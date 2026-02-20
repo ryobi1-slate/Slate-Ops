@@ -457,6 +457,10 @@
             <input class="input" id="break_minutes" value="${s.break_minutes || 20}" />
           </div>
         </div>
+        <div style="margin-top:10px;">
+          <div class="label" style="margin-bottom:6px;">Dealers (one per line)</div>
+          <textarea class="input" id="dealers" rows="6" placeholder="Dealer name">${escapeHtml((s.dealers || []).join('\n'))}</textarea>
+        </div>
         <div style="margin-top:12px;">
           <button class="btn" id="save_settings">Save</button>
         </div>
@@ -470,6 +474,7 @@
           shift_end: $('#shift_end').value.trim(),
           lunch_minutes: parseInt($('#lunch_minutes').value, 10),
           break_minutes: parseInt($('#break_minutes').value, 10),
+          dealers: $('#dealers').value,
         };
         await api.updateSettings(payload);
         alert('Saved.');
@@ -519,7 +524,8 @@ async function loadCreateJobInto(selector){
   const host = document.querySelector(selector);
   if(!host) return;
 
-  const dealerOptions = (slateOpsSettings.dealers || []).map((dealer) => `
+  const currentSettings = await api.settings();
+  const dealerOptions = ((currentSettings.dealers || slateOpsSettings.dealers || [])).map((dealer) => `
     <option value="${escapeHtml(dealer)}">${escapeHtml(dealer)}</option>
   `).join('');
 
@@ -553,9 +559,6 @@ async function loadCreateJobInto(selector){
         <input class="input" id="vin_last8" maxlength="8" placeholder="A1B2C3D4" />
         <div class="field-error" data-error-for="vin_last8"></div>
       </div>
-      <div style="flex:1 1 220px; align-self:flex-end;">
-        <label class="inline" style="margin-top:22px;"><input type="checkbox" id="no_vin_required" /> No VIN Required</label>
-      </div>
     </div>
 
     <div class="row" style="margin-top:10px;">
@@ -575,12 +578,7 @@ async function loadCreateJobInto(selector){
       </div>
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Created From</div>
-        <select class="input" id="created_from">
-          <option value="manual" selected>manual</option>
-          <option value="portal">portal</option>
-          <option value="import">import</option>
-        </select>
-        <div class="field-error" data-error-for="created_from"></div>
+        <input class="input" value="Manual" disabled />
       </div>
       <div style="flex:1 1 140px;">
         <div class="label" style="margin-bottom:6px;">Priority</div>
@@ -615,7 +613,7 @@ async function loadCreateJobInto(selector){
     <div class="row" style="margin-top:10px;">
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Quote Number</div>
-        <input class="input" id="quote_number" placeholder="Required for portal" />
+        <input class="input" id="quote_number" placeholder="Portal quote number (optional)" />
         <div class="field-error" data-error-for="quote_number"></div>
       </div>
       <div style="flex:1 1 220px;">
@@ -650,9 +648,8 @@ async function loadCreateJobInto(selector){
       customer_name: host.querySelector('#customer_name').value.trim(),
       dealer_name: host.querySelector('#dealer_name').value.trim(),
       vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
-      no_vin_required: host.querySelector('#no_vin_required').checked,
       job_type: host.querySelector('#job_type').value,
-      created_from: host.querySelector('#created_from').value,
+      created_from: 'manual',
       priority: parseInt(host.querySelector('#priority').value, 10),
       estimated_hours: host.querySelector('#estimated_hours').value.trim(),
       parts_status: host.querySelector('#parts_status').value,
