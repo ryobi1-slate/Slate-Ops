@@ -279,13 +279,15 @@ foreach ($rows as &$r) {
     $t = $wpdb->prefix . 'slate_ops_jobs';
 
     $so_number = strtoupper(trim(sanitize_text_field($body['so_number'] ?? '')));
-    if (!Slate_Ops_Utils::so_is_valid($so_number)) {
-      return self::validation_error('so_number', 'invalid_so_number', 'SO# format must be S-ORD######.');
+    if ($so_number !== '' && !Slate_Ops_Utils::so_is_valid($so_number)) {
+      return self::validation_error('so_number', 'invalid_so_number', 'SO# format: S-ORD followed by 6 digits (e.g. S-ORD101350).');
     }
 
-    $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE so_number=%s AND archived_at IS NULL", $so_number));
-    if ($existing) {
-      return self::validation_error('so_number', 'duplicate_so_number', 'SO# must be unique.', 409);
+    if ($so_number !== '') {
+      $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE so_number=%s AND archived_at IS NULL", $so_number));
+      if ($existing) {
+        return self::validation_error('so_number', 'duplicate_so_number', 'SO# must be unique.', 409);
+      }
     }
 
     $job_type = strtoupper(sanitize_key($body['job_type'] ?? ''));
@@ -343,7 +345,7 @@ foreach ($rows as &$r) {
     $inserted = $wpdb->insert($t, [
       'source' => $created_from,
       'created_from' => $created_from,
-      'so_number' => $so_number,
+      'so_number' => $so_number ?: null,
       'customer_name' => $customer ?: null,
       'dealer_name' => $dealer ?: null,
       'vin' => $vin_last8 ?: null,
@@ -384,7 +386,7 @@ foreach ($rows as &$r) {
     $so = strtoupper(trim(sanitize_text_field($body['so_number'] ?? '')));
 
     if (!Slate_Ops_Utils::so_is_valid($so)) {
-      return new WP_Error('invalid_so', 'SO# format must be S-ORD######', ['status' => 400]);
+      return new WP_Error('invalid_so', 'SO# format: S-ORD followed by 6 digits (e.g. S-ORD101350)', ['status' => 400]);
     }
 
     $t = $wpdb->prefix . 'slate_ops_jobs';

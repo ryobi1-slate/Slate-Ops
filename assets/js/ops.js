@@ -436,6 +436,23 @@
 
   async function loadSettings(){
     const s = await api.settings();
+    let dealers = [...(s.dealers || [])];
+    let salesPeople = [...(s.sales_people || [])];
+
+    function tagListHtml(id, items, placeholder) {
+      const tags = items.map(v => `
+        <span class="tag-item">${escapeHtml(v)}<button class="tag-remove" data-value="${escapeHtml(v)}" title="Remove">&times;</button></span>
+      `).join('');
+      const empty = items.length === 0 ? `<span style="color:rgba(0,0,0,0.45);font-size:13px;">None added yet.</span>` : '';
+      return `
+        <div class="tag-list" id="${id}-list">${tags}${empty}</div>
+        <div class="inline" style="margin-top:8px;">
+          <input class="input" id="${id}-input" placeholder="${escapeHtml(placeholder)}" style="max-width:300px;" />
+          <button class="btn secondary" id="${id}-add">Add</button>
+        </div>
+      `;
+    }
+
     view(`
       <div class="card">
         <h2>Settings</h2>
@@ -457,19 +474,59 @@
             <input class="input" id="break_minutes" value="${s.break_minutes || 20}" />
           </div>
         </div>
-        <div style="margin-top:10px;">
-          <div class="label" style="margin-bottom:6px;">Dealers (one per line)</div>
-          <textarea class="input" id="dealers" rows="6" placeholder="Dealer name">${escapeHtml((s.dealers || []).join('\n'))}</textarea>
+        <div style="margin-top:14px;">
+          <div class="label" style="margin-bottom:6px;">Dealers</div>
+          ${tagListHtml('dealers', dealers, 'Dealer name...')}
         </div>
-        <div style="margin-top:10px;">
-          <div class="label" style="margin-bottom:6px;">Sales People (one per line)</div>
-          <textarea class="input" id="sales_people" rows="6" placeholder="Sales person name">${escapeHtml((s.sales_people || []).join('\n'))}</textarea>
+        <div style="margin-top:14px;">
+          <div class="label" style="margin-bottom:6px;">Sales People</div>
+          ${tagListHtml('sales_people', salesPeople, 'Sales person name...')}
         </div>
         <div style="margin-top:12px;">
           <button class="btn" id="save_settings">Save</button>
         </div>
       </div>
     `);
+
+    function renderList(id, arr) {
+      const tags = arr.map(v => `
+        <span class="tag-item">${escapeHtml(v)}<button class="tag-remove" data-value="${escapeHtml(v)}" title="Remove">&times;</button></span>
+      `).join('');
+      const empty = arr.length === 0 ? `<span style="color:rgba(0,0,0,0.45);font-size:13px;">None added yet.</span>` : '';
+      $(`#${id}-list`).innerHTML = tags + empty;
+      bindRemove(id);
+    }
+
+    function bindRemove(id) {
+      $$(`#${id}-list .tag-remove`).forEach(btn => {
+        btn.onclick = () => {
+          const val = btn.getAttribute('data-value');
+          if (id === 'dealers') { dealers = dealers.filter(d => d !== val); renderList('dealers', dealers); }
+          else { salesPeople = salesPeople.filter(p => p !== val); renderList('sales_people', salesPeople); }
+        };
+      });
+    }
+
+    function bindAdd(id, getArr, addFn) {
+      const input = $(`#${id}-input`);
+      const btn = $(`#${id}-add`);
+      const doAdd = () => {
+        const val = input.value.trim();
+        if (!val) return;
+        addFn(val);
+        input.value = '';
+        renderList(id, getArr());
+        input.focus();
+      };
+      btn.onclick = doAdd;
+      input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } };
+    }
+
+    bindRemove('dealers');
+    bindRemove('sales_people');
+
+    bindAdd('dealers', () => dealers, (val) => { if (!dealers.includes(val)) dealers.push(val); });
+    bindAdd('sales_people', () => salesPeople, (val) => { if (!salesPeople.includes(val)) salesPeople.push(val); });
 
     $('#save_settings').onclick = async () => {
       try{
@@ -478,8 +535,8 @@
           shift_end: $('#shift_end').value.trim(),
           lunch_minutes: parseInt($('#lunch_minutes').value, 10),
           break_minutes: parseInt($('#break_minutes').value, 10),
-          dealers: $('#dealers').value,
-          sales_people: $('#sales_people').value,
+          dealers,
+          sales_people: salesPeople,
         };
         await api.updateSettings(payload);
         alert('Saved.');
@@ -541,11 +598,6 @@ async function loadCreateJobInto(selector){
     <div class="label" style="margin-bottom:8px;">Create Job</div>
 
     <div class="row">
-      <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">SO#</div>
-        <input class="input" id="so_number" placeholder="S-ORDXXXXXX" />
-        <div class="field-error" data-error-for="so_number"></div>
-      </div>
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Customer</div>
         <input class="input" id="customer_name" placeholder="Customer name" />
@@ -648,7 +700,6 @@ async function loadCreateJobInto(selector){
     const dealerValue = host.querySelector('#dealer_name_manual').value.trim() || host.querySelector('#dealer_name').value.trim();
     const salesPersonValue = host.querySelector('#sales_person_manual').value.trim() || host.querySelector('#sales_person').value.trim();
     const payload = {
-      so_number: host.querySelector('#so_number').value.trim(),
       customer_name: host.querySelector('#customer_name').value.trim(),
       dealer_name: dealerValue,
       vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
