@@ -137,6 +137,7 @@ class Slate_Ops_REST {
     $row = $wpdb->get_row("SELECT * FROM $t WHERE id=1", ARRAY_A);
     $row = $row ?: [];
     $row['dealers'] = array_values(Slate_Ops_Utils::dealer_list());
+    $row['sales_people'] = array_values(Slate_Ops_Utils::sales_person_list());
     return $row;
   }
 
@@ -164,6 +165,21 @@ class Slate_Ops_REST {
     }
     update_option('slate_ops_dealers', array_values(array_unique($dealers)));
 
+    $sales_payload = $body['sales_people'] ?? [];
+    if (is_string($sales_payload)) {
+      $sales_payload = preg_split('/\r\n|\r|\n/', $sales_payload);
+    }
+    $sales_people = [];
+    if (is_array($sales_payload)) {
+      foreach ($sales_payload as $person) {
+        $person = trim(sanitize_text_field((string) $person));
+        if ($person !== '') {
+          $sales_people[] = $person;
+        }
+      }
+    }
+    update_option('slate_ops_sales_people', array_values(array_unique($sales_people)));
+
     $wpdb->update($t, [
       'shift_start' => $shift_start,
       'shift_end' => $shift_end,
@@ -173,7 +189,7 @@ class Slate_Ops_REST {
       'updated_at' => Slate_Ops_Utils::now_gmt(),
     ], ['id' => 1]);
 
-    self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks,'dealers'=>$dealers]), 'Settings updated');
+    self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks,'dealers'=>$dealers,'sales_people'=>$sales_people]), 'Settings updated');
     return self::get_settings($req);
   }
 
@@ -264,7 +280,7 @@ foreach ($rows as &$r) {
 
     $so_number = strtoupper(trim(sanitize_text_field($body['so_number'] ?? '')));
     if (!Slate_Ops_Utils::so_is_valid($so_number)) {
-      return self::validation_error('so_number', 'invalid_so_number', 'SO# format must be S-ORD#####.');
+      return self::validation_error('so_number', 'invalid_so_number', 'SO# format must be S-ORD######.');
     }
 
     $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE so_number=%s AND archived_at IS NULL", $so_number));
@@ -279,10 +295,7 @@ foreach ($rows as &$r) {
 
     $created_from = 'manual';
 
-    $priority = (int) ($body['priority'] ?? 3);
-    if ($priority < 1 || $priority > 5) {
-      return self::validation_error('priority', 'invalid_priority', 'Priority must be between 1 and 5.');
-    }
+    $priority = 3;
 
     $parts_status = strtoupper(sanitize_key($body['parts_status'] ?? 'NOT_READY'));
     if (!in_array($parts_status, Slate_Ops_Utils::cs_parts_statuses(), true)) {
@@ -304,8 +317,6 @@ foreach ($rows as &$r) {
       return self::validation_error('customer_name', 'customer_or_dealer_required', 'Provide a customer, dealer, or both.');
     }
 
-    $quote_number = sanitize_text_field($body['quote_number'] ?? '');
-
     $no_vin_required = !empty($body['no_vin_required']);
     $vin_last8 = strtoupper(trim(sanitize_text_field($body['vin_last8'] ?? '')));
     if ($job_type !== 'PARTS_ONLY' && !$no_vin_required) {
@@ -322,7 +333,9 @@ foreach ($rows as &$r) {
     }
 
     $sales_person = sanitize_text_field($body['sales_person'] ?? '');
-    $stock_number = sanitize_text_field($body['stock_number'] ?? '');
+    if ($sales_person !== '' && !in_array($sales_person, Slate_Ops_Utils::sales_person_list(), true)) {
+      return self::validation_error('sales_person', 'invalid_sales_person', 'Select a valid sales person.');
+    }
     $notes = sanitize_textarea_field($body['notes'] ?? '');
     $notes_type = sanitize_key($body['notes_type'] ?? '');
     if ($notes !== '' && $notes_type === 'parts' && stripos($notes, 'Parts:') !== 0) {
@@ -333,7 +346,6 @@ foreach ($rows as &$r) {
     $inserted = $wpdb->insert($t, [
       'source' => $created_from,
       'created_from' => $created_from,
-      'quote_number' => $quote_number ?: null,
       'so_number' => $so_number,
       'customer_name' => $customer ?: null,
       'dealer_name' => $dealer ?: null,
@@ -348,7 +360,6 @@ foreach ($rows as &$r) {
       'estimated_minutes' => $estimated_minutes,
       'requested_date' => $requested_date ?: null,
       'sales_person' => $sales_person ?: null,
-      'stock_number' => $stock_number ?: null,
       'notes' => $notes ?: null,
       'dealer_status' => 'waiting',
       'created_by' => get_current_user_id(),
@@ -376,7 +387,7 @@ foreach ($rows as &$r) {
     $so = strtoupper(trim(sanitize_text_field($body['so_number'] ?? '')));
 
     if (!Slate_Ops_Utils::so_is_valid($so)) {
-      return new WP_Error('invalid_so', 'SO# format must be S-ORD#####', ['status' => 400]);
+      return new WP_Error('invalid_so', 'SO# format must be S-ORD######', ['status' => 400]);
     }
 
     $t = $wpdb->prefix . 'slate_ops_jobs';

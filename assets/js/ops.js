@@ -461,6 +461,10 @@
           <div class="label" style="margin-bottom:6px;">Dealers (one per line)</div>
           <textarea class="input" id="dealers" rows="6" placeholder="Dealer name">${escapeHtml((s.dealers || []).join('\n'))}</textarea>
         </div>
+        <div style="margin-top:10px;">
+          <div class="label" style="margin-bottom:6px;">Sales People (one per line)</div>
+          <textarea class="input" id="sales_people" rows="6" placeholder="Sales person name">${escapeHtml((s.sales_people || []).join('\n'))}</textarea>
+        </div>
         <div style="margin-top:12px;">
           <button class="btn" id="save_settings">Save</button>
         </div>
@@ -475,6 +479,7 @@
           lunch_minutes: parseInt($('#lunch_minutes').value, 10),
           break_minutes: parseInt($('#break_minutes').value, 10),
           dealers: $('#dealers').value,
+          sales_people: $('#sales_people').value,
         };
         await api.updateSettings(payload);
         alert('Saved.');
@@ -528,6 +533,9 @@ async function loadCreateJobInto(selector){
   const dealerOptions = ((currentSettings.dealers || slateOpsSettings.dealers || [])).map((dealer) => `
     <option value="${escapeHtml(dealer)}">${escapeHtml(dealer)}</option>
   `).join('');
+  const salesOptions = (currentSettings.sales_people || []).map((person) => `
+    <option value="${escapeHtml(person)}">${escapeHtml(person)}</option>
+  `).join('');
 
   host.innerHTML = `
     <div class="label" style="margin-bottom:8px;">Create Job</div>
@@ -535,7 +543,7 @@ async function loadCreateJobInto(selector){
     <div class="row">
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">SO#</div>
-        <input class="input" id="so_number" placeholder="S-ORD12345" />
+        <input class="input" id="so_number" placeholder="S-ORD123456" />
         <div class="field-error" data-error-for="so_number"></div>
       </div>
       <div style="flex:1 1 220px;">
@@ -580,11 +588,6 @@ async function loadCreateJobInto(selector){
         <div class="label" style="margin-bottom:6px;">Created From</div>
         <input class="input" value="Manual" disabled />
       </div>
-      <div style="flex:1 1 140px;">
-        <div class="label" style="margin-bottom:6px;">Priority</div>
-        <input class="input" id="priority" type="number" min="1" max="5" value="3" />
-        <div class="field-error" data-error-for="priority"></div>
-      </div>
     </div>
 
     <div class="row" style="margin-top:10px;">
@@ -612,17 +615,12 @@ async function loadCreateJobInto(selector){
 
     <div class="row" style="margin-top:10px;">
       <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">Quote Number</div>
-        <input class="input" id="quote_number" placeholder="Portal quote number (optional)" />
-        <div class="field-error" data-error-for="quote_number"></div>
-      </div>
-      <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Sales Person</div>
-        <input class="input" id="sales_person" />
-      </div>
-      <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">Stock Number</div>
-        <input class="input" id="stock_number" />
+        <select class="input" id="sales_person">
+          <option value="">Select sales person</option>
+          ${salesOptions}
+        </select>
+        <div class="field-error" data-error-for="sales_person"></div>
       </div>
     </div>
 
@@ -650,13 +648,10 @@ async function loadCreateJobInto(selector){
       vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
       job_type: host.querySelector('#job_type').value,
       created_from: 'manual',
-      priority: parseInt(host.querySelector('#priority').value, 10),
       estimated_hours: host.querySelector('#estimated_hours').value.trim(),
       parts_status: host.querySelector('#parts_status').value,
       requested_date: host.querySelector('#requested_date').value,
-      quote_number: host.querySelector('#quote_number').value.trim(),
       sales_person: host.querySelector('#sales_person').value.trim(),
-      stock_number: host.querySelector('#stock_number').value.trim(),
       notes: notesInput,
       notes_type: notesInput.toLowerCase().includes('part') ? 'parts' : '',
     };
@@ -697,7 +692,6 @@ async function loadCS(){
       <div class="label" style="margin-bottom:8px;">Needs SO#</div>
       <table class="table">
         <thead><tr>
-          <th style="min-width:140px;">Quote</th>
           <th style="min-width:220px;">Customer</th>
           <th style="min-width:90px;">VIN</th>
           <th style="min-width:180px;">Dealer</th>
@@ -707,14 +701,13 @@ async function loadCS(){
         <tbody>
           ${needs.map(j=>`
             <tr data-id="${j.job_id}">
-              <td>${escapeHtml(j.quote_number||'')}</td>
               <td>${escapeHtml(j.customer_name||'')}</td>
               <td>${escapeHtml((j.vin||'').slice(-6))}</td>
               <td>${escapeHtml(j.dealer_name||'')}</td>
               <td><input class="input so" placeholder="S-ORD101350" /></td>
               <td><button class="btn small-btn save-so">Save</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="6">No jobs need SO#.</td></tr>`}
+          `).join('') || `<tr><td colspan="5">No jobs need SO#.</td></tr>`}
         </tbody>
       </table>
     </div>
