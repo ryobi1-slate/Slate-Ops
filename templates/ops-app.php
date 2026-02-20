@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) exit;
 </head>
 <body class="slate-ops">
   <header class="ops-header">
-    <div class="ops-title"><img src="<?php echo esc_url(SLATE_OPS_URL . 'assets/slate-logo.svg'); ?>" style="height:28px;" alt="Slate Logo"></div>
+    <div class="ops-title"><?php echo Slate_Ops_Assets::logo_img(); ?></div>
     <nav class="ops-nav">
       <a class="ops-link" href="/ops/">Jobs</a>
       <?php if (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN) || current_user_can('administrator')): ?>
