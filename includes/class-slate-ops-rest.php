@@ -295,10 +295,7 @@ foreach ($rows as &$r) {
 
     $created_from = 'manual';
 
-    $priority = (int) ($body['priority'] ?? 3);
-    if ($priority < 1 || $priority > 5) {
-      $priority = 3;
-    }
+    $priority = 3;
 
     $parts_status = strtoupper(sanitize_key($body['parts_status'] ?? 'NOT_READY'));
     if (!in_array($parts_status, Slate_Ops_Utils::cs_parts_statuses(), true)) {
@@ -320,9 +317,6 @@ foreach ($rows as &$r) {
       return self::validation_error('customer_name', 'customer_or_dealer_required', 'Provide a customer, dealer, or both.');
     }
 
-    $quote_number = sanitize_text_field($body['quote_number'] ?? '');
-    $stock_number = sanitize_text_field($body['stock_number'] ?? '');
-
     $no_vin_required = !empty($body['no_vin_required']);
     $vin_last8 = strtoupper(trim(sanitize_text_field($body['vin_last8'] ?? '')));
     if ($job_type !== 'PARTS_ONLY' && !$no_vin_required) {
@@ -339,8 +333,7 @@ foreach ($rows as &$r) {
     }
 
     $sales_person = sanitize_text_field($body['sales_person'] ?? '');
-    $allowed_sales_people = Slate_Ops_Utils::sales_person_list();
-    if ($sales_person !== '' && !empty($allowed_sales_people) && !in_array($sales_person, $allowed_sales_people, true)) {
+    if ($sales_person !== '' && !in_array($sales_person, Slate_Ops_Utils::sales_person_list(), true)) {
       return self::validation_error('sales_person', 'invalid_sales_person', 'Select a valid sales person.');
     }
     $notes = sanitize_textarea_field($body['notes'] ?? '');
@@ -353,7 +346,6 @@ foreach ($rows as &$r) {
     $inserted = $wpdb->insert($t, [
       'source' => $created_from,
       'created_from' => $created_from,
-      'quote_number' => $quote_number ?: null,
       'so_number' => $so_number,
       'customer_name' => $customer ?: null,
       'dealer_name' => $dealer ?: null,
@@ -368,7 +360,6 @@ foreach ($rows as &$r) {
       'estimated_minutes' => $estimated_minutes,
       'requested_date' => $requested_date ?: null,
       'sales_person' => $sales_person ?: null,
-      'stock_number' => $stock_number ?: null,
       'notes' => $notes ?: null,
       'dealer_status' => 'waiting',
       'created_by' => get_current_user_id(),
