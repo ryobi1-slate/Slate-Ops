@@ -15,43 +15,67 @@ class Slate_Ops_Install {
     $settings = $wpdb->prefix . 'slate_ops_settings';
 
     $sql_jobs = "CREATE TABLE $jobs (
-      job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      source VARCHAR(20) NOT NULL DEFAULT 'manual',
-      portal_quote_id BIGINT UNSIGNED NULL,
-      quote_number VARCHAR(64) NULL,
-      so_number VARCHAR(32) NULL,
-      customer_name VARCHAR(255) NULL,
-      vin VARCHAR(32) NULL,
-      dealer_name VARCHAR(255) NULL,
-      job_type VARCHAR(30) NOT NULL DEFAULT 'upfit',
-      parts_status VARCHAR(20) NULL,
-      status VARCHAR(30) NOT NULL DEFAULT 'UNSCHEDULED',
-      status_detail VARCHAR(100) NULL,
-      assigned_user_id BIGINT UNSIGNED NULL,
-      scheduled_start DATETIME NULL,
-      scheduled_finish DATETIME NULL,
-      requested_date DATE NULL,
-      clickup_task_id VARCHAR(64) NULL,
-      clickup_estimate_ms BIGINT UNSIGNED NULL,
-      dealer_status VARCHAR(20) NOT NULL DEFAULT 'waiting',
-      created_by BIGINT UNSIGNED NULL,
-      created_at DATETIME NOT NULL,
-      updated_at DATETIME NOT NULL,
-      archived_at DATETIME NULL,
-      archived_by BIGINT UNSIGNED NULL,
-      archive_reason VARCHAR(255) NULL,
-      work_center VARCHAR(60) NULL,
-      estimated_minutes INT UNSIGNED NULL,
-      scheduled_start DATETIME NULL,
-      scheduled_finish DATETIME NULL,
-      assigned_user_id BIGINT UNSIGNED NULL,
+job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 
-      PRIMARY KEY  (job_id),
-      UNIQUE KEY so_unique (so_number),
-      KEY status_idx (status),
-      KEY assigned_idx (assigned_user_id),
-      KEY quote_idx (portal_quote_id),
-      KEY clickup_idx (clickup_task_id)
+-- Source tracking
+source VARCHAR(20) NOT NULL DEFAULT 'manual',
+created_from VARCHAR(20) NOT NULL DEFAULT 'manual',
+
+-- Portal linkage
+portal_quote_id BIGINT UNSIGNED NULL,
+quote_number VARCHAR(64) NULL,
+
+-- Identifiers
+so_number VARCHAR(32) NULL,
+customer_name VARCHAR(255) NULL,
+vin VARCHAR(32) NULL,
+dealer_name VARCHAR(255) NULL,
+
+-- Classification
+job_type VARCHAR(30) NOT NULL DEFAULT 'upfit',
+parts_status VARCHAR(20) NULL,
+
+-- Status + scheduling
+status VARCHAR(30) NOT NULL DEFAULT 'UNSCHEDULED',
+status_detail VARCHAR(100) NULL,
+status_updated_at DATETIME NULL,
+
+delay_reason VARCHAR(30) NULL,
+priority TINYINT UNSIGNED NOT NULL DEFAULT 3,
+
+assigned_user_id BIGINT UNSIGNED NULL,
+work_center VARCHAR(60) NULL,
+estimated_minutes INT UNSIGNED NULL,
+scheduled_start DATETIME NULL,
+scheduled_finish DATETIME NULL,
+requested_date DATE NULL,
+
+-- ClickUp
+clickup_task_id VARCHAR(64) NULL,
+clickup_estimate_ms BIGINT UNSIGNED NULL,
+
+-- Dealer-facing simplified status
+dealer_status VARCHAR(20) NOT NULL DEFAULT 'waiting',
+
+-- Audit fields
+created_by BIGINT UNSIGNED NULL,
+created_at DATETIME NOT NULL,
+updated_at DATETIME NOT NULL,
+
+archived_at DATETIME NULL,
+archived_by BIGINT UNSIGNED NULL,
+archive_reason VARCHAR(255) NULL,
+
+PRIMARY KEY  (job_id),
+UNIQUE KEY so_unique (so_number),
+KEY status_idx (status),
+KEY status_updated_idx (status_updated_at),
+KEY assigned_idx (assigned_user_id),
+KEY quote_idx (portal_quote_id),
+KEY clickup_idx (clickup_task_id),
+KEY priority_idx (priority),
+KEY created_from_idx (created_from)
+
     ) $charset_collate;";
 
     $sql_segments = "CREATE TABLE $segments (
