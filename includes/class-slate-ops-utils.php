@@ -30,7 +30,7 @@ class Slate_Ops_Utils {
   }
 
   public static function vin_last8_is_valid($vin_last8) {
-    return (bool) preg_match('/^[A-HJ-NPR-Z0-9]{8}$/', strtoupper((string) $vin_last8));
+    return (bool) preg_match('/^[A-HJ-NPR-Z0-9]{7,8}$/', strtoupper((string) $vin_last8));
   }
 
   public static function cs_job_types() {

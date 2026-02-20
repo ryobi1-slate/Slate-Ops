@@ -595,100 +595,87 @@ async function loadCreateJobInto(selector){
   `).join('');
 
   host.innerHTML = `
-    <div class="label" style="margin-bottom:8px;">Create Job</div>
+    <div class="label" style="margin-bottom:10px;">Create Job</div>
 
-    <div class="row">
-      <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">Customer</div>
-        <input class="input" id="customer_name" placeholder="Customer name" />
-        <div class="field-error" data-error-for="customer_name"></div>
+    <div class="form-grid">
+      <div>
+        <div class="label" style="margin-bottom:6px;">SO#</div>
+        <input class="input" id="so_number" placeholder="S-ORD101350" />
+        <div class="field-error" data-error-for="so_number"></div>
       </div>
-      <div style="flex:1 1 220px;">
+      <div>
         <div class="label" style="margin-bottom:6px;">Dealer</div>
         <select class="input" id="dealer_name">
           <option value="">Select dealer</option>
           ${dealerOptions}
         </select>
-        <div class="small" style="margin-top:6px;">Or enter dealer name</div>
-        <input class="input" id="dealer_name_manual" placeholder="Dealer name" style="margin-top:4px;" />
         <div class="field-error" data-error-for="dealer_name"></div>
       </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">VIN Last 8</div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Customer</div>
+        <input class="input" id="customer_name" placeholder="Customer name" />
+        <div class="field-error" data-error-for="customer_name"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">VIN Last 7–8</div>
         <input class="input" id="vin_last8" maxlength="8" placeholder="A1B2C3D4" />
         <div class="field-error" data-error-for="vin_last8"></div>
       </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <div style="flex:1 1 220px;">
+      <div>
+        <div class="label" style="margin-bottom:6px;">Sales Person</div>
+        <select class="input" id="sales_person">
+          <option value="">Select sales person</option>
+          ${salesOptions}
+        </select>
+        <div class="field-error" data-error-for="sales_person"></div>
+      </div>
+      <div>
         <div class="label" style="margin-bottom:6px;">Job Type</div>
         <select class="input" id="job_type">
-          <option value="UPFIT">UPFIT</option>
-          <option value="COMMERCIAL_UPFIT">COMMERCIAL_UPFIT</option>
-          <option value="COMMERCIAL_BUILD">COMMERCIAL_BUILD</option>
-          <option value="RV_BUILD">RV_BUILD</option>
-          <option value="RV_UPFIT">RV_UPFIT</option>
-          <option value="PARTS_ONLY">PARTS_ONLY</option>
-          <option value="SERVICE">SERVICE</option>
-          <option value="WARRANTY">WARRANTY</option>
+          <option value="UPFIT">Upfit</option>
+          <option value="COMMERCIAL_UPFIT">Commercial Upfit</option>
+          <option value="COMMERCIAL_BUILD">Commercial Build</option>
+          <option value="RV_BUILD">RV Build</option>
+          <option value="RV_UPFIT">RV Upfit</option>
+          <option value="PARTS_ONLY">Parts Only</option>
+          <option value="SERVICE">Service</option>
+          <option value="WARRANTY">Warranty</option>
         </select>
         <div class="field-error" data-error-for="job_type"></div>
       </div>
-      <div style="flex:1 1 220px;">
+      <div>
         <div class="label" style="margin-bottom:6px;">Created From</div>
-        <input class="input" value="Manual" disabled />
+        <div class="input" style="background:var(--surface2,#f4f4f4);color:var(--muted,#888);cursor:default;">Manual Entry</div>
       </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <div style="flex:1 1 220px;">
+      <div>
         <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
-        <input class="input" id="estimated_hours" type="number" min="0" step="0.1" />
+        <input class="input" id="estimated_hours" type="number" min="0.5" step="0.5" placeholder="e.g. 2.5" />
         <div class="field-error" data-error-for="estimated_hours"></div>
       </div>
-      <div style="flex:1 1 220px;">
+      <div>
         <div class="label" style="margin-bottom:6px;">Parts Status</div>
         <select class="input" id="parts_status">
-          <option value="NOT_READY" selected>NOT_READY</option>
-          <option value="PARTIAL">PARTIAL</option>
-          <option value="READY">READY</option>
-          <option value="HOLD">HOLD</option>
+          <option value="NOT_READY" selected>Not Ready</option>
+          <option value="PARTIAL">Partial</option>
+          <option value="READY">Ready</option>
+          <option value="HOLD">Hold</option>
         </select>
         <div class="field-error" data-error-for="parts_status"></div>
       </div>
-      <div style="flex:1 1 220px;">
+      <div>
         <div class="label" style="margin-bottom:6px;">Requested Completion Date</div>
         <input class="input" id="requested_date" type="date" />
         <div class="field-error" data-error-for="requested_date"></div>
       </div>
     </div>
 
-    <div class="row" style="margin-top:10px;">
-      <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">Sales Person</div>
-        <select class="input" id="sales_person">
-          <option value="">Select sales person</option>
-          ${salesOptions}
-        </select>
-        <div class="small" style="margin-top:6px;">Or enter sales person</div>
-        <input class="input" id="sales_person_manual" placeholder="Sales person" style="margin-top:4px;" />
-        <div class="field-error" data-error-for="sales_person"></div>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <div style="flex:1 1 100%;">
-        <div class="label" style="margin-bottom:6px;">Notes</div>
-        <textarea class="input" id="notes" placeholder="Notes"></textarea>
-      </div>
+    <div style="margin-top:10px;">
+      <div class="label" style="margin-bottom:6px;">Notes</div>
+      <textarea class="input" id="notes" rows="4" placeholder="Additional notes, special instructions, parts details…"></textarea>
     </div>
 
     <div class="row" style="margin-top:12px;">
-      <button class="btn" id="create_btn">Create</button>
+      <button class="btn" id="create_btn">Create Job</button>
       <div class="field-error" data-error-for="general"></div>
     </div>
   `;
@@ -697,18 +684,18 @@ async function loadCreateJobInto(selector){
     clearCreateJobErrors(host);
 
     const notesInput = host.querySelector('#notes').value.trim();
-    const dealerValue = host.querySelector('#dealer_name_manual').value.trim() || host.querySelector('#dealer_name').value.trim();
-    const salesPersonValue = host.querySelector('#sales_person_manual').value.trim() || host.querySelector('#sales_person').value.trim();
+    const soInput = host.querySelector('#so_number').value.trim().toUpperCase();
     const payload = {
+      so_number: soInput || undefined,
+      dealer_name: host.querySelector('#dealer_name').value.trim(),
       customer_name: host.querySelector('#customer_name').value.trim(),
-      dealer_name: dealerValue,
       vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
+      sales_person: host.querySelector('#sales_person').value.trim(),
       job_type: host.querySelector('#job_type').value,
       created_from: 'manual',
       estimated_hours: host.querySelector('#estimated_hours').value.trim(),
       parts_status: host.querySelector('#parts_status').value,
       requested_date: host.querySelector('#requested_date').value,
-      sales_person: salesPersonValue,
       notes: notesInput,
       notes_type: notesInput.toLowerCase().includes('part') ? 'parts' : '',
     };
