@@ -52,6 +52,7 @@ add_action('wp_enqueue_scripts', function() {
       'white' => '#ffffff',
     ],
     'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
+    'sales_people' => array_values(Slate_Ops_Utils::sales_person_list()),
   ]);
 });
 

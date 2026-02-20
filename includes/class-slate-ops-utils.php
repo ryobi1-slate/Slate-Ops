@@ -26,7 +26,7 @@ class Slate_Ops_Utils {
 
   public static function so_is_valid($so) {
     $so = strtoupper(trim((string)$so));
-    return (bool) preg_match('/^S-ORD\d{5}$/', $so);
+    return (bool) preg_match('/^S-ORD\d{6}$/', $so);
   }
 
   public static function vin_last8_is_valid($vin_last8) {
@@ -47,7 +47,7 @@ class Slate_Ops_Utils {
   }
 
   public static function cs_created_from_values() {
-    return ['portal', 'manual', 'import'];
+    return ['portal', 'manual'];
   }
 
   public static function cs_parts_statuses() {
@@ -55,13 +55,16 @@ class Slate_Ops_Utils {
   }
 
   public static function dealer_list() {
-    $dealers = [
+    $default_dealers = [
       'Northwest Fleet',
       'Pacific Utility Vehicles',
       'Summit Commercial',
       'Canyon RV Center',
       'Metro Work Trucks',
     ];
+
+    $saved = get_option('slate_ops_dealers', null);
+    $dealers = is_array($saved) ? $saved : $default_dealers;
 
     $dealers = apply_filters('slate_ops_dealer_list', $dealers);
 
@@ -70,6 +73,20 @@ class Slate_Ops_Utils {
     }
 
     return array_values(array_filter(array_map('sanitize_text_field', $dealers)));
+  }
+
+
+  public static function sales_person_list() {
+    $saved = get_option('slate_ops_sales_people', null);
+    $sales_people = is_array($saved) ? $saved : [];
+
+    $sales_people = apply_filters('slate_ops_sales_person_list', $sales_people);
+
+    if (!is_array($sales_people)) {
+      return [];
+    }
+
+    return array_values(array_filter(array_map('sanitize_text_field', $sales_people)));
   }
 
   public static function dealer_status_from_internal($status) {

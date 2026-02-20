@@ -436,6 +436,9 @@
 
   async function loadSettings(){
     const s = await api.settings();
+    const dealerList = [...new Set((s.dealers || []).map((d) => String(d || '').trim()).filter(Boolean))];
+    const salesPeopleList = [...new Set((s.sales_people || []).map((d) => String(d || '').trim()).filter(Boolean))];
+
     view(`
       <div class="card">
         <h2>Settings</h2>
@@ -457,11 +460,106 @@
             <input class="input" id="break_minutes" value="${s.break_minutes || 20}" />
           </div>
         </div>
+
+        <div style="margin-top:10px;">
+          <div class="label" style="margin-bottom:6px;">Dealer List</div>
+          <div class="row">
+            <div style="flex:1 1 320px;">
+              <select class="input" id="dealer_select">
+                <option value="">Select dealer</option>
+                ${dealerList.map((dealer) => `<option value="${escapeHtml(dealer)}">${escapeHtml(dealer)}</option>`).join('')}
+              </select>
+            </div>
+            <div style="flex:2 1 420px;">
+              <input class="input" id="dealer_input" placeholder="Add or edit dealer name" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn secondary" id="dealer_add">Add / Update Dealer</button>
+            <button class="btn secondary" id="dealer_remove">Remove Selected Dealer</button>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="label" style="margin-bottom:6px;">Sales Person List</div>
+          <div class="row">
+            <div style="flex:1 1 320px;">
+              <select class="input" id="sales_person_select">
+                <option value="">Select sales person</option>
+                ${salesPeopleList.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}
+              </select>
+            </div>
+            <div style="flex:2 1 420px;">
+              <input class="input" id="sales_person_input" placeholder="Add or edit sales person" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn secondary" id="sales_person_add">Add / Update Sales Person</button>
+            <button class="btn secondary" id="sales_person_remove">Remove Selected Sales Person</button>
+          </div>
+        </div>
+
         <div style="margin-top:12px;">
           <button class="btn" id="save_settings">Save</button>
         </div>
       </div>
     `);
+
+    const dealerSelect = $('#dealer_select');
+    const dealerInput = $('#dealer_input');
+    const salesPersonSelect = $('#sales_person_select');
+    const salesPersonInput = $('#sales_person_input');
+
+    function currentValues(selectEl){
+      return Array.from(selectEl.querySelectorAll('option'))
+        .map((o) => o.value)
+        .filter((v) => v);
+    }
+
+    function rebuildValues(selectEl, values, placeholder, selected=''){
+      const cleaned = [...new Set(values.map((d) => String(d || '').trim()).filter(Boolean))];
+      selectEl.innerHTML = `<option value="">${placeholder}</option>${cleaned.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('')}`;
+      if (selected && cleaned.includes(selected)) {
+        selectEl.value = selected;
+      }
+    }
+
+    dealerSelect.onchange = () => {
+      dealerInput.value = dealerSelect.value;
+    };
+    salesPersonSelect.onchange = () => {
+      salesPersonInput.value = salesPersonSelect.value;
+    };
+
+    $('#dealer_add').onclick = () => {
+      const next = dealerInput.value.trim();
+      if (!next) return;
+      const values = currentValues(dealerSelect).filter((name) => name !== dealerSelect.value);
+      values.push(next);
+      rebuildValues(dealerSelect, values, 'Select dealer', next);
+      dealerInput.value = '';
+    };
+
+    $('#dealer_remove').onclick = () => {
+      if (!dealerSelect.value) return;
+      rebuildValues(dealerSelect, currentValues(dealerSelect).filter((name) => name !== dealerSelect.value), 'Select dealer');
+      dealerInput.value = '';
+    };
+
+    $('#sales_person_add').onclick = () => {
+      const next = salesPersonInput.value.trim();
+      if (!next) return;
+      const values = currentValues(salesPersonSelect).filter((name) => name !== salesPersonSelect.value);
+      values.push(next);
+      rebuildValues(salesPersonSelect, values, 'Select sales person', next);
+      salesPersonInput.value = '';
+    };
+
+    $('#sales_person_remove').onclick = () => {
+      if (!salesPersonSelect.value) return;
+      rebuildValues(salesPersonSelect, currentValues(salesPersonSelect).filter((name) => name !== salesPersonSelect.value), 'Select sales person');
+      salesPersonInput.value = '';
+    };
 
     $('#save_settings').onclick = async () => {
       try{
@@ -470,6 +568,8 @@
           shift_end: $('#shift_end').value.trim(),
           lunch_minutes: parseInt($('#lunch_minutes').value, 10),
           break_minutes: parseInt($('#break_minutes').value, 10),
+          dealers: currentValues(dealerSelect),
+          sales_people: currentValues(salesPersonSelect),
         };
         await api.updateSettings(payload);
         alert('Saved.');
@@ -478,6 +578,7 @@
       }
     };
   }
+
 
   async function loadCreateJob(){
   view(`<div class="card" id="create-job-page"></div>`);
@@ -519,8 +620,12 @@ async function loadCreateJobInto(selector){
   const host = document.querySelector(selector);
   if(!host) return;
 
-  const dealerOptions = (slateOpsSettings.dealers || []).map((dealer) => `
+  const currentSettings = await api.settings();
+  const dealerOptions = ((currentSettings.dealers || [])).map((dealer) => `
     <option value="${escapeHtml(dealer)}">${escapeHtml(dealer)}</option>
+  `).join('');
+  const salesPersonOptions = ((currentSettings.sales_people || [])).map((name) => `
+    <option value="${escapeHtml(name)}">${escapeHtml(name)}</option>
   `).join('');
 
   host.innerHTML = `
@@ -529,7 +634,7 @@ async function loadCreateJobInto(selector){
     <div class="row">
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">SO#</div>
-        <input class="input" id="so_number" placeholder="S-ORD12345" />
+        <input class="input" id="so_number" placeholder="S-ORD123456" />
         <div class="field-error" data-error-for="so_number"></div>
       </div>
       <div style="flex:1 1 220px;">
@@ -553,9 +658,6 @@ async function loadCreateJobInto(selector){
         <input class="input" id="vin_last8" maxlength="8" placeholder="A1B2C3D4" />
         <div class="field-error" data-error-for="vin_last8"></div>
       </div>
-      <div style="flex:1 1 220px; align-self:flex-end;">
-        <label class="inline" style="margin-top:22px;"><input type="checkbox" id="no_vin_required" /> No VIN Required</label>
-      </div>
     </div>
 
     <div class="row" style="margin-top:10px;">
@@ -575,17 +677,7 @@ async function loadCreateJobInto(selector){
       </div>
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Created From</div>
-        <select class="input" id="created_from">
-          <option value="manual" selected>manual</option>
-          <option value="portal">portal</option>
-          <option value="import">import</option>
-        </select>
-        <div class="field-error" data-error-for="created_from"></div>
-      </div>
-      <div style="flex:1 1 140px;">
-        <div class="label" style="margin-bottom:6px;">Priority</div>
-        <input class="input" id="priority" type="number" min="1" max="5" value="3" />
-        <div class="field-error" data-error-for="priority"></div>
+        <input class="input" value="Manual" disabled />
       </div>
     </div>
 
@@ -614,17 +706,11 @@ async function loadCreateJobInto(selector){
 
     <div class="row" style="margin-top:10px;">
       <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">Quote Number</div>
-        <input class="input" id="quote_number" placeholder="Required for portal" />
-        <div class="field-error" data-error-for="quote_number"></div>
-      </div>
-      <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Sales Person</div>
-        <input class="input" id="sales_person" />
-      </div>
-      <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">Stock Number</div>
-        <input class="input" id="stock_number" />
+        <select class="input" id="sales_person">
+          <option value="">Select sales person</option>
+          ${salesPersonOptions}
+        </select>
       </div>
     </div>
 
@@ -650,16 +736,13 @@ async function loadCreateJobInto(selector){
       customer_name: host.querySelector('#customer_name').value.trim(),
       dealer_name: host.querySelector('#dealer_name').value.trim(),
       vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
-      no_vin_required: host.querySelector('#no_vin_required').checked,
       job_type: host.querySelector('#job_type').value,
-      created_from: host.querySelector('#created_from').value,
-      priority: parseInt(host.querySelector('#priority').value, 10),
+      created_from: 'manual',
+      priority: 3,
       estimated_hours: host.querySelector('#estimated_hours').value.trim(),
       parts_status: host.querySelector('#parts_status').value,
       requested_date: host.querySelector('#requested_date').value,
-      quote_number: host.querySelector('#quote_number').value.trim(),
       sales_person: host.querySelector('#sales_person').value.trim(),
-      stock_number: host.querySelector('#stock_number').value.trim(),
       notes: notesInput,
       notes_type: notesInput.toLowerCase().includes('part') ? 'parts' : '',
     };
