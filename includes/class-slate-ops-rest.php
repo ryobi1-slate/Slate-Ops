@@ -4,142 +4,658 @@ if (!defined('ABSPATH')) exit;
 class Slate_Ops_REST {
 
   public static function register_routes() {
-
-    register_rest_route('slate-ops/v1', '/jobs', [
+    register_rest_route('slate-ops/v1', '/me', [
       'methods' => 'GET',
       'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'get_jobs'],
-      'args' => [
-        'status' => ['required' => false],
-        'limit' => ['required' => false],
+      'callback' => [__CLASS__, 'me'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/settings', [
+      [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback' => [__CLASS__, 'get_settings'],
+      ],
+      [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+        'callback' => [__CLASS__, 'update_settings'],
       ],
     ]);
 
     register_rest_route('slate-ops/v1', '/jobs', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
-      'callback' => [__CLASS__, 'create_job'],
+      [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback' => [__CLASS__, 'list_jobs'],
+      ],
+      [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+        'callback' => [__CLASS__, 'create_job_manual'],
+      ],
     ]);
 
     register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback' => [__CLASS__, 'get_job'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/so', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+      'callback' => [__CLASS__, 'set_so'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/assign', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'assign_job'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/schedule', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'schedule_job'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/status', [
       'methods' => 'POST',
       'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'update_job'],
+      'callback' => [__CLASS__, 'set_status'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/time/start', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'time_start'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/time/stop', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'time_stop'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/time/correction', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'time_correction_request'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/supervisor/queues', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'supervisor_queues'],
     ]);
   }
 
+  // Permissions
   public static function perm_ops() {
-    return Slate_Ops_Utils::can_access_ops();
+    return Slate_Ops_Utils::require_ops_access();
   }
-
+  public static function perm_tech_or_supervisor_or_admin() {
+    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_TECH) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
+  }
+  public static function perm_supervisor_or_admin() {
+    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
+  }
+  public static function perm_admin_or_supervisor() {
+    return self::perm_supervisor_or_admin();
+  }
   public static function perm_cs_or_admin() {
-    return is_user_logged_in() && (
-      current_user_can(Slate_Ops_Utils::CAP_ADMIN) ||
-      current_user_can(Slate_Ops_Utils::CAP_CS) ||
-      current_user_can('administrator')
-    );
+    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
   }
 
-  public static function get_jobs($req) {
-    global $wpdb;
-    $t = Slate_Ops_Utils::jobs_table();
-    $status = sanitize_text_field($req->get_param('status'));
-    $limit = (int)($req->get_param('limit') ?: 100);
-    $limit = max(1, min(500, $limit));
+  // Handlers
+  public static function me($req) {
+    return [
+      'user' => [
+        'id' => get_current_user_id(),
+        'name' => wp_get_current_user()->display_name,
+        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+      ],
+    ];
+  }
 
-    $where = "1=1";
+  public static function get_settings($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_settings';
+    $row = $wpdb->get_row("SELECT * FROM $t WHERE id=1", ARRAY_A);
+    return $row ?: [];
+  }
+
+  public static function update_settings($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_settings';
+    $body = $req->get_json_params();
+
+    $shift_start = isset($body['shift_start']) ? sanitize_text_field($body['shift_start']) : '07:00:00';
+    $shift_end = isset($body['shift_end']) ? sanitize_text_field($body['shift_end']) : '15:30:00';
+    $lunch = isset($body['lunch_minutes']) ? max(0, intval($body['lunch_minutes'])) : 30;
+    $breaks = isset($body['break_minutes']) ? max(0, intval($body['break_minutes'])) : 20;
+
+    $wpdb->update($t, [
+      'shift_start' => $shift_start,
+      'shift_end' => $shift_end,
+      'lunch_minutes' => $lunch,
+      'break_minutes' => $breaks,
+      'updated_by' => get_current_user_id(),
+      'updated_at' => Slate_Ops_Utils::now_gmt(),
+    ], ['id' => 1]);
+
+    self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks]), 'Settings updated');
+    return self::get_settings($req);
+  }
+
+  public static function list_jobs($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+    $status = $req->get_param('status');
+    $q = $req->get_param('q');
+    $limit = min(200, max(1, intval($req->get_param('limit') ?: 100)));
+
+    $where = "archived_at IS NULL";
     $params = [];
 
     if ($status) {
-      $where .= " AND status=%s";
-      $params[] = $status;
+      $where .= " AND status = %s";
+      $params[] = strtoupper(sanitize_text_field($status));
     }
 
-    $sql = "SELECT job_id, so_number, vin, customer_name, dealer_name, status, dealer_status, work_center, estimated_minutes, scheduled_start, scheduled_finish, assigned_user_id, updated_at
+    if ($q) {
+      $q = sanitize_text_field($q);
+      $where .= " AND (so_number LIKE %s OR vin LIKE %s OR customer_name LIKE %s OR dealer_name LIKE %s)";
+      $like = '%' . $wpdb->esc_like($q) . '%';
+      array_push($params, $like, $like, $like, $like);
+    }
+
+    $sql = "SELECT job_id, source, portal_quote_id, quote_number, so_number, customer_name, vin, dealer_name, job_type, parts_status, status, assigned_user_id, scheduled_start, scheduled_finish, requested_date, clickup_task_id, clickup_estimate_ms, dealer_status, updated_at
             FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
 
-    if ($params) {
-      $sql = $wpdb->prepare($sql, ...$params);
-    }
+    $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
 
-    $rows = $wpdb->get_results($sql, ARRAY_A);
+    // Add assigned display
+    foreach ($rows as &$r) {
+      $r['assigned_name'] = $r['assigned_user_id'] ? Slate_Ops_Utils::user_display($r['assigned_user_id']) : '';
+    }
 
     return ['jobs' => $rows];
   }
 
-  public static function create_job($req) {
-    global $wpdb;
-    $t = Slate_Ops_Utils::jobs_table();
-    $body = $req->get_json_params();
-
-    $data = [
-      'so_number' => sanitize_text_field($body['so_number'] ?? ''),
-      'vin' => sanitize_text_field($body['vin'] ?? ''),
-      'customer_name' => sanitize_text_field($body['customer_name'] ?? ''),
-      'dealer_name' => sanitize_text_field($body['dealer_name'] ?? ''),
-      'status' => sanitize_text_field($body['status'] ?? 'UNSCHEDULED'),
-      'dealer_status' => sanitize_text_field($body['dealer_status'] ?? 'waiting'),
-      'created_at' => Slate_Ops_Utils::now_gmt(),
-      'updated_at' => Slate_Ops_Utils::now_gmt(),
-    ];
-
-    if (!$data['status']) $data['status'] = 'UNSCHEDULED';
-    if (!$data['dealer_status']) $data['dealer_status'] = 'waiting';
-
-    $wpdb->insert($t, $data);
-    $job_id = (int)$wpdb->insert_id;
-
-    Slate_Ops_Contract::fire_job_created($job_id);
-
-    return ['ok' => true, 'job_id' => $job_id];
-  }
-
-  public static function update_job($req) {
-    global $wpdb;
-    $t = Slate_Ops_Utils::jobs_table();
-    $job_id = (int)$req['id'];
-
-    $body = $req->get_json_params();
-    $job = $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE job_id=%d", $job_id), ARRAY_A);
+  public static function get_job($req) {
+    $job_id = intval($req['id']);
+    $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-    $allowed = array_keys(Slate_Ops_Contract::schedulable_job_fields());
-    $allowed = array_merge($allowed, ['so_number','vin','customer_name','dealer_name','status','dealer_status']);
+    $breakdown = self::time_breakdown($job_id);
+    $job['time'] = $breakdown;
 
-    $updates = [];
-    $changed = [];
+    return $job;
+  }
 
-    foreach ($allowed as $k) {
-      if (!array_key_exists($k, $body)) continue;
+  public static function create_job_manual($req) {
+    global $wpdb;
+    $body = $req->get_json_params();
+    $t = $wpdb->prefix . 'slate_ops_jobs';
 
-      if (in_array($k, ['estimated_minutes','assigned_user_id'], true)) {
-        $val = (int)$body[$k];
-        $updates[$k] = $val ?: null;
-      } elseif ($k === 'requested_date') {
-        $val = sanitize_text_field($body[$k]);
-        $updates[$k] = $val ?: null;
-      } else {
-        $val = sanitize_text_field($body[$k]);
-        $updates[$k] = $val !== '' ? $val : null;
+    $customer = sanitize_text_field($body['customer_name'] ?? '');
+    $dealer = sanitize_text_field($body['dealer_name'] ?? 'Internal');
+    $vin = sanitize_text_field($body['vin'] ?? '');
+    $job_type = sanitize_key($body['job_type'] ?? 'upfit');
+    $parts_status = sanitize_key($body['parts_status'] ?? '');
+
+    $now = Slate_Ops_Utils::now_gmt();
+
+    $wpdb->insert($t, [
+      'source' => 'manual',
+      'customer_name' => $customer,
+      'dealer_name' => $dealer,
+      'vin' => $vin,
+      'job_type' => $job_type ?: 'upfit',
+      'parts_status' => $parts_status ?: null,
+      'status' => 'UNSCHEDULED',
+      'dealer_status' => 'waiting',
+      'created_by' => get_current_user_id(),
+      'created_at' => $now,
+      'updated_at' => $now,
+    ]);
+
+    $job_id = (int)$wpdb->insert_id;
+    self::audit('job', $job_id, 'create', null, null, wp_json_encode(['source'=>'manual']), 'Manual job created');
+
+    // Create ClickUp unscheduled task (best effort)
+    $job = self::job_by_id($job_id);
+    self::maybe_create_clickup_task($job);
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  public static function set_so($req) {
+    global $wpdb;
+    $job_id = intval($req['id']);
+    $body = $req->get_json_params();
+    $so = strtoupper(trim(sanitize_text_field($body['so_number'] ?? '')));
+
+    if (!Slate_Ops_Utils::so_is_valid($so)) {
+      return new WP_Error('invalid_so', 'SO# format must be S-ORD######', ['status' => 400]);
+    }
+
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+    $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE so_number=%s AND job_id<>%d", $so, $job_id));
+    if ($existing) {
+      return new WP_Error('so_exists', 'SO# already linked to another job', ['status' => 409, 'job_id' => (int)$existing]);
+    }
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $old = $job['so_number'];
+
+    $wpdb->update($t, [
+      'so_number' => $so,
+      'status' => 'READY_FOR_SCHEDULING',
+      'dealer_status' => 'waiting',
+      'updated_at' => Slate_Ops_Utils::now_gmt(),
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'so_number', $old, $so, 'SO# set');
+    self::audit('job', $job_id, 'update', 'status', $job['status'], 'READY_FOR_SCHEDULING', 'Moved to Ready for Scheduling');
+
+    // Update ClickUp name if linked.
+    $job2 = self::job_by_id($job_id);
+    self::maybe_update_clickup_name($job2);
+
+    // Push dealer portal status back (integration hook)
+    self::maybe_push_dealer_portal_status($job2);
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  public static function assign_job($req) {
+    global $wpdb;
+    $job_id = intval($req['id']);
+    $body = $req->get_json_params();
+    $user_id = intval($body['assigned_user_id'] ?? 0);
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+    $old = $job['assigned_user_id'];
+
+    $wpdb->update($t, [
+      'assigned_user_id' => $user_id ?: null,
+      'updated_at' => Slate_Ops_Utils::now_gmt(),
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'assigned_user_id', (string)$old, (string)$user_id, 'Assignment updated');
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  public static function schedule_job($req) {
+    global $wpdb;
+    $job_id = intval($req['id']);
+    $body = $req->get_json_params();
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    if (empty($job['so_number'])) {
+      return new WP_Error('missing_so', 'SO# required before scheduling', ['status' => 400]);
+    }
+
+    $start = sanitize_text_field($body['scheduled_start'] ?? '');
+    $finish = sanitize_text_field($body['scheduled_finish'] ?? '');
+
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+    $wpdb->update($t, [
+      'scheduled_start' => $start ?: null,
+      'scheduled_finish' => $finish ?: null,
+      'status' => 'SCHEDULED',
+      'dealer_status' => 'waiting',
+      'updated_at' => Slate_Ops_Utils::now_gmt(),
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'scheduled_start', $job['scheduled_start'], $start, 'Scheduled start updated');
+    self::audit('job', $job_id, 'update', 'scheduled_finish', $job['scheduled_finish'], $finish, 'Scheduled finish updated');
+    self::audit('job', $job_id, 'update', 'status', $job['status'], 'SCHEDULED', 'Job scheduled');
+
+    $job2 = self::job_by_id($job_id);
+    self::maybe_push_dealer_portal_status($job2);
+    return self::get_job(['id' => $job_id]);
+  }
+
+  public static function set_status($req) {
+    global $wpdb;
+    $job_id = intval($req['id']);
+    $body = $req->get_json_params();
+    $new = strtoupper(sanitize_text_field($body['status'] ?? ''));
+    $note = sanitize_text_field($body['note'] ?? '');
+
+    $allowed = ['UNSCHEDULED','READY_FOR_SCHEDULING','SCHEDULED','IN_PROGRESS','PENDING_QC','COMPLETE','DELAYED','BLOCKED'];
+    if (!in_array($new, $allowed, true)) {
+      return new WP_Error('invalid_status', 'Invalid status', ['status' => 400]);
+    }
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    // QC approve: only supervisor/admin can set COMPLETE from PENDING_QC.
+    if ($new === 'COMPLETE' && $job['status'] === 'PENDING_QC' && !self::perm_supervisor_or_admin()) {
+      return new WP_Error('forbidden', 'Supervisor required for QC approve', ['status' => 403]);
+    }
+
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+    $dealer_status = Slate_Ops_Utils::dealer_status_from_internal($new);
+
+    $wpdb->update($t, [
+      'status' => $new,
+      'dealer_status' => $dealer_status,
+      'updated_at' => Slate_Ops_Utils::now_gmt(),
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'status', $job['status'], $new, $note ?: 'Status updated');
+
+    $job2 = self::job_by_id($job_id);
+    self::maybe_push_dealer_portal_status($job2);
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  public static function time_start($req) {
+    global $wpdb;
+    $body = $req->get_json_params();
+    $job_id = intval($body['job_id'] ?? 0);
+    $reason = sanitize_key($body['reason'] ?? '');
+    $note = sanitize_text_field($body['note'] ?? '');
+
+    if (!$job_id) return new WP_Error('missing_job', 'job_id required', ['status' => 400]);
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $user_id = get_current_user_id();
+
+    // Auto-stop any open segment for this tech.
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $open = $wpdb->get_row($wpdb->prepare("SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' ORDER BY start_ts DESC LIMIT 1", $user_id), ARRAY_A);
+    if ($open) {
+      $wpdb->update($segments, [
+        'end_ts' => Slate_Ops_Utils::now_gmt(),
+        'updated_at' => Slate_Ops_Utils::now_gmt(),
+      ], ['segment_id' => (int)$open['segment_id']]);
+
+      self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, Slate_Ops_Utils::now_gmt(), 'Auto-stopped due to starting another job');
+    }
+
+    // Reason required when not assigned (and assignment exists).
+    $assigned = (int)($job['assigned_user_id'] ?? 0);
+    if ($assigned && $assigned !== $user_id) {
+      $reason = Slate_Ops_Utils::sanitize_reason($reason);
+      if ($reason === 'other' && empty($note)) {
+        return new WP_Error('reason_required', 'Reason note required for "Other"', ['status' => 400]);
       }
-
-      $changed[] = $k;
+    } else {
+      $reason = null;
     }
 
-    if (!$updates) return ['ok' => true, 'job_id' => $job_id, 'changed' => []];
+    $now = Slate_Ops_Utils::now_gmt();
+    $wpdb->insert($segments, [
+      'job_id' => $job_id,
+      'user_id' => $user_id,
+      'start_ts' => $now,
+      'end_ts' => null,
+      'reason' => $reason,
+      'note' => $note ?: null,
+      'source' => 'timer',
+      'state' => 'active',
+      'approval_status' => 'approved',
+      'created_by' => $user_id,
+      'created_at' => $now,
+      'updated_at' => $now,
+    ]);
 
-    $updates['updated_at'] = Slate_Ops_Utils::now_gmt();
+    $segment_id = (int)$wpdb->insert_id;
+    self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'user_id'=>$user_id]), 'Timer started');
 
-    $wpdb->update($t, $updates, ['job_id' => $job_id]);
-
-    Slate_Ops_Contract::fire_job_updated($job_id, $changed);
-
-    // If schedule-related fields changed, fire schedule hook too
-    $sched_fields = ['scheduled_start','scheduled_finish','work_center','estimated_minutes','assigned_user_id'];
-    if (count(array_intersect($sched_fields, $changed)) > 0) {
-      Slate_Ops_Contract::fire_schedule_updated($job_id, array_values(array_intersect($sched_fields, $changed)));
+    // Set job to IN_PROGRESS if needed.
+    if (!in_array($job['status'], ['IN_PROGRESS','PENDING_QC','COMPLETE'], true)) {
+      self::set_status(['id'=>$job_id, 'status'=>'IN_PROGRESS', 'note'=>'Auto set by timer start']);
     }
 
-    return ['ok' => true, 'job_id' => $job_id, 'changed' => $changed];
+    return [
+      'segment_id' => $segment_id,
+      'job_id' => $job_id,
+      'started_at' => $now,
+    ];
+  }
+
+  public static function time_stop($req) {
+    global $wpdb;
+    $user_id = get_current_user_id();
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $open = $wpdb->get_row($wpdb->prepare("SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' ORDER BY start_ts DESC LIMIT 1", $user_id), ARRAY_A);
+    if (!$open) {
+      return new WP_Error('no_active_timer', 'No active timer', ['status' => 400]);
+    }
+
+    $now = Slate_Ops_Utils::now_gmt();
+    $wpdb->update($segments, [
+      'end_ts' => $now,
+      'updated_at' => $now,
+    ], ['segment_id' => (int)$open['segment_id']]);
+
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $now, 'Timer stopped');
+
+    return [
+      'segment_id' => (int)$open['segment_id'],
+      'stopped_at' => $now,
+    ];
+  }
+
+  public static function time_correction_request($req) {
+    // V1: tech submits a correction as a new pending segment (no auto-void logic yet).
+    // Supervisor can later void/replace segments; UI will show pending minutes separately.
+    global $wpdb;
+    $body = $req->get_json_params();
+    $job_id = intval($body['job_id'] ?? 0);
+    $start = sanitize_text_field($body['start_ts'] ?? '');
+    $end = sanitize_text_field($body['end_ts'] ?? '');
+    $note = sanitize_text_field($body['note'] ?? '');
+
+    if (!$job_id || !$start || !$end) return new WP_Error('missing_fields', 'job_id, start_ts, end_ts required', ['status' => 400]);
+    if (empty($note)) return new WP_Error('note_required', 'Reason note required', ['status' => 400]);
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $now = Slate_Ops_Utils::now_gmt();
+
+    $wpdb->insert($segments, [
+      'job_id' => $job_id,
+      'user_id' => get_current_user_id(),
+      'start_ts' => $start,
+      'end_ts' => $end,
+      'reason' => null,
+      'note' => $note,
+      'source' => 'manual_fix',
+      'state' => 'active',
+      'approval_status' => 'pending',
+      'created_by' => get_current_user_id(),
+      'created_at' => $now,
+      'updated_at' => $now,
+    ]);
+
+    $segment_id = (int)$wpdb->insert_id;
+    self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'start'=>$start,'end'=>$end]), 'Time correction submitted (pending)');
+
+    return ['segment_id' => $segment_id, 'approval_status' => 'pending'];
+  }
+
+  public static function supervisor_queues($req) {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $jobs = $wpdb->prefix . 'slate_ops_jobs';
+
+    // Pending corrections
+    $pending = $wpdb->get_results("SELECT s.segment_id, s.job_id, s.user_id, s.start_ts, s.end_ts, s.note, s.source, s.approval_status
+      FROM $segments s WHERE s.approval_status='pending' AND s.state='active' ORDER BY s.created_at DESC LIMIT 100", ARRAY_A);
+
+    // Unassigned segments: tech != assigned_user_id and assigned_user_id not null
+    $unassigned = $wpdb->get_results("SELECT s.segment_id, s.job_id, s.user_id, s.start_ts, s.end_ts, s.reason, s.note
+      FROM $segments s
+      JOIN $jobs j ON j.job_id = s.job_id
+      WHERE j.assigned_user_id IS NOT NULL AND j.assigned_user_id <> s.user_id
+        AND s.state='active' AND s.end_ts IS NOT NULL
+      ORDER BY s.end_ts DESC LIMIT 200", ARRAY_A);
+
+    return [
+      'pending_corrections' => array_map([__CLASS__, 'decorate_segment'], $pending),
+      'unassigned_segments' => array_map([__CLASS__, 'decorate_segment'], $unassigned),
+    ];
+  }
+
+  // Helpers
+  private static function decorate_segment($s) {
+    $s['user_name'] = Slate_Ops_Utils::user_display($s['user_id']);
+    return $s;
+  }
+
+  private static function job_by_id($job_id) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+    $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE job_id=%d", $job_id), ARRAY_A);
+    if ($row) {
+      $row['assigned_name'] = $row['assigned_user_id'] ? Slate_Ops_Utils::user_display($row['assigned_user_id']) : '';
+    }
+    return $row;
+  }
+
+  private static function time_breakdown($job_id) {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+
+    $rows = $wpdb->get_results($wpdb->prepare("
+      SELECT user_id,
+        SUM(CASE WHEN approval_status='approved' AND state='active' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as approved_minutes,
+        SUM(CASE WHEN approval_status='pending' AND state='active' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as pending_minutes,
+        COUNT(*) as segment_count,
+        MAX(COALESCE(end_ts, start_ts)) as last_activity
+      FROM $segments
+      WHERE job_id=%d AND state='active'
+      GROUP BY user_id
+      ORDER BY approved_minutes DESC, pending_minutes DESC
+    ", $job_id), ARRAY_A);
+
+    $by_tech = [];
+    $approved_total = 0;
+    $pending_total = 0;
+
+    foreach ($rows as $r) {
+      $approved_total += (int)$r['approved_minutes'];
+      $pending_total += (int)$r['pending_minutes'];
+      $by_tech[] = [
+        'user_id' => (int)$r['user_id'],
+        'user_name' => Slate_Ops_Utils::user_display($r['user_id']),
+        'approved_minutes' => (int)$r['approved_minutes'],
+        'pending_minutes' => (int)$r['pending_minutes'],
+        'segment_count' => (int)$r['segment_count'],
+        'last_activity' => $r['last_activity'],
+      ];
+    }
+
+    return [
+      'approved_minutes_total' => $approved_total,
+      'pending_minutes_total' => $pending_total,
+      'by_tech' => $by_tech,
+    ];
+  }
+
+  private static function audit($entity_type, $entity_id, $action, $field, $old, $new, $note = '') {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_audit_log';
+    $wpdb->insert($t, [
+      'entity_type' => sanitize_key($entity_type),
+      'entity_id' => (int)$entity_id,
+      'action' => sanitize_key($action),
+      'field_name' => $field ? sanitize_key($field) : null,
+      'old_value' => $old !== null ? maybe_serialize($old) : null,
+      'new_value' => $new !== null ? maybe_serialize($new) : null,
+      'note' => $note ? sanitize_text_field($note) : null,
+      'user_id' => get_current_user_id(),
+      'ip_address' => isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : null,
+      'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : null,
+      'created_at' => Slate_Ops_Utils::now_gmt(),
+    ]);
+  }
+
+  private static function maybe_create_clickup_task($job) {
+    if (!$job || !empty($job['clickup_task_id'])) return;
+
+    $name = 'UNSCHEDULED - ' . ($job['customer_name'] ?: 'Job ' . $job['job_id']);
+    $desc = "Slate Ops Job\n\n"
+      . "Job ID: {$job['job_id']}\n"
+      . ($job['portal_quote_id'] ? "Portal Quote ID: {$job['portal_quote_id']}\n" : "")
+      . ($job['quote_number'] ? "Quote #: {$job['quote_number']}\n" : "")
+      . ($job['vin'] ? "VIN: {$job['vin']}\n" : "")
+      . ($job['dealer_name'] ? "Dealer: {$job['dealer_name']}\n" : "")
+      . "Status: UNSCHEDULED\n";
+
+    $resp = Slate_Ops_ClickUp::create_unscheduled_task($name, $desc);
+    if (is_wp_error($resp)) return;
+
+    if (!empty($resp['id'])) {
+      global $wpdb;
+      $t = $wpdb->prefix . 'slate_ops_jobs';
+      $wpdb->update($t, [
+        'clickup_task_id' => sanitize_text_field($resp['id']),
+        'updated_at' => Slate_Ops_Utils::now_gmt(),
+      ], ['job_id' => (int)$job['job_id']]);
+      self::audit('job', (int)$job['job_id'], 'update', 'clickup_task_id', null, (string)$resp['id'], 'ClickUp task created');
+    }
+  }
+
+  private static function maybe_update_clickup_name($job) {
+    if (!$job || empty($job['clickup_task_id']) || empty($job['so_number'])) return;
+    $vin_last6 = $job['vin'] ? substr(preg_replace('/\s+/', '', $job['vin']), -6) : '';
+    $name = $job['so_number'] . ' - ' . ($job['customer_name'] ?: 'Customer') . ($vin_last6 ? ' - ' . $vin_last6 : '');
+    Slate_Ops_ClickUp::update_task_name($job['clickup_task_id'], $name);
+  }
+
+  private static function maybe_push_dealer_portal_status($job) {
+    if (!$job) return;
+    // Integration point: your Dealer Portal can hook this action and persist dealer status however it wants.
+    do_action('slate_ops_dealer_status_changed', (int)$job['job_id'], sanitize_text_field($job['dealer_status']), $job);
+  }
+
+  public static function handle_quote_approved($quote_id) {
+    // Minimal implementation: create job from quote approval.
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+    $now = Slate_Ops_Utils::now_gmt();
+
+    // Avoid duplicates: one job per portal_quote_id
+    $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE portal_quote_id=%d AND archived_at IS NULL", $quote_id));
+    if ($existing) return;
+
+    $wpdb->insert($t, [
+      'source' => 'portal',
+      'portal_quote_id' => $quote_id,
+      'status' => 'UNSCHEDULED',
+      'dealer_status' => 'waiting',
+      'created_by' => get_current_user_id() ?: null,
+      'created_at' => $now,
+      'updated_at' => $now,
+    ]);
+
+    $job_id = (int)$wpdb->insert_id;
+    self::audit('job', $job_id, 'create', null, null, wp_json_encode(['source'=>'portal','portal_quote_id'=>$quote_id]), 'Job created from portal approval');
+
+    $job = self::job_by_id($job_id);
+    self::maybe_create_clickup_task($job);
+    self::maybe_push_dealer_portal_status($job);
   }
 }
