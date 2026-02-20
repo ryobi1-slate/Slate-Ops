@@ -4,6 +4,19 @@ if (!defined('ABSPATH')) exit;
 class Slate_Ops_Install {
 
   public static function activate() {
+    self::run_install(true);
+  }
+
+  public static function maybe_upgrade() {
+    $installed = get_option('slate_ops_version', '0.0.0');
+    if (version_compare((string) $installed, (string) SLATE_OPS_VERSION, '>=')) {
+      return;
+    }
+
+    self::run_install(false);
+  }
+
+  private static function run_install($flush_rewrites = false) {
     global $wpdb;
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
@@ -29,11 +42,12 @@ quote_number VARCHAR(64) NULL,
 so_number VARCHAR(32) NULL,
 customer_name VARCHAR(255) NULL,
 vin VARCHAR(32) NULL,
+vin_last8 VARCHAR(8) NULL,
 dealer_name VARCHAR(255) NULL,
 
 -- Classification
-job_type VARCHAR(30) NOT NULL DEFAULT 'upfit',
-parts_status VARCHAR(20) NULL,
+job_type VARCHAR(30) NOT NULL DEFAULT 'UPFIT',
+parts_status VARCHAR(20) NOT NULL DEFAULT 'NOT_READY',
 
 -- Status + scheduling
 status VARCHAR(30) NOT NULL DEFAULT 'UNSCHEDULED',
@@ -49,6 +63,10 @@ estimated_minutes INT UNSIGNED NULL,
 scheduled_start DATETIME NULL,
 scheduled_finish DATETIME NULL,
 requested_date DATE NULL,
+
+sales_person VARCHAR(255) NULL,
+stock_number VARCHAR(64) NULL,
+notes TEXT NULL,
 
 -- ClickUp
 clickup_task_id VARCHAR(64) NULL,
@@ -67,7 +85,7 @@ archived_by BIGINT UNSIGNED NULL,
 archive_reason VARCHAR(255) NULL,
 
 PRIMARY KEY  (job_id),
-UNIQUE KEY so_unique (so_number),
+KEY so_idx (so_number),
 KEY status_idx (status),
 KEY status_updated_idx (status_updated_at),
 KEY assigned_idx (assigned_user_id),
@@ -140,7 +158,6 @@ KEY created_from_idx (created_from)
     dbDelta($sql_audit);
     dbDelta($sql_settings);
 
-    // Seed settings row if missing.
     $exists = $wpdb->get_var("SELECT COUNT(*) FROM $settings WHERE id=1");
     if (!$exists) {
       $wpdb->insert($settings, [
@@ -154,10 +171,13 @@ KEY created_from_idx (created_from)
       ]);
     }
 
-    // Flush rewrites once.
-    Slate_Ops_Roles::register_roles_caps();
-    Slate_Ops_Routes::register_routes();
-    flush_rewrite_rules();
+    update_option('slate_ops_version', SLATE_OPS_VERSION);
+
+    if ($flush_rewrites) {
+      Slate_Ops_Roles::register_roles_caps();
+      Slate_Ops_Routes::register_routes();
+      flush_rewrite_rules();
+    }
   }
 
   public static function deactivate() {
