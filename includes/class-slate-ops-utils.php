@@ -26,7 +26,64 @@ class Slate_Ops_Utils {
 
   public static function so_is_valid($so) {
     $so = strtoupper(trim((string)$so));
-    return (bool) preg_match('/^S-ORD\d{6}$/', $so);
+    return (bool) preg_match('/^S-ORD\d{5}$/', $so);
+  }
+
+  public static function vin_last8_is_valid($vin_last8) {
+    return (bool) preg_match('/^[A-HJ-NPR-Z0-9]{8}$/', strtoupper((string) $vin_last8));
+  }
+
+  public static function cs_job_types() {
+    return [
+      'UPFIT',
+      'COMMERCIAL_UPFIT',
+      'COMMERCIAL_BUILD',
+      'RV_BUILD',
+      'RV_UPFIT',
+      'PARTS_ONLY',
+      'SERVICE',
+      'WARRANTY',
+    ];
+  }
+
+  public static function cs_created_from_values() {
+    return ['portal', 'manual', 'import'];
+  }
+
+  public static function cs_parts_statuses() {
+    return ['NOT_READY', 'PARTIAL', 'READY', 'HOLD'];
+  }
+
+  public static function default_dealer_list() {
+    return [
+      'Northwest Fleet',
+      'Pacific Utility Vehicles',
+      'Summit Commercial',
+      'Canyon RV Center',
+      'Metro Work Trucks',
+    ];
+  }
+
+  public static function default_sales_person_list() {
+    return [
+      'Inside Sales',
+      'Regional Sales',
+      'Dealer Rep',
+    ];
+  }
+
+  public static function sanitize_list_lines($value) {
+    if (is_array($value)) {
+      $items = $value;
+    } else {
+      $normalized = str_replace(["\r\n", "\r"], "\n", (string) $value);
+      $items = explode("\n", $normalized);
+    }
+
+    $items = array_map('sanitize_text_field', $items);
+    $items = array_values(array_filter(array_map('trim', $items)));
+
+    return $items;
   }
 
   public static function dealer_status_from_internal($status) {

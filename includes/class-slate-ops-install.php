@@ -4,6 +4,19 @@ if (!defined('ABSPATH')) exit;
 class Slate_Ops_Install {
 
   public static function activate() {
+    self::run_install(true);
+  }
+
+  public static function maybe_upgrade() {
+    $installed = get_option('slate_ops_version', '0.0.0');
+    if (version_compare((string) $installed, (string) SLATE_OPS_VERSION, '>=')) {
+      return;
+    }
+
+    self::run_install(false);
+  }
+
+  private static function run_install($flush_rewrites = false) {
     global $wpdb;
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
@@ -29,11 +42,12 @@ quote_number VARCHAR(64) NULL,
 so_number VARCHAR(32) NULL,
 customer_name VARCHAR(255) NULL,
 vin VARCHAR(32) NULL,
+vin_last8 VARCHAR(8) NULL,
 dealer_name VARCHAR(255) NULL,
 
 -- Classification
-job_type VARCHAR(30) NOT NULL DEFAULT 'upfit',
-parts_status VARCHAR(20) NULL,
+job_type VARCHAR(30) NOT NULL DEFAULT 'UPFIT',
+parts_status VARCHAR(20) NOT NULL DEFAULT 'NOT_READY',
 
 -- Status + scheduling
 status VARCHAR(30) NOT NULL DEFAULT 'UNSCHEDULED',
@@ -49,6 +63,10 @@ estimated_minutes INT UNSIGNED NULL,
 scheduled_start DATETIME NULL,
 scheduled_finish DATETIME NULL,
 requested_date DATE NULL,
+
+sales_person VARCHAR(255) NULL,
+stock_number VARCHAR(64) NULL,
+notes TEXT NULL,
 
 -- ClickUp
 clickup_task_id VARCHAR(64) NULL,
@@ -67,7 +85,7 @@ archived_by BIGINT UNSIGNED NULL,
 archive_reason VARCHAR(255) NULL,
 
 PRIMARY KEY  (job_id),
-UNIQUE KEY so_unique (so_number),
+KEY so_idx (so_number),
 KEY status_idx (status),
 KEY status_updated_idx (status_updated_at),
 KEY assigned_idx (assigned_user_id),
@@ -130,6 +148,8 @@ KEY created_from_idx (created_from)
       lunch_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 30,
       break_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 20,
       timezone VARCHAR(64) NOT NULL DEFAULT 'America/Los_Angeles',
+      dealer_list TEXT NULL,
+      sales_person_list TEXT NULL,
       updated_by BIGINT UNSIGNED NULL,
       updated_at DATETIME NOT NULL,
       PRIMARY KEY (id)
@@ -140,7 +160,6 @@ KEY created_from_idx (created_from)
     dbDelta($sql_audit);
     dbDelta($sql_settings);
 
-    // Seed settings row if missing.
     $exists = $wpdb->get_var("SELECT COUNT(*) FROM $settings WHERE id=1");
     if (!$exists) {
       $wpdb->insert($settings, [
@@ -150,14 +169,35 @@ KEY created_from_idx (created_from)
         'lunch_minutes' => 30,
         'break_minutes' => 20,
         'timezone' => 'America/Los_Angeles',
+        'dealer_list' => implode("\n", Slate_Ops_Utils::default_dealer_list()),
+        'sales_person_list' => implode("\n", Slate_Ops_Utils::default_sales_person_list()),
         'updated_at' => gmdate('Y-m-d H:i:s'),
       ]);
+    } else {
+      $current = $wpdb->get_row("SELECT dealer_list, sales_person_list FROM $settings WHERE id=1", ARRAY_A);
+      $dealer_list = isset($current['dealer_list']) ? trim((string) $current['dealer_list']) : '';
+      $sales_list = isset($current['sales_person_list']) ? trim((string) $current['sales_person_list']) : '';
+
+      $updates = [];
+      if ($dealer_list === '') {
+        $updates['dealer_list'] = implode("\n", Slate_Ops_Utils::default_dealer_list());
+      }
+      if ($sales_list === '') {
+        $updates['sales_person_list'] = implode("\n", Slate_Ops_Utils::default_sales_person_list());
+      }
+      if (!empty($updates)) {
+        $updates['updated_at'] = gmdate('Y-m-d H:i:s');
+        $wpdb->update($settings, $updates, ['id' => 1]);
+      }
     }
 
-    // Flush rewrites once.
-    Slate_Ops_Roles::register_roles_caps();
-    Slate_Ops_Routes::register_routes();
-    flush_rewrite_rules();
+    update_option('slate_ops_version', SLATE_OPS_VERSION);
+
+    if ($flush_rewrites) {
+      Slate_Ops_Roles::register_roles_caps();
+      Slate_Ops_Routes::register_routes();
+      flush_rewrite_rules();
+    }
   }
 
   public static function deactivate() {
