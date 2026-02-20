@@ -227,28 +227,8 @@ foreach ($rows as &$r) {
   $r['actual_minutes'] = $actual_map[(int)$r['job_id']] ?? 0;
 }
 
-return ['jobs' => $rows];
-  }
-
-    if ($q) {
-      $q = sanitize_text_field($q);
-      $where .= " AND (so_number LIKE %s OR vin LIKE %s OR customer_name LIKE %s OR dealer_name LIKE %s)";
-      $like = '%' . $wpdb->esc_like($q) . '%';
-      array_push($params, $like, $like, $like, $like);
-    }
-
-    $sql = "SELECT job_id, source, portal_quote_id, quote_number, so_number, customer_name, vin, dealer_name, job_type, parts_status, status, assigned_user_id, scheduled_start, scheduled_finish, requested_date, clickup_task_id, clickup_estimate_ms, dealer_status, updated_at
-            FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
-
-    $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
-
-    // Add assigned display
-    foreach ($rows as &$r) {
-      $r['assigned_name'] = $r['assigned_user_id'] ? Slate_Ops_Utils::user_display($r['assigned_user_id']) : '';
-    }
-
-    return ['jobs' => $rows];
-  }
+	return ['jobs' => $rows];
+	  }
 
   public static function get_job($req) {
     $job_id = intval($req['id']);
@@ -406,28 +386,7 @@ self::maybe_update_clickup_name($job);
 self::maybe_push_dealer_portal_status($job);
 
 return self::get_job(['id' => $job_id]);
-  }
-
-    $start = sanitize_text_field($body['scheduled_start'] ?? '');
-    $finish = sanitize_text_field($body['scheduled_finish'] ?? '');
-
-    $t = $wpdb->prefix . 'slate_ops_jobs';
-    $wpdb->update($t, [
-      'scheduled_start' => $start ?: null,
-      'scheduled_finish' => $finish ?: null,
-      'status' => 'SCHEDULED',
-      'dealer_status' => 'waiting',
-      'updated_at' => Slate_Ops_Utils::now_gmt(),
-    ], ['job_id' => $job_id]);
-
-    self::audit('job', $job_id, 'update', 'scheduled_start', $job['scheduled_start'], $start, 'Scheduled start updated');
-    self::audit('job', $job_id, 'update', 'scheduled_finish', $job['scheduled_finish'], $finish, 'Scheduled finish updated');
-    self::audit('job', $job_id, 'update', 'status', $job['status'], 'SCHEDULED', 'Job scheduled');
-
-    $job2 = self::job_by_id($job_id);
-    self::maybe_push_dealer_portal_status($job2);
-    return self::get_job(['id' => $job_id]);
-  }
+	  }
 
   public static function set_status($req) {
 global $wpdb;
@@ -471,32 +430,7 @@ $job = self::job_by_id($job_id);
 self::maybe_push_dealer_portal_status($job);
 
 return self::get_job(['id' => $job_id]);
-  }
-
-    $job = self::job_by_id($job_id);
-    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
-
-    // QC approve: only supervisor/admin can set COMPLETE from PENDING_QC.
-    if ($new === 'COMPLETE' && $job['status'] === 'PENDING_QC' && !self::perm_supervisor_or_admin()) {
-      return new WP_Error('forbidden', 'Supervisor required for QC approve', ['status' => 403]);
-    }
-
-    $t = $wpdb->prefix . 'slate_ops_jobs';
-    $dealer_status = Slate_Ops_Utils::dealer_status_from_internal($new);
-
-    $wpdb->update($t, [
-      'status' => $new,
-      'dealer_status' => $dealer_status,
-      'updated_at' => Slate_Ops_Utils::now_gmt(),
-    ], ['job_id' => $job_id]);
-
-    self::audit('job', $job_id, 'update', 'status', $job['status'], $new, $note ?: 'Status updated');
-
-    $job2 = self::job_by_id($job_id);
-    self::maybe_push_dealer_portal_status($job2);
-
-    return self::get_job(['id' => $job_id]);
-  }
+	  }
 
   public static function time_start($req) {
     global $wpdb;
@@ -693,9 +627,7 @@ if ($row) {
   $seg = $wpdb->prefix . 'slate_ops_time_segments';
   $mins = $wpdb->get_var($wpdb->prepare("SELECT SUM(TIMESTAMPDIFF(MINUTE, start_ts, end_ts)) FROM $seg WHERE job_id=%d AND end_ts IS NOT NULL", (int)$job_id));
   $row['actual_minutes'] = (int)($mins ?: 0);
-}
-return $row;
-  }
+	  }
     return $row;
   }
 
