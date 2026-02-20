@@ -323,10 +323,10 @@ foreach ($rows as &$r) {
     $vin_last8 = strtoupper(trim(sanitize_text_field($body['vin_last8'] ?? '')));
     if ($job_type !== 'PARTS_ONLY' && !$no_vin_required) {
       if (!Slate_Ops_Utils::vin_last8_is_valid($vin_last8)) {
-        return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN Last 8 is required and must be 8 alphanumeric characters.');
+        return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN is required and must be 7–8 alphanumeric characters.');
       }
     } elseif ($vin_last8 !== '' && !Slate_Ops_Utils::vin_last8_is_valid($vin_last8)) {
-      return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN Last 8 must be 8 alphanumeric characters.');
+      return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN must be 7–8 alphanumeric characters.');
     }
 
     $requested_date = sanitize_text_field($body['requested_date'] ?? '');

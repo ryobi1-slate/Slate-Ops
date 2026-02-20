@@ -617,7 +617,7 @@ async function loadCreateJobInto(selector){
         <div class="field-error" data-error-for="customer_name"></div>
       </div>
       <div>
-        <div class="label" style="margin-bottom:6px;">VIN Last 8</div>
+        <div class="label" style="margin-bottom:6px;">VIN Last 7–8</div>
         <input class="input" id="vin_last8" maxlength="8" placeholder="A1B2C3D4" />
         <div class="field-error" data-error-for="vin_last8"></div>
       </div>
