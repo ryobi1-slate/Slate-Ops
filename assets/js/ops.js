@@ -599,9 +599,9 @@ async function loadCreateJobInto(selector){
 
     <div class="form-grid">
       <div>
-        <div class="label" style="margin-bottom:6px;">Customer</div>
-        <input class="input" id="customer_name" placeholder="Customer name" />
-        <div class="field-error" data-error-for="customer_name"></div>
+        <div class="label" style="margin-bottom:6px;">SO#</div>
+        <input class="input" id="so_number" placeholder="S-ORD101350" />
+        <div class="field-error" data-error-for="so_number"></div>
       </div>
       <div>
         <div class="label" style="margin-bottom:6px;">Dealer</div>
@@ -610,6 +610,16 @@ async function loadCreateJobInto(selector){
           ${dealerOptions}
         </select>
         <div class="field-error" data-error-for="dealer_name"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Customer</div>
+        <input class="input" id="customer_name" placeholder="Customer name" />
+        <div class="field-error" data-error-for="customer_name"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">VIN Last 8</div>
+        <input class="input" id="vin_last8" maxlength="8" placeholder="A1B2C3D4" />
+        <div class="field-error" data-error-for="vin_last8"></div>
       </div>
       <div>
         <div class="label" style="margin-bottom:6px;">Sales Person</div>
@@ -634,9 +644,13 @@ async function loadCreateJobInto(selector){
         <div class="field-error" data-error-for="job_type"></div>
       </div>
       <div>
-        <div class="label" style="margin-bottom:6px;">VIN Last 8</div>
-        <input class="input" id="vin_last8" maxlength="8" placeholder="A1B2C3D4" />
-        <div class="field-error" data-error-for="vin_last8"></div>
+        <div class="label" style="margin-bottom:6px;">Created From</div>
+        <div class="input" style="background:var(--surface2,#f4f4f4);color:var(--muted,#888);cursor:default;">Manual Entry</div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
+        <input class="input" id="estimated_hours" type="number" min="0.5" step="0.5" placeholder="e.g. 2.5" />
+        <div class="field-error" data-error-for="estimated_hours"></div>
       </div>
       <div>
         <div class="label" style="margin-bottom:6px;">Parts Status</div>
@@ -649,20 +663,15 @@ async function loadCreateJobInto(selector){
         <div class="field-error" data-error-for="parts_status"></div>
       </div>
       <div>
-        <div class="label" style="margin-bottom:6px;">Requested Date</div>
+        <div class="label" style="margin-bottom:6px;">Requested Completion Date</div>
         <input class="input" id="requested_date" type="date" />
         <div class="field-error" data-error-for="requested_date"></div>
-      </div>
-      <div>
-        <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
-        <input class="input" id="estimated_hours" type="number" min="0" step="0.1" placeholder="0.0" />
-        <div class="field-error" data-error-for="estimated_hours"></div>
       </div>
     </div>
 
     <div style="margin-top:10px;">
       <div class="label" style="margin-bottom:6px;">Notes</div>
-      <textarea class="input" id="notes" rows="3" placeholder="Notes"></textarea>
+      <textarea class="input" id="notes" rows="4" placeholder="Additional notes, special instructions, parts details…"></textarea>
     </div>
 
     <div class="row" style="margin-top:12px;">
@@ -675,16 +684,18 @@ async function loadCreateJobInto(selector){
     clearCreateJobErrors(host);
 
     const notesInput = host.querySelector('#notes').value.trim();
+    const soInput = host.querySelector('#so_number').value.trim().toUpperCase();
     const payload = {
-      customer_name: host.querySelector('#customer_name').value.trim(),
+      so_number: soInput || undefined,
       dealer_name: host.querySelector('#dealer_name').value.trim(),
+      customer_name: host.querySelector('#customer_name').value.trim(),
       vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
+      sales_person: host.querySelector('#sales_person').value.trim(),
       job_type: host.querySelector('#job_type').value,
       created_from: 'manual',
       estimated_hours: host.querySelector('#estimated_hours').value.trim(),
       parts_status: host.querySelector('#parts_status').value,
       requested_date: host.querySelector('#requested_date').value,
-      sales_person: host.querySelector('#sales_person').value.trim(),
       notes: notesInput,
       notes_type: notesInput.toLowerCase().includes('part') ? 'parts' : '',
     };
