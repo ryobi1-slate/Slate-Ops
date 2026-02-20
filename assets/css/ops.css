@@ -236,3 +236,11 @@ body.ops-role-tech .ops-nav-link { flex: 1 1 0; text-align: center; padding: 10p
   .ops-main { grid-template-columns: 1fr; }
   .ops-nav { flex-direction: row; overflow-x: auto; }
 }
+
+
+.field-error{
+  color:#b42318;
+  font-size:12px;
+  margin-top:4px;
+  min-height:16px;
+}

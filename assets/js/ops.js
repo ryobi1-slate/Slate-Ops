@@ -480,74 +480,11 @@
   }
 
   async function loadCreateJob(){
-    view(`
-      <div class="card">
-        <h2>Create Job</h2>
-        <div class="row">
-          <div style="flex:1 1 260px;">
-            <div class="label" style="margin-bottom:6px;">Customer</div>
-            <input class="input" id="customer_name" placeholder="Customer name" />
-          </div>
-          <div style="flex:1 1 260px;">
-            <div class="label" style="margin-bottom:6px;">Dealer</div>
-            <input class="input" id="dealer_name" placeholder="Dealer or Internal" value="Internal" />
-          </div>
-          <div style="flex:1 1 260px;">
-            <div class="label" style="margin-bottom:6px;">VIN</div>
-            <input class="input" id="vin" placeholder="VIN (optional)" />
-          </div>
-        </div>
+  view(`<div class="card" id="create-job-page"></div>`);
+  await loadCreateJobInto('#create-job-page');
+}
 
-        <div class="row" style="margin-top:10px;">
-          <div style="flex:1 1 260px;">
-            <div class="label" style="margin-bottom:6px;">Job Type</div>
-            <select class="input" id="job_type">
-              <option value="upfit">Upfit</option>
-              <option value="warranty">Warranty</option>
-              <option value="rework">Rework</option>
-              <option value="service">Service</option>
-              <option value="internal">Internal</option>
-              <option value="parts">Parts:</option>
-            </select>
-          </div>
-          <div style="flex:1 1 260px;">
-            <div class="label" style="margin-bottom:6px;">Parts Status</div>
-            <select class="input" id="parts_status">
-              <option value="">—</option>
-              <option value="ordered">Ordered</option>
-              <option value="received">Received</option>
-              <option value="kitted">Kitted</option>
-              <option value="missing">Missing</option>
-              <option value="returned">Returned</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="margin-top:12px;">
-          <button class="btn" id="create_btn">Create</button>
-        </div>
-      </div>
-    `);
-
-    $('#create_btn').onclick = async () => {
-      try{
-        const payload = {
-          customer_name: $('#customer_name').value.trim(),
-          dealer_name: $('#dealer_name').value.trim(),
-          vin: $('#vin').value.trim(),
-          job_type: $('#job_type').value,
-          parts_status: $('#parts_status').value || '',
-        };
-        const job = await api.createJob(payload);
-        window.history.pushState({}, '', '/ops/job/' + job.job_id);
-        router();
-      }catch(e){
-        alert(e.message);
-      }
-    };
-  }
-
-  function escapeHtml(s){
+function escapeHtml(s){
     return String(s||'')
       .replaceAll('&','&amp;')
       .replaceAll('<','&lt;')
@@ -565,66 +502,181 @@
   `;
 }
 
+function setFieldError(host, field, message){
+  const errorEl = host.querySelector(`[data-error-for="${field}"]`);
+  if (errorEl) {
+    errorEl.textContent = message || '';
+  }
+}
+
+function clearCreateJobErrors(host){
+  host.querySelectorAll('.field-error').forEach((el) => {
+    el.textContent = '';
+  });
+}
+
 async function loadCreateJobInto(selector){
   const host = document.querySelector(selector);
   if(!host) return;
+
+  const dealerOptions = (slateOpsSettings.dealers || []).map((dealer) => `
+    <option value="${escapeHtml(dealer)}">${escapeHtml(dealer)}</option>
+  `).join('');
+
   host.innerHTML = `
     <div class="label" style="margin-bottom:8px;">Create Job</div>
+
     <div class="row">
-      <div style="flex:1 1 280px;">
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">SO#</div>
+        <input class="input" id="so_number" placeholder="S-ORD12345" />
+        <div class="field-error" data-error-for="so_number"></div>
+      </div>
+      <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Customer</div>
         <input class="input" id="customer_name" placeholder="Customer name" />
+        <div class="field-error" data-error-for="customer_name"></div>
       </div>
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Dealer</div>
-        <input class="input" id="dealer_name" placeholder="Dealer (optional)" />
-      </div>
-      <div style="flex:1 1 220px;">
-        <div class="label" style="margin-bottom:6px;">VIN</div>
-        <input class="input" id="vin" placeholder="VIN" />
+        <select class="input" id="dealer_name">
+          <option value="">Select dealer</option>
+          ${dealerOptions}
+        </select>
+        <div class="field-error" data-error-for="dealer_name"></div>
       </div>
     </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">VIN Last 8</div>
+        <input class="input" id="vin_last8" maxlength="8" placeholder="A1B2C3D4" />
+        <div class="field-error" data-error-for="vin_last8"></div>
+      </div>
+      <div style="flex:1 1 220px; align-self:flex-end;">
+        <label class="inline" style="margin-top:22px;"><input type="checkbox" id="no_vin_required" /> No VIN Required</label>
+      </div>
+    </div>
+
     <div class="row" style="margin-top:10px;">
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Job Type</div>
         <select class="input" id="job_type">
-          <option value="upfit">Upfit</option>
-          <option value="bedrock">Bedrock</option>
-          <option value="warranty">Warranty</option>
-          <option value="rework">Rework</option>
-          <option value="service">Service</option>
-          <option value="internal">Internal</option>
-          <option value="parts">Parts:</option>
+          <option value="UPFIT">UPFIT</option>
+          <option value="COMMERCIAL_UPFIT">COMMERCIAL_UPFIT</option>
+          <option value="COMMERCIAL_BUILD">COMMERCIAL_BUILD</option>
+          <option value="RV_BUILD">RV_BUILD</option>
+          <option value="RV_UPFIT">RV_UPFIT</option>
+          <option value="PARTS_ONLY">PARTS_ONLY</option>
+          <option value="SERVICE">SERVICE</option>
+          <option value="WARRANTY">WARRANTY</option>
         </select>
+        <div class="field-error" data-error-for="job_type"></div>
+      </div>
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Created From</div>
+        <select class="input" id="created_from">
+          <option value="manual" selected>manual</option>
+          <option value="portal">portal</option>
+          <option value="import">import</option>
+        </select>
+        <div class="field-error" data-error-for="created_from"></div>
+      </div>
+      <div style="flex:1 1 140px;">
+        <div class="label" style="margin-bottom:6px;">Priority</div>
+        <input class="input" id="priority" type="number" min="1" max="5" value="3" />
+        <div class="field-error" data-error-for="priority"></div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
+        <input class="input" id="estimated_hours" type="number" min="0" step="0.1" />
+        <div class="field-error" data-error-for="estimated_hours"></div>
       </div>
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">Parts Status</div>
         <select class="input" id="parts_status">
-          <option value="">—</option>
-          <option value="ordered">Ordered</option>
-          <option value="received">Received</option>
-          <option value="kitted">Kitted</option>
-          <option value="missing">Missing</option>
+          <option value="NOT_READY" selected>NOT_READY</option>
+          <option value="PARTIAL">PARTIAL</option>
+          <option value="READY">READY</option>
+          <option value="HOLD">HOLD</option>
         </select>
+        <div class="field-error" data-error-for="parts_status"></div>
+      </div>
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Requested Completion Date</div>
+        <input class="input" id="requested_date" type="date" />
+        <div class="field-error" data-error-for="requested_date"></div>
       </div>
     </div>
-    <div style="margin-top:12px;">
+
+    <div class="row" style="margin-top:10px;">
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Quote Number</div>
+        <input class="input" id="quote_number" placeholder="Required for portal" />
+        <div class="field-error" data-error-for="quote_number"></div>
+      </div>
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Sales Person</div>
+        <input class="input" id="sales_person" />
+      </div>
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Stock Number</div>
+        <input class="input" id="stock_number" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div style="flex:1 1 100%;">
+        <div class="label" style="margin-bottom:6px;">Notes</div>
+        <textarea class="input" id="notes" placeholder="Notes"></textarea>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
       <button class="btn" id="create_btn">Create</button>
+      <div class="field-error" data-error-for="general"></div>
     </div>
   `;
+
   host.querySelector('#create_btn').onclick = async () => {
-    try{
-      const payload = {
-        customer_name: host.querySelector('#customer_name').value.trim(),
-        dealer_name: host.querySelector('#dealer_name').value.trim(),
-        vin: host.querySelector('#vin').value.trim(),
-        job_type: host.querySelector('#job_type').value,
-        parts_status: host.querySelector('#parts_status').value || '',
-      };
+    clearCreateJobErrors(host);
+
+    const notesInput = host.querySelector('#notes').value.trim();
+    const payload = {
+      so_number: host.querySelector('#so_number').value.trim(),
+      customer_name: host.querySelector('#customer_name').value.trim(),
+      dealer_name: host.querySelector('#dealer_name').value.trim(),
+      vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
+      no_vin_required: host.querySelector('#no_vin_required').checked,
+      job_type: host.querySelector('#job_type').value,
+      created_from: host.querySelector('#created_from').value,
+      priority: parseInt(host.querySelector('#priority').value, 10),
+      estimated_hours: host.querySelector('#estimated_hours').value.trim(),
+      parts_status: host.querySelector('#parts_status').value,
+      requested_date: host.querySelector('#requested_date').value,
+      quote_number: host.querySelector('#quote_number').value.trim(),
+      sales_person: host.querySelector('#sales_person').value.trim(),
+      stock_number: host.querySelector('#stock_number').value.trim(),
+      notes: notesInput,
+      notes_type: notesInput.toLowerCase().includes('part') ? 'parts' : '',
+    };
+
+    try {
       const job = await api.createJob(payload);
       window.history.pushState({}, '', '/ops/job/' + job.job_id);
       router();
-    }catch(e){ alert(e.message); }
+    } catch(e) {
+      const field = e?.data?.data?.field || e?.data?.field;
+      const message = e?.data?.data?.message || e?.message || 'Request failed';
+      if (field) {
+        setFieldError(host, field, message);
+      } else {
+        setFieldError(host, 'general', message);
+      }
+    }
   };
 }
 

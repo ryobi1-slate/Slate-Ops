@@ -117,7 +117,7 @@ class Slate_Ops_REST {
     return self::perm_supervisor_or_admin();
   }
   public static function perm_cs_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
+    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN) || current_user_can('edit_posts'));
   }
 
   // Handlers
@@ -242,45 +242,124 @@ foreach ($rows as &$r) {
   }
 
   public static function create_job_manual($req) {
-global $wpdb;
-$body = $req->get_json_params();
-$t = $wpdb->prefix . 'slate_ops_jobs';
+    global $wpdb;
+    $body = $req->get_json_params();
+    $t = $wpdb->prefix . 'slate_ops_jobs';
 
-$customer = sanitize_text_field($body['customer_name'] ?? '');
-$dealer = sanitize_text_field($body['dealer_name'] ?? 'Internal');
-$vin = sanitize_text_field($body['vin'] ?? '');
-$job_type = sanitize_key($body['job_type'] ?? 'upfit');
-$parts_status = sanitize_key($body['parts_status'] ?? '');
-$priority = (int)($body['priority'] ?? 3);
-if ($priority < 1 || $priority > 5) $priority = 3;
+    $so_number = strtoupper(trim(sanitize_text_field($body['so_number'] ?? '')));
+    if (!Slate_Ops_Utils::so_is_valid($so_number)) {
+      return self::validation_error('so_number', 'invalid_so_number', 'SO# format must be S-ORD#####.');
+    }
 
-$now = Slate_Ops_Utils::now_gmt();
+    $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE so_number=%s AND archived_at IS NULL", $so_number));
+    if ($existing) {
+      return self::validation_error('so_number', 'duplicate_so_number', 'SO# must be unique.', 409);
+    }
 
-$wpdb->insert($t, [
-  'source' => 'manual',
-  'created_from' => 'manual',
-  'customer_name' => $customer,
-  'dealer_name' => $dealer,
-  'vin' => $vin,
-  'job_type' => $job_type ?: 'upfit',
-  'parts_status' => $parts_status ?: null,
-  'status' => 'UNSCHEDULED',
-  'status_updated_at' => $now,
-  'delay_reason' => null,
-  'priority' => $priority,
-  'dealer_status' => 'waiting',
-  'created_by' => get_current_user_id(),
-  'created_at' => $now,
-  'updated_at' => $now,
-]);
+    $job_type = strtoupper(sanitize_key($body['job_type'] ?? ''));
+    if (!in_array($job_type, Slate_Ops_Utils::cs_job_types(), true)) {
+      return self::validation_error('job_type', 'invalid_job_type', 'Select a valid job type.');
+    }
 
-$job_id = (int)$wpdb->insert_id;
-self::audit('job', $job_id, 'create', null, null, wp_json_encode(['created_from'=>'manual']), 'Manual job created');
+    $created_from = sanitize_key($body['created_from'] ?? 'manual');
+    if (!$created_from) {
+      $created_from = 'manual';
+    }
+    if (!in_array($created_from, Slate_Ops_Utils::cs_created_from_values(), true)) {
+      return self::validation_error('created_from', 'invalid_created_from', 'Select a valid source.');
+    }
 
-$job = self::job_by_id($job_id);
-self::maybe_create_clickup_task($job);
+    $priority = (int) ($body['priority'] ?? 3);
+    if ($priority < 1 || $priority > 5) {
+      return self::validation_error('priority', 'invalid_priority', 'Priority must be between 1 and 5.');
+    }
 
-return self::get_job(['id' => $job_id]);
+    $parts_status = strtoupper(sanitize_key($body['parts_status'] ?? 'NOT_READY'));
+    if (!in_array($parts_status, Slate_Ops_Utils::cs_parts_statuses(), true)) {
+      return self::validation_error('parts_status', 'invalid_parts_status', 'Select a valid parts status.');
+    }
+
+    $estimated_hours_raw = isset($body['estimated_hours']) ? trim((string) $body['estimated_hours']) : '';
+    if ($estimated_hours_raw === '' || !is_numeric($estimated_hours_raw)) {
+      return self::validation_error('estimated_hours', 'invalid_estimated_hours', 'Estimated hours are required.');
+    }
+    $estimated_minutes = (int) round(((float) $estimated_hours_raw) * 60);
+    if ($estimated_minutes <= 0) {
+      return self::validation_error('estimated_hours', 'invalid_estimated_hours', 'Estimated hours must be greater than zero.');
+    }
+
+    $customer = sanitize_text_field($body['customer_name'] ?? '');
+    $dealer = sanitize_text_field($body['dealer_name'] ?? '');
+    if ($customer === '' && $dealer === '') {
+      return self::validation_error('customer_name', 'customer_or_dealer_required', 'Provide a customer, dealer, or both.');
+    }
+
+    $quote_number = sanitize_text_field($body['quote_number'] ?? '');
+    if ($created_from === 'portal' && $quote_number === '') {
+      return self::validation_error('quote_number', 'quote_number_required', 'Quote number is required for portal jobs.');
+    }
+
+    $no_vin_required = !empty($body['no_vin_required']);
+    $vin_last8 = strtoupper(trim(sanitize_text_field($body['vin_last8'] ?? '')));
+    if ($job_type !== 'PARTS_ONLY' && !$no_vin_required) {
+      if (!Slate_Ops_Utils::vin_last8_is_valid($vin_last8)) {
+        return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN Last 8 is required and must be 8 alphanumeric characters.');
+      }
+    } elseif ($vin_last8 !== '' && !Slate_Ops_Utils::vin_last8_is_valid($vin_last8)) {
+      return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN Last 8 must be 8 alphanumeric characters.');
+    }
+
+    $requested_date = sanitize_text_field($body['requested_date'] ?? '');
+    if ($requested_date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $requested_date)) {
+      return self::validation_error('requested_date', 'invalid_requested_date', 'Requested completion date must be YYYY-MM-DD.');
+    }
+
+    $sales_person = sanitize_text_field($body['sales_person'] ?? '');
+    $stock_number = sanitize_text_field($body['stock_number'] ?? '');
+    $notes = sanitize_textarea_field($body['notes'] ?? '');
+    $notes_type = sanitize_key($body['notes_type'] ?? '');
+    if ($notes !== '' && $notes_type === 'parts' && stripos($notes, 'Parts:') !== 0) {
+      $notes = 'Parts: ' . $notes;
+    }
+
+    $now = Slate_Ops_Utils::now_gmt();
+    $inserted = $wpdb->insert($t, [
+      'source' => $created_from,
+      'created_from' => $created_from,
+      'quote_number' => $quote_number ?: null,
+      'so_number' => $so_number,
+      'customer_name' => $customer ?: null,
+      'dealer_name' => $dealer ?: null,
+      'vin' => $vin_last8 ?: null,
+      'vin_last8' => $vin_last8 ?: null,
+      'job_type' => $job_type,
+      'parts_status' => $parts_status,
+      'status' => 'UNSCHEDULED',
+      'status_updated_at' => $now,
+      'delay_reason' => null,
+      'priority' => $priority,
+      'estimated_minutes' => $estimated_minutes,
+      'requested_date' => $requested_date ?: null,
+      'sales_person' => $sales_person ?: null,
+      'stock_number' => $stock_number ?: null,
+      'notes' => $notes ?: null,
+      'dealer_status' => 'waiting',
+      'created_by' => get_current_user_id(),
+      'created_at' => $now,
+      'updated_at' => $now,
+    ]);
+
+    if (!$inserted) {
+      return new WP_Error('db_insert_failed', 'Could not create job.', ['status' => 500]);
+    }
+
+    $job_id = (int) $wpdb->insert_id;
+    self::audit('job', $job_id, 'create', null, null, wp_json_encode(['created_from' => $created_from]), 'CS intake job created');
+
+    $job = self::job_by_id($job_id);
+    self::maybe_create_clickup_task($job);
+
+    return self::get_job(['id' => $job_id]);
   }
 
   public static function set_so($req) {
@@ -290,11 +369,11 @@ return self::get_job(['id' => $job_id]);
     $so = strtoupper(trim(sanitize_text_field($body['so_number'] ?? '')));
 
     if (!Slate_Ops_Utils::so_is_valid($so)) {
-      return new WP_Error('invalid_so', 'SO# format must be S-ORD######', ['status' => 400]);
+      return new WP_Error('invalid_so', 'SO# format must be S-ORD#####', ['status' => 400]);
     }
 
     $t = $wpdb->prefix . 'slate_ops_jobs';
-    $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE so_number=%s AND job_id<>%d", $so, $job_id));
+    $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE so_number=%s AND job_id<>%d AND archived_at IS NULL", $so, $job_id));
     if ($existing) {
       return new WP_Error('so_exists', 'SO# already linked to another job', ['status' => 409, 'job_id' => (int)$existing]);
     }
@@ -607,6 +686,15 @@ return self::get_job(['id' => $job_id]);
   }
 
   // Helpers
+  private static function validation_error($field, $code, $message, $status = 400) {
+    return new WP_Error($code, $message, [
+      'status' => (int) $status,
+      'field' => sanitize_key($field),
+      'code' => sanitize_key($code),
+      'message' => sanitize_text_field($message),
+    ]);
+  }
+
   private static function decorate_segment($s) {
     $s['user_name'] = Slate_Ops_Utils::user_display($s['user_id']);
     return $s;
