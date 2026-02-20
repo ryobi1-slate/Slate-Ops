@@ -40,6 +40,12 @@ class Slate_Ops_Install {
       archived_at DATETIME NULL,
       archived_by BIGINT UNSIGNED NULL,
       archive_reason VARCHAR(255) NULL,
+      work_center VARCHAR(60) NULL,
+      estimated_minutes INT UNSIGNED NULL,
+      scheduled_start DATETIME NULL,
+      scheduled_finish DATETIME NULL,
+      assigned_user_id BIGINT UNSIGNED NULL,
+
       PRIMARY KEY  (job_id),
       UNIQUE KEY so_unique (so_number),
       KEY status_idx (status),

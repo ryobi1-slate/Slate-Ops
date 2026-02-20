@@ -13,7 +13,6 @@ class Slate_Ops_Contract {
       'parts_status' => 'text',
       'requested_date' => 'date',
     ];
-
     return apply_filters('slate_ops_schedulable_job_fields', $fields);
   }
 

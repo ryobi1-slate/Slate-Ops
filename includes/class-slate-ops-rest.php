@@ -23,6 +23,12 @@ class Slate_Ops_REST {
       ],
     ]);
 
+    register_rest_route('slate-ops/v1', '/users', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+      'callback' => [__CLASS__, 'users'],
+    ]);
+
     register_rest_route('slate-ops/v1', '/jobs', [
       [
         'methods' => 'GET',
@@ -64,6 +70,12 @@ class Slate_Ops_REST {
       'methods' => 'POST',
       'permission_callback' => [__CLASS__, 'perm_ops'],
       'callback' => [__CLASS__, 'set_status'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/time/active', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback' => [__CLASS__, 'time_active'],
     ]);
 
     register_rest_route('slate-ops/v1', '/time/start', [
@@ -151,6 +163,11 @@ class Slate_Ops_REST {
 
   public static function list_jobs($req) {
     global $wpdb;
+    $status = strtoupper(sanitize_text_field((string)$req->get_param('status')));
+    $limit = (int)$req->get_param('limit');
+    if ($limit <= 0) $limit = 100;
+    if ($limit > 500) $limit = 500;
+    $so_missing = (int)$req->get_param('so_missing');
     $t = $wpdb->prefix . 'slate_ops_jobs';
     $status = $req->get_param('status');
     $q = $req->get_param('q');
@@ -493,6 +510,27 @@ class Slate_Ops_REST {
     self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'start'=>$start,'end'=>$end]), 'Time correction submitted (pending)');
 
     return ['segment_id' => $segment_id, 'approval_status' => 'pending'];
+  }
+
+  public static function time_active($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_time';
+    $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE user_id=%d AND end_at IS NULL ORDER BY start_at DESC LIMIT 1", get_current_user_id()), ARRAY_A);
+    return ['active' => $row ?: null];
+  }
+
+  public static function users($req) {
+    $users = get_users([
+      'fields' => ['ID','display_name','user_email'],
+      'orderby' => 'display_name',
+      'order' => 'ASC',
+      'number' => 500,
+    ]);
+    $out = [];
+    foreach ($users as $u){
+      $out[] = ['id'=>(int)$u->ID,'name'=>$u->display_name,'email'=>$u->user_email];
+    }
+    return ['users'=>$out];
   }
 
   public static function supervisor_queues($req) {

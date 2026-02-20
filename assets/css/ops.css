@@ -222,3 +222,17 @@ textarea{ min-height:90px; }
   .ops-nav{ width:auto; display:flex; gap:8px; overflow:auto; }
   .ops-nav-link{ white-space:nowrap; }
 }
+
+/* Role-based + mobile tweaks */
+.small-btn{padding:8px 10px;font-size:12px;border-radius:10px;}
+.kpi-label{font-size:10px;letter-spacing:.20em;text-transform:uppercase;font-weight:900;color:rgba(0,0,0,.65);}
+.kpi-value{font-size:28px;font-weight:900;color:#404f4b;}
+
+body.ops-role-tech .ops-nav { position: fixed; bottom: 0; left: 0; right: 0; flex-direction: row; gap: 0; background: #fff; border-top: 1px solid rgba(0,0,0,0.14); padding: 8px; z-index: 50; }
+body.ops-role-tech .ops-main { padding-bottom: 64px; }
+body.ops-role-tech .ops-nav-link { flex: 1 1 0; text-align: center; padding: 10px 8px; }
+
+@media (max-width: 900px){
+  .ops-main { grid-template-columns: 1fr; }
+  .ops-nav { flex-direction: row; overflow-x: auto; }
+}

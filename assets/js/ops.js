@@ -23,6 +23,7 @@
     },
     me(){ return this.req('/me'); },
     settings(){ return this.req('/settings'); },
+    users(){ return this.req('/users'); },
     updateSettings(payload){ return this.req('/settings', {method:'POST', body: JSON.stringify(payload)}); },
     jobs(q=''){ return this.req('/jobs' + q); },
     job(id){ return this.req('/jobs/' + id); },
@@ -33,6 +34,7 @@
     setStatus(id, status, note=''){ return this.req('/jobs/' + id + '/status', {method:'POST', body: JSON.stringify({status, note})}); },
     timeStart(job_id, reason, note){ return this.req('/time/start', {method:'POST', body: JSON.stringify({job_id, reason, note})}); },
     timeStop(){ return this.req('/time/stop', {method:'POST'}); },
+    timeActive(){ return this.req('/time/active'); },
     correction(payload){ return this.req('/time/correction', {method:'POST', body: JSON.stringify(payload)}); },
     supervisorQueues(){ return this.req('/supervisor/queues'); }
   };
@@ -554,6 +556,314 @@
       .replaceAll("'","&#039;");
   }
 
+  function kpi(label, value){
+  return `
+    <div class="card" style="flex:1 1 160px;">
+      <div class="kpi-label">${escapeHtml(label)}</div>
+      <div class="kpi-value">${value}</div>
+    </div>
+  `;
+}
+
+async function loadCreateJobInto(selector){
+  const host = document.querySelector(selector);
+  if(!host) return;
+  host.innerHTML = `
+    <div class="label" style="margin-bottom:8px;">Create Job</div>
+    <div class="row">
+      <div style="flex:1 1 280px;">
+        <div class="label" style="margin-bottom:6px;">Customer</div>
+        <input class="input" id="customer_name" placeholder="Customer name" />
+      </div>
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Dealer</div>
+        <input class="input" id="dealer_name" placeholder="Dealer (optional)" />
+      </div>
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">VIN</div>
+        <input class="input" id="vin" placeholder="VIN" />
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Job Type</div>
+        <select class="input" id="job_type">
+          <option value="upfit">Upfit</option>
+          <option value="bedrock">Bedrock</option>
+          <option value="warranty">Warranty</option>
+          <option value="rework">Rework</option>
+          <option value="service">Service</option>
+          <option value="internal">Internal</option>
+          <option value="parts">Parts:</option>
+        </select>
+      </div>
+      <div style="flex:1 1 220px;">
+        <div class="label" style="margin-bottom:6px;">Parts Status</div>
+        <select class="input" id="parts_status">
+          <option value="">—</option>
+          <option value="ordered">Ordered</option>
+          <option value="received">Received</option>
+          <option value="kitted">Kitted</option>
+          <option value="missing">Missing</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn" id="create_btn">Create</button>
+    </div>
+  `;
+  host.querySelector('#create_btn').onclick = async () => {
+    try{
+      const payload = {
+        customer_name: host.querySelector('#customer_name').value.trim(),
+        dealer_name: host.querySelector('#dealer_name').value.trim(),
+        vin: host.querySelector('#vin').value.trim(),
+        job_type: host.querySelector('#job_type').value,
+        parts_status: host.querySelector('#parts_status').value || '',
+      };
+      const job = await api.createJob(payload);
+      window.history.pushState({}, '', '/ops/job/' + job.job_id);
+      router();
+    }catch(e){ alert(e.message); }
+  };
+}
+
+async function loadCS(){
+  const jobsResp = await api.jobs('?limit=300&so_missing=1');
+  const needs = (jobsResp.jobs||[]).filter(j => (j.status||'').toUpperCase() === 'UNSCHEDULED' || (j.status||'').toUpperCase() === 'READY_FOR_SCHEDULING');
+  view(`
+    <div class="card">
+      <div class="row">
+        <div style="flex:1 1 520px;">
+          <h2 style="margin:0;">Customer Service</h2>
+          <div class="muted">Enter SO# and create jobs fast. No scheduling here.</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          ${kpi('Needs SO#', needs.length)}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">Needs SO#</div>
+      <table class="table">
+        <thead><tr>
+          <th style="min-width:140px;">Quote</th>
+          <th style="min-width:220px;">Customer</th>
+          <th style="min-width:90px;">VIN</th>
+          <th style="min-width:180px;">Dealer</th>
+          <th style="min-width:200px;">SO#</th>
+          <th style="min-width:90px;"></th>
+        </tr></thead>
+        <tbody>
+          ${needs.map(j=>`
+            <tr data-id="${j.job_id}">
+              <td>${escapeHtml(j.quote_number||'')}</td>
+              <td>${escapeHtml(j.customer_name||'')}</td>
+              <td>${escapeHtml((j.vin||'').slice(-6))}</td>
+              <td>${escapeHtml(j.dealer_name||'')}</td>
+              <td><input class="input so" placeholder="S-ORD101350" /></td>
+              <td><button class="btn small-btn save-so">Save</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="6">No jobs need SO#.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" id="cs-create"></div>
+  `);
+
+  await loadCreateJobInto('#cs-create');
+
+  $$('.save-so').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const tr = btn.closest('tr');
+      const id = parseInt(tr.dataset.id,10);
+      const so = $('.so', tr).value.trim();
+      if(!so){ alert('SO# required'); return; }
+      btn.disabled=true;
+      const old=btn.textContent;
+      btn.textContent='Saving…';
+      try{
+        await api.setSO(id, so);
+        btn.textContent='Saved';
+        setTimeout(()=>router(), 250);
+      }catch(e){
+        alert(e.message);
+        btn.textContent=old;
+      }finally{
+        btn.disabled=false;
+      }
+    });
+  });
+}
+
+async function loadTech(){
+  const [activeResp, jobsResp] = await Promise.all([ api.timeActive(), api.jobs('?limit=250') ]);
+  const active = activeResp.active;
+  const jobs = jobsResp.jobs || [];
+  view(`
+    <div class="card">
+      <h2 style="margin:0;">Tech</h2>
+      <div class="muted">Start/Stop job. Fix time if you forgot. One active timer per tech.</div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">My Active Timer</div>
+      ${active ? `
+        <div class="row" style="align-items:center;">
+          <div style="flex:1 1 320px;">
+            <div><strong>${escapeHtml(active.so_number || '')}</strong> <span class="muted">${escapeHtml((active.vin||'').slice(-6))}</span></div>
+            <div class="small">Started: ${escapeHtml(active.start_at || '')}</div>
+          </div>
+          <button class="btn" id="stop-now">Stop</button>
+        </div>
+      ` : `<div class="muted">No active job.</div>`}
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:6px;">All Jobs</div>
+      <input class="input" id="tech-search" placeholder="Search SO#, VIN, customer" />
+      <div style="margin-top:10px;">
+        <table class="table" id="tech-table">
+          <thead><tr>
+            <th style="min-width:140px;">SO#</th>
+            <th style="min-width:90px;">VIN</th>
+            <th style="min-width:220px;">Customer</th>
+            <th style="min-width:160px;">Status</th>
+            <th style="min-width:90px;"></th>
+          </tr></thead>
+          <tbody>
+            ${jobs.map(j=>`
+              <tr>
+                <td>${escapeHtml(j.so_number||'')}</td>
+                <td>${escapeHtml((j.vin||'').slice(-6))}</td>
+                <td>${escapeHtml(j.customer_name||'')}</td>
+                <td><span class="badge ${badgeClass(j.status)}">${escapeHtml(fmtStatus(j.status))}</span></td>
+                <td><a class="btn secondary small-btn" href="/ops/job/${j.job_id}" data-link>Open</a></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `);
+
+  if (active){
+    $('#stop-now').onclick = async ()=>{ try{ await api.timeStop(); router(); }catch(e){ alert(e.message);} };
+  }
+
+  const search = $('#tech-search');
+  const rows = $$('#tech-table tbody tr');
+  search.addEventListener('input', ()=>{
+    const q = search.value.trim().toLowerCase();
+    rows.forEach(r=>{ r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+  });
+}
+
+async function loadExecutive(){
+  const jobsResp = await api.jobs('?limit=500');
+  const jobs = jobsResp.jobs || [];
+  const by = (s)=>jobs.filter(j=>(j.status||'').toUpperCase()===s).length;
+  const uns = by('UNSCHEDULED');
+  const sch = by('SCHEDULED');
+  const prog = by('IN_PROGRESS');
+  const qc = by('PENDING_QC');
+  const complete = by('COMPLETE');
+  const needsSO = jobs.filter(j=>!j.so_number).length;
+
+  view(`
+    <div class="card">
+      <h2 style="margin:0;">Executive Dashboard</h2>
+      <div class="muted">Fast visibility.</div>
+    </div>
+
+    <div class="row">
+      ${kpi('Needs SO#', needsSO)}
+      ${kpi('Unscheduled', uns)}
+      ${kpi('Scheduled', sch)}
+      ${kpi('In Progress', prog)}
+      ${kpi('Pending QC', qc)}
+      ${kpi('Complete', complete)}
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">Recent Activity</div>
+      <table class="table">
+        <thead><tr><th>SO#</th><th>Customer</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody>
+          ${jobs.slice(0,15).map(j=>`
+            <tr>
+              <td>${escapeHtml(j.so_number||'')}</td>
+              <td>${escapeHtml(j.customer_name||'')}</td>
+              <td><span class="badge ${badgeClass(j.status)}">${escapeHtml(fmtStatus(j.status))}</span></td>
+              <td>${escapeHtml(j.updated_at||'')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
+async function loadQC(){
+  const jobsResp = await api.jobs('?limit=300&status=PENDING_QC');
+  const jobs = jobsResp.jobs || [];
+  view(`
+    <div class="card">
+      <h2 style="margin:0;">QC Queue</h2>
+      <div class="muted">Jobs marked Complete - Pending QC.</div>
+    </div>
+    <div class="card">
+      <table class="table">
+        <thead><tr><th>SO#</th><th>Customer</th><th>VIN</th><th></th></tr></thead>
+        <tbody>
+          ${jobs.map(j=>`
+            <tr>
+              <td>${escapeHtml(j.so_number||'')}</td>
+              <td>${escapeHtml(j.customer_name||'')}</td>
+              <td>${escapeHtml((j.vin||'').slice(-6))}</td>
+              <td><a class="btn secondary small-btn" href="/ops/job/${j.job_id}" data-link>Open</a></td>
+            </tr>
+          `).join('') || `<tr><td colspan="4">No jobs pending QC.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
+async function loadAdmin(){
+  const usersResp = await api.users();
+  const users = usersResp.users || [];
+  view(`
+    <div class="card">
+      <h2 style="margin:0;">Admin</h2>
+      <div class="muted">Settings + user visibility. Role changes happen in WP Users.</div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">Quick Links</div>
+      <div class="row">
+        <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
+        <a class="btn secondary" href="/ops/settings" data-link>Ops Settings</a>
+        <a class="btn secondary" href="/ops/exec" data-link>Executive Dashboard</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">Users</div>
+      <table class="table">
+        <thead><tr><th>Name</th><th>Email</th></tr></thead>
+        <tbody>
+          ${users.slice(0,200).map(u=>`
+            <tr><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td></tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
   async function render(){
     const r = state.route;
     setActiveNav(
@@ -562,10 +872,30 @@
       r.startsWith('/new') ? '/new' :
       r.startsWith('/settings') ? '/settings' :
       r.startsWith('/supervisor') ? '/supervisor' :
+      r.startsWith('/cs') ? '/cs' :
+      r.startsWith('/tech') ? '/tech' :
+      r.startsWith('/admin') ? '/admin' :
+      r.startsWith('/exec') ? '/exec' :
+      r.startsWith('/qc') ? '/qc' :
+      r.startsWith('/schedule') ? '/schedule' :
       '/'
     );
 
     try{
+      if (r === '/' || r === '') {
+        const c = slateOpsSettings.user.caps || {};
+        if (c.admin) { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
+        else if (c.supervisor) { window.history.replaceState({}, '', '/ops/supervisor'); state.route='/supervisor'; }
+        else if (c.cs) { window.history.replaceState({}, '', '/ops/cs'); state.route='/cs'; }
+        else if (c.tech) { window.history.replaceState({}, '', '/ops/tech'); state.route='/tech'; }
+        else { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
+        return await render();
+      }
+      if (r.startsWith('/exec')) return await loadExecutive();
+      if (r.startsWith('/cs')) return await loadCS();
+      if (r.startsWith('/tech')) return await loadTech();
+      if (r.startsWith('/qc')) return await loadQC();
+      if (r.startsWith('/admin')) return await loadAdmin();
       if (r === '/' || r === '') return await loadDashboard();
       if (r.startsWith('/jobs')) return await loadJobsList();
       if (r.startsWith('/job/')) {
