@@ -333,9 +333,6 @@ foreach ($rows as &$r) {
     }
 
     $sales_person = sanitize_text_field($body['sales_person'] ?? '');
-    if ($sales_person !== '' && !in_array($sales_person, Slate_Ops_Utils::sales_person_list(), true)) {
-      return self::validation_error('sales_person', 'invalid_sales_person', 'Select a valid sales person.');
-    }
     $notes = sanitize_textarea_field($body['notes'] ?? '');
     $notes_type = sanitize_key($body['notes_type'] ?? '');
     if ($notes !== '' && $notes_type === 'parts' && stripos($notes, 'Parts:') !== 0) {

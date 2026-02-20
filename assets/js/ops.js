@@ -543,7 +543,7 @@ async function loadCreateJobInto(selector){
     <div class="row">
       <div style="flex:1 1 220px;">
         <div class="label" style="margin-bottom:6px;">SO#</div>
-        <input class="input" id="so_number" placeholder="S-ORD123456" />
+        <input class="input" id="so_number" placeholder="S-ORDXXXXXX" />
         <div class="field-error" data-error-for="so_number"></div>
       </div>
       <div style="flex:1 1 220px;">
@@ -557,6 +557,8 @@ async function loadCreateJobInto(selector){
           <option value="">Select dealer</option>
           ${dealerOptions}
         </select>
+        <div class="small" style="margin-top:6px;">Or enter dealer name</div>
+        <input class="input" id="dealer_name_manual" placeholder="Dealer name" style="margin-top:4px;" />
         <div class="field-error" data-error-for="dealer_name"></div>
       </div>
     </div>
@@ -620,6 +622,8 @@ async function loadCreateJobInto(selector){
           <option value="">Select sales person</option>
           ${salesOptions}
         </select>
+        <div class="small" style="margin-top:6px;">Or enter sales person</div>
+        <input class="input" id="sales_person_manual" placeholder="Sales person" style="margin-top:4px;" />
         <div class="field-error" data-error-for="sales_person"></div>
       </div>
     </div>
@@ -641,17 +645,19 @@ async function loadCreateJobInto(selector){
     clearCreateJobErrors(host);
 
     const notesInput = host.querySelector('#notes').value.trim();
+    const dealerValue = host.querySelector('#dealer_name_manual').value.trim() || host.querySelector('#dealer_name').value.trim();
+    const salesPersonValue = host.querySelector('#sales_person_manual').value.trim() || host.querySelector('#sales_person').value.trim();
     const payload = {
       so_number: host.querySelector('#so_number').value.trim(),
       customer_name: host.querySelector('#customer_name').value.trim(),
-      dealer_name: host.querySelector('#dealer_name').value.trim(),
+      dealer_name: dealerValue,
       vin_last8: host.querySelector('#vin_last8').value.trim().toUpperCase(),
       job_type: host.querySelector('#job_type').value,
       created_from: 'manual',
       estimated_hours: host.querySelector('#estimated_hours').value.trim(),
       parts_status: host.querySelector('#parts_status').value,
       requested_date: host.querySelector('#requested_date').value,
-      sales_person: host.querySelector('#sales_person').value.trim(),
+      sales_person: salesPersonValue,
       notes: notesInput,
       notes_type: notesInput.toLowerCase().includes('part') ? 'parts' : '',
     };
