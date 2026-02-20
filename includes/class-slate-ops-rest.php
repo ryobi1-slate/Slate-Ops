@@ -135,7 +135,9 @@ class Slate_Ops_REST {
     global $wpdb;
     $t = $wpdb->prefix . 'slate_ops_settings';
     $row = $wpdb->get_row("SELECT * FROM $t WHERE id=1", ARRAY_A);
-    return $row ?: [];
+    $row = $row ?: [];
+    $row['dealers'] = array_values(Slate_Ops_Utils::dealer_list());
+    return $row;
   }
 
   public static function update_settings($req) {
@@ -147,6 +149,20 @@ class Slate_Ops_REST {
     $shift_end = isset($body['shift_end']) ? sanitize_text_field($body['shift_end']) : '15:30:00';
     $lunch = isset($body['lunch_minutes']) ? max(0, intval($body['lunch_minutes'])) : 30;
     $breaks = isset($body['break_minutes']) ? max(0, intval($body['break_minutes'])) : 20;
+    $dealers_payload = $body['dealers'] ?? [];
+    if (is_string($dealers_payload)) {
+      $dealers_payload = preg_split('/\r\n|\r|\n/', $dealers_payload);
+    }
+    $dealers = [];
+    if (is_array($dealers_payload)) {
+      foreach ($dealers_payload as $dealer) {
+        $dealer = trim(sanitize_text_field((string) $dealer));
+        if ($dealer !== '') {
+          $dealers[] = $dealer;
+        }
+      }
+    }
+    update_option('slate_ops_dealers', array_values(array_unique($dealers)));
 
     $wpdb->update($t, [
       'shift_start' => $shift_start,
@@ -157,7 +173,7 @@ class Slate_Ops_REST {
       'updated_at' => Slate_Ops_Utils::now_gmt(),
     ], ['id' => 1]);
 
-    self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks]), 'Settings updated');
+    self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks,'dealers'=>$dealers]), 'Settings updated');
     return self::get_settings($req);
   }
 
@@ -261,13 +277,7 @@ foreach ($rows as &$r) {
       return self::validation_error('job_type', 'invalid_job_type', 'Select a valid job type.');
     }
 
-    $created_from = sanitize_key($body['created_from'] ?? 'manual');
-    if (!$created_from) {
-      $created_from = 'manual';
-    }
-    if (!in_array($created_from, Slate_Ops_Utils::cs_created_from_values(), true)) {
-      return self::validation_error('created_from', 'invalid_created_from', 'Select a valid source.');
-    }
+    $created_from = 'manual';
 
     $priority = (int) ($body['priority'] ?? 3);
     if ($priority < 1 || $priority > 5) {
@@ -295,9 +305,6 @@ foreach ($rows as &$r) {
     }
 
     $quote_number = sanitize_text_field($body['quote_number'] ?? '');
-    if ($created_from === 'portal' && $quote_number === '') {
-      return self::validation_error('quote_number', 'quote_number_required', 'Quote number is required for portal jobs.');
-    }
 
     $no_vin_required = !empty($body['no_vin_required']);
     $vin_last8 = strtoupper(trim(sanitize_text_field($body['vin_last8'] ?? '')));

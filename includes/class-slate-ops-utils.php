@@ -47,7 +47,7 @@ class Slate_Ops_Utils {
   }
 
   public static function cs_created_from_values() {
-    return ['portal', 'manual', 'import'];
+    return ['portal', 'manual'];
   }
 
   public static function cs_parts_statuses() {
@@ -55,13 +55,16 @@ class Slate_Ops_Utils {
   }
 
   public static function dealer_list() {
-    $dealers = [
+    $default_dealers = [
       'Northwest Fleet',
       'Pacific Utility Vehicles',
       'Summit Commercial',
       'Canyon RV Center',
       'Metro Work Trucks',
     ];
+
+    $saved = get_option('slate_ops_dealers', null);
+    $dealers = is_array($saved) ? $saved : $default_dealers;
 
     $dealers = apply_filters('slate_ops_dealer_list', $dealers);
 
