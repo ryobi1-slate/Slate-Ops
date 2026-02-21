@@ -37,30 +37,8 @@ body.slate-ops{
 }
 
 .ops-brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:18px 14px;
+  padding:20px 18px 18px;
   border-bottom:1px solid rgba(255,255,255,0.1);
-}
-
-.ops-brand-icon{
-  width:36px;
-  height:36px;
-  background:var(--arches);
-  border-radius:8px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-}
-
-.ops-brand-name{
-  font-weight:900;
-  font-size:13px;
-  letter-spacing:0.10em;
-  text-transform:uppercase;
-  color:#fff;
 }
 
 .ops-nav{
