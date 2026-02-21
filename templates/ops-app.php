@@ -34,8 +34,7 @@ function ops_nav_link( $href, $route, $icon, $label ) {
 
   <aside class="ops-sidebar">
     <div class="ops-brand">
-      <div class="ops-brand-icon"><?php echo Slate_Ops_Assets::logo_img(22); ?></div>
-      <div class="ops-brand-name">Slate Ops</div>
+      <?php echo Slate_Ops_Assets::logo_img(36); ?>
     </div>
 
     <nav class="ops-nav">
