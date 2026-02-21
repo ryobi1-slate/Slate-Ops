@@ -33,12 +33,6 @@ body.slate-ops{
   gap:10px;
 }
 
-.ops-mark{
-  width:18px;height:18px;
-  background: var(--sage);
-  border-radius:4px;
-}
-
 .ops-title{
   font-weight:900;
   letter-spacing:0.12em;
@@ -293,3 +287,152 @@ body.ops-role-tech .ops-nav-link { flex: 1 1 0; text-align: center; padding: 10p
 @media(max-width:600px){
   .form-grid{ grid-template-columns:1fr; }
 }
+
+/* ── Collapsible sections ── */
+.section-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  background:none;
+  border:none;
+  border-bottom:1px solid var(--border);
+  padding:10px 0 12px;
+  margin-bottom:12px;
+  cursor:pointer;
+  text-align:left;
+  font-family:inherit;
+  font-size:inherit;
+}
+.collapse-title{
+  font-size:11px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  font-weight:900;
+  color:rgba(0,0,0,0.7);
+}
+.collapse-chevron{
+  font-size:14px;
+  color:rgba(0,0,0,0.45);
+  line-height:1;
+}
+.count-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:20px;
+  height:20px;
+  padding:0 6px;
+  border-radius:999px;
+  background:var(--sage);
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+}
+.count-badge.urgent{
+  background:var(--arches);
+}
+
+/* ── Tech job cards ── */
+.tech-job-card{
+  background:var(--white);
+  border:1px solid var(--border);
+  border-left:4px solid var(--sage);
+  border-radius:var(--radius);
+  padding:18px 16px;
+  margin-bottom:12px;
+  box-shadow:var(--shadow);
+}
+.tech-job-card.is-active{
+  border-left-color:var(--arches);
+}
+.tech-job-so{
+  font-size:22px;
+  font-weight:900;
+  font-family:var(--mono);
+  letter-spacing:0.02em;
+  color:var(--redwood);
+  margin-bottom:4px;
+}
+.tech-job-meta{
+  font-size:13px;
+  color:rgba(0,0,0,0.5);
+  margin-bottom:14px;
+}
+.timer-display{
+  font-size:40px;
+  font-weight:900;
+  font-family:var(--mono);
+  color:var(--arches);
+  letter-spacing:0.05em;
+  margin:8px 0 16px;
+  line-height:1;
+}
+.btn-xl{
+  padding:16px 20px;
+  font-size:16px;
+  border-radius:12px;
+  flex:1;
+}
+.active-job-card{
+  background:var(--white);
+  border:2px solid var(--arches);
+  border-radius:var(--radius);
+  padding:20px 18px;
+  margin-bottom:14px;
+  box-shadow:var(--shadow);
+}
+.active-job-card .label-sm{
+  font-size:10px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  font-weight:900;
+  color:var(--arches);
+  margin-bottom:4px;
+}
+
+/* ── Admin stat tiles ── */
+.stat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:10px;
+  margin-bottom:14px;
+}
+.stat-tile{
+  background:var(--white);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 12px;
+}
+.stat-tile .label{
+  font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:900;color:rgba(0,0,0,.65);
+}
+.stat-tile .value{
+  font-size:28px;font-weight:900;color:var(--sage);margin-top:4px;
+}
+
+/* ── Notes feed ── */
+.note-bubble{
+  background:var(--sand);
+  border-radius:10px;
+  padding:10px 12px;
+  margin-bottom:8px;
+}
+.note-bubble .meta{
+  display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:4px;font-size:12px;color:rgba(0,0,0,.5);
+}
+.note-bubble .author{font-weight:700;color:var(--sage);}
+.note-bubble .body{font-size:14px;white-space:pre-wrap;}
+
+/* Mobile: larger tap targets for tech */
+@media(max-width:700px){
+  .btn-xl{ padding:18px; font-size:17px; }
+  .tech-job-so{ font-size:20px; }
+  .timer-display{ font-size:36px; }
+  .ops-content{ padding:0; }
+  .active-job-card, .tech-job-card{ border-radius:0; margin-bottom:8px; }
+}
+
+/* Muted helper */
+.muted{ color:rgba(0,0,0,0.5); font-size:13px; }

@@ -39,7 +39,8 @@
     correction(payload){ return this.req('/time/correction', {method:'POST', body: JSON.stringify(payload)}); },
     supervisorQueues(){ return this.req('/supervisor/queues'); },
     editJob(id, payload){ return this.req('/jobs/' + id, {method:'PATCH', body: JSON.stringify(payload)}); },
-    addNote(id, note){ return this.req('/jobs/' + id + '/notes', {method:'POST', body: JSON.stringify({note})}); }
+    addNote(id, note){ return this.req('/jobs/' + id + '/notes', {method:'POST', body: JSON.stringify({note})}); },
+    updateUserRole(id, role){ return this.req('/users/' + id + '/role', {method:'POST', body: JSON.stringify({role})}); }
   };
 
   const state = {
@@ -47,6 +48,7 @@
     jobs: [],
     settings: null,
     active: null,
+    timerInterval: null,
   };
 
   function setActiveNav(route){
@@ -688,57 +690,150 @@
     return {reason, note};
   }
 
-  async function loadSupervisor(){
-    const data = await api.supervisorQueues();
-    const pending = data.pending_corrections || [];
-    const unassigned = data.unassigned_segments || [];
+  function bindCollapsibles() {
+    $$('.section-header[data-collapse]').forEach(btn => {
+      if (btn._collapsebound) return;
+      btn._collapsebound = true;
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-collapse');
+        const body = document.getElementById('collapse-' + id);
+        const chevron = btn.querySelector('.collapse-chevron');
+        if (!body) return;
+        const hidden = body.style.display === 'none';
+        body.style.display = hidden ? '' : 'none';
+        if (chevron) chevron.textContent = hidden ? '▾' : '▸';
+      });
+    });
+  }
+
+  function parseGMTTimestamp(ts) {
+    if (!ts) return null;
+    return new Date(ts.replace(' ', 'T') + 'Z');
+  }
+
+  function formatElapsed(totalSeconds) {
+    const s = Math.max(0, totalSeconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  async function loadSupervisor() {
+    const [queuesResp, jobsResp] = await Promise.all([
+      api.supervisorQueues(),
+      api.jobs('?limit=300'),
+    ]);
+    const pending    = queuesResp.pending_corrections || [];
+    const unassigned = queuesResp.unassigned_segments || [];
+    const jobs       = jobsResp.jobs || [];
+
+    const byS      = (s) => jobs.filter(j => j.status === s);
+    const today    = new Date().toISOString().slice(0, 10);
+    const todayJobs = jobs.filter(j => j.scheduled_start && j.scheduled_start.startsWith(today));
 
     view(`
       <div class="card">
-        <h2>Supervisor</h2>
+        <h2 style="margin:0 0 14px;">Supervisor</h2>
         <div class="row">
-          <div class="kpi"><div class="label">Pending Corrections</div><div class="value">${pending.length}</div></div>
-          <div class="kpi"><div class="label">Unassigned Segments</div><div class="value">${unassigned.length}</div></div>
+          ${kpi('In Progress',    byS('IN_PROGRESS').length)}
+          ${kpi('Scheduled',      byS('SCHEDULED').length)}
+          ${kpi('Pending QC',     byS('PENDING_QC').length)}
+          ${kpi('Needs Attention', pending.length + unassigned.length)}
         </div>
       </div>
 
       <div class="card">
-        <h2>Pending Corrections</h2>
-        <table class="table">
-          <thead><tr><th>SO#</th><th>Tech</th><th>Start</th><th>End</th><th>Note</th></tr></thead>
-          <tbody>
-            ${pending.map(p => `
-              <tr>
-                <td><button class="btn secondary" data-open-job="${p.job_id}">Open</button></td>
-                <td>${escapeHtml(p.user_name||'')}</td>
-                <td>${p.start_ts}</td>
-                <td>${p.end_ts}</td>
-                <td>${escapeHtml(p.note||'')}</td>
-              </tr>
-            `).join('') || `<tr><td colspan="5">None.</td></tr>`}
-          </tbody>
-        </table>
+        <button class="section-header" data-collapse="corrections">
+          <span class="collapse-title">Pending Corrections</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${pending.length ? `<span class="count-badge urgent">${pending.length}</span>` : `<span class="muted">None</span>`}
+            <span class="collapse-chevron">${pending.length ? '▾' : '▸'}</span>
+          </div>
+        </button>
+        <div class="collapse-body" id="collapse-corrections" ${!pending.length ? 'style="display:none;"' : ''}>
+          <table class="table">
+            <thead><tr><th>Job</th><th>Tech</th><th>Start</th><th>End</th><th>Note</th></tr></thead>
+            <tbody>
+              ${pending.map(p=>`
+                <tr>
+                  <td><button class="btn secondary small-btn" data-open-job="${p.job_id}">Open</button></td>
+                  <td>${escapeHtml(p.user_name||'')}</td>
+                  <td style="font-size:12px;">${p.start_ts}</td>
+                  <td style="font-size:12px;">${p.end_ts}</td>
+                  <td>${escapeHtml(p.note||'')}</td>
+                </tr>
+              `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">None.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="card">
-        <h2>Unassigned Time</h2>
-        <table class="table">
-          <thead><tr><th>Job</th><th>Tech</th><th>Start</th><th>End</th><th>Reason</th></tr></thead>
-          <tbody>
-            ${unassigned.map(u => `
-              <tr>
-                <td><button class="btn secondary" data-open-job="${u.job_id}">Open</button></td>
-                <td>${escapeHtml(u.user_name||'')}</td>
-                <td>${u.start_ts}</td>
-                <td>${u.end_ts || ''}</td>
-                <td>${escapeHtml(u.reason||'')}</td>
-              </tr>
-            `).join('') || `<tr><td colspan="5">None.</td></tr>`}
-          </tbody>
-        </table>
+        <button class="section-header" data-collapse="unassigned">
+          <span class="collapse-title">Unassigned Time</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${unassigned.length ? `<span class="count-badge">${unassigned.length}</span>` : `<span class="muted">None</span>`}
+            <span class="collapse-chevron">${unassigned.length ? '▾' : '▸'}</span>
+          </div>
+        </button>
+        <div class="collapse-body" id="collapse-unassigned" ${!unassigned.length ? 'style="display:none;"' : ''}>
+          <table class="table">
+            <thead><tr><th>Job</th><th>Tech</th><th>Start</th><th>End</th><th>Reason</th></tr></thead>
+            <tbody>
+              ${unassigned.map(u=>`
+                <tr>
+                  <td><button class="btn secondary small-btn" data-open-job="${u.job_id}">Open</button></td>
+                  <td>${escapeHtml(u.user_name||'')}</td>
+                  <td style="font-size:12px;">${u.start_ts}</td>
+                  <td style="font-size:12px;">${u.end_ts||''}</td>
+                  <td>${escapeHtml(u.reason||'')}</td>
+                </tr>
+              `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">None.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <button class="section-header" data-collapse="today">
+          <span class="collapse-title">Today's Schedule</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${todayJobs.length ? `<span class="count-badge">${todayJobs.length}</span>` : `<span class="muted">None today</span>`}
+            <span class="collapse-chevron">▾</span>
+          </div>
+        </button>
+        <div class="collapse-body" id="collapse-today">
+          <table class="table">
+            <thead><tr><th>SO#</th><th>Customer</th><th>Assigned</th><th>Start</th><th>Bay</th><th></th></tr></thead>
+            <tbody>
+              ${todayJobs.map(j=>`
+                <tr>
+                  <td class="mono">${escapeHtml(j.so_number||'—')}</td>
+                  <td>${escapeHtml(j.customer_name||j.dealer_name||'—')}</td>
+                  <td>${escapeHtml(j.assigned_name||'—')}</td>
+                  <td style="font-size:12px;">${escapeHtml(j.scheduled_start||'')}</td>
+                  <td>${escapeHtml(j.work_center||'—')}</td>
+                  <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">Open</button></td>
+                </tr>
+              `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No jobs scheduled today.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <button class="section-header" data-collapse="alljobs">
+          <span class="collapse-title">All Active Jobs</span>
+          <span class="collapse-chevron">▸</span>
+        </button>
+        <div class="collapse-body" id="collapse-alljobs" style="display:none;">
+          ${jobsTable(jobs)}
+        </div>
       </div>
     `);
 
+    bindCollapsibles();
     bindJobsTable();
   }
 
@@ -1024,13 +1119,13 @@ async function loadCreateJobInto(selector){
   };
 }
 
-async function loadCS(){
+async function loadCS() {
   const [jobsResp, settingsResp] = await Promise.all([
     api.jobs('?limit=300&so_missing=1'),
-    api.settings()
+    api.settings(),
   ]);
 
-  const allNeeds = (jobsResp.jobs||[]).filter(j => {
+  const allNeeds    = (jobsResp.jobs||[]).filter(j => {
     const s = (j.status||'').toUpperCase();
     return s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING';
   });
@@ -1041,81 +1136,120 @@ async function loadCS(){
 
   view(`
     <div class="card">
-      <div class="row">
-        <div style="flex:1 1 520px;">
+      <div class="row" style="align-items:flex-start;">
+        <div style="flex:1 1 320px;">
           <h2 style="margin:0;">Customer Service</h2>
-          <div class="muted">Complete intake for portal jobs, enter SO# for manual jobs, and create new jobs.</div>
+          <div class="muted" style="margin-top:4px;">Complete intake, assign SO#s, and create jobs.</div>
         </div>
-        <div style="display:flex; gap:10px; align-items:flex-end;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
           ${kpi('Pending Intake', portalNeeds.length)}
           ${kpi('Needs SO#', manualNeeds.length)}
         </div>
       </div>
     </div>
 
-    <div class="card" id="intake-panel" style="display:none">
+    <div class="card" id="intake-panel" style="display:none;">
       <div id="intake-form-content"></div>
     </div>
 
     <div class="card">
-      <div class="label" style="margin-bottom:8px;">Pending Intake — Portal Jobs</div>
-      <table class="table">
-        <thead><tr>
-          <th style="min-width:200px;">Customer</th>
-          <th style="min-width:90px;">VIN</th>
-          <th style="min-width:180px;">Dealer</th>
-          <th style="min-width:90px;"></th>
-        </tr></thead>
-        <tbody>
-          ${portalNeeds.map(j=>`
-            <tr data-id="${j.job_id}">
-              <td>${escapeHtml(j.customer_name||'—')}</td>
-              <td>${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
-              <td>${escapeHtml(j.dealer_name||'—')}</td>
-              <td><button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button></td>
-            </tr>
-          `).join('') || `<tr><td colspan="4" class="muted" style="padding:10px;">No portal jobs pending intake.</td></tr>`}
-        </tbody>
-      </table>
+      <button class="section-header" data-collapse="intake">
+        <span class="collapse-title">Pending Intake — Portal Jobs</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${portalNeeds.length ? `<span class="count-badge urgent">${portalNeeds.length}</span>` : ''}
+          <span class="collapse-chevron">${portalNeeds.length ? '▾' : '▸'}</span>
+        </div>
+      </button>
+      <div class="collapse-body" id="collapse-intake" ${!portalNeeds.length ? 'style="display:none;"' : ''}>
+        <table class="table">
+          <thead><tr>
+            <th>Customer</th><th>VIN</th><th>Dealer</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${portalNeeds.map(j=>`
+              <tr data-id="${j.job_id}">
+                <td>${escapeHtml(j.customer_name||'—')}</td>
+                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
+                <td>${escapeHtml(j.dealer_name||'—')}</td>
+                <td>
+                  <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
+                  <button class="btn secondary small-btn" data-open-job="${j.job_id}" style="margin-left:4px;">View</button>
+                </td>
+              </tr>
+            `).join('') || `<tr><td colspan="4" class="muted" style="padding:10px;">No portal jobs pending intake.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="card">
-      <div class="label" style="margin-bottom:8px;">Needs SO# — Manual Jobs</div>
-      <table class="table">
-        <thead><tr>
-          <th style="min-width:220px;">Customer</th>
-          <th style="min-width:90px;">VIN</th>
-          <th style="min-width:180px;">Dealer</th>
-          <th style="min-width:200px;">SO#</th>
-          <th style="min-width:90px;"></th>
-        </tr></thead>
-        <tbody>
-          ${manualNeeds.map(j=>`
-            <tr data-id="${j.job_id}">
-              <td>${escapeHtml(j.customer_name||'')}</td>
-              <td>${escapeHtml((j.vin||'').slice(-6))}</td>
-              <td>${escapeHtml(j.dealer_name||'')}</td>
-              <td><input class="input so" placeholder="S-ORD101350" /></td>
-              <td><button class="btn small-btn save-so">Save</button></td>
-            </tr>
-          `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">No manual jobs need SO#.</td></tr>`}
-        </tbody>
-      </table>
+      <button class="section-header" data-collapse="so">
+        <span class="collapse-title">Needs SO# — Manual Jobs</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${manualNeeds.length ? `<span class="count-badge">${manualNeeds.length}</span>` : ''}
+          <span class="collapse-chevron">${manualNeeds.length ? '▾' : '▸'}</span>
+        </div>
+      </button>
+      <div class="collapse-body" id="collapse-so" ${!manualNeeds.length ? 'style="display:none;"' : ''}>
+        <table class="table">
+          <thead><tr>
+            <th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${manualNeeds.map(j=>`
+              <tr data-id="${j.job_id}">
+                <td>${escapeHtml(j.customer_name||'')}</td>
+                <td class="mono">${escapeHtml((j.vin||'').slice(-6))}</td>
+                <td>${escapeHtml(j.dealer_name||'')}</td>
+                <td><input class="input so" placeholder="S-ORD101350" /></td>
+                <td><button class="btn small-btn save-so">Save</button></td>
+              </tr>
+            `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">No manual jobs need SO#.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="card" id="cs-create"></div>
+    <div class="card">
+      <button class="section-header" data-collapse="create">
+        <span class="collapse-title">Create Job</span>
+        <span class="collapse-chevron">▸</span>
+      </button>
+      <div class="collapse-body" id="collapse-create" style="display:none;">
+        <div id="cs-create-inner"></div>
+      </div>
+    </div>
   `);
 
-  await loadCreateJobInto('#cs-create');
+  bindCollapsibles();
+  bindJobsTable();
+
+  // Lazy-load create form when section is opened
+  let createLoaded = false;
+  const createBtn = document.querySelector('[data-collapse="create"]');
+  if (createBtn) {
+    createBtn._collapsebound = false; // allow re-bind with lazy-load logic
+    createBtn.addEventListener('click', async () => {
+      const body = document.getElementById('collapse-create');
+      const chevron = createBtn.querySelector('.collapse-chevron');
+      const hidden = body.style.display === 'none';
+      body.style.display = hidden ? '' : 'none';
+      if (chevron) chevron.textContent = hidden ? '▾' : '▸';
+      if (hidden && !createLoaded) {
+        createLoaded = true;
+        await loadCreateJobInto('#cs-create-inner');
+      }
+    });
+  }
 
   $$('.intake-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const jobId = parseInt(btn.dataset.id, 10);
-      const job = portalNeeds.find(j => j.job_id === jobId);
+      const job   = portalNeeds.find(j => j.job_id === jobId);
       const panel = $('#intake-panel');
       panel.style.display = '';
       renderIntakeForm($('#intake-form-content'), job, dealerList, salesList);
-      panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+      panel.scrollIntoView({behavior:'smooth', block:'start'});
     });
   });
 
@@ -1124,9 +1258,8 @@ async function loadCS(){
       const tr = btn.closest('tr');
       const id = parseInt(tr.dataset.id, 10);
       const so = $('.so', tr).value.trim();
-      if(!so){ alert('SO# required'); return; }
+      if (!so) { alert('SO# required'); return; }
       btn.disabled = true;
-      const old = btn.textContent;
       btn.textContent = 'Saving…';
       try {
         await api.setSO(id, so);
@@ -1134,7 +1267,7 @@ async function loadCS(){
         setTimeout(() => router(), 250);
       } catch(e) {
         alert(e.message);
-        btn.textContent = old;
+        btn.textContent = 'Save';
       } finally {
         btn.disabled = false;
       }
@@ -1418,49 +1551,95 @@ function renderScheduleForm(el, job, userOptions) {
   });
 }
 
-async function loadTech(){
-  const [activeResp, jobsResp] = await Promise.all([ api.timeActive(), api.jobs('?limit=250') ]);
-  const active = activeResp.active;
-  const jobs = jobsResp.jobs || [];
-  view(`
-    <div class="card">
-      <h2 style="margin:0;">Tech</h2>
-      <div class="muted">Start/Stop job. Fix time if you forgot. One active timer per tech.</div>
-    </div>
+async function loadTech() {
+  const [activeResp, myJobsResp] = await Promise.all([
+    api.timeActive(),
+    api.jobs('?assigned_me=1&limit=100'),
+  ]);
+  const active  = activeResp.active;
+  const allMyJobs = myJobsResp.jobs || [];
+  const myJobs  = allMyJobs.filter(j => ['SCHEDULED','IN_PROGRESS','PENDING_QC'].includes(j.status));
 
-    <div class="card">
-      <div class="label" style="margin-bottom:8px;">My Active Timer</div>
-      ${active ? `
-        <div class="row" style="align-items:center;">
-          <div style="flex:1 1 320px;">
-            <div><strong>${escapeHtml(active.so_number || '')}</strong> <span class="muted">${escapeHtml((active.vin||'').slice(-6))}</span></div>
-            <div class="small">Started: ${escapeHtml(active.start_at || '')}</div>
+  const activeJobId = active ? parseInt(active.job_id, 10) : 0;
+
+  function techJobCard(job) {
+    const isActive = job.job_id === activeJobId;
+    const estHrs   = job.estimated_minutes ? (job.estimated_minutes / 60).toFixed(1) : null;
+    return `
+      <div class="tech-job-card${isActive ? ' is-active' : ''}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+          <div>
+            <div class="tech-job-so">${escapeHtml(job.so_number || '#' + job.job_id)}</div>
+            <div class="tech-job-meta">
+              ${escapeHtml(job.customer_name||'')}${job.dealer_name ? ' · '+escapeHtml(job.dealer_name) : ''}${job.vin ? ' · …'+escapeHtml(job.vin.slice(-6)) : ''}
+            </div>
           </div>
-          <button class="btn" id="stop-now">Stop</button>
+          <span class="badge ${badgeClass(job.status)}" style="white-space:nowrap;">${fmtStatus(job.status)}</span>
         </div>
-      ` : `<div class="muted">No active job.</div>`}
-    </div>
+        ${job.work_center ? `<div style="font-size:13px;font-weight:700;color:var(--sage);margin-bottom:4px;">${escapeHtml(job.work_center)}</div>` : ''}
+        ${estHrs ? `<div class="muted" style="font-size:12px;margin-bottom:10px;">Est ${estHrs} hrs</div>` : ''}
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${isActive
+            ? `<div style="flex:1;font-size:13px;font-weight:700;color:var(--arches);">▲ Active — see timer above</div>`
+            : `<button class="btn btn-xl" data-start-job="${job.job_id}" style="flex:1;">Start</button>`
+          }
+          <button class="btn secondary btn-xl" data-open-job="${job.job_id}">View</button>
+        </div>
+      </div>
+    `;
+  }
+
+  view(`
+    ${active ? `
+      <div class="active-job-card">
+        <div class="label-sm">Active Job</div>
+        <div class="tech-job-so" style="margin-top:2px;">${escapeHtml(active.so_number || '#' + active.job_id)}</div>
+        <div class="tech-job-meta">${escapeHtml(active.customer_name||'')}${active.vin ? ' · …'+escapeHtml(active.vin.slice(-6)) : ''}${active.work_center ? ' · '+escapeHtml(active.work_center) : ''}</div>
+        <div class="timer-display" id="live-timer">00:00:00</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn danger btn-xl" id="stop-active" style="flex:1;">Stop Job</button>
+          <button class="btn secondary btn-xl" id="note-toggle" style="flex:1;">+ Note</button>
+        </div>
+        <div id="note-panel" style="display:none;margin-top:14px;">
+          <textarea class="input" id="note-input" rows="3" placeholder="Add a note to this job…"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <button class="btn secondary" id="note-submit">Save Note</button>
+            <span class="field-error" data-error-for="note-err" style="flex:1;"></span>
+          </div>
+        </div>
+      </div>
+    ` : `
+      <div class="card" style="text-align:center;padding:28px 16px;">
+        <div style="font-size:13px;font-weight:700;color:rgba(0,0,0,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">No Active Job</div>
+        <div class="muted">Start a job below to begin tracking time.</div>
+      </div>
+    `}
+
+    ${myJobs.length ? myJobs.map(techJobCard).join('') : `
+      <div class="card" style="text-align:center;padding:20px;">
+        <div class="muted">No jobs currently assigned to you.</div>
+      </div>
+    `}
 
     <div class="card">
-      <div class="label" style="margin-bottom:6px;">All Jobs</div>
-      <input class="input" id="tech-search" placeholder="Search SO#, VIN, customer" />
-      <div style="margin-top:10px;">
+      <button class="section-header" data-collapse="alljobs-tech">
+        <span class="collapse-title">All Jobs</span>
+        <span class="collapse-chevron">▸</span>
+      </button>
+      <div class="collapse-body" id="collapse-alljobs-tech" style="display:none;">
+        <input class="input" id="tech-search" placeholder="Search SO#, VIN, customer" style="margin-bottom:10px;" />
         <table class="table" id="tech-table">
           <thead><tr>
-            <th style="min-width:140px;">SO#</th>
-            <th style="min-width:90px;">VIN</th>
-            <th style="min-width:220px;">Customer</th>
-            <th style="min-width:160px;">Status</th>
-            <th style="min-width:90px;"></th>
+            <th>SO#</th><th>VIN</th><th>Customer</th><th>Status</th><th></th>
           </tr></thead>
           <tbody>
-            ${jobs.map(j=>`
+            ${allMyJobs.map(j=>`
               <tr>
-                <td>${escapeHtml(j.so_number||'')}</td>
-                <td>${escapeHtml((j.vin||'').slice(-6))}</td>
+                <td class="mono">${escapeHtml(j.so_number||'')}</td>
+                <td class="mono">${escapeHtml((j.vin||'').slice(-6))}</td>
                 <td>${escapeHtml(j.customer_name||'')}</td>
-                <td><span class="badge ${badgeClass(j.status)}">${escapeHtml(fmtStatus(j.status))}</span></td>
-                <td><a class="btn secondary small-btn" href="/ops/job/${j.job_id}" data-link>Open</a></td>
+                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">Open</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -1469,16 +1648,92 @@ async function loadTech(){
     </div>
   `);
 
-  if (active){
-    $('#stop-now').onclick = async ()=>{ try{ await api.timeStop(); router(); }catch(e){ alert(e.message);} };
+  // Live timer
+  if (active && active.start_ts) {
+    const tick = () => {
+      const el = document.getElementById('live-timer');
+      if (!el) { clearInterval(state.timerInterval); return; }
+      const start = parseGMTTimestamp(active.start_ts);
+      el.textContent = formatElapsed(Math.floor((Date.now() - start.getTime()) / 1000));
+    };
+    tick();
+    state.timerInterval = setInterval(tick, 1000);
   }
 
-  const search = $('#tech-search');
-  const rows = $$('#tech-table tbody tr');
-  search.addEventListener('input', ()=>{
-    const q = search.value.trim().toLowerCase();
-    rows.forEach(r=>{ r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+  const stopBtn = document.getElementById('stop-active');
+  if (stopBtn) {
+    stopBtn.onclick = async () => {
+      stopBtn.disabled = true;
+      stopBtn.textContent = 'Stopping…';
+      try {
+        await api.timeStop();
+        clearInterval(state.timerInterval);
+        router();
+      } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop Job'; }
+    };
+  }
+
+  const noteToggle = document.getElementById('note-toggle');
+  if (noteToggle) {
+    noteToggle.onclick = () => {
+      const p = document.getElementById('note-panel');
+      p.style.display = p.style.display === 'none' ? '' : 'none';
+      if (p.style.display !== 'none') document.getElementById('note-input').focus();
+    };
+  }
+
+  const noteSubmit = document.getElementById('note-submit');
+  if (noteSubmit) {
+    noteSubmit.onclick = async () => {
+      const text   = document.getElementById('note-input').value.trim();
+      const errEl  = document.querySelector('[data-error-for="note-err"]');
+      errEl.textContent = '';
+      if (!text) { errEl.textContent = 'Note required.'; return; }
+      noteSubmit.disabled = true;
+      noteSubmit.textContent = 'Saving…';
+      try {
+        await api.addNote(activeJobId, text);
+        document.getElementById('note-input').value = '';
+        document.getElementById('note-panel').style.display = 'none';
+        errEl.style.color = 'var(--sage)';
+        errEl.textContent = 'Saved.';
+        setTimeout(() => { errEl.textContent = ''; errEl.style.color = ''; }, 2000);
+      } catch(e) {
+        errEl.textContent = e.message;
+      }
+      noteSubmit.disabled = false;
+      noteSubmit.textContent = 'Save Note';
+    };
+  }
+
+  $$('[data-start-job]').forEach(btn => {
+    btn.onclick = async () => {
+      const jobId = parseInt(btn.getAttribute('data-start-job'), 10);
+      btn.disabled = true;
+      btn.textContent = 'Starting…';
+      try {
+        await api.timeStart(jobId, null, '');
+        router();
+      } catch(e) {
+        alert(e.message);
+        btn.disabled = false;
+        btn.textContent = 'Start';
+      }
+    };
   });
+
+  bindCollapsibles();
+  bindJobsTable();
+
+  const search = document.getElementById('tech-search');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      $$('#tech-table tbody tr').forEach(r => {
+        r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
 }
 
 async function loadExecutive(){
@@ -1552,39 +1807,92 @@ async function loadQC(){
   `);
 }
 
-async function loadAdmin(){
-  const usersResp = await api.users();
+async function loadAdmin() {
+  const [usersResp, jobsResp] = await Promise.all([
+    api.users(),
+    api.jobs('?limit=500'),
+  ]);
   const users = usersResp.users || [];
+  const jobs  = jobsResp.jobs  || [];
+  const byS   = (s) => jobs.filter(j => j.status === s).length;
+
   view(`
     <div class="card">
-      <h2 style="margin:0;">Admin</h2>
-      <div class="muted">Settings + user visibility. Role changes happen in WP Users.</div>
+      <h2 style="margin:0 0 4px;">Admin</h2>
+      <div class="muted">Ops role management and system overview.</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-tile"><div class="label">Active Jobs</div><div class="value">${jobs.filter(j=>j.status!=='COMPLETE').length}</div></div>
+      <div class="stat-tile"><div class="label">In Progress</div><div class="value">${byS('IN_PROGRESS')}</div></div>
+      <div class="stat-tile"><div class="label">Pending QC</div><div class="value">${byS('PENDING_QC')}</div></div>
+      <div class="stat-tile"><div class="label">Unscheduled</div><div class="value">${byS('UNSCHEDULED')}</div></div>
+      <div class="stat-tile"><div class="label">Users</div><div class="value">${users.length}</div></div>
     </div>
 
     <div class="card">
-      <div class="label" style="margin-bottom:8px;">Quick Links</div>
-      <div class="row">
-        <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
-        <a class="btn secondary" href="/ops/settings" data-link>Ops Settings</a>
-        <a class="btn secondary" href="/ops/exec" data-link>Executive Dashboard</a>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="collapse-title">Users &amp; Ops Roles</div>
+        <a class="btn secondary small-btn" href="/wp-admin/users.php">WP Admin ↗</a>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="label" style="margin-bottom:8px;">Users</div>
       <table class="table">
-        <thead><tr><th>Name</th><th>Email</th></tr></thead>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Ops Role</th><th style="width:60px;"></th></tr>
+        </thead>
         <tbody>
-          ${users.slice(0,200).map(u=>`
-            <tr><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td></tr>
+          ${users.map(u => `
+            <tr>
+              <td style="font-weight:600;">${escapeHtml(u.name)}</td>
+              <td style="font-size:13px;color:rgba(0,0,0,.5);">${escapeHtml(u.email)}</td>
+              <td>
+                <select class="input role-select" style="padding:6px 8px;font-size:13px;width:auto;min-width:120px;" data-uid="${u.id}">
+                  <option value=""          ${u.ops_role===''         ?'selected':''}>No Role</option>
+                  <option value="tech"       ${u.ops_role==='tech'       ?'selected':''}>Tech</option>
+                  <option value="cs"         ${u.ops_role==='cs'         ?'selected':''}>CS</option>
+                  <option value="supervisor" ${u.ops_role==='supervisor' ?'selected':''}>Supervisor</option>
+                  <option value="admin"      ${u.ops_role==='admin'      ?'selected':''}>Admin</option>
+                </select>
+              </td>
+              <td>
+                <span class="role-save-status" data-uid="${u.id}" style="font-size:11px;color:rgba(0,0,0,.4);white-space:nowrap;"></span>
+              </td>
+            </tr>
           `).join('')}
         </tbody>
       </table>
     </div>
+
+    <div class="card">
+      <div class="collapse-title" style="margin-bottom:10px;">Quick Links</div>
+      <div class="row">
+        <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
+        <a class="btn secondary" href="/ops/settings" data-link>Settings</a>
+        <a class="btn secondary" href="/ops/exec" data-link>Exec Dashboard</a>
+        <a class="btn secondary" href="/ops/jobs" data-link>All Jobs</a>
+      </div>
+    </div>
   `);
+
+  $$('.role-select').forEach(sel => {
+    sel.onchange = async () => {
+      const uid      = parseInt(sel.getAttribute('data-uid'), 10);
+      const statusEl = document.querySelector(`.role-save-status[data-uid="${uid}"]`);
+      statusEl.textContent = 'Saving…';
+      try {
+        await api.updateUserRole(uid, sel.value);
+        statusEl.textContent = 'Saved ✓';
+        setTimeout(() => { statusEl.textContent = ''; }, 2500);
+      } catch(e) {
+        statusEl.textContent = 'Error';
+      }
+    };
+  });
+
+  linkify();
 }
 
   async function render(){
+    if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
     const r = state.route;
     setActiveNav(
       r.startsWith('/job/') ? '/jobs' :

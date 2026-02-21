@@ -17,7 +17,6 @@ Slate_Ops_Routes::require_access_or_redirect();
   <div id="slate-ops-app">
     <header class="ops-header">
       <div class="ops-brand">
-        <div class="ops-mark"></div>
         <div class="ops-title"><?php echo Slate_Ops_Assets::logo_img(22); ?></div>
       </div>
       <div class="ops-user">
