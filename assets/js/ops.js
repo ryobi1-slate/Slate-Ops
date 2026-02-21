@@ -37,7 +37,9 @@
     timeStop(){ return this.req('/time/stop', {method:'POST'}); },
     timeActive(){ return this.req('/time/active'); },
     correction(payload){ return this.req('/time/correction', {method:'POST', body: JSON.stringify(payload)}); },
-    supervisorQueues(){ return this.req('/supervisor/queues'); }
+    supervisorQueues(){ return this.req('/supervisor/queues'); },
+    editJob(id, payload){ return this.req('/jobs/' + id, {method:'PATCH', body: JSON.stringify(payload)}); },
+    addNote(id, note){ return this.req('/jobs/' + id + '/notes', {method:'POST', body: JSON.stringify({note})}); }
   };
 
   const state = {
@@ -192,29 +194,40 @@
   }
 
   async function loadJobDetail(id){
-    const job = await api.job(id);
+    const [job, settingsResp, usersResp] = await Promise.all([
+      api.job(id),
+      api.settings(),
+      api.users().catch(() => ({users:[]})),
+    ]);
+
     const caps = slateOpsSettings.user.caps || {};
     const isSupervisor = !!caps.supervisor || !!caps.admin;
     const isCS = !!caps.cs || !!caps.admin;
+    const canEdit = isCS || isSupervisor;
 
     const t = job.time || {approved_minutes_total:0, pending_minutes_total:0, by_tech:[]};
-    const estHrs = job.clickup_estimate_ms ? (job.clickup_estimate_ms / 1000 / 60 / 60) : 0;
+    const estHrs = job.estimated_minutes ? (job.estimated_minutes / 60) : 0;
     const actHrs = t.approved_minutes_total / 60;
     const varHrs = actHrs - estHrs;
+    const notesLog = job.notes_log || [];
+
+    const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','HOLD':'Hold'};
+    const jobTypeLabel = {
+      'UPFIT':'Upfit','COMMERCIAL_UPFIT':'Commercial Upfit','COMMERCIAL_BUILD':'Commercial Build',
+      'RV_BUILD':'RV Build','RV_UPFIT':'RV Upfit','PARTS_ONLY':'Parts Only','SERVICE':'Service','WARRANTY':'Warranty',
+    };
 
     view(`
       <div class="card">
-        <h2>Job</h2>
+        <div class="row" style="align-items:flex-start;margin-bottom:14px;">
+          <div style="flex:1;">
+            <h2 style="margin:0 0 4px;">${escapeHtml(job.so_number || 'No SO#')}</h2>
+            <div class="muted">${escapeHtml(job.customer_name || '')}${job.dealer_name ? ' &middot; ' + escapeHtml(job.dealer_name) : ''}</div>
+          </div>
+          <span class="badge ${badgeClass(job.status)}">${fmtStatus(job.status)}</span>
+        </div>
 
         <div class="row">
-          <div class="kpi">
-            <div class="label">SO#</div>
-            <div class="value mono" style="font-size:18px;">${job.so_number || '—'}</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Status</div>
-            <div class="value" style="font-size:18px;">${fmtStatus(job.status)}</div>
-          </div>
           <div class="kpi">
             <div class="label">Estimate</div>
             <div class="value">${estHrs ? estHrs.toFixed(1) : '—'} hrs</div>
@@ -233,20 +246,39 @@
           </div>
         </div>
 
-        <div class="row" style="margin-top:10px;">
-          <div style="flex:1 1 300px;">
-            <div class="label" style="margin-bottom:6px;">VIN</div>
-            <div class="mono">${job.vin || ''}</div>
+        <div class="form-grid" style="margin-top:14px;">
+          <div>
+            <div class="label" style="margin-bottom:4px;">VIN</div>
+            <div class="mono">${escapeHtml(job.vin || '—')}</div>
           </div>
-          <div style="flex:1 1 300px;">
-            <div class="label" style="margin-bottom:6px;">Customer</div>
-            <div>${escapeHtml(job.customer_name || '')}</div>
+          <div>
+            <div class="label" style="margin-bottom:4px;">Job Type</div>
+            <div>${escapeHtml(jobTypeLabel[job.job_type] || job.job_type || '—')}</div>
           </div>
-          <div style="flex:1 1 300px;">
-            <div class="label" style="margin-bottom:6px;">Scheduled</div>
-            <div>${job.scheduled_start || ''} - ${job.scheduled_finish || ''}</div>
+          <div>
+            <div class="label" style="margin-bottom:4px;">Parts Status</div>
+            <div>${escapeHtml(partsLabel[job.parts_status] || job.parts_status || '—')}</div>
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:4px;">Requested Date</div>
+            <div>${escapeHtml(job.requested_date || '—')}</div>
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:4px;">Assigned Tech</div>
+            <div>${escapeHtml(job.assigned_name || '—')}</div>
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:4px;">Scheduled</div>
+            <div>${escapeHtml(job.scheduled_start || '—')} &rarr; ${escapeHtml(job.scheduled_finish || '—')}</div>
           </div>
         </div>
+
+        ${job.notes ? `
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);">
+            <div class="label" style="margin-bottom:4px;">Notes</div>
+            <div style="white-space:pre-wrap;">${escapeHtml(job.notes)}</div>
+          </div>
+        ` : ''}
 
         <div class="row" style="margin-top:14px;">
           <button class="btn" id="start-btn">Start</button>
@@ -254,8 +286,15 @@
           <button class="btn secondary" id="fix-btn">Fix Time</button>
           ${isCS ? `<button class="btn secondary" id="so-btn">Set SO#</button>` : ``}
           ${isSupervisor ? `<button class="btn secondary" id="qc-btn">QC Approve</button>` : ``}
+          ${canEdit ? `<button class="btn secondary" id="edit-btn">Edit Job</button>` : ``}
         </div>
       </div>
+
+      ${canEdit ? `
+      <div class="card" id="edit-panel" style="display:none;">
+        <div id="edit-form-content"></div>
+      </div>
+      ` : ''}
 
       <div class="card">
         <h2>Time Breakdown</h2>
@@ -281,6 +320,33 @@
             `).join('') || `<tr><td colspan="5">No time logged yet.</td></tr>`}
           </tbody>
         </table>
+      </div>
+
+      <div class="card">
+        <h2>Notes</h2>
+        ${notesLog.length === 0 ? `<div class="muted">No notes yet.</div>` : `
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            ${notesLog.map(n => `
+              <div style="padding:10px 12px;background:var(--surface2,#f4f4f4);border-radius:6px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <strong style="font-size:13px;">${escapeHtml(n.user_name || '')}</strong>
+                  <span class="muted" style="font-size:12px;">${escapeHtml(n.created_at || '')}</span>
+                </div>
+                <div style="white-space:pre-wrap;font-size:14px;">${escapeHtml(n.note || '')}</div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+        ${canEdit ? `
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);">
+            <div class="label" style="margin-bottom:6px;">Add Note</div>
+            <textarea class="input" id="new-note" rows="3" placeholder="Internal note…"></textarea>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
+              <button class="btn secondary" id="add-note-btn">Add Note</button>
+              <div class="field-error" data-error-for="note" style="flex:1;"></div>
+            </div>
+          </div>
+        ` : ``}
       </div>
     `);
 
@@ -354,6 +420,247 @@
         }
       };
     }
+
+    if ($('#edit-btn')) {
+      $('#edit-btn').onclick = () => {
+        const panel = $('#edit-panel');
+        if (panel.style.display === 'none') {
+          panel.style.display = '';
+          renderEditForm($('#edit-form-content'), job, isSupervisor, settingsResp, usersResp.users || []);
+          panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+        } else {
+          panel.style.display = 'none';
+        }
+      };
+    }
+
+    if ($('#add-note-btn')) {
+      $('#add-note-btn').onclick = async () => {
+        const noteText = $('#new-note').value.trim();
+        const errEl = $('[data-error-for="note"]');
+        errEl.textContent = '';
+        if (!noteText) { errEl.textContent = 'Note cannot be empty.'; return; }
+        const btn = $('#add-note-btn');
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+        try {
+          await api.addNote(job.job_id, noteText);
+          router();
+        } catch(e) {
+          errEl.textContent = e.message;
+          btn.disabled = false;
+          btn.textContent = 'Add Note';
+        }
+      };
+    }
+  }
+
+  function renderEditForm(el, job, isSupervisor, settings, users) {
+    const dealerOpts = (settings.dealers || []).map(d =>
+      `<option value="${escapeHtml(d)}"${job.dealer_name===d?' selected':''}>${escapeHtml(d)}</option>`
+    ).join('');
+    const salesOpts = (settings.sales_people || []).map(p =>
+      `<option value="${escapeHtml(p)}"${job.sales_person===p?' selected':''}>${escapeHtml(p)}</option>`
+    ).join('');
+
+    const jobTypes = [
+      ['UPFIT','Upfit'],['COMMERCIAL_UPFIT','Commercial Upfit'],['COMMERCIAL_BUILD','Commercial Build'],
+      ['RV_BUILD','RV Build'],['RV_UPFIT','RV Upfit'],['PARTS_ONLY','Parts Only'],
+      ['SERVICE','Service'],['WARRANTY','Warranty'],
+    ];
+    const jobTypeOpts = jobTypes.map(([v,l]) =>
+      `<option value="${v}"${job.job_type===v?' selected':''}>${l}</option>`
+    ).join('');
+
+    const partsOpts = [['NOT_READY','Not Ready'],['PARTIAL','Partial'],['READY','Ready'],['HOLD','Hold']].map(([v,l]) =>
+      `<option value="${v}"${(job.parts_status||'NOT_READY')===v?' selected':''}>${l}</option>`
+    ).join('');
+
+    const estHours = job.estimated_minutes ? (job.estimated_minutes / 60).toFixed(1) : '';
+
+    const statusOpts = ['UNSCHEDULED','READY_FOR_SCHEDULING','SCHEDULED','IN_PROGRESS','PENDING_QC','COMPLETE','DELAYED','BLOCKED','ON_HOLD'].map(s =>
+      `<option value="${s}"${job.status===s?' selected':''}>${fmtStatus(s)}</option>`
+    ).join('');
+
+    const userOpts = users.map(u =>
+      `<option value="${u.id}"${(job.assigned_user_id==u.id)?' selected':''}>${escapeHtml(u.name)}</option>`
+    ).join('');
+
+    el.innerHTML = `
+      <div class="label" style="margin-bottom:6px;">Edit Job — ${escapeHtml(job.so_number || '#' + job.job_id)}</div>
+      <div class="muted" style="margin-bottom:12px;">Changes are logged to the audit trail.</div>
+
+      <div class="form-grid">
+        <div>
+          <div class="label" style="margin-bottom:6px;">Customer</div>
+          <input class="input" id="ef-customer" value="${escapeHtml(job.customer_name||'')}" placeholder="Customer name" />
+          <div class="field-error" data-error-for="customer_name"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Dealer</div>
+          <select class="input" id="ef-dealer">
+            <option value="">Select dealer</option>
+            ${dealerOpts}
+          </select>
+          <div class="field-error" data-error-for="dealer_name"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">VIN Last 7–8</div>
+          <input class="input" id="ef-vin" maxlength="8" value="${escapeHtml(job.vin_last8||job.vin||'')}" placeholder="A1B2C3D4" />
+          <div class="field-error" data-error-for="vin_last8"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Job Type</div>
+          <select class="input" id="ef-job-type">
+            ${jobTypeOpts}
+          </select>
+          <div class="field-error" data-error-for="job_type"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Parts Status</div>
+          <select class="input" id="ef-parts">
+            ${partsOpts}
+          </select>
+          <div class="field-error" data-error-for="parts_status"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
+          <input class="input" id="ef-est" type="number" min="0.5" step="0.5" value="${escapeHtml(estHours)}" placeholder="e.g. 2.5" />
+          <div class="field-error" data-error-for="estimated_hours"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Requested Date</div>
+          <input class="input" id="ef-date" type="date" value="${escapeHtml(job.requested_date||'')}" />
+          <div class="field-error" data-error-for="requested_date"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Sales Person</div>
+          <select class="input" id="ef-sales">
+            <option value="">Select sales person</option>
+            ${salesOpts}
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="label" style="margin-bottom:6px;">Notes</div>
+        <textarea class="input" id="ef-notes" rows="3" placeholder="Additional notes…">${escapeHtml(job.notes||'')}</textarea>
+      </div>
+
+      ${isSupervisor ? `
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);">
+        <div class="label" style="margin-bottom:8px;">Supervisor Fields</div>
+        <div class="form-grid">
+          <div>
+            <div class="label" style="margin-bottom:6px;">Status</div>
+            <select class="input" id="ef-status">
+              ${statusOpts}
+            </select>
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:6px;">Status Detail</div>
+            <input class="input" id="ef-status-detail" value="${escapeHtml(job.status_detail||'')}" placeholder="Optional detail" />
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:6px;">Assigned Tech</div>
+            <select class="input" id="ef-tech">
+              <option value="">Unassigned</option>
+              ${userOpts}
+            </select>
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:6px;">Work Center / Bay</div>
+            <input class="input" id="ef-bay" value="${escapeHtml(job.work_center||'')}" placeholder="e.g. Bay 3" />
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:6px;">Scheduled Start</div>
+            <input class="input" id="ef-start" type="datetime-local" value="${escapeHtml((job.scheduled_start||'').replace(' ','T'))}" />
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:6px;">Scheduled Finish</div>
+            <input class="input" id="ef-finish" type="datetime-local" value="${escapeHtml((job.scheduled_finish||'').replace(' ','T'))}" />
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:6px;">Priority (1–5)</div>
+            <input class="input" id="ef-priority" type="number" min="1" max="5" value="${escapeHtml(String(job.priority||3))}" />
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:6px;">Delay Reason</div>
+            <select class="input" id="ef-delay">
+              <option value="">None</option>
+              <option value="parts"${job.delay_reason==='parts'?' selected':''}>Parts</option>
+              <option value="customer"${job.delay_reason==='customer'?' selected':''}>Customer</option>
+              <option value="vendor"${job.delay_reason==='vendor'?' selected':''}>Vendor</option>
+              <option value="labor"${job.delay_reason==='labor'?' selected':''}>Labor</option>
+              <option value="other"${job.delay_reason==='other'?' selected':''}>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="row" style="margin-top:14px;">
+        <button class="btn" id="ef-save">Save Changes</button>
+        <button class="btn secondary" id="ef-cancel">Cancel</button>
+        <div class="field-error" data-error-for="ef-general" style="flex:1;"></div>
+      </div>
+    `;
+
+    el.querySelector('#ef-cancel').onclick = () => {
+      el.closest('#edit-panel').style.display = 'none';
+    };
+
+    el.querySelector('#ef-save').onclick = async () => {
+      el.querySelectorAll('.field-error').forEach(e => e.textContent = '');
+
+      const payload = {
+        customer_name:   el.querySelector('#ef-customer').value.trim(),
+        dealer_name:     el.querySelector('#ef-dealer').value.trim(),
+        vin_last8:       el.querySelector('#ef-vin').value.trim().toUpperCase(),
+        job_type:        el.querySelector('#ef-job-type').value,
+        parts_status:    el.querySelector('#ef-parts').value,
+        estimated_hours: el.querySelector('#ef-est').value.trim(),
+        requested_date:  el.querySelector('#ef-date').value,
+        sales_person:    el.querySelector('#ef-sales').value.trim(),
+        notes:           el.querySelector('#ef-notes').value.trim(),
+      };
+
+      if (isSupervisor) {
+        const start  = el.querySelector('#ef-start').value.replace('T', ' ');
+        const finish = el.querySelector('#ef-finish').value.replace('T', ' ');
+        Object.assign(payload, {
+          status:           el.querySelector('#ef-status').value,
+          status_detail:    el.querySelector('#ef-status-detail').value.trim(),
+          assigned_user_id: parseInt(el.querySelector('#ef-tech').value, 10) || 0,
+          work_center:      el.querySelector('#ef-bay').value.trim(),
+          scheduled_start:  start || '',
+          scheduled_finish: finish || '',
+          priority:         parseInt(el.querySelector('#ef-priority').value, 10) || 3,
+          delay_reason:     el.querySelector('#ef-delay').value,
+        });
+      }
+
+      const btn = el.querySelector('#ef-save');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        await api.editJob(job.job_id, payload);
+        router();
+      } catch(e) {
+        const field   = e?.data?.data?.field || e?.data?.field;
+        const message = e?.data?.data?.message || e?.message || 'Save failed.';
+        if (field) {
+          const errEl = el.querySelector(`[data-error-for="${field}"]`);
+          if (errEl) errEl.textContent = message;
+          else el.querySelector('[data-error-for="ef-general"]').textContent = message;
+        } else {
+          el.querySelector('[data-error-for="ef-general"]').textContent = message;
+        }
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+      }
+    };
   }
 
   function promptReason(){
