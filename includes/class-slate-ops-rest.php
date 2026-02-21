@@ -43,9 +43,22 @@ class Slate_Ops_REST {
     ]);
 
     register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'get_job'],
+      [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback' => [__CLASS__, 'get_job'],
+      ],
+      [
+        'methods' => 'PATCH',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'edit_job'],
+      ],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/notes', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'add_note'],
     ]);
 
     register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/so', [
@@ -273,7 +286,255 @@ foreach ($rows as &$r) {
     $breakdown = self::time_breakdown($job_id);
     $job['time'] = $breakdown;
 
+    global $wpdb;
+    $al = $wpdb->prefix . 'slate_ops_audit_log';
+    $raw_notes = $wpdb->get_results($wpdb->prepare(
+      "SELECT audit_id, note, user_id, created_at FROM $al
+       WHERE entity_type='job' AND entity_id=%d AND action='note'
+       ORDER BY created_at ASC",
+      $job_id
+    ), ARRAY_A);
+    $job['notes_log'] = array_map(function($n) {
+      $n['user_name'] = Slate_Ops_Utils::user_display($n['user_id']);
+      return $n;
+    }, $raw_notes ?: []);
+
     return $job;
+  }
+
+  public static function edit_job($req) {
+    global $wpdb;
+    $job_id = intval($req['id']);
+    $body   = $req->get_json_params();
+    $t      = $wpdb->prefix . 'slate_ops_jobs';
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $is_supervisor = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN);
+    $is_cs         = current_user_can(Slate_Ops_Utils::CAP_CS)         || current_user_can(Slate_Ops_Utils::CAP_ADMIN) || current_user_can('edit_posts');
+
+    $update = [];
+    $audits = [];
+    $now    = Slate_Ops_Utils::now_gmt();
+
+    if ($is_cs || $is_supervisor) {
+      // Simple text fields
+      foreach (['customer_name', 'dealer_name', 'sales_person'] as $f) {
+        if (!array_key_exists($f, $body)) continue;
+        $val = sanitize_text_field((string)($body[$f] ?? ''));
+        $store = $val ?: null;
+        if ($store !== $job[$f]) {
+          $audits[] = [$f, $job[$f], $store];
+          $update[$f] = $store;
+        }
+      }
+
+      // Notes (textarea — preserves newlines)
+      if (array_key_exists('notes', $body)) {
+        $val = sanitize_textarea_field((string)($body['notes'] ?? ''));
+        $store = $val ?: null;
+        if ($store !== $job['notes']) {
+          $audits[] = ['notes', $job['notes'], $store];
+          $update['notes'] = $store;
+        }
+      }
+
+      // Requested date
+      if (array_key_exists('requested_date', $body)) {
+        $val = sanitize_text_field((string)($body['requested_date'] ?? ''));
+        if ($val !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $val)) {
+          return self::validation_error('requested_date', 'invalid_requested_date', 'Date must be YYYY-MM-DD.');
+        }
+        $store = $val ?: null;
+        if ($store !== $job['requested_date']) {
+          $audits[] = ['requested_date', $job['requested_date'], $store];
+          $update['requested_date'] = $store;
+        }
+      }
+
+      // VIN
+      if (array_key_exists('vin_last8', $body)) {
+        $vin = strtoupper(trim(sanitize_text_field((string)($body['vin_last8'] ?? ''))));
+        if ($vin !== '' && !Slate_Ops_Utils::vin_last8_is_valid($vin)) {
+          return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN must be 7–8 alphanumeric characters.');
+        }
+        $store = $vin ?: null;
+        if ($store !== $job['vin']) {
+          $audits[] = ['vin', $job['vin'], $store];
+          $update['vin']      = $store;
+          $update['vin_last8'] = $store;
+        }
+      }
+
+      // Job type
+      if (array_key_exists('job_type', $body)) {
+        $jt = strtoupper(sanitize_key((string)($body['job_type'] ?? '')));
+        if ($jt !== '' && !in_array($jt, Slate_Ops_Utils::cs_job_types(), true)) {
+          return self::validation_error('job_type', 'invalid_job_type', 'Select a valid job type.');
+        }
+        $store = $jt ?: null;
+        if ($store !== $job['job_type']) {
+          $audits[] = ['job_type', $job['job_type'], $store];
+          $update['job_type'] = $store;
+        }
+      }
+
+      // Parts status
+      if (array_key_exists('parts_status', $body)) {
+        $ps = strtoupper(sanitize_key((string)($body['parts_status'] ?? '')));
+        if ($ps !== '' && !in_array($ps, Slate_Ops_Utils::cs_parts_statuses(), true)) {
+          return self::validation_error('parts_status', 'invalid_parts_status', 'Select a valid parts status.');
+        }
+        $store = $ps ?: null;
+        if ($store !== $job['parts_status']) {
+          $audits[] = ['parts_status', $job['parts_status'], $store];
+          $update['parts_status'] = $store;
+        }
+      }
+
+      // Estimated hours
+      if (array_key_exists('estimated_hours', $body)) {
+        $eh = trim((string)($body['estimated_hours'] ?? ''));
+        if ($eh !== '') {
+          if (!is_numeric($eh)) {
+            return self::validation_error('estimated_hours', 'invalid_estimated_hours', 'Estimated hours must be a number.');
+          }
+          $em = (int) round((float) $eh * 60);
+          if ($em <= 0) {
+            return self::validation_error('estimated_hours', 'invalid_estimated_hours', 'Estimated hours must be greater than zero.');
+          }
+          if ($em !== (int)($job['estimated_minutes'] ?? 0)) {
+            $audits[] = ['estimated_minutes', $job['estimated_minutes'], $em];
+            $update['estimated_minutes'] = $em;
+          }
+        }
+      }
+    }
+
+    // Supervisor-only fields
+    if ($is_supervisor) {
+      if (array_key_exists('status', $body)) {
+        $ns = strtoupper(sanitize_text_field((string)($body['status'] ?? '')));
+        if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
+          $audits[] = ['status', $job['status'], $ns];
+          $update['status']            = $ns;
+          $update['status_updated_at'] = $now;
+        }
+      }
+
+      if (array_key_exists('status_detail', $body)) {
+        $sd    = sanitize_text_field((string)($body['status_detail'] ?? ''));
+        $store = $sd ?: null;
+        if ($store !== $job['status_detail']) {
+          $audits[] = ['status_detail', $job['status_detail'], $store];
+          $update['status_detail'] = $store;
+        }
+      }
+
+      if (array_key_exists('assigned_user_id', $body)) {
+        $uid   = (int)($body['assigned_user_id'] ?? 0);
+        $store = $uid ?: null;
+        if ($store !== (int)($job['assigned_user_id'] ?? 0)) {
+          $audits[] = ['assigned_user_id', $job['assigned_user_id'], $store];
+          $update['assigned_user_id'] = $store;
+        }
+      }
+
+      if (array_key_exists('work_center', $body)) {
+        $wc    = sanitize_text_field((string)($body['work_center'] ?? ''));
+        $store = $wc ?: null;
+        if ($store !== $job['work_center']) {
+          $audits[] = ['work_center', $job['work_center'], $store];
+          $update['work_center'] = $store;
+        }
+      }
+
+      if (array_key_exists('scheduled_start', $body)) {
+        $ss    = sanitize_text_field((string)($body['scheduled_start'] ?? ''));
+        $store = $ss ?: null;
+        if ($store !== $job['scheduled_start']) {
+          $audits[] = ['scheduled_start', $job['scheduled_start'], $store];
+          $update['scheduled_start'] = $store;
+        }
+      }
+
+      if (array_key_exists('scheduled_finish', $body)) {
+        $sf    = sanitize_text_field((string)($body['scheduled_finish'] ?? ''));
+        $store = $sf ?: null;
+        if ($store !== $job['scheduled_finish']) {
+          $audits[] = ['scheduled_finish', $job['scheduled_finish'], $store];
+          $update['scheduled_finish'] = $store;
+        }
+      }
+
+      if (array_key_exists('delay_reason', $body)) {
+        $dr    = sanitize_key((string)($body['delay_reason'] ?? ''));
+        $store = $dr ?: null;
+        if ($store !== $job['delay_reason']) {
+          $audits[] = ['delay_reason', $job['delay_reason'], $store];
+          $update['delay_reason'] = $store;
+        }
+      }
+
+      if (array_key_exists('priority', $body)) {
+        $prio = (int)($body['priority'] ?? 3);
+        $prio = max(1, min(5, $prio));
+        if ($prio !== (int)($job['priority'] ?? 3)) {
+          $audits[] = ['priority', $job['priority'], $prio];
+          $update['priority'] = $prio;
+        }
+      }
+    }
+
+    if (empty($update)) {
+      return self::get_job(['id' => $job_id]);
+    }
+
+    $update['updated_at'] = $now;
+    $wpdb->update($t, $update, ['job_id' => $job_id]);
+
+    foreach ($audits as [$field, $old, $new]) {
+      self::audit('job', $job_id, 'update', $field, (string)$old, (string)$new, 'Field edited');
+    }
+
+    $job2 = self::job_by_id($job_id);
+    self::maybe_update_clickup_name($job2);
+    if (array_key_exists('status', $update)) {
+      self::maybe_push_dealer_portal_status($job2);
+    }
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  public static function add_note($req) {
+    global $wpdb;
+    $job_id    = intval($req['id']);
+    $body      = $req->get_json_params();
+    $note_text = sanitize_textarea_field((string)($body['note'] ?? ''));
+
+    if (!$note_text) {
+      return new WP_Error('note_required', 'Note text is required.', ['status' => 400]);
+    }
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $wpdb->insert($wpdb->prefix . 'slate_ops_audit_log', [
+      'entity_type' => 'job',
+      'entity_id'   => $job_id,
+      'action'      => 'note',
+      'field_name'  => null,
+      'old_value'   => null,
+      'new_value'   => null,
+      'note'        => $note_text,
+      'user_id'     => get_current_user_id(),
+      'ip_address'  => isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : null,
+      'user_agent'  => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : null,
+      'created_at'  => Slate_Ops_Utils::now_gmt(),
+    ]);
+
+    return self::get_job(['id' => $job_id]);
   }
 
   public static function create_job_manual($req) {
