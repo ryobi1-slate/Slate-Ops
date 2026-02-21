@@ -57,8 +57,14 @@ class Slate_Ops_REST {
 
     register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/notes', [
       'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'permission_callback' => [__CLASS__, 'perm_ops'],
       'callback' => [__CLASS__, 'add_note'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/users/(?P<id>\d+)/role', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_admin'],
+      'callback' => [__CLASS__, 'update_user_role'],
     ]);
 
     register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/so', [
@@ -134,6 +140,9 @@ class Slate_Ops_REST {
   }
   public static function perm_cs_or_supervisor_or_admin() {
     return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
+  }
+  public static function perm_admin() {
+    return is_user_logged_in() && current_user_can(Slate_Ops_Utils::CAP_ADMIN);
   }
 
   // Handlers
@@ -231,6 +240,14 @@ if ($status) {
 
 if ($so_missing === 1) {
   $where .= " AND (so_number IS NULL OR so_number = '')";
+}
+
+if ((int)$req->get_param('assigned_me') === 1) {
+  $me = get_current_user_id();
+  if ($me) {
+    $where .= " AND assigned_user_id = %d";
+    $params[] = $me;
+  }
 }
 
 if ($q) {
@@ -976,8 +993,17 @@ return self::get_job(['id' => $job_id]);
 
   public static function time_active($req) {
     global $wpdb;
-    $t = $wpdb->prefix . 'slate_ops_time';
-    $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE user_id=%d AND end_at IS NULL ORDER BY start_at DESC LIMIT 1", get_current_user_id()), ARRAY_A);
+    $seg = $wpdb->prefix . 'slate_ops_time_segments';
+    $jt  = $wpdb->prefix . 'slate_ops_jobs';
+    $row = $wpdb->get_row($wpdb->prepare(
+      "SELECT s.*, j.so_number, j.customer_name, j.vin, j.status AS job_status,
+              j.estimated_minutes, j.work_center, j.dealer_name
+       FROM $seg s
+       JOIN $jt j ON j.job_id = s.job_id
+       WHERE s.user_id = %d AND s.end_ts IS NULL AND s.state = 'active'
+       ORDER BY s.start_ts DESC LIMIT 1",
+      get_current_user_id()
+    ), ARRAY_A);
     return ['active' => $row ?: null];
   }
 
@@ -989,10 +1015,51 @@ return self::get_job(['id' => $job_id]);
       'number' => 500,
     ]);
     $out = [];
-    foreach ($users as $u){
-      $out[] = ['id'=>(int)$u->ID,'name'=>$u->display_name,'email'=>$u->user_email];
+    foreach ($users as $u) {
+      if (user_can($u->ID, Slate_Ops_Utils::CAP_ADMIN)) {
+        $ops_role = 'admin';
+      } elseif (user_can($u->ID, Slate_Ops_Utils::CAP_SUPERVISOR)) {
+        $ops_role = 'supervisor';
+      } elseif (user_can($u->ID, Slate_Ops_Utils::CAP_CS)) {
+        $ops_role = 'cs';
+      } elseif (user_can($u->ID, Slate_Ops_Utils::CAP_TECH)) {
+        $ops_role = 'tech';
+      } else {
+        $ops_role = '';
+      }
+      $out[] = ['id' => (int)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email, 'ops_role' => $ops_role];
     }
-    return ['users'=>$out];
+    return ['users' => $out];
+  }
+
+  public static function update_user_role($req) {
+    $user_id  = intval($req['id']);
+    $body     = $req->get_json_params();
+    $new_role = sanitize_key($body['role'] ?? '');
+
+    $role_map = [
+      'tech'       => 'slate_tech',
+      'cs'         => 'slate_customer_service',
+      'supervisor' => 'slate_shop_supervisor',
+      'admin'      => 'slate_ops_admin',
+    ];
+
+    $user = new WP_User($user_id);
+    if (!$user->exists()) {
+      return new WP_Error('not_found', 'User not found', ['status' => 404]);
+    }
+
+    foreach (array_values($role_map) as $r) {
+      $user->remove_role($r);
+    }
+
+    if ($new_role && isset($role_map[$new_role])) {
+      $user->add_role($role_map[$new_role]);
+    }
+
+    self::audit('user', $user_id, 'role_change', 'ops_role', null, $new_role, 'Role changed by admin');
+
+    return ['ok' => true, 'user_id' => $user_id, 'ops_role' => $new_role];
   }
 
   public static function supervisor_queues($req) {
