@@ -79,7 +79,7 @@ body.slate-ops{
 }
 
 .ops-nav-link.active{
-  background: var(--sage);
+  background: var(--arches);
   color: var(--white);
 }
 
@@ -179,8 +179,8 @@ textarea{ min-height:90px; }
 .btn{
   padding:10px 12px;
   border-radius:10px;
-  border:1px solid var(--sage);
-  background: var(--sage);
+  border:1px solid var(--arches);
+  background: var(--arches);
   color: var(--white);
   font-weight:900;
   letter-spacing:0.04em;
@@ -189,13 +189,15 @@ textarea{ min-height:90px; }
 
 .btn.secondary{
   background: var(--white);
-  color: var(--sage);
+  color: var(--arches);
 }
 
 .btn.danger{
-  border-color: var(--arches);
-  background: var(--arches);
+  border-color: #b84e0f;
+  background: #b84e0f;
 }
+
+.btn:hover{ filter: brightness(1.08); }
 
 .inline{
   display:flex;
@@ -220,7 +222,7 @@ textarea{ min-height:90px; }
 /* Role-based + mobile tweaks */
 .small-btn{padding:8px 10px;font-size:12px;border-radius:10px;}
 .kpi-label{font-size:10px;letter-spacing:.20em;text-transform:uppercase;font-weight:900;color:rgba(0,0,0,.65);}
-.kpi-value{font-size:28px;font-weight:900;color:#404f4b;}
+.kpi-value{font-size:28px;font-weight:900;color:var(--arches);}
 
 body.ops-role-tech .ops-nav { position: fixed; bottom: 0; left: 0; right: 0; flex-direction: row; gap: 0; background: #fff; border-top: 1px solid rgba(0,0,0,0.14); padding: 8px; z-index: 50; }
 body.ops-role-tech .ops-main { padding-bottom: 64px; }
@@ -408,7 +410,7 @@ body.ops-role-tech .ops-nav-link { flex: 1 1 0; text-align: center; padding: 10p
   font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:900;color:rgba(0,0,0,.65);
 }
 .stat-tile .value{
-  font-size:28px;font-weight:900;color:var(--sage);margin-top:4px;
+  font-size:28px;font-weight:900;color:var(--arches);margin-top:4px;
 }
 
 /* ── Notes feed ── */
