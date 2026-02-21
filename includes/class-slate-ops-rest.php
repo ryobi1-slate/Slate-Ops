@@ -25,7 +25,7 @@ class Slate_Ops_REST {
 
     register_rest_route('slate-ops/v1', '/users', [
       'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
       'callback' => [__CLASS__, 'users'],
     ]);
 
@@ -62,7 +62,7 @@ class Slate_Ops_REST {
 
     register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/schedule', [
       'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
       'callback' => [__CLASS__, 'schedule_job'],
     ]);
 
@@ -118,6 +118,9 @@ class Slate_Ops_REST {
   }
   public static function perm_cs_or_admin() {
     return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN) || current_user_can('edit_posts'));
+  }
+  public static function perm_cs_or_supervisor_or_admin() {
+    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
   }
 
   // Handlers
@@ -352,7 +355,7 @@ foreach ($rows as &$r) {
       'vin_last8' => $vin_last8 ?: null,
       'job_type' => $job_type,
       'parts_status' => $parts_status,
-      'status' => 'UNSCHEDULED',
+      'status' => $so_number !== '' ? 'READY_FOR_SCHEDULING' : 'UNSCHEDULED',
       'status_updated_at' => $now,
       'delay_reason' => null,
       'priority' => $priority,
@@ -398,23 +401,75 @@ foreach ($rows as &$r) {
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-    $old = $job['so_number'];
+    $now = Slate_Ops_Utils::now_gmt();
+    $update = [
+      'so_number'         => $so,
+      'status'            => 'READY_FOR_SCHEDULING',
+      'status_updated_at' => $now,
+      'dealer_status'     => 'waiting',
+      'updated_at'        => $now,
+    ];
 
-    $wpdb->update($t, [
-      'so_number' => $so,
-      'status' => 'READY_FOR_SCHEDULING',
-      'dealer_status' => 'waiting',
-      'updated_at' => Slate_Ops_Utils::now_gmt(),
-    ], ['job_id' => $job_id]);
+    // Accept full intake fields when provided (portal-originated jobs completing intake).
+    $customer     = sanitize_text_field($body['customer_name'] ?? '');
+    $dealer       = sanitize_text_field($body['dealer_name'] ?? '');
+    $job_type     = strtoupper(sanitize_key($body['job_type'] ?? ''));
+    $parts_status = strtoupper(sanitize_key($body['parts_status'] ?? ''));
+    $est_raw      = isset($body['estimated_hours']) ? trim((string) $body['estimated_hours']) : '';
+    $vin_last8    = strtoupper(trim(sanitize_text_field($body['vin_last8'] ?? '')));
+    $notes        = sanitize_textarea_field($body['notes'] ?? '');
+    $req_date     = sanitize_text_field($body['requested_date'] ?? '');
+    $no_vin       = !empty($body['no_vin_required']);
 
-    self::audit('job', $job_id, 'update', 'so_number', $old, $so, 'SO# set');
+    $has_intake = ($customer !== '' || $dealer !== '' || $job_type !== '' || $est_raw !== '');
+
+    if ($has_intake) {
+      if ($customer === '' && $dealer === '') {
+        return self::validation_error('customer_name', 'customer_or_dealer_required', 'Provide a customer, dealer, or both.');
+      }
+      if (!in_array($job_type, Slate_Ops_Utils::cs_job_types(), true)) {
+        return self::validation_error('job_type', 'invalid_job_type', 'Select a valid job type.');
+      }
+      if ($parts_status !== '' && !in_array($parts_status, Slate_Ops_Utils::cs_parts_statuses(), true)) {
+        return self::validation_error('parts_status', 'invalid_parts_status', 'Select a valid parts status.');
+      }
+      if ($est_raw === '' || !is_numeric($est_raw)) {
+        return self::validation_error('estimated_hours', 'invalid_estimated_hours', 'Estimated hours are required.');
+      }
+      $est_minutes = (int) round(((float) $est_raw) * 60);
+      if ($est_minutes <= 0) {
+        return self::validation_error('estimated_hours', 'invalid_estimated_hours', 'Estimated hours must be greater than zero.');
+      }
+      if ($vin_last8 !== '' && !Slate_Ops_Utils::vin_last8_is_valid($vin_last8)) {
+        return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN must be 7–8 alphanumeric characters.');
+      }
+      if (!$no_vin && $job_type !== 'PARTS_ONLY' && !Slate_Ops_Utils::vin_last8_is_valid($vin_last8)) {
+        return self::validation_error('vin_last8', 'invalid_vin_last8', 'VIN is required and must be 7–8 alphanumeric characters.');
+      }
+      if ($req_date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $req_date)) {
+        return self::validation_error('requested_date', 'invalid_requested_date', 'Requested completion date must be YYYY-MM-DD.');
+      }
+      $update['customer_name']     = $customer ?: null;
+      $update['dealer_name']       = $dealer ?: null;
+      $update['job_type']          = $job_type;
+      $update['parts_status']      = $parts_status ?: 'NOT_READY';
+      $update['estimated_minutes'] = $est_minutes;
+      if ($vin_last8 !== '') {
+        $update['vin']      = $vin_last8;
+        $update['vin_last8']= $vin_last8;
+      }
+      if ($notes !== '')    $update['notes']          = $notes;
+      if ($req_date !== '') $update['requested_date'] = $req_date;
+    }
+
+    $old_so = $job['so_number'];
+    $wpdb->update($t, $update, ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'so_number', $old_so, $so, 'SO# set');
     self::audit('job', $job_id, 'update', 'status', $job['status'], 'READY_FOR_SCHEDULING', 'Moved to Ready for Scheduling');
 
-    // Update ClickUp name if linked.
     $job2 = self::job_by_id($job_id);
     self::maybe_update_clickup_name($job2);
-
-    // Push dealer portal status back (integration hook)
     self::maybe_push_dealer_portal_status($job2);
 
     return self::get_job(['id' => $job_id]);
