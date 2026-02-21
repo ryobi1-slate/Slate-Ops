@@ -819,10 +819,11 @@ return self::get_job(['id' => $job_id]);
 
   public static function set_status($req) {
 global $wpdb;
-$body = $req->get_json_params();
+$body = $req->get_json_params() ?: [];
 $t = $wpdb->prefix . 'slate_ops_jobs';
 
-$job_id = (int)($body['job_id'] ?? 0);
+// Accept job_id from URL param (REST route) or body (legacy internal calls)
+$job_id = isset($req['id']) ? intval($req['id']) : (int)($body['job_id'] ?? 0);
 if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status'=>400]);
 
 $new_status = strtoupper(sanitize_text_field($body['status'] ?? ''));
@@ -916,9 +917,17 @@ return self::get_job(['id' => $job_id]);
     $segment_id = (int)$wpdb->insert_id;
     self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'user_id'=>$user_id]), 'Timer started');
 
-    // Set job to IN_PROGRESS if needed.
+    // Set job to IN_PROGRESS if needed (inline update to avoid REST req context issues).
     if (!in_array($job['status'], ['IN_PROGRESS','PENDING_QC','COMPLETE'], true)) {
-      self::set_status(['id'=>$job_id, 'status'=>'IN_PROGRESS', 'note'=>'Auto set by timer start']);
+      $t    = $wpdb->prefix . 'slate_ops_jobs';
+      $now2 = Slate_Ops_Utils::now_gmt();
+      $wpdb->update($t, [
+        'status'            => 'IN_PROGRESS',
+        'status_detail'     => null,
+        'status_updated_at' => $now2,
+        'updated_at'        => $now2,
+      ], ['job_id' => $job_id]);
+      self::audit('job', $job_id, 'update', 'status', $job['status'], 'IN_PROGRESS', 'Auto set by timer start');
     }
 
     return [
