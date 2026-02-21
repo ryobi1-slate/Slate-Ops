@@ -35,6 +35,7 @@ Slate_Ops_Routes::require_access_or_redirect();
 
         <?php if (current_user_can(Slate_Ops_Utils::CAP_CS) && !current_user_can(Slate_Ops_Utils::CAP_ADMIN) && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)) : ?>
           <a href="/ops/cs" data-route="/cs" class="ops-nav-link">CS</a>
+          <a href="/ops/schedule" data-route="/schedule" class="ops-nav-link">Schedule</a>
           <a href="/ops/jobs" data-route="/jobs" class="ops-nav-link">Jobs</a>
           <a href="/ops/new" data-route="/new" class="ops-nav-link">Create Job</a>
         <?php endif; ?>

@@ -29,6 +29,7 @@
     job(id){ return this.req('/jobs/' + id); },
     createJob(payload){ return this.req('/jobs', {method:'POST', body: JSON.stringify(payload)}); },
     setSO(id, so){ return this.req('/jobs/' + id + '/so', {method:'POST', body: JSON.stringify({so_number: so})}); },
+    intake(id, payload){ return this.req('/jobs/' + id + '/so', {method:'POST', body: JSON.stringify(payload)}); },
     assign(id, userId){ return this.req('/jobs/' + id + '/assign', {method:'POST', body: JSON.stringify({assigned_user_id: userId})}); },
     schedule(id, payload){ return this.req('/jobs/' + id + '/schedule', {method:'POST', body: JSON.stringify(payload)}); },
     setStatus(id, status, note=''){ return this.req('/jobs/' + id + '/status', {method:'POST', body: JSON.stringify({status, note})}); },
@@ -717,23 +718,62 @@ async function loadCreateJobInto(selector){
 }
 
 async function loadCS(){
-  const jobsResp = await api.jobs('?limit=300&so_missing=1');
-  const needs = (jobsResp.jobs||[]).filter(j => (j.status||'').toUpperCase() === 'UNSCHEDULED' || (j.status||'').toUpperCase() === 'READY_FOR_SCHEDULING');
+  const [jobsResp, settingsResp] = await Promise.all([
+    api.jobs('?limit=300&so_missing=1'),
+    api.settings()
+  ]);
+
+  const allNeeds = (jobsResp.jobs||[]).filter(j => {
+    const s = (j.status||'').toUpperCase();
+    return s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING';
+  });
+  const portalNeeds = allNeeds.filter(j => j.created_from === 'portal');
+  const manualNeeds = allNeeds.filter(j => j.created_from !== 'portal');
+  const dealerList  = settingsResp.dealers || [];
+  const salesList   = settingsResp.sales_people || [];
+
   view(`
     <div class="card">
       <div class="row">
         <div style="flex:1 1 520px;">
           <h2 style="margin:0;">Customer Service</h2>
-          <div class="muted">Enter SO# and create jobs fast. No scheduling here.</div>
+          <div class="muted">Complete intake for portal jobs, enter SO# for manual jobs, and create new jobs.</div>
         </div>
         <div style="display:flex; gap:10px; align-items:flex-end;">
-          ${kpi('Needs SO#', needs.length)}
+          ${kpi('Pending Intake', portalNeeds.length)}
+          ${kpi('Needs SO#', manualNeeds.length)}
         </div>
       </div>
     </div>
 
+    <div class="card" id="intake-panel" style="display:none">
+      <div id="intake-form-content"></div>
+    </div>
+
     <div class="card">
-      <div class="label" style="margin-bottom:8px;">Needs SO#</div>
+      <div class="label" style="margin-bottom:8px;">Pending Intake — Portal Jobs</div>
+      <table class="table">
+        <thead><tr>
+          <th style="min-width:200px;">Customer</th>
+          <th style="min-width:90px;">VIN</th>
+          <th style="min-width:180px;">Dealer</th>
+          <th style="min-width:90px;"></th>
+        </tr></thead>
+        <tbody>
+          ${portalNeeds.map(j=>`
+            <tr data-id="${j.job_id}">
+              <td>${escapeHtml(j.customer_name||'—')}</td>
+              <td>${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
+              <td>${escapeHtml(j.dealer_name||'—')}</td>
+              <td><button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="4" class="muted" style="padding:10px;">No portal jobs pending intake.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">Needs SO# — Manual Jobs</div>
       <table class="table">
         <thead><tr>
           <th style="min-width:220px;">Customer</th>
@@ -743,7 +783,7 @@ async function loadCS(){
           <th style="min-width:90px;"></th>
         </tr></thead>
         <tbody>
-          ${needs.map(j=>`
+          ${manualNeeds.map(j=>`
             <tr data-id="${j.job_id}">
               <td>${escapeHtml(j.customer_name||'')}</td>
               <td>${escapeHtml((j.vin||'').slice(-6))}</td>
@@ -751,7 +791,7 @@ async function loadCS(){
               <td><input class="input so" placeholder="S-ORD101350" /></td>
               <td><button class="btn small-btn save-so">Save</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="5">No jobs need SO#.</td></tr>`}
+          `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">No manual jobs need SO#.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -761,26 +801,313 @@ async function loadCS(){
 
   await loadCreateJobInto('#cs-create');
 
-  $$('.save-so').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+  $$('.intake-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const jobId = parseInt(btn.dataset.id, 10);
+      const job = portalNeeds.find(j => j.job_id === jobId);
+      const panel = $('#intake-panel');
+      panel.style.display = '';
+      renderIntakeForm($('#intake-form-content'), job, dealerList, salesList);
+      panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+  });
+
+  $$('.save-so').forEach(btn => {
+    btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
-      const id = parseInt(tr.dataset.id,10);
+      const id = parseInt(tr.dataset.id, 10);
       const so = $('.so', tr).value.trim();
       if(!so){ alert('SO# required'); return; }
-      btn.disabled=true;
-      const old=btn.textContent;
-      btn.textContent='Saving…';
-      try{
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = 'Saving…';
+      try {
         await api.setSO(id, so);
-        btn.textContent='Saved';
-        setTimeout(()=>router(), 250);
-      }catch(e){
+        btn.textContent = 'Saved';
+        setTimeout(() => router(), 250);
+      } catch(e) {
         alert(e.message);
-        btn.textContent=old;
-      }finally{
-        btn.disabled=false;
+        btn.textContent = old;
+      } finally {
+        btn.disabled = false;
       }
     });
+  });
+}
+
+function renderIntakeForm(el, job, dealerList, salesList) {
+  const dealerOpts = dealerList.map(d =>
+    `<option value="${escapeHtml(d)}"${job.dealer_name===d?' selected':''}>${escapeHtml(d)}</option>`
+  ).join('');
+
+  const jobTypes = [
+    ['UPFIT','Upfit'],['COMMERCIAL_UPFIT','Commercial Upfit'],['COMMERCIAL_BUILD','Commercial Build'],
+    ['RV_BUILD','RV Build'],['RV_UPFIT','RV Upfit'],['PARTS_ONLY','Parts Only'],
+    ['SERVICE','Service'],['WARRANTY','Warranty'],
+  ];
+  const jobTypeOpts = jobTypes.map(([v,l]) =>
+    `<option value="${v}"${job.job_type===v?' selected':''}>${l}</option>`
+  ).join('');
+
+  const partsSts = [['NOT_READY','Not Ready'],['PARTIAL','Partial'],['READY','Ready'],['HOLD','Hold']];
+  const partsOpts = partsSts.map(([v,l]) =>
+    `<option value="${v}"${(job.parts_status||'NOT_READY')===v?' selected':''}>${l}</option>`
+  ).join('');
+
+  const estHours = job.estimated_minutes ? (job.estimated_minutes/60).toFixed(1) : '';
+
+  el.innerHTML = `
+    <div class="label" style="margin-bottom:6px;">Complete Intake — Portal Job #${job.job_id}</div>
+    <div class="muted" style="margin-bottom:12px;">Fill in all required fields to move this job to Ready for Scheduling.</div>
+
+    <div class="form-grid">
+      <div>
+        <div class="label" style="margin-bottom:6px;">SO#</div>
+        <input class="input" id="in-so" placeholder="S-ORD101350" value="${escapeHtml(job.so_number||'')}" />
+        <div class="field-error" data-error-for="so_number"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Dealer</div>
+        <select class="input" id="in-dealer">
+          <option value="">Select dealer</option>
+          ${dealerOpts}
+        </select>
+        <div class="field-error" data-error-for="dealer_name"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Customer</div>
+        <input class="input" id="in-customer" placeholder="Customer name" value="${escapeHtml(job.customer_name||'')}" />
+        <div class="field-error" data-error-for="customer_name"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">VIN Last 7–8</div>
+        <input class="input" id="in-vin" maxlength="8" placeholder="A1B2C3D4" value="${escapeHtml(job.vin_last8||job.vin||'')}" />
+        <div class="field-error" data-error-for="vin_last8"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Job Type</div>
+        <select class="input" id="in-job-type">
+          ${jobTypeOpts}
+        </select>
+        <div class="field-error" data-error-for="job_type"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
+        <input class="input" id="in-est" type="number" min="0.5" step="0.5" placeholder="e.g. 2.5" value="${escapeHtml(estHours)}" />
+        <div class="field-error" data-error-for="estimated_hours"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Parts Status</div>
+        <select class="input" id="in-parts">
+          ${partsOpts}
+        </select>
+        <div class="field-error" data-error-for="parts_status"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Requested Completion Date</div>
+        <input class="input" id="in-date" type="date" value="${escapeHtml(job.requested_date||'')}" />
+        <div class="field-error" data-error-for="requested_date"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <div class="label" style="margin-bottom:6px;">Notes</div>
+      <textarea class="input" id="in-notes" rows="3" placeholder="Additional notes…">${escapeHtml(job.notes||'')}</textarea>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <button class="btn" id="in-submit">Submit Intake</button>
+      <button class="btn" id="in-cancel" style="background:var(--surface2,#e0e0e0);color:var(--fg,#222);">Cancel</button>
+      <div class="field-error" data-error-for="general"></div>
+    </div>
+  `;
+
+  el.querySelector('#in-cancel').addEventListener('click', () => {
+    el.closest('#intake-panel').style.display = 'none';
+  });
+
+  el.querySelector('#in-submit').addEventListener('click', async () => {
+    el.querySelectorAll('.field-error').forEach(e => e.textContent = '');
+
+    const payload = {
+      so_number:       el.querySelector('#in-so').value.trim().toUpperCase(),
+      customer_name:   el.querySelector('#in-customer').value.trim(),
+      dealer_name:     el.querySelector('#in-dealer').value.trim(),
+      vin_last8:       el.querySelector('#in-vin').value.trim().toUpperCase(),
+      job_type:        el.querySelector('#in-job-type').value,
+      estimated_hours: el.querySelector('#in-est').value.trim(),
+      parts_status:    el.querySelector('#in-parts').value,
+      requested_date:  el.querySelector('#in-date').value,
+      notes:           el.querySelector('#in-notes').value.trim(),
+    };
+
+    const btn = el.querySelector('#in-submit');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    try {
+      await api.intake(job.job_id, payload);
+      router();
+    } catch(e) {
+      const field   = e?.data?.data?.field || e?.data?.field;
+      const message = e?.data?.data?.message || e?.message || 'Request failed';
+      if (field) {
+        const errEl = el.querySelector(`[data-error-for="${field}"]`);
+        if (errEl) errEl.textContent = message;
+        else el.querySelector('[data-error-for="general"]').textContent = message;
+      } else {
+        el.querySelector('[data-error-for="general"]').textContent = message;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Submit Intake';
+    }
+  });
+}
+
+async function loadSchedule(){
+  const [jobsResp, usersResp] = await Promise.all([
+    api.jobs('?status=READY_FOR_SCHEDULING&limit=200'),
+    api.users()
+  ]);
+  const ready = jobsResp.jobs || [];
+  const users = usersResp.users || [];
+  const userOptions = users.map(u =>
+    `<option value="${u.id}">${escapeHtml(u.name)}</option>`
+  ).join('');
+
+  view(`
+    <div class="card">
+      <div class="row">
+        <div style="flex:1 1 520px;">
+          <h2 style="margin:0;">Schedule</h2>
+          <div class="muted">Assign jobs to technicians and set start and end times.</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          ${kpi('Ready to Schedule', ready.length)}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="sched-panel" style="display:none">
+      <div id="sched-form-content"></div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">Ready for Scheduling</div>
+      <table class="table">
+        <thead><tr>
+          <th>SO#</th>
+          <th>Customer</th>
+          <th>VIN</th>
+          <th>Job Type</th>
+          <th>Est.</th>
+          <th>Requested Date</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          ${ready.map(j=>`
+            <tr>
+              <td>${escapeHtml(j.so_number||'—')}</td>
+              <td>${escapeHtml(j.customer_name||j.dealer_name||'—')}</td>
+              <td>${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
+              <td>${escapeHtml(fmtStatus(j.job_type||''))}</td>
+              <td>${j.estimated_minutes ? minutesToHours(j.estimated_minutes)+'h' : '—'}</td>
+              <td>${escapeHtml(j.requested_date||'—')}</td>
+              <td><button class="btn small-btn sched-btn" data-id="${j.job_id}">Schedule</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="7" class="muted" style="padding:12px;">No jobs ready to schedule.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `);
+
+  $$('.sched-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const jobId = parseInt(btn.dataset.id, 10);
+      const job = ready.find(j => j.job_id === jobId);
+      const panel = $('#sched-panel');
+      panel.style.display = '';
+      renderScheduleForm($('#sched-form-content'), job, userOptions);
+      panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+  });
+}
+
+function renderScheduleForm(el, job, userOptions) {
+  const estHours = job.estimated_minutes ? (job.estimated_minutes/60).toFixed(1) : '';
+  const jobLabel = job.so_number || ('Job #' + job.job_id);
+  const jobSub   = [job.customer_name, job.dealer_name].filter(Boolean).join(' / ');
+
+  el.innerHTML = `
+    <div class="label" style="margin-bottom:6px;">Schedule — ${escapeHtml(jobLabel)}</div>
+    ${jobSub ? `<div class="muted" style="margin-bottom:12px;">${escapeHtml(jobSub)}${job.vin ? ' · …'+escapeHtml(job.vin.slice(-6)) : ''}</div>` : ''}
+
+    <div class="form-grid">
+      <div>
+        <div class="label" style="margin-bottom:6px;">Assign Tech</div>
+        <select class="input" id="sf-tech">
+          <option value="">Unassigned</option>
+          ${userOptions}
+        </select>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Work Center / Bay</div>
+        <input class="input" id="sf-bay" placeholder="e.g. Bay 3" />
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Scheduled Start</div>
+        <input class="input" id="sf-start" type="datetime-local" />
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Scheduled Finish</div>
+        <input class="input" id="sf-finish" type="datetime-local" />
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
+        <input class="input" id="sf-est" type="number" min="0.5" step="0.5" placeholder="e.g. 2.5" value="${escapeHtml(estHours)}" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <button class="btn" id="sf-submit">Confirm Schedule</button>
+      <button class="btn" id="sf-cancel" style="background:var(--surface2,#e0e0e0);color:var(--fg,#222);">Cancel</button>
+      <div class="field-error" data-error-for="sf-general"></div>
+    </div>
+  `;
+
+  el.querySelector('#sf-cancel').addEventListener('click', () => {
+    el.closest('#sched-panel').style.display = 'none';
+  });
+
+  el.querySelector('#sf-submit').addEventListener('click', async () => {
+    const techId    = parseInt(el.querySelector('#sf-tech').value, 10) || 0;
+    const workCenter= el.querySelector('#sf-bay').value.trim();
+    const start     = el.querySelector('#sf-start').value;
+    const finish    = el.querySelector('#sf-finish').value;
+    const estVal    = parseFloat(el.querySelector('#sf-est').value) || 0;
+
+    const payload = {
+      job_id:            job.job_id,
+      assigned_user_id:  techId || undefined,
+      work_center:       workCenter || undefined,
+      scheduled_start:   start || undefined,
+      scheduled_finish:  finish || undefined,
+      estimated_minutes: estVal > 0 ? Math.round(estVal * 60) : undefined,
+    };
+
+    const btn = el.querySelector('#sf-submit');
+    btn.disabled = true;
+    btn.textContent = 'Scheduling…';
+
+    try {
+      await api.schedule(job.job_id, payload);
+      el.closest('#sched-panel').style.display = 'none';
+      router();
+    } catch(e) {
+      el.querySelector('[data-error-for="sf-general"]').textContent = e.message || 'Failed to schedule.';
+      btn.disabled = false;
+      btn.textContent = 'Confirm Schedule';
+    }
   });
 }
 
@@ -990,6 +1317,7 @@ async function loadAdmin(){
       }
       if (r.startsWith('/new')) return await loadCreateJob();
       if (r.startsWith('/supervisor')) return await loadSupervisor();
+      if (r.startsWith('/schedule')) return await loadSchedule();
       if (r.startsWith('/settings')) return await loadSettings();
 
       // fallback
