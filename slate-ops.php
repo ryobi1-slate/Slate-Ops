@@ -32,7 +32,8 @@ add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
 
-  wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', [], SLATE_OPS_VERSION);
+  wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
+  wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', ['material-symbols'], SLATE_OPS_VERSION);
   wp_enqueue_script('slate-ops', SLATE_OPS_URL . 'assets/js/ops.js', [], SLATE_OPS_VERSION, true);
 
   wp_localize_script('slate-ops', 'slateOpsSettings', [

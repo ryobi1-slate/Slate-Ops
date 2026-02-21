@@ -1,6 +1,26 @@
 <?php
 if (!defined('ABSPATH')) exit;
 Slate_Ops_Routes::require_access_or_redirect();
+
+$caps      = Slate_Ops_Utils::current_user_caps_summary();
+$role_class = $caps['admin'] ? 'ops-role-admin'
+  : ($caps['supervisor'] ? 'ops-role-supervisor'
+  : ($caps['cs']         ? 'ops-role-cs'
+  : ($caps['tech']       ? 'ops-role-tech' : '')));
+
+$role_label = $caps['admin'] ? 'Admin'
+  : ($caps['supervisor'] ? 'Supervisor'
+  : ($caps['cs']         ? 'Customer Service'
+  : ($caps['tech']       ? 'Technician' : '')));
+
+$user = wp_get_current_user();
+
+function ops_nav_link( $href, $route, $icon, $label ) {
+  echo '<a href="' . esc_url( $href ) . '" data-route="' . esc_attr( $route ) . '" class="ops-nav-link">'
+    . '<span class="material-symbols-outlined">' . esc_html( $icon ) . '</span>'
+    . '<span class="ops-nav-label">' . esc_html( $label ) . '</span>'
+    . '</a>';
+}
 ?><!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
@@ -8,73 +28,75 @@ Slate_Ops_Routes::require_access_or_redirect();
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Slate Ops</title>
   <?php wp_head(); ?>
-<?php
-  $caps = Slate_Ops_Utils::current_user_caps_summary();
-  $role_class = $caps['admin'] ? 'ops-role-admin' : ($caps['supervisor'] ? 'ops-role-supervisor' : ($caps['cs'] ? 'ops-role-cs' : ($caps['tech'] ? 'ops-role-tech' : '')));
-?>
 </head>
-<body class="slate-ops <?php echo esc_attr($role_class); ?>">
-  <div id="slate-ops-app">
-    <header class="ops-header">
-      <div class="ops-brand">
-        <div class="ops-title"><?php echo Slate_Ops_Assets::logo_img(22); ?></div>
+<body class="slate-ops <?php echo esc_attr( $role_class ); ?>">
+<div id="slate-ops-app" class="ops-shell">
+
+  <aside class="ops-sidebar">
+    <div class="ops-brand">
+      <div class="ops-brand-icon"><?php echo Slate_Ops_Assets::logo_img(22); ?></div>
+      <div class="ops-brand-name">Slate Ops</div>
+    </div>
+
+    <nav class="ops-nav">
+      <?php if ( current_user_can( Slate_Ops_Utils::CAP_TECH ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) && ! current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) && ! current_user_can( Slate_Ops_Utils::CAP_CS ) ) : ?>
+        <?php ops_nav_link( '/ops/tech',  '/tech',  'build',        'Tech' ); ?>
+        <?php ops_nav_link( '/ops/jobs',  '/jobs',  'construction', 'Jobs' ); ?>
+      <?php endif; ?>
+
+      <?php if ( current_user_can( Slate_Ops_Utils::CAP_CS ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) && ! current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) ) : ?>
+        <?php ops_nav_link( '/ops/cs',       '/cs',       'headset_mic',    'CS' ); ?>
+        <?php ops_nav_link( '/ops/schedule', '/schedule', 'calendar_today', 'Schedule' ); ?>
+        <?php ops_nav_link( '/ops/jobs',     '/jobs',     'construction',   'Jobs' ); ?>
+        <?php ops_nav_link( '/ops/new',      '/new',      'add_circle',     'Create Job' ); ?>
+      <?php endif; ?>
+
+      <?php if ( current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) ) : ?>
+        <?php ops_nav_link( '/ops/supervisor', '/supervisor', 'engineering',    'Supervisor' ); ?>
+        <?php ops_nav_link( '/ops/exec',       '/exec',       'dashboard',      'Dashboard' ); ?>
+        <?php ops_nav_link( '/ops/jobs',       '/jobs',       'construction',   'Jobs' ); ?>
+        <?php ops_nav_link( '/ops/qc',         '/qc',         'fact_check',     'QC' ); ?>
+        <?php ops_nav_link( '/ops/schedule',   '/schedule',   'calendar_today', 'Schedule' ); ?>
+        <?php ops_nav_link( '/ops/settings',   '/settings',   'settings',       'Settings' ); ?>
+      <?php endif; ?>
+
+      <?php if ( current_user_can( Slate_Ops_Utils::CAP_ADMIN ) ) : ?>
+        <?php ops_nav_link( '/ops/admin',      '/admin',      'shield_person',  'Admin' ); ?>
+        <?php ops_nav_link( '/ops/exec',       '/exec',       'dashboard',      'Dashboard' ); ?>
+        <?php ops_nav_link( '/ops/cs',         '/cs',         'headset_mic',    'CS' ); ?>
+        <?php ops_nav_link( '/ops/supervisor', '/supervisor', 'engineering',    'Supervisor' ); ?>
+        <?php ops_nav_link( '/ops/jobs',       '/jobs',       'construction',   'Jobs' ); ?>
+        <?php ops_nav_link( '/ops/qc',         '/qc',         'fact_check',     'QC' ); ?>
+        <?php ops_nav_link( '/ops/schedule',   '/schedule',   'calendar_today', 'Schedule' ); ?>
+        <?php ops_nav_link( '/ops/settings',   '/settings',   'settings',       'Settings' ); ?>
+      <?php endif; ?>
+
+      <?php if ( ! current_user_can( Slate_Ops_Utils::CAP_TECH ) && ! current_user_can( Slate_Ops_Utils::CAP_CS ) && ! current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) ) : ?>
+        <?php ops_nav_link( '/ops/exec', '/exec', 'dashboard',    'Dashboard' ); ?>
+        <?php ops_nav_link( '/ops/jobs', '/jobs', 'construction', 'Jobs' ); ?>
+      <?php endif; ?>
+    </nav>
+
+    <div class="ops-sidebar-footer">
+      <div class="ops-sidebar-user">
+        <div class="ops-sidebar-user-name"><?php echo esc_html( $user->display_name ); ?></div>
+        <?php if ( $role_label ) : ?>
+          <div class="ops-sidebar-user-role"><?php echo esc_html( $role_label ); ?></div>
+        <?php endif; ?>
       </div>
-      <div class="ops-user">
-        <span class="ops-user-name"><?php echo esc_html(wp_get_current_user()->display_name); ?></span>
-        <a class="ops-link" href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>">Logout</a>
-      </div>
-    </header>
+      <a class="ops-sidebar-logout" href="<?php echo esc_url( wp_logout_url( home_url('/') ) ); ?>" title="Log out">
+        <span class="material-symbols-outlined">logout</span>
+      </a>
+    </div>
+  </aside>
 
-    <main class="ops-main">
-      <div class="ops-nav">
-        <?php if (current_user_can(Slate_Ops_Utils::CAP_TECH) && !current_user_can(Slate_Ops_Utils::CAP_ADMIN) && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) && !current_user_can(Slate_Ops_Utils::CAP_CS)) : ?>
-          <a href="/ops/tech" data-route="/tech" class="ops-nav-link">Tech</a>
-          <a href="/ops/jobs" data-route="/jobs" class="ops-nav-link">Jobs</a>
-        <?php endif; ?>
-
-        <?php if (current_user_can(Slate_Ops_Utils::CAP_CS) && !current_user_can(Slate_Ops_Utils::CAP_ADMIN) && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)) : ?>
-          <a href="/ops/cs" data-route="/cs" class="ops-nav-link">CS</a>
-          <a href="/ops/schedule" data-route="/schedule" class="ops-nav-link">Schedule</a>
-          <a href="/ops/jobs" data-route="/jobs" class="ops-nav-link">Jobs</a>
-          <a href="/ops/new" data-route="/new" class="ops-nav-link">Create Job</a>
-        <?php endif; ?>
-
-        <?php if (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)) : ?>
-          <a href="/ops/supervisor" data-route="/supervisor" class="ops-nav-link">Supervisor</a>
-          <a href="/ops/exec" data-route="/exec" class="ops-nav-link">Dashboard</a>
-          <a href="/ops/jobs" data-route="/jobs" class="ops-nav-link">Jobs</a>
-          <a href="/ops/qc" data-route="/qc" class="ops-nav-link">QC</a>
-          <a href="/ops/schedule" data-route="/schedule" class="ops-nav-link">Schedule</a>
-          <a href="/ops/settings" data-route="/settings" class="ops-nav-link">Settings</a>
-        <?php endif; ?>
-
-        <?php if (current_user_can(Slate_Ops_Utils::CAP_ADMIN)) : ?>
-          <a href="/ops/admin" data-route="/admin" class="ops-nav-link">Admin</a>
-          <a href="/ops/exec" data-route="/exec" class="ops-nav-link">Dashboard</a>
-          <a href="/ops/cs" data-route="/cs" class="ops-nav-link">CS</a>
-          <a href="/ops/supervisor" data-route="/supervisor" class="ops-nav-link">Supervisor</a>
-          <a href="/ops/jobs" data-route="/jobs" class="ops-nav-link">Jobs</a>
-          <a href="/ops/qc" data-route="/qc" class="ops-nav-link">QC</a>
-          <a href="/ops/schedule" data-route="/schedule" class="ops-nav-link">Schedule</a>
-          <a href="/ops/settings" data-route="/settings" class="ops-nav-link">Settings</a>
-        <?php endif; ?>
-
-        <?php if (!current_user_can(Slate_Ops_Utils::CAP_TECH) && !current_user_can(Slate_Ops_Utils::CAP_CS) && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)) : ?>
-          <a href="/ops/exec" data-route="/exec" class="ops-nav-link">Dashboard</a>
-          <a href="/ops/jobs" data-route="/jobs" class="ops-nav-link">Jobs</a>
-        <?php endif; ?>
-      </div>
-
-
-      <section class="ops-content">
-        <div id="ops-view"></div>
-      </section>
-    </main>
-
-    <footer class="ops-footer">
-      <span>Slate Ops v<?php echo esc_html(SLATE_OPS_VERSION); ?></span>
-    </footer>
+  <div class="ops-body">
+    <section class="ops-content">
+      <div id="ops-view"></div>
+    </section>
   </div>
-  <?php wp_footer(); ?>
+
+</div>
+<?php wp_footer(); ?>
 </body>
 </html>
