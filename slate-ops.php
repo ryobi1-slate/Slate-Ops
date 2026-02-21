@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.3.5
+ * Version: 0.3.6
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.3.5');
+define('SLATE_OPS_VERSION', '0.3.6');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -60,6 +60,12 @@ add_filter('template_include', function($template) {
   if (!Slate_Ops_Routes::is_ops_request()) return $template;
   return SLATE_OPS_PATH . 'templates/ops-app.php';
 }, 99);
+
+// Hide the WP admin bar on all /ops/ pages — it breaks the full-screen layout.
+add_filter('show_admin_bar', function($show) {
+  if (Slate_Ops_Routes::is_ops_request()) return false;
+  return $show;
+});
 
 /**
  * Integration point: Dealer Portal quote approved.

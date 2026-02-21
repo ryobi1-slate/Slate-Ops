@@ -18,10 +18,11 @@ body.slate-ops{
   background: var(--sand);
 }
 
-/* ── Shell ── */
+/* ── Shell: fills the viewport, sidebar and body side-by-side ── */
 .ops-shell{
   display:flex;
-  min-height:100vh;
+  height:100vh;
+  overflow:hidden;
 }
 
 /* ── Sidebar ── */
@@ -32,9 +33,6 @@ body.slate-ops{
   display:flex;
   flex-direction:column;
   flex-shrink:0;
-  position:sticky;
-  top:0;
-  height:100vh;
   overflow-y:auto;
 }
 
@@ -140,11 +138,13 @@ body.slate-ops{
   display:flex;
   flex-direction:column;
   min-width:0;
+  overflow:hidden;
 }
 
 .ops-content{
   flex:1;
   padding:16px;
+  overflow-y:auto;
 }
 
 .card{
