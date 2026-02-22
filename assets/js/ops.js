@@ -29,7 +29,8 @@
     job(id){ return this.req('/jobs/' + id); },
     createJob(payload){ return this.req('/jobs', {method:'POST', body: JSON.stringify(payload)}); },
     setSO(id, so){ return this.req('/jobs/' + id + '/so', {method:'POST', body: JSON.stringify({so_number: so})}); },
-    intake(id, payload){ return this.req('/jobs/' + id + '/so', {method:'POST', body: JSON.stringify(payload)}); },
+    // CS intake must update the full job record (not just SO#)
+    intake(id, payload){ return this.req('/jobs/' + id, {method:'PATCH', body: JSON.stringify(payload)}); },
     assign(id, userId){ return this.req('/jobs/' + id + '/assign', {method:'POST', body: JSON.stringify({assigned_user_id: userId})}); },
     schedule(id, payload){ return this.req('/jobs/' + id + '/schedule', {method:'POST', body: JSON.stringify(payload)}); },
     setStatus(id, status, note=''){ return this.req('/jobs/' + id + '/status', {method:'POST', body: JSON.stringify({status, note})}); },
@@ -50,6 +51,14 @@
     active: null,
     timerInterval: null,
   };
+
+  // Role helpers (from wp_localize_script)
+  const caps = (window.slateOpsSettings && window.slateOpsSettings.user && window.slateOpsSettings.user.caps) ? window.slateOpsSettings.user.caps : {};
+  const isAdmin = !!caps.admin;
+  const isSupervisor = !!caps.supervisor;
+  const isCS = !!caps.cs;
+  const isTech = !!caps.tech;
+
 
   function setActiveNav(route){
     $$('.ops-nav-link').forEach(a => {
@@ -211,7 +220,7 @@
     const isSupervisor = !!caps.supervisor || !!caps.admin;
     const isCS = !!caps.cs || !!caps.admin;
     const csOnly = !!caps.cs && !caps.supervisor && !caps.admin;
-    const canEdit = isSupervisor; // CS users view only; supervisors/admins may edit
+    const canEdit = isSupervisor || isCS || isAdmin;// CS/Admin need to edit job details during Phase 0 manual intake
 
     const t = job.time || {approved_minutes_total:0, pending_minutes_total:0, by_tech:[]};
     const estHrs = job.estimated_minutes ? (job.estimated_minutes / 60) : 0;
@@ -1167,6 +1176,48 @@ async function loadCS() {
       <div id="intake-form-content"></div>
     </div>
 
+    ${(isCS || isAdmin) ? `
+    <div class="card">
+      <button class="section-header" data-collapse="create">
+        <span class="collapse-title">Create Manual Job</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="collapse-chevron">▸</span>
+        </div>
+      </button>
+      <div class="collapse-body" id="collapse-create" style="display:none;">
+        <form id="manual-create" class="grid">
+          <label>Customer<input name="customer_name" placeholder="Customer" /></label>
+          <label>Dealer<select name="dealer_name" id="create-dealer"></select></label>
+          <label>VIN<input name="vin" class="mono" placeholder="VIN (required unless Parts Only)" /></label>
+          <label>Job Type
+            <select name="job_type">
+              <option value="UPFIT">UPFIT</option>
+              <option value="RV_BUILD">RV_BUILD</option>
+              <option value="PARTS_ONLY">PARTS_ONLY</option>
+              <option value="SERVICE">SERVICE</option>
+              <option value="WARRANTY">WARRANTY</option>
+            </select>
+          </label>
+          <label>Parts Status
+            <select name="parts_status">
+              <option value="NOT_READY">NOT_READY</option>
+              <option value="PARTIAL">PARTIAL</option>
+              <option value="READY">READY</option>
+              <option value="HOLD">HOLD</option>
+            </select>
+          </label>
+          <label>Estimated Hours<input name="estimated_hours" type="number" min="0" step="0.25" value="1" /></label>
+          <label>SO# (optional)<input name="so_number" class="mono" placeholder="S-ORD#####" /></label>
+          <label>Due Date (optional)<input name="due_date" type="date" /></label>
+          <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+            <button type="submit" class="btn">Create Job</button>
+            <span class="muted" id="create-status"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+    ` : ``}
+
     <div class="card">
       <button class="section-header" data-collapse="intake">
         <span class="collapse-title">Pending Intake — Portal Jobs</span>
@@ -1257,6 +1308,58 @@ async function loadCS() {
 
   bindCollapsibles();
   bindJobsTable();
+
+  // Manual job create (Phase 0)
+  const createForm = $('#manual-create');
+  if (createForm) {
+    const dealerSel = $('#create-dealer');
+    if (dealerSel) {
+      const opts = ['<option value="">Select…</option>'];
+      dealerList.forEach((d) => {
+        opts.push('<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>');
+      });
+      dealerSel.innerHTML = opts.join('');
+    }
+
+    createForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(createForm);
+      const payload = {
+        customer_name: (fd.get('customer_name')||'').toString().trim(),
+        dealer_name: (fd.get('dealer_name')||'').toString().trim(),
+        vin: (fd.get('vin')||'').toString().trim(),
+        job_type: (fd.get('job_type')||'UPFIT').toString(),
+        parts_status: (fd.get('parts_status')||'NOT_READY').toString(),
+        estimated_hours: parseFloat((fd.get('estimated_hours')||'0').toString()) || 0,
+        so_number: (fd.get('so_number')||'').toString().trim(),
+        due_date: ((fd.get('due_date')||'').toString().trim() || null),
+      };
+
+      if (!payload.job_type) { alert('Job Type required'); return; }
+      if (!payload.parts_status) { alert('Parts Status required'); return; }
+      if (!payload.estimated_hours || payload.estimated_hours <= 0) { alert('Estimated Hours required'); return; }
+      if (payload.job_type !== 'PARTS_ONLY' && !payload.vin) { alert('VIN required (unless Parts Only)'); return; }
+      if (!payload.customer_name && !payload.dealer_name) { alert('Customer or Dealer required'); return; }
+
+      const statusEl = $('#create-status');
+      if (statusEl) statusEl.textContent = 'Creating…';
+      const btn = createForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await api.createJob(payload);
+        if (statusEl) statusEl.textContent = 'Created';
+        const newId = res && (res.job_id || res.id);
+        if (newId) location.hash = '#/job/' + newId;
+        else router();
+      } catch (err) {
+        alert((err && err.message) ? err.message : 'Create failed');
+        if (statusEl) statusEl.textContent = '';
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
 
   $$('.intake-btn').forEach(btn => {
     btn.addEventListener('click', () => {
