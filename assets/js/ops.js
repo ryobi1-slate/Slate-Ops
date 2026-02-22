@@ -210,7 +210,8 @@
     const caps = slateOpsSettings.user.caps || {};
     const isSupervisor = !!caps.supervisor || !!caps.admin;
     const isCS = !!caps.cs || !!caps.admin;
-    const canEdit = isCS || isSupervisor;
+    const csOnly = !!caps.cs && !caps.supervisor && !caps.admin;
+    const canEdit = isSupervisor; // CS users view only; supervisors/admins may edit
 
     const t = job.time || {approved_minutes_total:0, pending_minutes_total:0, by_tech:[]};
     const estHrs = job.estimated_minutes ? (job.estimated_minutes / 60) : 0;
@@ -332,14 +333,14 @@
       <div class="card">
         <h2>Notes</h2>
         ${notesLog.length === 0 ? `<div class="muted">No notes yet.</div>` : `
-          <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
             ${notesLog.map(n => `
-              <div style="padding:10px 12px;background:var(--surface2,#f4f4f4);border-radius:6px;">
-                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                  <strong style="font-size:13px;">${escapeHtml(n.user_name || '')}</strong>
-                  <span class="muted" style="font-size:12px;">${escapeHtml(n.created_at || '')}</span>
+              <div class="note-bubble">
+                <div class="meta">
+                  <span class="author">${escapeHtml(n.user_name || '')}</span>
+                  <span>${escapeHtml(n.created_at || '')}</span>
                 </div>
-                <div style="white-space:pre-wrap;font-size:14px;">${escapeHtml(n.note || '')}</div>
+                <div class="body">${escapeHtml(n.note || '')}</div>
               </div>
             `).join('')}
           </div>
@@ -1053,7 +1054,7 @@ async function loadCreateJobInto(selector){
       </div>
       <div>
         <div class="label" style="margin-bottom:6px;">Created From</div>
-        <div class="input" style="background:var(--surface2,#f4f4f4);color:var(--muted,#888);cursor:default;">Manual Entry</div>
+        <div class="input" style="background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.45);cursor:default;">Manual Entry</div>
       </div>
       <div>
         <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
@@ -1126,29 +1127,38 @@ async function loadCreateJobInto(selector){
 
 async function loadCS() {
   const [jobsResp, settingsResp] = await Promise.all([
-    api.jobs('?limit=300&so_missing=1'),
+    api.jobs('?limit=300'),
     api.settings(),
   ]);
 
-  const allNeeds    = (jobsResp.jobs||[]).filter(j => {
+  const allJobs    = jobsResp.jobs || [];
+  const dealerList = settingsResp.dealers || [];
+  const salesList  = settingsResp.sales_people || [];
+
+  const portalNeeds = allJobs.filter(j => {
     const s = (j.status||'').toUpperCase();
-    return s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING';
+    return (s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING') && j.created_from === 'portal';
   });
-  const portalNeeds = allNeeds.filter(j => j.created_from === 'portal');
-  const manualNeeds = allNeeds.filter(j => j.created_from !== 'portal');
-  const dealerList  = settingsResp.dealers || [];
-  const salesList   = settingsResp.sales_people || [];
+  const manualNeeds = allJobs.filter(j => {
+    const s = (j.status||'').toUpperCase();
+    return (s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING') && j.created_from !== 'portal' && !j.so_number;
+  });
+  const activeJobs = allJobs.filter(j => {
+    const s = (j.status||'').toUpperCase();
+    return s === 'SCHEDULED' || s === 'IN_PROGRESS' || s === 'PENDING_QC';
+  });
 
   view(`
     <div class="card">
       <div class="row" style="align-items:flex-start;">
         <div style="flex:1 1 320px;">
           <h2 style="margin:0;">Customer Service</h2>
-          <div class="muted" style="margin-top:4px;">Complete intake, assign SO#s, and create jobs.</div>
+          <div class="muted" style="margin-top:4px;">Complete intake and assign SO#s for incoming jobs.</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           ${kpi('Pending Intake', portalNeeds.length)}
           ${kpi('Needs SO#', manualNeeds.length)}
+          ${kpi('Active Jobs', activeJobs.length)}
         </div>
       </div>
     </div>
@@ -1209,43 +1219,44 @@ async function loadCS() {
                 <td><input class="input so" placeholder="S-ORD101350" /></td>
                 <td><button class="btn small-btn save-so">Save</button></td>
               </tr>
-            `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">No manual jobs need SO#.</td></tr>`}
+            `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">All manual jobs have SO#s.</td></tr>`}
           </tbody>
         </table>
       </div>
     </div>
 
     <div class="card">
-      <button class="section-header" data-collapse="create">
-        <span class="collapse-title">Create Job</span>
-        <span class="collapse-chevron">▸</span>
+      <button class="section-header" data-collapse="active">
+        <span class="collapse-title">Active Jobs</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${activeJobs.length ? `<span class="count-badge">${activeJobs.length}</span>` : ''}
+          <span class="collapse-chevron">${activeJobs.length ? '▾' : '▸'}</span>
+        </div>
       </button>
-      <div class="collapse-body" id="collapse-create" style="display:none;">
-        <div id="cs-create-inner"></div>
+      <div class="collapse-body" id="collapse-active" ${!activeJobs.length ? 'style="display:none;"' : ''}>
+        <table class="table">
+          <thead><tr>
+            <th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${activeJobs.map(j=>`
+              <tr>
+                <td class="mono">${escapeHtml(j.so_number||'—')}</td>
+                <td>${escapeHtml(j.customer_name||'—')}</td>
+                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
+                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+                <td>${escapeHtml(j.assigned_name||'—')}</td>
+                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
+              </tr>
+            `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No active jobs.</td></tr>`}
+          </tbody>
+        </table>
       </div>
     </div>
   `);
 
   bindCollapsibles();
   bindJobsTable();
-
-  // Lazy-load create form when section is opened
-  let createLoaded = false;
-  const createBtn = document.querySelector('[data-collapse="create"]');
-  if (createBtn) {
-    createBtn._collapsebound = false; // allow re-bind with lazy-load logic
-    createBtn.addEventListener('click', async () => {
-      const body = document.getElementById('collapse-create');
-      const chevron = createBtn.querySelector('.collapse-chevron');
-      const hidden = body.style.display === 'none';
-      body.style.display = hidden ? '' : 'none';
-      if (chevron) chevron.textContent = hidden ? '▾' : '▸';
-      if (hidden && !createLoaded) {
-        createLoaded = true;
-        await loadCreateJobInto('#cs-create-inner');
-      }
-    });
-  }
 
   $$('.intake-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1362,7 +1373,7 @@ function renderIntakeForm(el, job, dealerList, salesList) {
 
     <div class="row" style="margin-top:12px;">
       <button class="btn" id="in-submit">Submit Intake</button>
-      <button class="btn" id="in-cancel" style="background:var(--surface2,#e0e0e0);color:var(--fg,#222);">Cancel</button>
+      <button class="btn secondary" id="in-cancel">Cancel</button>
       <div class="field-error" data-error-for="general"></div>
     </div>
   `;
@@ -1515,7 +1526,7 @@ function renderScheduleForm(el, job, userOptions) {
 
     <div class="row" style="margin-top:12px;">
       <button class="btn" id="sf-submit">Confirm Schedule</button>
-      <button class="btn" id="sf-cancel" style="background:var(--surface2,#e0e0e0);color:var(--fg,#222);">Cancel</button>
+      <button class="btn secondary" id="sf-cancel">Cancel</button>
       <div class="field-error" data-error-for="sf-general"></div>
     </div>
   `;
@@ -1813,18 +1824,33 @@ async function loadQC(){
 }
 
 async function loadAdmin() {
-  const [usersResp, jobsResp] = await Promise.all([
+  const [usersResp, jobsResp, settingsResp] = await Promise.all([
     api.users(),
     api.jobs('?limit=500'),
+    api.settings(),
   ]);
   const users = usersResp.users || [];
   const jobs  = jobsResp.jobs  || [];
   const byS   = (s) => jobs.filter(j => j.status === s).length;
 
+  let dealers    = [...(settingsResp.dealers      || [])];
+  let salesPeople= [...(settingsResp.sales_people || [])];
+
+  function tagListHtml(id, items, placeholder) {
+    const tags  = items.map(v => `<span class="tag-item">${escapeHtml(v)}<button class="tag-remove" data-value="${escapeHtml(v)}" title="Remove">&times;</button></span>`).join('');
+    const empty = items.length === 0 ? `<span style="color:rgba(0,0,0,0.45);font-size:13px;">None added yet.</span>` : '';
+    return `
+      <div class="tag-list" id="${id}-list">${tags}${empty}</div>
+      <div class="inline" style="margin-top:8px;">
+        <input class="input" id="${id}-input" placeholder="${escapeHtml(placeholder)}" style="max-width:280px;" />
+        <button class="btn secondary" id="${id}-add">Add</button>
+      </div>`;
+  }
+
   view(`
     <div class="card">
       <h2 style="margin:0 0 4px;">Admin</h2>
-      <div class="muted">Ops role management and system overview.</div>
+      <div class="muted">Role management, system overview, and configuration.</div>
     </div>
 
     <div class="stat-grid">
@@ -1868,10 +1894,40 @@ async function loadAdmin() {
     </div>
 
     <div class="card">
+      <h2>Settings</h2>
+      <div class="row" style="margin-bottom:14px;">
+        <div style="flex:1 1 160px;">
+          <div class="label" style="margin-bottom:6px;">Shift Start</div>
+          <input class="input" id="shift_start" value="${settingsResp.shift_start || '07:00:00'}" />
+        </div>
+        <div style="flex:1 1 160px;">
+          <div class="label" style="margin-bottom:6px;">Shift End</div>
+          <input class="input" id="shift_end" value="${settingsResp.shift_end || '15:30:00'}" />
+        </div>
+        <div style="flex:1 1 160px;">
+          <div class="label" style="margin-bottom:6px;">Lunch Minutes</div>
+          <input class="input" id="lunch_minutes" value="${settingsResp.lunch_minutes || 30}" />
+        </div>
+        <div style="flex:1 1 160px;">
+          <div class="label" style="margin-bottom:6px;">Break Minutes</div>
+          <input class="input" id="break_minutes" value="${settingsResp.break_minutes || 20}" />
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="label" style="margin-bottom:6px;">Dealers</div>
+        ${tagListHtml('dealers', dealers, 'Dealer name…')}
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="label" style="margin-bottom:6px;">Sales People</div>
+        ${tagListHtml('sales_people', salesPeople, 'Sales person name…')}
+      </div>
+      <button class="btn" id="save_settings">Save Settings</button>
+    </div>
+
+    <div class="card">
       <div class="collapse-title" style="margin-bottom:10px;">Quick Links</div>
       <div class="row">
         <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
-        <a class="btn secondary" href="/ops/settings" data-link>Settings</a>
         <a class="btn secondary" href="/ops/exec" data-link>Exec Dashboard</a>
         <a class="btn secondary" href="/ops/jobs" data-link>All Jobs</a>
       </div>
@@ -1892,6 +1948,58 @@ async function loadAdmin() {
       }
     };
   });
+
+  // Settings bindings
+  function renderTagList(id, arr) {
+    const tags  = arr.map(v => `<span class="tag-item">${escapeHtml(v)}<button class="tag-remove" data-value="${escapeHtml(v)}" title="Remove">&times;</button></span>`).join('');
+    const empty = arr.length === 0 ? `<span style="color:rgba(0,0,0,0.45);font-size:13px;">None added yet.</span>` : '';
+    $(`#${id}-list`).innerHTML = tags + empty;
+    bindTagRemove(id);
+  }
+  function bindTagRemove(id) {
+    $$(`#${id}-list .tag-remove`).forEach(btn => {
+      btn.onclick = () => {
+        const val = btn.getAttribute('data-value');
+        if (id === 'dealers') { dealers = dealers.filter(d => d !== val); renderTagList('dealers', dealers); }
+        else { salesPeople = salesPeople.filter(p => p !== val); renderTagList('sales_people', salesPeople); }
+      };
+    });
+  }
+  function bindTagAdd(id, getArr, addFn) {
+    const input = $(`#${id}-input`);
+    const btn   = $(`#${id}-add`);
+    const doAdd = () => {
+      const val = input.value.trim();
+      if (!val) return;
+      addFn(val);
+      input.value = '';
+      renderTagList(id, getArr());
+      input.focus();
+    };
+    btn.onclick = doAdd;
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } };
+  }
+
+  bindTagRemove('dealers');
+  bindTagRemove('sales_people');
+  bindTagAdd('dealers',     () => dealers,     (v) => { if (!dealers.includes(v))     dealers.push(v); });
+  bindTagAdd('sales_people',() => salesPeople, (v) => { if (!salesPeople.includes(v)) salesPeople.push(v); });
+
+  $('#save_settings').onclick = async () => {
+    try {
+      await api.updateSettings({
+        shift_start:    $('#shift_start').value.trim(),
+        shift_end:      $('#shift_end').value.trim(),
+        lunch_minutes:  parseInt($('#lunch_minutes').value, 10),
+        break_minutes:  parseInt($('#break_minutes').value, 10),
+        dealers,
+        sales_people: salesPeople,
+      });
+      alert('Settings saved.');
+    } catch(e) {
+      alert(e.message);
+    }
+  };
 
   linkify();
 }
@@ -1952,7 +2060,12 @@ async function loadAdmin() {
       if (r.startsWith('/new')) return await loadCreateJob();
       if (r.startsWith('/supervisor')) return await loadSupervisor();
       if (r.startsWith('/schedule')) return await loadSchedule();
-      if (r.startsWith('/settings')) return await loadSettings();
+      if (r.startsWith('/settings')) {
+        // Admins manage settings inside the Admin view
+        const c = slateOpsSettings.user.caps || {};
+        if (c.admin) { window.history.replaceState({}, '', '/ops/admin'); state.route = '/admin'; return await render(); }
+        return await loadSettings();
+      }
 
       // fallback
       return await loadDashboard();

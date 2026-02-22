@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Author: Slate
  */
 
