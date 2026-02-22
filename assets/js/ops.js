@@ -1421,150 +1421,381 @@ function renderIntakeForm(el, job, dealerList, salesList) {
 }
 
 async function loadSchedule(){
-  const [jobsResp, usersResp] = await Promise.all([
-    api.jobs('?status=READY_FOR_SCHEDULING&limit=200'),
-    api.users()
+  const [jobsResp, settingsResp, usersResp] = await Promise.all([
+    api.jobs('?limit=500'),
+    api.settings(),
+    api.users(),
   ]);
-  const ready = jobsResp.jobs || [];
-  const users = usersResp.users || [];
-  const userOptions = users.map(u =>
-    `<option value="${u.id}">${escapeHtml(u.name)}</option>`
-  ).join('');
+  const allJobs   = jobsResp.jobs || [];
+  const bays      = (settingsResp.bays || [{id:1,name:'Bay 1',active:true},{id:2,name:'Bay 2',active:true}]).filter(b=>b.active);
+  const users     = usersResp.users || [];
+  const userOpts  = users.map(u=>`<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+  const bayOpts   = bays.map(b=>`<option value="${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join('');
 
-  view(`
-    <div class="card">
-      <div class="row">
-        <div style="flex:1 1 520px;">
-          <h2 style="margin:0;">Schedule</h2>
-          <div class="muted">Assign jobs to technicians and set start and end times.</div>
-        </div>
-        <div style="display:flex; gap:10px; align-items:flex-end;">
-          ${kpi('Ready to Schedule', ready.length)}
-        </div>
-      </div>
-    </div>
+  let weekOffset = 0;
 
-    <div class="card" id="sched-panel" style="display:none">
-      <div id="sched-form-content"></div>
-    </div>
+  // ── helpers ─────────────────────────────────────────
+  function getWeekDates(offset){
+    const d = new Date(); d.setHours(0,0,0,0);
+    const day = d.getDay(); // 0=Sun
+    const mon = new Date(d); mon.setDate(d.getDate() - ((day + 6) % 7) + (offset * 7));
+    const out = [];
+    for(let i=0;i<7;i++){ const c=new Date(mon); c.setDate(mon.getDate()+i); out.push(c); }
+    return out;
+  }
+  function ds(d){ return d.toISOString().split('T')[0]; }
+  function shortDay(d){ return d.toLocaleDateString('en-US',{weekday:'short'}); }
+  function shortDate(d){ return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
 
-    <div class="card">
-      <div class="label" style="margin-bottom:8px;">Ready for Scheduling</div>
-      <table class="table">
-        <thead><tr>
-          <th>SO#</th>
-          <th>Customer</th>
-          <th>VIN</th>
-          <th>Job Type</th>
-          <th>Est.</th>
-          <th>Requested Date</th>
-          <th></th>
-        </tr></thead>
-        <tbody>
-          ${ready.map(j=>`
-            <tr>
-              <td>${escapeHtml(j.so_number||'—')}</td>
-              <td>${escapeHtml(j.customer_name||j.dealer_name||'—')}</td>
-              <td>${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
-              <td>${escapeHtml(fmtStatus(j.job_type||''))}</td>
-              <td>${j.estimated_minutes ? minutesToHours(j.estimated_minutes)+'h' : '—'}</td>
-              <td>${escapeHtml(j.requested_date||'—')}</td>
-              <td><button class="btn small-btn sched-btn" data-id="${j.job_id}">Schedule</button></td>
-            </tr>
-          `).join('') || `<tr><td colspan="7" class="muted" style="padding:12px;">No jobs ready to schedule.</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `);
+  function closeModal(){
+    const m = document.querySelector('.modal-overlay');
+    if(m) m.remove();
+  }
 
-  $$('.sched-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const jobId = parseInt(btn.dataset.id, 10);
-      const job = ready.find(j => j.job_id === jobId);
-      const panel = $('#sched-panel');
-      panel.style.display = '';
-      renderScheduleForm($('#sched-form-content'), job, userOptions);
-      panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+  // ── render ──────────────────────────────────────────
+  function renderBoard(){
+    const dates = getWeekDates(weekOffset);
+    const today = ds(new Date());
+    const wkStart = ds(dates[0]), wkEnd = ds(dates[6]);
+
+    // jobs with scheduled start that overlap this week
+    const weekJobs = allJobs.filter(j=>{
+      if(!j.scheduled_start) return false;
+      const s = (j.scheduled_start||'').split(' ')[0];
+      const f = (j.scheduled_finish||j.scheduled_start||'').split(' ')[0];
+      return s <= wkEnd && f >= wkStart;
     });
-  });
-}
 
-function renderScheduleForm(el, job, userOptions) {
-  const estHours = job.estimated_minutes ? (job.estimated_minutes/60).toFixed(1) : '';
-  const jobLabel = job.so_number || ('Job #' + job.job_id);
-  const jobSub   = [job.customer_name, job.dealer_name].filter(Boolean).join(' / ');
+    // unscheduled / ready-for-scheduling
+    const unscheduled = allJobs.filter(j=>{
+      const s=(j.status||'').toUpperCase();
+      return s==='UNSCHEDULED'||s==='READY_FOR_SCHEDULING';
+    });
 
-  el.innerHTML = `
-    <div class="label" style="margin-bottom:6px;">Schedule — ${escapeHtml(jobLabel)}</div>
-    ${jobSub ? `<div class="muted" style="margin-bottom:12px;">${escapeHtml(jobSub)}${job.vin ? ' · …'+escapeHtml(job.vin.slice(-6)) : ''}</div>` : ''}
+    // KPIs
+    const delayed = allJobs.filter(j=>j.status==='DELAYED'||j.status==='BLOCKED').length;
 
-    <div class="form-grid">
-      <div>
-        <div class="label" style="margin-bottom:6px;">Assign Tech</div>
-        <select class="input" id="sf-tech">
-          <option value="">Unassigned</option>
-          ${userOptions}
-        </select>
+    // day headers
+    const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const dayHeaders = dates.map((d,i)=>{
+      const t = ds(d)===today;
+      return `<th class="sched-day-header${t?' sched-today':''}">${dayNames[i]}<span>${shortDate(d)}</span></th>`;
+    }).join('');
+
+    // bay rows
+    const bayRows = bays.map(bay=>{
+      const cells = dates.map(d=>{
+        const dStr = ds(d);
+        const t = dStr===today;
+        const dayJobs = weekJobs.filter(j=>{
+          const jBay = j.work_center||'';
+          if(jBay!==bay.name) return false;
+          const s=(j.scheduled_start||'').split(' ')[0];
+          const f=(j.scheduled_finish||j.scheduled_start||'').split(' ')[0];
+          return s<=dStr && f>=dStr;
+        });
+        const cards = dayJobs.map(j=>{
+          const pri = j.priority && j.priority <= 2;
+          return `<div class="sched-card${pri?' sched-card-priority':''}" draggable="true" data-job-id="${j.job_id}" data-bay="${escapeHtml(bay.name)}">
+            <div class="sched-card-title">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
+            <div class="sched-card-so">${escapeHtml(j.so_number||'')}</div>
+            <div class="sched-card-meta">${escapeHtml(j.job_type?fmtStatus(j.job_type):'') }${j.assigned_name?' · '+escapeHtml(j.assigned_name):''}</div>
+            ${pri?'<div class="sched-card-flag">PRIORITY</div>':''}
+          </div>`;
+        }).join('');
+        return `<td class="sched-cell${t?' sched-today':''}" data-bay="${escapeHtml(bay.name)}" data-date="${dStr}">${cards}</td>`;
+      }).join('');
+      return `<tr><td class="sched-bay-label">${escapeHtml(bay.name)}</td>${cells}</tr>`;
+    }).join('');
+
+    const weekLabel = shortDate(dates[0])+' — '+shortDate(dates[6])+', '+dates[6].getFullYear();
+
+    // unscheduled list
+    const unsRows = unscheduled.slice(0,20).map(j=>`
+      <div class="sched-unscheduled-item" draggable="true" data-job-id="${j.job_id}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
+          <div class="muted" style="font-size:11px;">${escapeHtml(j.so_number||'')}${j.estimated_minutes?' · '+minutesToHours(j.estimated_minutes)+'h':''}</div>
+        </div>
+        <button class="btn secondary small-btn sched-quick-add" data-id="${j.job_id}" style="white-space:nowrap;">+ Schedule</button>
       </div>
-      <div>
-        <div class="label" style="margin-bottom:6px;">Work Center / Bay</div>
-        <input class="input" id="sf-bay" placeholder="e.g. Bay 3" />
+    `).join('');
+
+    view(`
+      <div class="card" style="margin-bottom:12px;">
+        <div class="row" style="align-items:flex-start;">
+          <div style="flex:1;">
+            <h2 style="margin:0;">Production Schedule</h2>
+            <div class="muted" style="margin-top:4px;">Drag jobs to reschedule. Click to view details.</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            ${kpi('This Week', weekJobs.length)}
+            ${kpi('Unscheduled', unscheduled.length)}
+            ${kpi('Delayed', delayed)}
+          </div>
+        </div>
       </div>
-      <div>
-        <div class="label" style="margin-bottom:6px;">Scheduled Start</div>
-        <input class="input" id="sf-start" type="datetime-local" />
+
+      <div class="card" style="padding:16px;">
+        <div class="sched-toolbar">
+          <div class="inline">
+            <button class="btn secondary small-btn" id="sched-prev">← Prev</button>
+            <button class="btn secondary small-btn" id="sched-today-btn">Today</button>
+            <button class="btn secondary small-btn" id="sched-next">Next →</button>
+            <span class="sched-week-label">${weekLabel}</span>
+          </div>
+          <button class="btn small-btn" id="sched-new-entry">+ New Entry</button>
+        </div>
+        <div class="sched-grid-wrap">
+          <table class="sched-grid">
+            <thead><tr><th class="sched-bay-header">Bays</th>${dayHeaders}</tr></thead>
+            <tbody>${bayRows}</tbody>
+          </table>
+        </div>
       </div>
-      <div>
-        <div class="label" style="margin-bottom:6px;">Scheduled Finish</div>
-        <input class="input" id="sf-finish" type="datetime-local" />
-      </div>
-      <div>
-        <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
-        <input class="input" id="sf-est" type="number" min="0.5" step="0.5" placeholder="e.g. 2.5" value="${escapeHtml(estHours)}" />
-      </div>
-    </div>
 
-    <div class="row" style="margin-top:12px;">
-      <button class="btn" id="sf-submit">Confirm Schedule</button>
-      <button class="btn secondary" id="sf-cancel">Cancel</button>
-      <div class="field-error" data-error-for="sf-general"></div>
-    </div>
-  `;
+      ${unscheduled.length ? `
+      <div class="card">
+        <h2 style="margin:0 0 8px;">Unscheduled Jobs</h2>
+        <div class="muted" style="margin-bottom:10px;">Drag onto the board above, or click + Schedule.</div>
+        ${unsRows}
+      </div>` : ''}
+    `);
 
-  el.querySelector('#sf-cancel').addEventListener('click', () => {
-    el.closest('#sched-panel').style.display = 'none';
-  });
+    bindBoard();
+  }
 
-  el.querySelector('#sf-submit').addEventListener('click', async () => {
-    const techId    = parseInt(el.querySelector('#sf-tech').value, 10) || 0;
-    const workCenter= el.querySelector('#sf-bay').value.trim();
-    const start     = el.querySelector('#sf-start').value;
-    const finish    = el.querySelector('#sf-finish').value;
-    const estVal    = parseFloat(el.querySelector('#sf-est').value) || 0;
+  // ── board bindings ──────────────────────────────────
+  function bindBoard(){
+    $('#sched-prev').onclick = ()=>{ weekOffset--; renderBoard(); };
+    $('#sched-next').onclick = ()=>{ weekOffset++; renderBoard(); };
+    $('#sched-today-btn').onclick = ()=>{ weekOffset=0; renderBoard(); };
+    $('#sched-new-entry').onclick = ()=> openNewEntryModal();
 
-    const payload = {
-      job_id:            job.job_id,
-      assigned_user_id:  techId || undefined,
-      work_center:       workCenter || undefined,
-      scheduled_start:   start || undefined,
-      scheduled_finish:  finish || undefined,
-      estimated_minutes: estVal > 0 ? Math.round(estVal * 60) : undefined,
-    };
+    // click card → job modal
+    $$('.sched-card').forEach(c=>{
+      c.addEventListener('click', e=>{
+        if(c.classList.contains('dragging')) return;
+        openJobModal(parseInt(c.getAttribute('data-job-id'),10));
+      });
+    });
 
-    const btn = el.querySelector('#sf-submit');
-    btn.disabled = true;
-    btn.textContent = 'Scheduling…';
+    // ── drag from board cards ───────────────────────
+    $$('.sched-card, .sched-unscheduled-item[draggable]').forEach(el=>{
+      el.addEventListener('dragstart', e=>{
+        el.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', el.getAttribute('data-job-id'));
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      el.addEventListener('dragend', ()=>el.classList.remove('dragging'));
+    });
 
-    try {
-      await api.schedule(job.job_id, payload);
-      el.closest('#sched-panel').style.display = 'none';
+    // ── drop targets ────────────────────────────────
+    $$('.sched-cell').forEach(cell=>{
+      cell.addEventListener('dragover', e=>{ e.preventDefault(); cell.classList.add('sched-drop-target'); });
+      cell.addEventListener('dragleave', ()=> cell.classList.remove('sched-drop-target'));
+      cell.addEventListener('drop', async e=>{
+        e.preventDefault();
+        cell.classList.remove('sched-drop-target');
+        const jid = parseInt(e.dataTransfer.getData('text/plain'),10);
+        const bay = cell.getAttribute('data-bay');
+        const date= cell.getAttribute('data-date');
+        if(!jid||!bay||!date) return;
+
+        const job = allJobs.find(j=>j.job_id===jid);
+        if(!job) return;
+
+        // preserve duration
+        const oldS = (job.scheduled_start||'').split(' ')[0];
+        const oldF = (job.scheduled_finish||job.scheduled_start||'').split(' ')[0];
+        const dur  = (oldS && oldF) ? Math.max(0, Math.round((new Date(oldF)-new Date(oldS))/86400000)) : 0;
+        const nf   = new Date(date); nf.setDate(nf.getDate()+dur);
+
+        try {
+          await api.schedule(jid, { work_center:bay, scheduled_start:date, scheduled_finish:ds(nf) });
+          job.work_center = bay;
+          job.scheduled_start = date;
+          job.scheduled_finish = ds(nf);
+          if(job.status==='UNSCHEDULED'||job.status==='READY_FOR_SCHEDULING') job.status='SCHEDULED';
+          renderBoard();
+        } catch(err){ alert(err.message); }
+      });
+    });
+
+    // ── unscheduled + Schedule button ────────────────
+    $$('.sched-quick-add').forEach(btn=>{
+      btn.onclick = e=>{
+        e.stopPropagation();
+        const jid = parseInt(btn.getAttribute('data-id'),10);
+        openNewEntryModal(jid);
+      };
+    });
+  }
+
+  // ── Job detail modal ────────────────────────────────
+  async function openJobModal(jobId){
+    const job = allJobs.find(j=>j.job_id===jobId) || await api.job(jobId);
+    const estH = job.estimated_minutes ? (job.estimated_minutes/60).toFixed(1) : '—';
+    const t = job.time || {approved_minutes_total:0,pending_minutes_total:0};
+    const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','HOLD':'Hold'};
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>${escapeHtml(job.so_number||'Job #'+job.job_id)}</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <span class="badge ${badgeClass(job.status)}">${fmtStatus(job.status)}</span>
+            ${job.priority&&job.priority<=2 ? '<span class="badge progress">Priority</span>' : ''}
+          </div>
+          <div class="form-grid" style="gap:10px;margin-bottom:14px;">
+            <div><div class="label">Customer</div><div style="margin-top:4px;">${escapeHtml(job.customer_name||'—')}</div></div>
+            <div><div class="label">Dealer</div><div style="margin-top:4px;">${escapeHtml(job.dealer_name||'—')}</div></div>
+            <div><div class="label">VIN</div><div class="mono" style="margin-top:4px;">${escapeHtml(job.vin||'—')}</div></div>
+            <div><div class="label">Job Type</div><div style="margin-top:4px;">${escapeHtml(fmtStatus(job.job_type||'—'))}</div></div>
+            <div><div class="label">Parts Status</div><div style="margin-top:4px;">${escapeHtml(partsLabel[job.parts_status]||job.parts_status||'—')}</div></div>
+            <div><div class="label">Estimate</div><div style="margin-top:4px;">${estH} hrs</div></div>
+            <div><div class="label">Approved Time</div><div style="margin-top:4px;">${minutesToHours(t.approved_minutes_total)} hrs</div></div>
+            <div><div class="label">Pending Time</div><div style="margin-top:4px;">${minutesToHours(t.pending_minutes_total)} hrs</div></div>
+          </div>
+          <div style="border-top:1px solid rgba(0,0,0,0.08);padding-top:14px;margin-bottom:14px;">
+            <div class="form-grid" style="gap:10px;">
+              <div><div class="label">Bay</div><div style="margin-top:4px;font-weight:600;color:var(--sage);">${escapeHtml(job.work_center||'—')}</div></div>
+              <div><div class="label">Assigned Tech</div><div style="margin-top:4px;">${escapeHtml(job.assigned_name||'—')}</div></div>
+              <div><div class="label">Start</div><div style="margin-top:4px;">${escapeHtml(job.scheduled_start||'—')}</div></div>
+              <div><div class="label">Finish</div><div style="margin-top:4px;">${escapeHtml(job.scheduled_finish||'—')}</div></div>
+            </div>
+          </div>
+          ${job.notes ? `<div><div class="label" style="margin-bottom:4px;">Notes</div><div style="white-space:pre-wrap;font-size:14px;">${escapeHtml(job.notes)}</div></div>` : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn" id="modal-open-job">Open Full Detail</button>
+          <button class="btn secondary" id="modal-close-btn">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.modal-close').onclick = closeModal;
+    overlay.querySelector('#modal-close-btn').onclick = closeModal;
+    overlay.onclick = e=>{ if(e.target===overlay) closeModal(); };
+    overlay.querySelector('#modal-open-job').onclick = ()=>{
+      closeModal();
+      window.history.pushState({},'','/ops/job/'+job.job_id);
       router();
-    } catch(e) {
-      el.querySelector('[data-error-for="sf-general"]').textContent = e.message || 'Failed to schedule.';
-      btn.disabled = false;
-      btn.textContent = 'Confirm Schedule';
-    }
-  });
+    };
+  }
+
+  // ── New entry modal ─────────────────────────────────
+  function openNewEntryModal(prefillJobId){
+    const prefill = prefillJobId ? allJobs.find(j=>j.job_id===prefillJobId) : null;
+
+    // jobs eligible to schedule
+    const eligible = allJobs.filter(j=>{
+      const s=(j.status||'').toUpperCase();
+      return s==='UNSCHEDULED'||s==='READY_FOR_SCHEDULING'||s==='SCHEDULED';
+    });
+    const jobSelectOpts = eligible.map(j=>{
+      const label = (j.so_number||'#'+j.job_id)+' — '+(j.customer_name||j.dealer_name||'');
+      const sel = prefill && prefill.job_id===j.job_id ? ' selected' : '';
+      return `<option value="${j.job_id}"${sel}>${escapeHtml(label)}</option>`;
+    }).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>New Schedule Entry</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid" style="gap:10px;">
+            <div style="grid-column:1/-1;">
+              <div class="label" style="margin-bottom:6px;">Job / SO#</div>
+              <select class="input" id="ne-job"><option value="">Select a job…</option>${jobSelectOpts}</select>
+              <div class="field-error" data-error-for="ne-job"></div>
+            </div>
+            <div>
+              <div class="label" style="margin-bottom:6px;">Production Bay</div>
+              <select class="input" id="ne-bay"><option value="">Select bay…</option>${bayOpts}</select>
+            </div>
+            <div>
+              <div class="label" style="margin-bottom:6px;">Lead Technician</div>
+              <select class="input" id="ne-tech"><option value="">Unassigned</option>${userOpts}</select>
+            </div>
+            <div>
+              <div class="label" style="margin-bottom:6px;">Start Date</div>
+              <input class="input" id="ne-start" type="date" />
+            </div>
+            <div>
+              <div class="label" style="margin-bottom:6px;">Est. Completion</div>
+              <input class="input" id="ne-finish" type="date" />
+            </div>
+          </div>
+          ${prefill ? '' : `
+          <div style="margin-top:12px;">
+            <div class="label" style="margin-bottom:6px;">Notes</div>
+            <textarea class="input" id="ne-notes" rows="2" placeholder="Optional scheduling notes…"></textarea>
+          </div>`}
+        </div>
+        <div class="modal-footer">
+          <button class="btn" id="ne-submit">Create Entry</button>
+          <button class="btn secondary" id="ne-cancel">Cancel</button>
+          <div class="field-error" data-error-for="ne-general" style="flex:1;"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.modal-close').onclick = closeModal;
+    overlay.querySelector('#ne-cancel').onclick = closeModal;
+    overlay.onclick = e=>{ if(e.target===overlay) closeModal(); };
+
+    overlay.querySelector('#ne-submit').onclick = async ()=>{
+      const jid   = parseInt(overlay.querySelector('#ne-job').value, 10);
+      const bay   = overlay.querySelector('#ne-bay').value;
+      const tech  = parseInt(overlay.querySelector('#ne-tech').value, 10) || 0;
+      const start = overlay.querySelector('#ne-start').value;
+      const fin   = overlay.querySelector('#ne-finish').value;
+      const notes = overlay.querySelector('#ne-notes')?.value?.trim() || '';
+
+      overlay.querySelectorAll('.field-error').forEach(e=>e.textContent='');
+      if(!jid){ overlay.querySelector('[data-error-for="ne-job"]').textContent='Select a job.'; return; }
+
+      const btn = overlay.querySelector('#ne-submit');
+      btn.disabled = true; btn.textContent = 'Scheduling…';
+
+      try {
+        const payload = {};
+        if(bay) payload.work_center = bay;
+        if(start) payload.scheduled_start = start;
+        if(fin) payload.scheduled_finish = fin;
+        if(tech) payload.assigned_user_id = tech;
+        if(notes) payload.note = notes;
+        await api.schedule(jid, payload);
+
+        // update local
+        const job = allJobs.find(j=>j.job_id===jid);
+        if(job){
+          if(bay) job.work_center = bay;
+          if(start) job.scheduled_start = start;
+          if(fin) job.scheduled_finish = fin;
+          if(tech){ job.assigned_user_id = tech; const u=users.find(x=>x.id===tech); if(u) job.assigned_name=u.name; }
+          if(job.status==='UNSCHEDULED'||job.status==='READY_FOR_SCHEDULING') job.status='SCHEDULED';
+        }
+        closeModal();
+        renderBoard();
+      } catch(e){
+        overlay.querySelector('[data-error-for="ne-general"]').textContent = e.message||'Failed';
+        btn.disabled = false; btn.textContent = 'Create Entry';
+      }
+    };
+  }
+
+  renderBoard();
 }
 
 async function loadTech() {

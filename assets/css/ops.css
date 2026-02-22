@@ -538,3 +538,223 @@ textarea{min-height:90px;}
   color:var(--sage);
   font-size:13px;
 }
+
+/* ─── Schedule board ───────────────────────────────── */
+.sched-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+  flex-wrap:wrap;
+}
+.sched-week-label{
+  font-size:14px;
+  font-weight:700;
+  color:var(--black);
+  margin-left:8px;
+}
+.sched-grid-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.sched-grid{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  min-width:760px;
+}
+.sched-grid th,
+.sched-grid td{
+  border:1px solid rgba(0,0,0,0.08);
+  vertical-align:top;
+  padding:0;
+}
+.sched-bay-header{
+  width:120px;
+  padding:8px 10px !important;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  font-weight:700;
+  color:rgba(0,0,0,0.42);
+  background:rgba(0,0,0,0.02);
+  text-align:left;
+}
+.sched-day-header{
+  padding:8px 6px !important;
+  font-size:11px;
+  font-weight:700;
+  text-align:center;
+  color:rgba(0,0,0,0.50);
+  background:rgba(0,0,0,0.02);
+}
+.sched-day-header span{
+  display:block;
+  font-size:10px;
+  font-weight:500;
+  color:rgba(0,0,0,0.38);
+  margin-top:1px;
+}
+.sched-day-header.sched-today{
+  background:rgba(64,79,75,0.08);
+  color:var(--sage);
+}
+.sched-day-header.sched-today span{ color:var(--sage); }
+.sched-bay-label{
+  width:120px;
+  padding:10px !important;
+  font-size:12px;
+  font-weight:700;
+  color:var(--sage);
+  background:rgba(64,79,75,0.03);
+  white-space:nowrap;
+  vertical-align:middle !important;
+}
+.sched-cell{
+  padding:4px !important;
+  min-height:64px;
+  height:64px;
+  background:#fff;
+  transition:background 0.12s;
+}
+.sched-cell.sched-today{
+  background:rgba(64,79,75,0.04);
+}
+.sched-cell.sched-drop-target{
+  background:rgba(216,107,25,0.10) !important;
+  outline:2px dashed var(--arches);
+  outline-offset:-2px;
+}
+
+/* ─── Schedule job cards ───────────────────────────── */
+.sched-card{
+  background:var(--sage);
+  color:#fff;
+  border-radius:6px;
+  padding:6px 8px;
+  margin-bottom:3px;
+  cursor:grab;
+  font-size:12px;
+  line-height:1.35;
+  position:relative;
+  transition:box-shadow 0.12s,opacity 0.12s;
+  overflow:hidden;
+}
+.sched-card:hover{
+  box-shadow:0 2px 10px rgba(0,0,0,0.18);
+}
+.sched-card.dragging{
+  opacity:0.4;
+}
+.sched-card-title{
+  font-weight:700;
+  font-size:11px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.sched-card-so{
+  font-size:10px;
+  opacity:0.78;
+  font-family:var(--mono);
+  margin-top:1px;
+}
+.sched-card-meta{
+  font-size:10px;
+  opacity:0.65;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-top:1px;
+}
+.sched-card-flag{
+  position:absolute;
+  top:4px;
+  right:4px;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:0.08em;
+  background:var(--arches);
+  color:#fff;
+  padding:1px 5px;
+  border-radius:3px;
+}
+.sched-card.sched-card-priority{
+  background:var(--redwood);
+}
+
+/* ─── Unscheduled sidebar table ────────────────────── */
+.sched-unscheduled-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 0;
+  border-bottom:1px solid rgba(0,0,0,0.06);
+}
+.sched-unscheduled-item:last-child{ border-bottom:none; }
+
+/* ─── Modal overlay ────────────────────────────────── */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:200;
+  padding:20px;
+  animation:modalFadeIn 0.15s ease-out;
+}
+@keyframes modalFadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+.modal{
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.22);
+  width:100%;
+  max-width:600px;
+  max-height:90vh;
+  overflow-y:auto;
+  animation:modalSlideIn 0.18s ease-out;
+}
+@keyframes modalSlideIn{
+  from{transform:translateY(20px);opacity:0;}
+  to{transform:translateY(0);opacity:1;}
+}
+.modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:18px 22px 14px;
+  border-bottom:1px solid rgba(0,0,0,0.08);
+}
+.modal-header h2{
+  font-size:16px;
+  font-weight:700;
+  color:var(--sage);
+}
+.modal-close{
+  background:none;
+  border:none;
+  font-size:22px;
+  color:rgba(0,0,0,0.35);
+  cursor:pointer;
+  padding:0 4px;
+  line-height:1;
+}
+.modal-close:hover{color:var(--black);}
+.modal-body{
+  padding:18px 22px 22px;
+}
+.modal-body .form-grid{
+  gap:10px;
+}
+.modal-footer{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 22px 20px;
+}
