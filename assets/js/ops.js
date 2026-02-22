@@ -58,6 +58,11 @@
     });
   }
 
+  function setPageTitle(title){
+    const el = document.getElementById('ops-page-title');
+    if (el) el.textContent = title;
+  }
+
   function fmtStatus(s){
     if(!s) return '';
     return s.replaceAll('_',' ');
@@ -1907,6 +1912,20 @@ async function loadAdmin() {
       r.startsWith('/qc') ? '/qc' :
       r.startsWith('/schedule') ? '/schedule' :
       '/'
+    );
+    setPageTitle(
+      r.startsWith('/exec')       ? 'Dashboard'        :
+      r.startsWith('/cs')         ? 'Customer Service' :
+      r.startsWith('/tech')       ? 'Tech'             :
+      r.startsWith('/qc')         ? 'QC Queue'         :
+      r.startsWith('/admin')      ? 'Admin'            :
+      r.startsWith('/job/')       ? 'Job Detail'       :
+      r.startsWith('/jobs')       ? 'Jobs'             :
+      r.startsWith('/new')        ? 'Create Job'       :
+      r.startsWith('/supervisor') ? 'Supervisor'       :
+      r.startsWith('/schedule')   ? 'Schedule'         :
+      r.startsWith('/settings')   ? 'Settings'         :
+      'Dashboard'
     );
 
     try{
