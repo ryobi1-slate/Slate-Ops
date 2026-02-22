@@ -413,3 +413,123 @@ textarea{min-height:90px;}
   .ops-content{padding:0;}
   .active-job-card,.tech-job-card{border-radius:0;margin-bottom:8px;}
 }
+
+/* ─── Toggle switch ────────────────────────────────── */
+.toggle{
+  position:relative;
+  display:inline-block;
+  width:64px;
+  height:30px;
+  flex-shrink:0;
+}
+.toggle input{
+  position:absolute;
+  opacity:0;
+  width:0;
+  height:0;
+}
+.toggle-track{
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.18);
+  border-radius:999px;
+  cursor:pointer;
+  transition:background 0.2s;
+}
+.toggle input:checked + .toggle-track{
+  background:var(--sage);
+}
+.toggle-off,
+.toggle-on{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:0.07em;
+  color:rgba(255,255,255,0.88);
+  pointer-events:none;
+  user-select:none;
+  transition:opacity 0.15s;
+}
+.toggle-off{ right:7px; opacity:1; }
+.toggle-on { left:8px;  opacity:0; }
+.toggle input:checked + .toggle-track .toggle-off{ opacity:0; }
+.toggle input:checked + .toggle-track .toggle-on { opacity:1; }
+.toggle-thumb{
+  position:absolute;
+  top:4px;
+  left:4px;
+  width:22px;
+  height:22px;
+  background:#fff;
+  border-radius:50%;
+  box-shadow:0 1px 4px rgba(0,0,0,0.22);
+  transition:transform 0.2s;
+  pointer-events:none;
+}
+.toggle input:checked + .toggle-track .toggle-thumb{
+  transform:translateX(34px);
+}
+
+/* ─── Notification rows ────────────────────────────── */
+.notify-group-label{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:rgba(0,0,0,0.45);
+  margin-bottom:8px;
+}
+.notify-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:13px 0;
+  border-bottom:1px solid rgba(0,0,0,0.07);
+}
+.notify-row:last-child{ border-bottom:none; }
+.notify-title{
+  font-size:14px;
+  font-weight:600;
+  color:var(--black);
+  margin-bottom:2px;
+}
+.notify-desc{
+  font-size:12px;
+  color:rgba(0,0,0,0.45);
+}
+
+/* ─── Bay configuration rows ───────────────────────── */
+.bay-row{
+  padding:11px 0;
+  border-bottom:1px solid rgba(0,0,0,0.07);
+}
+.bay-row:last-child{ border-bottom:none; }
+.bay-row-view{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.bay-row-name{
+  font-size:14px;
+  font-weight:600;
+  flex:1;
+}
+.bay-row-edit{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.bay-add-btn{
+  width:100%;
+  margin-top:12px;
+  justify-content:center;
+  background:rgba(64,79,75,0.06);
+  border-color:rgba(64,79,75,0.22);
+  color:var(--sage);
+  font-size:13px;
+}

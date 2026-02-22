@@ -1835,6 +1835,18 @@ async function loadAdmin() {
 
   let dealers    = [...(settingsResp.dealers      || [])];
   let salesPeople= [...(settingsResp.sales_people || [])];
+  let bays       = (settingsResp.bays || [
+    {id:1, name:'Bay 1', active:true},
+    {id:2, name:'Bay 2', active:true},
+  ]).map(b => ({...b}));
+  let nextBayId  = bays.reduce((m,b) => Math.max(m, b.id||0), 0) + 1;
+
+  const notify = {
+    email_qc:       settingsResp.notify_email_qc       !== false,
+    email_complete: settingsResp.notify_email_complete  !== false,
+    sms_qc:         settingsResp.notify_sms_qc          === true,
+    sms_complete:   settingsResp.notify_sms_complete     === true,
+  };
 
   function tagListHtml(id, items, placeholder) {
     const tags  = items.map(v => `<span class="tag-item">${escapeHtml(v)}<button class="tag-remove" data-value="${escapeHtml(v)}" title="Remove">&times;</button></span>`).join('');
@@ -1925,6 +1937,90 @@ async function loadAdmin() {
     </div>
 
     <div class="card">
+      <h2>Production Bays</h2>
+      <div id="bay-list"></div>
+      <button class="btn secondary bay-add-btn" id="bay-add-btn">+ Add New Bay</button>
+      <div id="bay-new-row" style="display:none;margin-top:12px;">
+        <div class="inline" style="flex-wrap:wrap;">
+          <input class="input" id="bay-new-name" placeholder="Bay name…" style="max-width:200px;" />
+          <select class="input" id="bay-new-status" style="width:auto;max-width:130px;">
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+          <button class="btn small-btn" id="bay-new-save">Add Bay</button>
+          <button class="btn secondary small-btn" id="bay-new-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Notification Preferences</h2>
+      <div style="margin-bottom:20px;">
+        <div class="notify-group-label">Email Alerts</div>
+        <div class="notify-row">
+          <div>
+            <div class="notify-title">QC Failures</div>
+            <div class="notify-desc">Send an email when a job fails QC review</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notify-email-qc" ${notify.email_qc ? 'checked' : ''}>
+            <span class="toggle-track">
+              <span class="toggle-off">OFF</span>
+              <span class="toggle-on">ON</span>
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+        <div class="notify-row">
+          <div>
+            <div class="notify-title">Job Completion</div>
+            <div class="notify-desc">Send an email when a job is marked complete</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notify-email-complete" ${notify.email_complete ? 'checked' : ''}>
+            <span class="toggle-track">
+              <span class="toggle-off">OFF</span>
+              <span class="toggle-on">ON</span>
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+      </div>
+      <div>
+        <div class="notify-group-label">SMS Alerts</div>
+        <div class="notify-row">
+          <div>
+            <div class="notify-title">QC Failures</div>
+            <div class="notify-desc">Send a text message when a job fails QC review</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notify-sms-qc" ${notify.sms_qc ? 'checked' : ''}>
+            <span class="toggle-track">
+              <span class="toggle-off">OFF</span>
+              <span class="toggle-on">ON</span>
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+        <div class="notify-row">
+          <div>
+            <div class="notify-title">Job Completion</div>
+            <div class="notify-desc">Send a text message when a job is marked complete</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notify-sms-complete" ${notify.sms_complete ? 'checked' : ''}>
+            <span class="toggle-track">
+              <span class="toggle-off">OFF</span>
+              <span class="toggle-on">ON</span>
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+      </div>
+      <button class="btn" id="save-notify" style="margin-top:16px;">Save Notification Preferences</button>
+    </div>
+
+    <div class="card">
       <div class="collapse-title" style="margin-bottom:10px;">Quick Links</div>
       <div class="row">
         <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
@@ -1994,8 +2090,109 @@ async function loadAdmin() {
         break_minutes:  parseInt($('#break_minutes').value, 10),
         dealers,
         sales_people: salesPeople,
+        bays,
       });
       alert('Settings saved.');
+    } catch(e) {
+      alert(e.message);
+    }
+  };
+
+  // ── Bay configuration ──────────────────────────────────────
+  function bayRowHtml(b) {
+    return `
+      <div class="bay-row" data-bay-id="${b.id}">
+        <div class="bay-row-view">
+          <span class="bay-row-name">${escapeHtml(b.name)}</span>
+          <span class="badge ${b.active ? 'complete' : 'scheduled'}">${b.active ? 'Active' : 'Inactive'}</span>
+          <button class="btn secondary small-btn bay-edit" data-id="${b.id}">Edit</button>
+        </div>
+        <div class="bay-row-edit" style="display:none;">
+          <input class="input bay-name-input" value="${escapeHtml(b.name)}" style="max-width:200px;" />
+          <select class="input bay-status-select" style="width:auto;max-width:130px;">
+            <option value="1" ${b.active ? 'selected' : ''}>Active</option>
+            <option value="0" ${!b.active ? 'selected' : ''}>Inactive</option>
+          </select>
+          <button class="btn small-btn bay-save" data-id="${b.id}">Save</button>
+          <button class="btn secondary small-btn bay-cancel" data-id="${b.id}">Cancel</button>
+          <button class="btn danger small-btn bay-delete" data-id="${b.id}">Remove</button>
+        </div>
+      </div>`;
+  }
+
+  function renderBayList() {
+    $('#bay-list').innerHTML = bays.length
+      ? bays.map(bayRowHtml).join('')
+      : `<div class="muted" style="padding:8px 0;">No bays configured yet.</div>`;
+    bindBayEvents();
+  }
+
+  function bindBayEvents() {
+    $$('.bay-edit').forEach(btn => {
+      btn.onclick = () => {
+        const row = btn.closest('.bay-row');
+        row.querySelector('.bay-row-view').style.display = 'none';
+        row.querySelector('.bay-row-edit').style.display = 'flex';
+        row.querySelector('.bay-name-input').focus();
+      };
+    });
+    $$('.bay-cancel').forEach(btn => {
+      btn.onclick = () => {
+        const row = btn.closest('.bay-row');
+        row.querySelector('.bay-row-view').style.display = 'flex';
+        row.querySelector('.bay-row-edit').style.display = 'none';
+      };
+    });
+    $$('.bay-save').forEach(btn => {
+      btn.onclick = () => {
+        const id   = parseInt(btn.getAttribute('data-id'), 10);
+        const row  = btn.closest('.bay-row');
+        const name = row.querySelector('.bay-name-input').value.trim();
+        const active = row.querySelector('.bay-status-select').value === '1';
+        if (!name) return;
+        const bay = bays.find(b => b.id === id);
+        if (bay) { bay.name = name; bay.active = active; }
+        renderBayList();
+      };
+    });
+    $$('.bay-delete').forEach(btn => {
+      btn.onclick = () => {
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        if (!confirm('Remove this bay?')) return;
+        bays = bays.filter(b => b.id !== id);
+        renderBayList();
+      };
+    });
+  }
+
+  renderBayList();
+
+  $('#bay-add-btn').onclick = () => {
+    $('#bay-new-row').style.display = '';
+    $('#bay-new-name').value = '';
+    $('#bay-new-name').focus();
+  };
+  $('#bay-new-cancel').onclick = () => { $('#bay-new-row').style.display = 'none'; };
+  $('#bay-new-save').onclick = () => {
+    const name   = $('#bay-new-name').value.trim();
+    const active = $('#bay-new-status').value === '1';
+    if (!name) return;
+    bays.push({ id: nextBayId++, name, active });
+    $('#bay-new-row').style.display = 'none';
+    renderBayList();
+  };
+  $('#bay-new-name').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#bay-new-save').click(); } };
+
+  // ── Notification preferences ───────────────────────────────
+  $('#save-notify').onclick = async () => {
+    try {
+      await api.updateSettings({
+        notify_email_qc:       $('#notify-email-qc').checked,
+        notify_email_complete: $('#notify-email-complete').checked,
+        notify_sms_qc:         $('#notify-sms-qc').checked,
+        notify_sms_complete:   $('#notify-sms-complete').checked,
+      });
+      alert('Notification preferences saved.');
     } catch(e) {
       alert(e.message);
     }
