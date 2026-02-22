@@ -85,6 +85,12 @@ class Slate_Ops_REST {
       'callback' => [__CLASS__, 'schedule_job'],
     ]);
 
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/release', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'release_job'],
+    ]);
+
     register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/status', [
       'methods' => 'POST',
       'permission_callback' => [__CLASS__, 'perm_ops'],
@@ -223,6 +229,9 @@ global $wpdb;
 $t = $wpdb->prefix . 'slate_ops_jobs';
 
 $status = $req->get_param('status');
+$status_in = $req->get_param('status_in');
+$ready_only = (int)$req->get_param('ready_only');
+
 $q = $req->get_param('q');
 $so_missing = (int)$req->get_param('so_missing');
 
@@ -233,9 +242,27 @@ if ($limit > 500) $limit = 500;
 $where = "archived_at IS NULL";
 $params = [];
 
-if ($status) {
+$ready_only = (int)$ready_only; // default 0 if not provided
+
+if ($status_in) {
+  $parts = array_filter(array_map('trim', explode(',', strtoupper($status_in))));
+  $parts = array_slice($parts, 0, 20);
+
+  if (!empty($parts)) {
+    $placeholders = implode(',', array_fill(0, count($parts), '%s'));
+    $where .= " AND status IN ($placeholders)";
+    foreach ($parts as $p) { $params[] = sanitize_text_field($p); }
+  }
+} elseif ($status) {
   $where .= " AND status = %s";
   $params[] = strtoupper(sanitize_text_field($status));
+}
+
+// Optional TOC gate for "unscheduled" lists
+if ($ready_only === 1) {
+  $where .= " AND (scheduling_status = %s OR status = %s)";
+  $params[] = 'READY_FOR_SCHEDULING';
+  $params[] = 'READY_FOR_SCHEDULING';
 }
 
 if ($so_missing === 1) {
@@ -259,7 +286,7 @@ if ($q) {
 
 $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_number, customer_name, vin, dealer_name,
                job_type, parts_status, status, status_detail, status_updated_at, delay_reason, priority,
-               assigned_user_id, work_center, estimated_minutes, scheduled_start, scheduled_finish, requested_date,
+               assigned_user_id, work_center, estimated_minutes, scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes, scheduled_start, scheduled_finish, requested_date,
                clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
         FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
 
@@ -816,6 +843,68 @@ self::maybe_push_dealer_portal_status($job);
 
 return self::get_job(['id' => $job_id]);
 	  }
+
+  /**
+   * Release a job to the scheduler (TOC Rope).
+   * Phase 0: you can skip this and schedule manually.
+   * Phase 1+: scheduler can be configured to only show jobs with scheduling_status=READY_FOR_SCHEDULING.
+   */
+  public static function release_job($req) {
+    global $wpdb;
+    $body = $req->get_json_params() ?: [];
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $job_id = isset($req['id']) ? intval($req['id']) : intval($body['job_id'] ?? 0);
+    if (!$job_id) {
+      return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
+    }
+
+    $override = !empty($body['override']);
+    $override_reason = sanitize_text_field($body['override_reason'] ?? '');
+    $override_notes  = sanitize_text_field($body['override_notes'] ?? '');
+
+    $job = self::job_by_id($job_id);
+    if (!$job) {
+      return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+    }
+
+    $failures = [];
+
+    if (empty($job->so_number)) $failures[] = 'missing_so_number';
+    if (empty($job->estimated_minutes) || intval($job->estimated_minutes) <= 0) $failures[] = 'missing_estimated_minutes';
+
+    // Scope must be locked before release (unless overridden)
+    if (!empty($job->scope_status) && $job->scope_status !== 'LOCKED') $failures[] = 'scope_not_locked';
+
+    // Parts must be READY before release (unless overridden)
+    if (!empty($job->parts_status) && $job->parts_status !== 'READY') $failures[] = 'parts_not_ready';
+
+    if (!$override && !empty($failures)) {
+      return new WP_Error('release_blocked', 'Job is not eligible for scheduling release', [
+        'status' => 409,
+        'failures' => $failures,
+      ]);
+    }
+
+    $now = Slate_Ops_Utils::now_gmt();
+
+    $update = [
+      'scheduling_status' => 'READY_FOR_SCHEDULING',
+      'ready_queue_entered_at' => $now,
+      'override_flag' => $override ? 1 : 0,
+      'override_reason' => $override ? ($override_reason ?: null) : null,
+      'override_notes'  => $override ? ($override_notes ?: null) : null,
+      'updated_at' => $now,
+    ];
+
+    $wpdb->update($t, $update, ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'release', null, wp_json_encode($update), 'Released to scheduler');
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+
 
   public static function set_status($req) {
 global $wpdb;
