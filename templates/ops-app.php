@@ -70,7 +70,6 @@ function ops_nav_link( $href, $route, $icon, $label ) {
         <?php ops_nav_link( '/ops/jobs',       '/jobs',       'construction',   'Jobs' ); ?>
         <?php ops_nav_link( '/ops/qc',         '/qc',         'fact_check',     'QC' ); ?>
         <?php ops_nav_link( '/ops/schedule',   '/schedule',   'calendar_today', 'Schedule' ); ?>
-        <?php ops_nav_link( '/ops/settings',   '/settings',   'settings',       'Settings' ); ?>
       <?php endif; ?>
 
       <?php if ( ! current_user_can( Slate_Ops_Utils::CAP_TECH ) && ! current_user_can( Slate_Ops_Utils::CAP_CS ) && ! current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) ) : ?>
