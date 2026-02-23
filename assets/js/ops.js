@@ -1193,12 +1193,12 @@ async function loadCS() {
 
   view(`
     <div class="card">
-      <div class="row" style="align-items:flex-start;">
-        <div style="flex:1 1 320px;">
+      <div class="row" style="align-items:flex-start;gap:16px;">
+        <div style="flex:1 1 360px;">
           <h2 style="margin:0;">Customer Service</h2>
-          <div class="muted" style="margin-top:4px;">Complete intake and assign SO#s for incoming jobs.</div>
+          <div class="muted" style="margin-top:4px;">Complete intake, assign SO#s, and keep jobs moving.</div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
           ${kpi('Pending Intake', portalNeeds.length)}
           ${kpi('Needs SO#', manualNeeds.length)}
           ${kpi('Active Jobs', activeJobs.length)}
@@ -1206,26 +1206,70 @@ async function loadCS() {
       </div>
     </div>
 
-
     <div class="card" style="margin-top:12px;">
-      <div style="display:flex;gap:10px;align-items:center;">
+      <div class="row" style="gap:10px;align-items:center;">
         <input id="cs-search" class="input" type="text" placeholder="Search SO#, VIN, customer, dealer..." style="flex:1;min-width:260px;" />
         <button type="button" class="btn secondary" id="cs-search-clear">Clear</button>
       </div>
       <div class="muted" style="margin-top:8px;" id="cs-search-count"></div>
     </div>
 
-    <div class="card" id="intake-panel" style="display:none;">
+    <div class="card" id="intake-panel" style="display:none;margin-top:12px;">
       <div id="intake-form-content"></div>
     </div>
 
+    <div class="row" style="gap:12px;align-items:stretch;flex-wrap:wrap;margin-top:12px;">
+      <div class="card" style="flex:1 1 420px;">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:800;">Recent Intake</div>
+            <div class="muted" style="margin-top:2px;">Portal jobs waiting on intake.</div>
+          </div>
+          ${portalNeeds.length ? `<span class="count-badge urgent">${portalNeeds.length}</span>` : ``}
+        </div>
+        <div style="margin-top:10px;">
+          ${(portalNeeds.slice(0,6).map(j => `
+            <div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);">
+              <div style="font-weight:700;">${escapeHtml(j.customer_name||'—')}</div>
+              <div class="muted" style="margin-top:2px;">Dealer: ${escapeHtml(j.dealer_name||'—')} • VIN: <span class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</span></div>
+              <div style="margin-top:8px;display:flex;gap:8px;">
+                <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
+                <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+              </div>
+            </div>
+          `).join('')) || `<div class="muted" style="padding:10px 0;">No portal jobs pending intake.</div>`}
+        </div>
+      </div>
+
+      <div class="card" style="flex:1 1 420px;">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:800;">Active Jobs</div>
+            <div class="muted" style="margin-top:2px;">Quick visibility for updates.</div>
+          </div>
+          ${activeJobs.length ? `<span class="count-badge">${activeJobs.length}</span>` : ``}
+        </div>
+        <div style="margin-top:10px;">
+          ${(activeJobs.slice(0,6).map(j => `
+            <div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);">
+              <div style="font-weight:700;">SO# <span class="mono">${escapeHtml(j.so_number||'—')}</span> • ${escapeHtml(j.customer_name||'—')}</div>
+              <div class="muted" style="margin-top:2px;">Status: ${fmtStatus(j.status)} • Tech: ${escapeHtml(j.assigned_name||'—')}</div>
+              <div style="margin-top:8px;">
+                <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+              </div>
+            </div>
+          `).join('')) || `<div class="muted" style="padding:10px 0;">No active jobs.</div>`}
+        </div>
+      </div>
+    </div>
+
     ${(isCS || isAdmin) ? `
-    <div class="card">
-      <button class="section-header" data-collapse="create-manual">
+    <div class="card" style="margin-top:12px;">
+      <button class="section-header" data-collapse="manual">
         <span class="collapse-title">Create Manual Job</span>
         <span class="collapse-chevron">▾</span>
       </button>
-      <div class="collapse-body" id="collapse-create-manual">
+      <div class="collapse-body" id="collapse-manual">
         <form id="manual-create" class="grid">
           <label>Customer<input name="customer_name" placeholder="Customer" /></label>
           <label>Dealer<select name="dealer_name" id="create-dealer"></select></label>
@@ -1259,9 +1303,46 @@ async function loadCS() {
     </div>
     ` : ``}
 
-    <div class="card">
+    <div class="card" style="margin-top:12px;">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:800;">Work Queue</div>
+          <div class="muted" style="margin-top:2px;">Search and open jobs from one list.</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;overflow:auto;border:1px solid rgba(0,0,0,0.06);border-radius:12px;">
+        <table class="table" data-cs-table="1" id="cs-directory">
+          <thead>
+            <tr>
+              <th>SO#</th>
+              <th>Customer</th>
+              <th>Dealer</th>
+              <th>VIN</th>
+              <th>Status</th>
+              <th>Assigned</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${allJobs.map(j=>`
+              <tr>
+                <td class="mono">${escapeHtml(j.so_number||'—')}</td>
+                <td>${escapeHtml(j.customer_name||'—')}</td>
+                <td>${escapeHtml(j.dealer_name||'—')}</td>
+                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
+                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+                <td>${escapeHtml(j.assigned_name||'—')}</td>
+                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
       <button class="section-header" data-collapse="intake">
-        <span class="collapse-title">Pending Intake — Portal Jobs</span>
+        <span class="collapse-title">Pending Intake - Portal Jobs</span>
         <div style="display:flex;align-items:center;gap:8px;">
           ${portalNeeds.length ? `<span class="count-badge urgent">${portalNeeds.length}</span>` : ''}
           <span class="collapse-chevron">${portalNeeds.length ? '▾' : '▸'}</span>
@@ -1269,14 +1350,12 @@ async function loadCS() {
       </button>
       <div class="collapse-body" id="collapse-intake" ${!portalNeeds.length ? 'style="display:none;"' : ''}>
         <table class="table" data-cs-table="1">
-          <thead><tr>
-            <th>Customer</th><th>VIN</th><th>Dealer</th><th></th>
-          </tr></thead>
+          <thead><tr><th>Customer</th><th>VIN</th><th>Dealer</th><th></th></tr></thead>
           <tbody>
             ${portalNeeds.map(j=>`
               <tr data-id="${j.job_id}">
                 <td>${escapeHtml(j.customer_name||'—')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
+                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
                 <td>${escapeHtml(j.dealer_name||'—')}</td>
                 <td>
                   <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
@@ -1289,9 +1368,9 @@ async function loadCS() {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-top:12px;">
       <button class="section-header" data-collapse="so">
-        <span class="collapse-title">Needs SO# — Manual Jobs</span>
+        <span class="collapse-title">Needs SO# - Manual Jobs</span>
         <div style="display:flex;align-items:center;gap:8px;">
           ${manualNeeds.length ? `<span class="count-badge">${manualNeeds.length}</span>` : ''}
           <span class="collapse-chevron">${manualNeeds.length ? '▾' : '▸'}</span>
@@ -1299,14 +1378,12 @@ async function loadCS() {
       </button>
       <div class="collapse-body" id="collapse-so" ${!manualNeeds.length ? 'style="display:none;"' : ''}>
         <table class="table" data-cs-table="1">
-          <thead><tr>
-            <th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th>
-          </tr></thead>
+          <thead><tr><th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th></tr></thead>
           <tbody>
             ${manualNeeds.map(j=>`
               <tr data-id="${j.job_id}">
                 <td>${escapeHtml(j.customer_name||'')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6))}</td>
+                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
                 <td>${escapeHtml(j.dealer_name||'')}</td>
                 <td><input class="input so" placeholder="S-ORD101350" /></td>
                 <td><button class="btn small-btn save-so">Save</button></td>
@@ -1317,7 +1394,7 @@ async function loadCS() {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-top:12px;">
       <button class="section-header" data-collapse="active">
         <span class="collapse-title">Active Jobs</span>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -1327,15 +1404,13 @@ async function loadCS() {
       </button>
       <div class="collapse-body" id="collapse-active" ${!activeJobs.length ? 'style="display:none;"' : ''}>
         <table class="table" data-cs-table="1">
-          <thead><tr>
-            <th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th>
-          </tr></thead>
+          <thead><tr><th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th></tr></thead>
           <tbody>
             ${activeJobs.map(j=>`
               <tr>
                 <td class="mono">${escapeHtml(j.so_number||'—')}</td>
                 <td>${escapeHtml(j.customer_name||'—')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
+                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
                 <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
                 <td>${escapeHtml(j.assigned_name||'—')}</td>
                 <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
@@ -1350,47 +1425,38 @@ async function loadCS() {
   bindCollapsibles();
   bindJobsTable();
 
-    // CS search - filters the CS tables only (Pending Intake, Needs SO#, Active Jobs)
-    const csSearch = document.getElementById('cs-search');
-    const csClear  = document.getElementById('cs-search-clear');
-    const csCount  = document.getElementById('cs-search-count');
+  // CS search - filters all CS tables marked with data-cs-table="1"
+  const csSearch = document.getElementById('cs-search');
+  const csClear  = document.getElementById('cs-search-clear');
+  const csCount  = document.getElementById('cs-search-count');
 
-    function csApplyFilter() {
-      const q = (csSearch ? csSearch.value : '').trim().toLowerCase();
-      let shown = 0;
-      let total = 0;
+  function csApplyFilter() {
+    const q = (csSearch?.value || '').trim().toLowerCase();
+    let shown = 0;
+    let total = 0;
 
-      document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach((tr) => {
-        total++;
-        const txt = (tr.textContent || '').toLowerCase();
-        const ok = (!q) || txt.includes(q);
-        tr.style.display = ok ? '' : 'none';
-        if (ok) shown++;
-      });
+    document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+      total++;
+      const txt = (tr.textContent || '').toLowerCase();
+      const ok = !q || txt.includes(q);
+      tr.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
 
-      if (csCount) {
-        csCount.textContent = q ? (shown + ' of ' + total + ' rows shown') : '';
-      }
-    }
+    if (csCount) csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
 
-    if (csSearch) csSearch.addEventListener('input', csApplyFilter);
-    if (csClear) {
-      csClear.addEventListener('click', () => {
-        if (csSearch) csSearch.value = '';
-        csApplyFilter();
-        csSearch && csSearch.focus();
-      });
-    }
+  if (csSearch) csSearch.addEventListener('input', csApplyFilter);
+  if (csClear) csClear.addEventListener('click', () => { if (csSearch) csSearch.value=''; csApplyFilter(); csSearch?.focus(); });
 
-    csApplyFilter();
+  csApplyFilter();
 
-
-  // Manual job create (Phase 0)
+  // Manual job create (Phase 0) - populate dealer dropdown and bind submit
   const createForm = $('#manual-create');
   if (createForm) {
     const dealerSel = $('#create-dealer');
     if (dealerSel) {
-      const opts = ['<option value="">Select…</option>'];
+      const opts = ['<option value="">Select...</option>'];
       dealerList.forEach((d) => {
         opts.push('<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>');
       });
@@ -1399,73 +1465,76 @@ async function loadCS() {
 
     createForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fd = new FormData(createForm);
+      const data = Object.fromEntries(new FormData(createForm).entries());
+
+      // VIN optional only for Parts Only
+      const jobType = (data.job_type || '').toUpperCase();
+      if (jobType !== 'PARTS_ONLY' && !(data.vin || '').trim()) {
+        toast('VIN required unless Parts Only', true);
+        return;
+      }
+
       const payload = {
-        customer_name: (fd.get('customer_name')||'').toString().trim(),
-        dealer_name: (fd.get('dealer_name')||'').toString().trim(),
-        vin: (fd.get('vin')||'').toString().trim(),
-        job_type: (fd.get('job_type')||'UPFIT').toString(),
-        parts_status: (fd.get('parts_status')||'NOT_READY').toString(),
-        estimated_hours: parseFloat((fd.get('estimated_hours')||'0').toString()) || 0,
-        so_number: (fd.get('so_number')||'').toString().trim(),
-        due_date: ((fd.get('due_date')||'').toString().trim() || null),
+        customer_name: (data.customer_name || '').trim(),
+        dealer_name:   (data.dealer_name || '').trim(),
+        vin:           (data.vin || '').trim(),
+        job_type:      jobType,
+        parts_status:  (data.parts_status || 'NOT_READY').toUpperCase(),
+        estimated_minutes: Math.round(parseFloat(data.estimated_hours || '0') * 60),
+        so_number:     (data.so_number || '').trim(),
+        due_date:      (data.due_date || '').trim(),
+        created_from:  'manual',
       };
 
-      if (!payload.job_type) { alert('Job Type required'); return; }
-      if (!payload.parts_status) { alert('Parts Status required'); return; }
-      if (!payload.estimated_hours || payload.estimated_hours <= 0) { alert('Estimated Hours required'); return; }
-      if (payload.job_type !== 'PARTS_ONLY' && !payload.vin) { alert('VIN required (unless Parts Only)'); return; }
-      if (!payload.customer_name && !payload.dealer_name) { alert('Customer or Dealer required'); return; }
+      const status = $('#create-status');
+      if (status) status.textContent = 'Creating...';
 
-      const statusEl = $('#create-status');
-      if (statusEl) statusEl.textContent = 'Creating…';
-      const btn = createForm.querySelector('button[type="submit"]');
-      if (btn) btn.disabled = true;
-
-      try {
-        const res = await api.createJob(payload);
-        if (statusEl) statusEl.textContent = 'Created';
-        const newId = res && (res.job_id || res.id);
-        if (newId) location.hash = '#/job/' + newId;
-        else router();
-      } catch (err) {
-        alert((err && err.message) ? err.message : 'Create failed');
-        if (statusEl) statusEl.textContent = '';
-      } finally {
-        if (btn) btn.disabled = false;
+      const resp = await api.create_job(payload);
+      if (status) status.textContent = resp.ok ? 'Created.' : (resp.message || 'Error');
+      if (resp.ok) {
+        toast('Job created');
+        route('/ops/cs'); // refresh CS page
+      } else {
+        toast(resp.message || 'Error', true);
       }
     });
   }
 
-  $$('.intake-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const jobId = parseInt(btn.dataset.id, 10);
-      const job   = portalNeeds.find(j => j.job_id === jobId);
-      const panel = $('#intake-panel');
-      panel.style.display = '';
-      renderIntakeForm($('#intake-form-content'), job, dealerList, salesList);
-      panel.scrollIntoView({behavior:'smooth', block:'start'});
+  // Intake button opens intake form
+  document.querySelectorAll('.intake-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      await openIntake(id, dealerList, salesList);
     });
   });
 
-  $$('.save-so').forEach(btn => {
+  // Save SO# for manual jobs
+  document.querySelectorAll('.save-so').forEach(btn => {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
-      const id = parseInt(tr.dataset.id, 10);
-      const so = $('.so', tr).value.trim();
-      if (!so) { alert('SO# required'); return; }
-      btn.disabled = true;
-      btn.textContent = 'Saving…';
-      try {
-        await api.setSO(id, so);
-        btn.textContent = 'Saved';
-        setTimeout(() => router(), 250);
-      } catch(e) {
-        alert(e.message);
-        btn.textContent = 'Save';
-      } finally {
-        btn.disabled = false;
+      if (!tr) return;
+      const id = tr.getAttribute('data-id');
+      const so = tr.querySelector('input.so')?.value?.trim() || '';
+      if (!id || !so) {
+        toast('Missing SO#', true);
+        return;
       }
+      const resp = await api.update_job(id, { so_number: so });
+      if (resp.ok) {
+        toast('Saved');
+        route('/ops/cs');
+      } else {
+        toast(resp.message || 'Error', true);
+      }
+    });
+  });
+
+  // View buttons
+  document.querySelectorAll('[data-open-job]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-open-job');
+      if (id) route('/ops/job/' + id);
     });
   });
 }
