@@ -1206,6 +1206,15 @@ async function loadCS() {
       </div>
     </div>
 
+
+    <div class="card" style="margin-top:12px;">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <input id="cs-search" class="input" type="text" placeholder="Search SO#, VIN, customer, dealer..." style="flex:1;min-width:260px;" />
+        <button type="button" class="btn secondary" id="cs-search-clear">Clear</button>
+      </div>
+      <div class="muted" style="margin-top:8px;" id="cs-search-count"></div>
+    </div>
+
     <div class="card" id="intake-panel" style="display:none;">
       <div id="intake-form-content"></div>
     </div>
@@ -1259,7 +1268,7 @@ async function loadCS() {
         </div>
       </button>
       <div class="collapse-body" id="collapse-intake" ${!portalNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead><tr>
             <th>Customer</th><th>VIN</th><th>Dealer</th><th></th>
           </tr></thead>
@@ -1289,7 +1298,7 @@ async function loadCS() {
         </div>
       </button>
       <div class="collapse-body" id="collapse-so" ${!manualNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead><tr>
             <th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th>
           </tr></thead>
@@ -1317,7 +1326,7 @@ async function loadCS() {
         </div>
       </button>
       <div class="collapse-body" id="collapse-active" ${!activeJobs.length ? 'style="display:none;"' : ''}>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead><tr>
             <th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th>
           </tr></thead>
@@ -1340,6 +1349,41 @@ async function loadCS() {
 
   bindCollapsibles();
   bindJobsTable();
+
+    // CS search - filters the CS tables only (Pending Intake, Needs SO#, Active Jobs)
+    const csSearch = document.getElementById('cs-search');
+    const csClear  = document.getElementById('cs-search-clear');
+    const csCount  = document.getElementById('cs-search-count');
+
+    function csApplyFilter() {
+      const q = (csSearch ? csSearch.value : '').trim().toLowerCase();
+      let shown = 0;
+      let total = 0;
+
+      document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach((tr) => {
+        total++;
+        const txt = (tr.textContent || '').toLowerCase();
+        const ok = (!q) || txt.includes(q);
+        tr.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+      });
+
+      if (csCount) {
+        csCount.textContent = q ? (shown + ' of ' + total + ' rows shown') : '';
+      }
+    }
+
+    if (csSearch) csSearch.addEventListener('input', csApplyFilter);
+    if (csClear) {
+      csClear.addEventListener('click', () => {
+        if (csSearch) csSearch.value = '';
+        csApplyFilter();
+        csSearch && csSearch.focus();
+      });
+    }
+
+    csApplyFilter();
+
 
   // Manual job create (Phase 0)
   const createForm = $('#manual-create');
