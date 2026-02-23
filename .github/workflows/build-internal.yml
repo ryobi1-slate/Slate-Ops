@@ -3,7 +3,7 @@ on:
   repository_dispatch:
     types: [ core_updated ]
   push:
-    branches: [ main ]
+    branches: [ main, claude/code-review-7VsvS ]
 
 jobs:
   build:
