@@ -62,7 +62,7 @@ body.slate-ops{
   transition:background 0.13s,color 0.13s;
 }
 .ops-nav-link:hover{
-  background:rgba(255,255,255,0.10);
+  background:rgba(216,107,25,0.20);
   color:#fff;
 }
 .ops-nav-link.active{
@@ -310,6 +310,11 @@ textarea{min-height:90px;}
   font-size:11px;letter-spacing:0.14em;text-transform:uppercase;
   font-weight:700;color:rgba(0,0,0,0.50);
 }
+.section-header:hover{
+  background:rgba(216,107,25,0.12);
+  border-radius:6px;
+}
+.section-header:hover .collapse-title{color:#b05b17;}
 .collapse-chevron{font-size:14px;color:rgba(0,0,0,0.30);line-height:1;}
 
 .count-badge{

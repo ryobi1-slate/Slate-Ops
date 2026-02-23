@@ -1,0 +1,15 @@
+name: Sync Slate Suite
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  notify-satellites:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Shop Monitor
+        run: |
+          curl -X POST -H "Authorization: token ${{ secrets.G_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/ryobi1-slate/Revised-Shop-Monitor/dispatches \
+          -d '{"event_type": "core_updated"}'

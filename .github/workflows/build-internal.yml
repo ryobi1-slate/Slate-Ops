@@ -1,0 +1,31 @@
+name: Build Internal Test Monitor
+on:
+  repository_dispatch:
+    types: [ core_updated ] # Matches the event_type in Slate-Ops
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install & Build Vite
+        run: |
+          npm install
+          npm run build
+          
+      - name: Create Test Plugin Zip
+        run: zip -r revised-shop-monitor-test.zip . -x "*.git*" "node_modules/*" "src/*"
+        
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: internal-monitor-test
+          path: revised-shop-monitor-test.zip
