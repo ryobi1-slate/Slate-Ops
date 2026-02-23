@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Slate Upfit – QC</title>
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        'sand-bg': '#e1dfc8',
+        'sage-sidebar': '#404f4b',
+        'arches-orange': '#d86b19'
+      },
+      fontFamily: { sans: ['Roboto Flex','sans-serif'] }
+    }
+  }
+}
+</script>
+<link rel="stylesheet" href="assets/app.css">
+
+<style>body{font-family:'Roboto Flex',sans-serif;}</style>
+</head>
+<body class="bg-sand-bg min-h-screen flex">
+
+<aside class="w-64 bg-sage-sidebar flex-shrink-0 flex flex-col h-screen sticky top-0">
+  <div class="p-6 border-b border-white/10 flex items-center justify-start">
+    <img src="assets/slate-logo-white.svg" alt="Slate Upfit" class="h-6 w-auto">
+  </div>
+
+  <nav class="mt-6 flex-grow px-4 space-y-2">
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="dashboard.html">Dashboard</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="cs.html">CS</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="supervisor.html">Supervisor</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="jobs.html">Jobs</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors bg-white/20 font-bold" href="qc.html">QC</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="schedule.html">Schedule</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="settings.html">Settings</a>
+  </nav>
+
+  <div class="p-6 mt-auto border-t border-white/10">
+    <div class="flex items-center">
+      <div class="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white font-bold mr-3">JD</div>
+      <div class="overflow-hidden">
+        <p class="text-white text-sm font-semibold truncate">John Doe</p>
+        <p class="text-white/60 text-xs truncate">Ops Manager</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-grow p-8 overflow-y-auto">
+<header class="mb-8 flex items-start justify-between gap-6">
+  <div>
+    <h1 class="text-3xl font-black text-sage-sidebar tracking-tight">QC</h1>
+    <p class="text-slate-600">Review pending inspections and exceptions.</p>
+  </div>
+  
+</header>
+<div class='max-w-3xl'><section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
+    <div>
+      <h2 class="text-lg font-bold text-sage-sidebar">QC Queue</h2>
+      <p class="kicker mt-1">Pending checks</p>
+    </div>
+    
+  </div>
+  <div class="p-6">
+    
+    <div class="space-y-4">
+      <div class="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="font-bold text-slate-800">S-ORD10408 - Electrical checklist</p>
+            <p class="text-sm text-slate-600">Assigned: Seth - Due: Mon</p>
+          </div>
+          <span class="badge badge-warn">Review</span>
+        </div>
+      </div>
+      <div class="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="font-bold text-slate-800">S-ORD10432 - Fit & finish</p>
+            <p class="text-sm text-slate-600">Assigned: Jake - Due: Fri</p>
+          </div>
+          <span class="badge badge-neutral">Pending</span>
+        </div>
+      </div>
+      <div class="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="font-bold text-slate-800">S-ORD10455 - Parts verification</p>
+            <p class="text-sm text-slate-600">Assigned: Tim - Due: Wed</p>
+          </div>
+          <span class="badge badge-danger">Blocked</span>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="bg-sage-sidebar text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors shadow-sm">Open QC</button></div>
+</section></div>
+</main>
+</body>
+</html>
