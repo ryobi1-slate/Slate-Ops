@@ -1152,22 +1152,16 @@ async function loadCS() {
     const s = (j.status||'').toUpperCase();
     return (s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING') && j.created_from !== 'portal' && !j.so_number;
   });
-  const activeJobs = allJobs.filter(j => {
-    const s = (j.status||'').toUpperCase();
-    return s === 'SCHEDULED' || s === 'IN_PROGRESS' || s === 'PENDING_QC';
-  });
-
   view(`
     <div class="card">
       <div class="row" style="align-items:flex-start;">
         <div style="flex:1 1 320px;">
-          <h2 style="margin:0;">Customer Service</h2>
-          <div class="muted" style="margin-top:4px;">Complete intake and assign SO#s for incoming jobs.</div>
+          <h2 style="margin:0;text-transform:uppercase;letter-spacing:.04em;">Customer Service</h2>
+          <div class="muted" style="margin-top:4px;">Complete intake, assign SO#s, and create jobs.</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           ${kpi('Pending Intake', portalNeeds.length)}
           ${kpi('Needs SO#', manualNeeds.length)}
-          ${kpi('Active Jobs', activeJobs.length)}
         </div>
       </div>
     </div>
@@ -1175,48 +1169,6 @@ async function loadCS() {
     <div class="card" id="intake-panel" style="display:none;">
       <div id="intake-form-content"></div>
     </div>
-
-    ${(isCS || isAdmin) ? `
-    <div class="card">
-      <button class="section-header" data-collapse="create">
-        <span class="collapse-title">Create Manual Job</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="collapse-chevron">▸</span>
-        </div>
-      </button>
-      <div class="collapse-body" id="collapse-create" style="display:none;">
-        <form id="manual-create" class="grid">
-          <label>Customer<input name="customer_name" placeholder="Customer" /></label>
-          <label>Dealer<select name="dealer_name" id="create-dealer"></select></label>
-          <label>VIN<input name="vin" class="mono" placeholder="VIN (required unless Parts Only)" /></label>
-          <label>Job Type
-            <select name="job_type">
-              <option value="UPFIT">UPFIT</option>
-              <option value="RV_BUILD">RV_BUILD</option>
-              <option value="PARTS_ONLY">PARTS_ONLY</option>
-              <option value="SERVICE">SERVICE</option>
-              <option value="WARRANTY">WARRANTY</option>
-            </select>
-          </label>
-          <label>Parts Status
-            <select name="parts_status">
-              <option value="NOT_READY">NOT_READY</option>
-              <option value="PARTIAL">PARTIAL</option>
-              <option value="READY">READY</option>
-              <option value="HOLD">HOLD</option>
-            </select>
-          </label>
-          <label>Estimated Hours<input name="estimated_hours" type="number" min="0" step="0.25" value="1" /></label>
-          <label>SO# (optional)<input name="so_number" class="mono" placeholder="S-ORD#####" /></label>
-          <label>Due Date (optional)<input name="due_date" type="date" /></label>
-          <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
-            <button type="submit" class="btn">Create Job</button>
-            <span class="muted" id="create-status"></span>
-          </div>
-        </form>
-      </div>
-    </div>
-    ` : ``}
 
     <div class="card">
       <button class="section-header" data-collapse="intake">
@@ -1276,48 +1228,63 @@ async function loadCS() {
       </div>
     </div>
 
+    ${(isCS || isAdmin) ? `
     <div class="card">
-      <button class="section-header" data-collapse="active">
-        <span class="collapse-title">Active Jobs</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${activeJobs.length ? `<span class="count-badge">${activeJobs.length}</span>` : ''}
-          <span class="collapse-chevron">${activeJobs.length ? '▾' : '▸'}</span>
+      <div class="row" style="align-items:center;">
+        <span class="collapse-title" style="font-weight:600;letter-spacing:.03em;">Create Job</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <button class="btn" id="start-intake-btn">Start New Intake</button>
+          <span class="muted" style="font-size:.8em;">Streamlined form to initiate a new job intake.</span>
         </div>
-      </button>
-      <div class="collapse-body" id="collapse-active" ${!activeJobs.length ? 'style="display:none;"' : ''}>
-        <table class="table">
-          <thead><tr>
-            <th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${activeJobs.map(j=>`
-              <tr>
-                <td class="mono">${escapeHtml(j.so_number||'—')}</td>
-                <td>${escapeHtml(j.customer_name||'—')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
-                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
-                <td>${escapeHtml(j.assigned_name||'—')}</td>
-                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
-              </tr>
-            `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No active jobs.</td></tr>`}
-          </tbody>
-        </table>
+      </div>
+      <div id="create-job-form" style="display:none;margin-top:16px;">
+        <form id="manual-create" class="grid">
+          <label>Customer<input name="customer_name" placeholder="Customer" /></label>
+          <label>Dealer<select name="dealer_name" id="create-dealer"></select></label>
+          <label>VIN<input name="vin" class="mono" placeholder="VIN (required unless Parts Only)" /></label>
+          <label>Job Type
+            <select name="job_type">
+              <option value="UPFIT">UPFIT</option>
+              <option value="RV_BUILD">RV_BUILD</option>
+              <option value="PARTS_ONLY">PARTS_ONLY</option>
+              <option value="SERVICE">SERVICE</option>
+              <option value="WARRANTY">WARRANTY</option>
+            </select>
+          </label>
+          <label>Parts Status
+            <select name="parts_status">
+              <option value="NOT_READY">NOT_READY</option>
+              <option value="PARTIAL">PARTIAL</option>
+              <option value="READY">READY</option>
+              <option value="HOLD">HOLD</option>
+            </select>
+          </label>
+          <label>Estimated Hours<input name="estimated_hours" type="number" min="0" step="0.25" value="1" /></label>
+          <label>SO# (optional)<input name="so_number" class="mono" placeholder="S-ORD#####" /></label>
+          <label>Due Date (optional)<input name="due_date" type="date" /></label>
+          <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+            <button type="submit" class="btn">Create Job</button>
+            <span class="muted" id="create-status"></span>
+          </div>
+        </form>
       </div>
     </div>
-
-    <div class="card">
-      <button class="section-header" data-collapse="create-manual">
-        <span class="collapse-title">Create Manual Job</span>
-        <span class="collapse-chevron">▸</span>
-      </button>
-      <div class="collapse-body" id="collapse-create-manual" style="display:none;">
-        <div id="cs-manual-form"></div>
-      </div>
-    </div>
+    ` : ``}
   `);
 
   bindCollapsibles();
   bindJobsTable();
+
+  // Create Job card — toggle form on button click
+  const startBtn = $('#start-intake-btn');
+  const createPanel = $('#create-job-form');
+  if (startBtn && createPanel) {
+    startBtn.addEventListener('click', () => {
+      const open = createPanel.style.display !== 'none';
+      createPanel.style.display = open ? 'none' : '';
+      startBtn.textContent = open ? 'Start New Intake' : 'Cancel';
+    });
+  }
 
   // Manual job create (Phase 0)
   const createForm = $('#manual-create');
