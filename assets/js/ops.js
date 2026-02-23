@@ -139,11 +139,49 @@
     `);
 
     bindJobsTable();
+
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
+  });
+}
+
+csApplyFilter();
+
   }
 
   function jobsTable(jobs){
     return `
-      <table class="table">
+      <table class="table" data-cs-table="1">
         <thead>
           <tr>
             <th>SO#</th>
@@ -207,6 +245,44 @@
     };
 
     bindJobsTable();
+
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
+  });
+}
+
+csApplyFilter();
+
   }
 
   async function loadJobDetail(id){
@@ -315,7 +391,7 @@
 
       <div class="card">
         <h2>Time Breakdown</h2>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead>
             <tr>
               <th>Tech</th>
@@ -769,7 +845,7 @@
             <span class="collapse-title">Pending Corrections</span>
             ${pending.length ? `<span class="count-badge urgent">${pending.length} Critical</span>` : `<span class="muted" style="font-size:12px;">None</span>`}
           </div>
-          <table class="table">
+          <table class="table" data-cs-table="1">
             <thead><tr><th>Job</th><th>Tech</th><th>Note</th><th></th></tr></thead>
             <tbody>
               ${pending.map(p=>`
@@ -816,7 +892,7 @@
             <button class="btn secondary small-btn" id="export-schedule-csv">Export CSV</button>
           </div>
         </div>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead><tr><th>SO Number</th><th>Vehicle Type</th><th>Station</th><th>Technician</th><th>ETA Completion</th><th>Status</th><th></th></tr></thead>
           <tbody>
             ${todayJobs.map(j=>`
@@ -836,6 +912,44 @@
     `);
 
     bindJobsTable();
+
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
+  });
+}
+
+csApplyFilter();
+
 
     const exportBtn = $('#export-schedule-csv');
     if (exportBtn) {
@@ -1195,7 +1309,19 @@ async function loadCS() {
     <div class="card">
       <div class="row" style="align-items:flex-start;">
         <div style="flex:1 1 320px;">
-          <h2 style="margin:0;">Customer Service</h2>
+          <h2 style="margin:0;">Customer Service`);
+  view(`
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;gap:10px;align-items:center;">
+    <input id="cs-search" class="input" type="text"
+      placeholder="Search SO#, VIN, customer, dealer..."
+      style="flex:1;min-width:260px;"
+    />
+    <button type="button" class="btn secondary" id="cs-search-clear">Clear</button>
+  </div>
+  <div class="muted" style="margin-top:8px;" id="cs-search-count"></div>
+</div>
+</h2>
           <div class="muted" style="margin-top:4px;">Complete intake and assign SO#s for incoming jobs.</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1259,7 +1385,7 @@ async function loadCS() {
         </div>
       </button>
       <div class="collapse-body" id="collapse-intake" ${!portalNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead><tr>
             <th>Customer</th><th>VIN</th><th>Dealer</th><th></th>
           </tr></thead>
@@ -1289,7 +1415,7 @@ async function loadCS() {
         </div>
       </button>
       <div class="collapse-body" id="collapse-so" ${!manualNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead><tr>
             <th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th>
           </tr></thead>
@@ -1317,7 +1443,7 @@ async function loadCS() {
         </div>
       </button>
       <div class="collapse-body" id="collapse-active" ${!activeJobs.length ? 'style="display:none;"' : ''}>
-        <table class="table">
+        <table class="table" data-cs-table="1">
           <thead><tr>
             <th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th>
           </tr></thead>
@@ -1341,27 +1467,43 @@ async function loadCS() {
   bindCollapsibles();
   bindJobsTable();
 
-/* CS dashboard bindings */
-const search = document.getElementById('cs-search');
-if (search) {
-  search.addEventListener('input', () => {
-    const q = search.value.trim().toLowerCase();
-    const rows = Array.from(document.querySelectorAll('#cs-directory tbody tr'));
-    rows.forEach(tr => {
-      const txt = (tr.textContent || '').toLowerCase();
-      tr.style.display = (!q || txt.includes(q)) ? '' : 'none';
-    });
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
   });
 }
 
-// Toolbar buttons that toggle existing collapsibles
-document.querySelectorAll('[data-collapse-toggle]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const key = btn.getAttribute('data-collapse-toggle');
-    const header = document.querySelector(`[data-collapse="${key}"]`);
-    if (header) header.click();
-  });
-});
+csApplyFilter();
+
 
   // Manual job create (Phase 0)
   const createForm = $('#manual-create');
@@ -2129,6 +2271,44 @@ async function loadTech() {
   bindCollapsibles();
   bindJobsTable();
 
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
+  });
+}
+
+csApplyFilter();
+
+
   const search = document.getElementById('tech-search');
   if (search) {
     search.addEventListener('input', () => {
@@ -2177,7 +2357,7 @@ async function loadExecutive(){
         <span class="collapse-title">Recent Sales Orders</span>
         <button class="btn secondary small-btn" data-link href="/ops/jobs">View All</button>
       </div>
-      <table class="table">
+      <table class="table" data-cs-table="1">
         <thead><tr>
           <th>Order ID</th><th>Client</th><th>Dealer</th><th>Due Date</th><th>Status</th><th></th>
         </tr></thead>
@@ -2198,6 +2378,44 @@ async function loadExecutive(){
   `);
 
   bindJobsTable();
+
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
+  });
+}
+
+csApplyFilter();
+
 }
 
 async function loadQC(){
@@ -2298,6 +2516,44 @@ async function loadQC(){
 
   bindJobsTable();
 
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
+  });
+}
+
+csApplyFilter();
+
+
   let filtered = [...jobs];
 
   function rebind() {
@@ -2319,6 +2575,44 @@ async function loadQC(){
     else if (newFoot) t.appendChild(newFoot);
     rebind();
     bindJobsTable();
+
+// CS search - filters all CS tables marked with data-cs-table="1"
+const csSearch = document.getElementById('cs-search');
+const csClear  = document.getElementById('cs-search-clear');
+const csCount  = document.getElementById('cs-search-count');
+
+function csApplyFilter() {
+  const q = (csSearch?.value || '').trim().toLowerCase();
+  let shown = 0;
+  let total = 0;
+
+  document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
+    total++;
+    const txt = (tr.textContent || '').toLowerCase();
+    const ok = !q || txt.includes(q);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+
+  if (csCount) {
+    csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
+  }
+}
+
+if (csSearch) {
+  csSearch.addEventListener('input', csApplyFilter);
+}
+
+if (csClear) {
+  csClear.addEventListener('click', () => {
+    if (csSearch) csSearch.value = '';
+    csApplyFilter();
+    csSearch?.focus();
+  });
+}
+
+csApplyFilter();
+
   }
 
   rebind();
@@ -2809,7 +3103,19 @@ async function loadAdmin() {
     );
     setPageTitle(
       r.startsWith('/exec')       ? 'Dashboard'        :
-      r.startsWith('/cs')         ? 'Customer Service' :
+      r.startsWith('/cs')         ? 'Customer Service`);
+  view(`
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;gap:10px;align-items:center;">
+    <input id="cs-search" class="input" type="text"
+      placeholder="Search SO#, VIN, customer, dealer..."
+      style="flex:1;min-width:260px;"
+    />
+    <button type="button" class="btn secondary" id="cs-search-clear">Clear</button>
+  </div>
+  <div class="muted" style="margin-top:8px;" id="cs-search-count"></div>
+</div>
+' :
       r.startsWith('/tech')       ? 'Tech'             :
       r.startsWith('/qc')         ? 'QC Queue'         :
       r.startsWith('/admin')      ? 'Admin'            :
