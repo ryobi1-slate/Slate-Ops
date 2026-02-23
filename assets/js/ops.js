@@ -211,7 +211,7 @@
     const isSupervisor = !!caps.supervisor || !!caps.admin;
     const isCS = !!caps.cs || !!caps.admin;
     const csOnly = !!caps.cs && !caps.supervisor && !caps.admin;
-    const canEdit = isSupervisor; // CS users view only; supervisors/admins may edit
+    const canEdit = isSupervisor || !!caps.cs;
 
     const t = job.time || {approved_minutes_total:0, pending_minutes_total:0, by_tech:[]};
     const estHrs = job.estimated_minutes ? (job.estimated_minutes / 60) : 0;
@@ -1253,10 +1253,32 @@ async function loadCS() {
         </table>
       </div>
     </div>
+
+    <div class="card">
+      <button class="section-header" data-collapse="create-manual">
+        <span class="collapse-title">Create Manual Job</span>
+        <span class="collapse-chevron">▸</span>
+      </button>
+      <div class="collapse-body" id="collapse-create-manual" style="display:none;">
+        <div id="cs-manual-form"></div>
+      </div>
+    </div>
   `);
 
   bindCollapsibles();
   bindJobsTable();
+
+  // Load create form after collapse section exists; re-bind on expand
+  const createToggle = document.querySelector('[data-collapse="create-manual"]');
+  if (createToggle) {
+    createToggle.addEventListener('click', () => {
+      const panel = $('#cs-manual-form');
+      if (panel && !panel._loaded) {
+        panel._loaded = true;
+        loadCreateJobInto('#cs-manual-form');
+      }
+    });
+  }
 
   $$('.intake-btn').forEach(btn => {
     btn.addEventListener('click', () => {
