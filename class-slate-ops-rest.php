@@ -1191,168 +1191,295 @@ async function loadCS() {
     return s === 'SCHEDULED' || s === 'IN_PROGRESS' || s === 'PENDING_QC';
   });
 
-  view(`
-    <div class="card">
-      <div class="row" style="align-items:flex-start;">
-        <div style="flex:1 1 320px;">
-          <h2 style="margin:0;">Customer Service</h2>
-          <div class="muted" style="margin-top:4px;">Complete intake and assign SO#s for incoming jobs.</div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          ${kpi('Pending Intake', portalNeeds.length)}
-          ${kpi('Needs SO#', manualNeeds.length)}
-          ${kpi('Active Jobs', activeJobs.length)}
-        </div>
+const fmtDate = (iso) => {
+  if (!iso) return '-';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch (e) { return '-'; }
+};
+
+const kpi = (label, value) => `
+  <div class="cs-kpi">
+    <div class="cs-kpi-label">${escapeHtml(label)}</div>
+    <div class="cs-kpi-value">${escapeHtml(String(value ?? 0))}</div>
+  </div>
+`;
+view(`
+  <div class="cs-topbar">
+    <div class="cs-topbar-left">
+      <h2 class="cs-title">Customer Service Dashboard</h2>
+      <div class="muted">Intake, assign SO#s, and keep jobs moving.</div>
+    </div>
+
+    <div class="cs-topbar-right">
+      <div class="cs-search">
+        <span class="material-symbols-outlined cs-search-icon">search</span>
+        <input id="cs-search" class="input cs-search-input" type="text" placeholder="Search SO#, VIN, customer, dealer..." />
       </div>
-    </div>
-
-    <div class="card" id="intake-panel" style="display:none;">
-      <div id="intake-form-content"></div>
-    </div>
-
-    ${(isCS || isAdmin) ? `
-
-    <div class="card" style="margin-bottom:12px;">
-      <div style="display:flex;gap:10px;align-items:center;">
-        <input id="cs-search" class="input" type="text"
-          placeholder="Search SO#, VIN, customer, dealer..."
-          style="flex:1;min-width:260px;"
-        />
-        <button type="button" class="btn secondary" id="cs-search-clear">Clear</button>
-      </div>
-      <div class="muted" style="margin-top:8px;" id="cs-search-count"></div>
-    </div>
-
-    <div class="card">
-      <button class="section-header" data-collapse="create-manual">
-        <span class="collapse-title">Create Manual Job</span>
-        <span class="collapse-chevron">▾</span>
+      <button id="cs-create-job" class="btn primary" type="button">
+        <span class="material-symbols-outlined" style="font-size:18px;">add_circle</span>
+        Create Job
       </button>
-      <div class="collapse-body" id="collapse-create-manual">
-        <form id="manual-create" class="grid">
-          <label>Customer<input name="customer_name" placeholder="Customer" /></label>
-          <label>Dealer<select name="dealer_name" id="create-dealer"></select></label>
-          <label>VIN<input name="vin" class="mono" placeholder="VIN (required unless Parts Only)" /></label>
-          <label>Job Type
-            <select name="job_type">
-              <option value="UPFIT">UPFIT</option>
-              <option value="RV_BUILD">RV_BUILD</option>
-              <option value="PARTS_ONLY">PARTS_ONLY</option>
-              <option value="SERVICE">SERVICE</option>
-              <option value="WARRANTY">WARRANTY</option>
-            </select>
-          </label>
-          <label>Parts Status
-            <select name="parts_status">
-              <option value="NOT_READY">NOT_READY</option>
-              <option value="PARTIAL">PARTIAL</option>
-              <option value="READY">READY</option>
-              <option value="HOLD">HOLD</option>
-            </select>
-          </label>
-          <label>Estimated Hours<input name="estimated_hours" type="number" min="0" step="0.25" value="1" /></label>
-          <label>SO# (optional)<input name="so_number" class="mono" placeholder="S-ORD#####" /></label>
-          <label>Due Date (optional)<input name="due_date" type="date" /></label>
-          <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
-            <button type="submit" class="btn">Create Job</button>
-            <span class="muted" id="create-status"></span>
-          </div>
-        </form>
-      </div>
+      <button id="cs-search-clear" class="btn ghost" type="button">Clear</button>
     </div>
-    ` : ``}
+  </div>
 
-    <div class="card">
-      <button class="section-header" data-collapse="intake">
-        <span class="collapse-title">Pending Intake — Portal Jobs</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${portalNeeds.length ? `<span class="count-badge urgent">${portalNeeds.length}</span>` : ''}
-          <span class="collapse-chevron">${portalNeeds.length ? '▾' : '▸'}</span>
+  <div class="cs-metrics">
+    ${kpi('Pending Intake', portalNeeds.length)}
+    ${kpi('Needs SO#', manualNeeds.length)}
+    ${kpi('Active Jobs', activeJobs.length)}
+    ${kpi('Total Jobs', allJobs.length)}
+  </div>
+
+  <div class="cs-grid">
+    <div class="cs-col-main">
+      <div class="card cs-card">
+        <div class="section-header" data-collapse="manual">
+          <div class="section-title">Create Manual Job</div>
+          <div class="muted">Use for walk-ins or phone/email requests.</div>
+          <span class="material-symbols-outlined section-caret">expand_more</span>
         </div>
-      </button>
-      <div class="collapse-body" id="collapse-intake" ${!portalNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table" data-cs-table="1">
-          <thead><tr>
-            <th>Customer</th><th>VIN</th><th>Dealer</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${portalNeeds.map(j=>`
-              <tr data-id="${j.job_id}">
-                <td>${escapeHtml(j.customer_name||'—')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
-                <td>${escapeHtml(j.dealer_name||'—')}</td>
-                <td>
-                  <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
-                  <button class="btn secondary small-btn" data-open-job="${j.job_id}" style="margin-left:4px;">View</button>
-                </td>
-              </tr>
-            `).join('') || `<tr><td colspan="4" class="muted" style="padding:10px;">No portal jobs pending intake.</td></tr>`}
-          </tbody>
-        </table>
+        <div class="section-body" data-collapsible="manual">
+          <form id="manual-create" class="grid2" style="gap:14px;">
+            <div>
+              <label>Customer</label>
+              <input class="input" name="customer_name" placeholder="Enter customer name" />
+            </div>
+
+            <div>
+              <label>Dealer</label>
+              <select id="create-dealer" class="input" name="dealer">
+                <option value="">Select Dealer...</option>
+              </select>
+            </div>
+
+            <div>
+              <label>VIN <span class="muted">(Req. unless Parts Only)</span></label>
+              <input class="input mono" name="vin" placeholder="VIN Number" />
+            </div>
+
+            <div>
+              <label>Job Type</label>
+              <select class="input" name="job_type">
+                <option value="UPFIT">UPFIT</option>
+                <option value="RV_BUILD">RV_BUILD</option>
+                <option value="PARTS_ONLY">PARTS_ONLY</option>
+                <option value="SERVICE">SERVICE</option>
+                <option value="WARRANTY">WARRANTY</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Parts Status</label>
+              <select class="input" name="parts_status">
+                <option value="NOT_READY">NOT READY</option>
+                <option value="PARTIAL">PARTIAL</option>
+                <option value="READY">READY</option>
+                <option value="HOLD">HOLD</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Estimated Hours</label>
+              <input class="input" name="time_estimate_hours" type="number" min="0" step="0.25" value="1" />
+            </div>
+
+            <div>
+              <label>SO# <span class="muted">(Optional)</span></label>
+              <input class="input mono" name="so_number" placeholder="S-ORD#####" />
+            </div>
+
+            <div>
+              <label>Due Date <span class="muted">(Optional)</span></label>
+              <input class="input" name="due_date" type="date" />
+            </div>
+
+            <div style="grid-column: 1 / -1; display:flex; justify-content:flex-end; gap:10px; padding-top:6px;">
+              <button class="btn ghost" type="reset">Cancel</button>
+              <button class="btn primary" type="submit">
+                <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+                Create Job
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <button class="section-header" data-collapse="so">
-        <span class="collapse-title">Needs SO# — Manual Jobs</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${manualNeeds.length ? `<span class="count-badge">${manualNeeds.length}</span>` : ''}
-          <span class="collapse-chevron">${manualNeeds.length ? '▾' : '▸'}</span>
+      <div class="card cs-card" style="margin-top:12px;">
+        <div class="section-header" data-collapse="portal-intake">
+          <div class="section-title">Pending Intake - Portal Jobs</div>
+          <div class="muted">Quotes approved in the portal that need CS intake.</div>
+          <span class="material-symbols-outlined section-caret">expand_more</span>
         </div>
-      </button>
-      <div class="collapse-body" id="collapse-so" ${!manualNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table" data-cs-table="1">
-          <thead><tr>
-            <th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${manualNeeds.map(j=>`
-              <tr data-id="${j.job_id}">
-                <td>${escapeHtml(j.customer_name||'')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6))}</td>
-                <td>${escapeHtml(j.dealer_name||'')}</td>
-                <td><input class="input so" placeholder="S-ORD101350" /></td>
-                <td><button class="btn small-btn save-so">Save</button></td>
-              </tr>
-            `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">All manual jobs have SO#s.</td></tr>`}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <button class="section-header" data-collapse="active">
-        <span class="collapse-title">Active Jobs</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${activeJobs.length ? `<span class="count-badge">${activeJobs.length}</span>` : ''}
-          <span class="collapse-chevron">${activeJobs.length ? '▾' : '▸'}</span>
-        </div>
-      </button>
-      <div class="collapse-body" id="collapse-active" ${!activeJobs.length ? 'style="display:none;"' : ''}>
-        <table class="table" data-cs-table="1">
-          <thead><tr>
-            <th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${activeJobs.map(j=>`
+        <div class="section-body" data-collapsible="portal-intake">
+          <table class="table" data-cs-table="1">
+            <thead>
               <tr>
-                <td class="mono">${escapeHtml(j.so_number||'—')}</td>
-                <td>${escapeHtml(j.customer_name||'—')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
-                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
-                <td>${escapeHtml(j.assigned_name||'—')}</td>
-                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
+                <th>Quote</th>
+                <th>Customer</th>
+                <th>Dealer</th>
+                <th>Created</th>
+                <th></th>
               </tr>
-            `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No active jobs.</td></tr>`}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${portalNeeds.map(j => `
+                <tr>
+                  <td class="mono">${escapeHtml(j.quote_number || j.quote_id || j.id || '-')}</td>
+                  <td>${escapeHtml(j.customer_name || '-')}</td>
+                  <td>${escapeHtml(j.dealer || '-')}</td>
+                  <td class="muted">${escapeHtml(fmtDate(j.created_at))}</td>
+                  <td style="text-align:right;">
+                    <button class="btn secondary small-btn intake-btn" data-id="${j.job_id}">Intake</button>
+                  </td>
+                </tr>
+              `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">No pending intake jobs.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card cs-card" style="margin-top:12px;">
+        <div class="section-header" data-collapse="needs-so">
+          <div class="section-title">Needs SO# - Manual Jobs</div>
+          <div class="muted">Manual jobs missing SO#.</div>
+          <span class="material-symbols-outlined section-caret">expand_more</span>
+        </div>
+        <div class="section-body" data-collapsible="needs-so">
+          <table class="table" data-cs-table="1">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Customer</th>
+                <th>Dealer</th>
+                <th>VIN</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${manualNeeds.map(j => `
+                <tr>
+                  <td class="mono">${escapeHtml(j.job_id || j.id || '-')}</td>
+                  <td>${escapeHtml(j.customer_name || '-')}</td>
+                  <td>${escapeHtml(j.dealer || '-')}</td>
+                  <td class="mono">${escapeHtml((j.vin||'').slice(-6) || '-')}</td>
+                  <td style="text-align:right;">
+                    <button class="btn secondary small-btn open-job" data-id="${j.job_id}">View</button>
+                  </td>
+                </tr>
+              `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">No manual jobs need an SO#.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card cs-card" style="margin-top:12px;">
+        <div class="section-header" data-collapse="active-monitor">
+          <div class="section-title">Active Job Monitoring</div>
+          <div class="muted">Quick view for scheduled, in-progress, and pending QC jobs.</div>
+          <span class="material-symbols-outlined section-caret">expand_more</span>
+        </div>
+        <div class="section-body" data-collapsible="active-monitor">
+          <table class="table" data-cs-table="1">
+            <thead>
+              <tr>
+                <th>SO#</th>
+                <th>Customer</th>
+                <th>Dealer</th>
+                <th>VIN</th>
+                <th>Status</th>
+                <th>Tech</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${activeJobs.map(j => `
+                <tr>
+                  <td class="mono">${escapeHtml(j.so_number || '-')}</td>
+                  <td>${escapeHtml(j.customer_name || '-')}</td>
+                  <td>${escapeHtml(j.dealer || '-')}</td>
+                  <td class="mono">${escapeHtml((j.vin||'').slice(-6) || '-')}</td>
+                  <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+                  <td>${escapeHtml(j.assigned_name || 'Unassigned')}</td>
+                  <td style="text-align:right;">
+                    <button class="btn secondary small-btn open-job" data-id="${j.job_id}">View</button>
+                  </td>
+                </tr>
+              `).join('') || `<tr><td colspan="7" class="muted" style="padding:10px;">No active jobs.</td></tr>`}
+            </tbody>
+          </table>
+          <div id="cs-search-count" class="muted" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- Intake Modal -->
+      <div id="intake-modal" class="modal" style="display:none;">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <div class="modal-title">Portal Intake</div>
+              <div class="muted" id="intake-sub"></div>
+            </div>
+            <button class="btn icon" data-close-modal="1"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="modal-body" id="intake-body"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="cs-col-side">
+      <div class="card cs-card">
+        <div class="section-title" style="margin:0 0 6px 0;">CRM - Recent Inquiries</div>
+        <div class="muted">CRM widgets are always visible. Connect your CRM to activate.</div>
+        <div class="cs-placeholder">
+          <div class="cs-placeholder-title">Connect CRM</div>
+          <div class="muted">Turn on CRM in Settings when your integration is ready.</div>
+          <button class="btn secondary" type="button" disabled>Connect CRM</button>
+        </div>
+      </div>
+
+      <div class="card cs-card" style="margin-top:12px;">
+        <div class="section-title" style="margin:0 0 6px 0;">CRM - Customer Directory</div>
+        <div class="muted">Search clients, see active jobs, and open profiles.</div>
+        <div class="cs-placeholder">
+          <div class="cs-placeholder-title">Connect CRM</div>
+          <div class="muted">This block will list customers once CRM is enabled.</div>
+          <button class="btn secondary" type="button" disabled>Connect CRM</button>
+        </div>
+      </div>
+
+      <div class="card cs-card cs-guide" style="margin-top:12px;">
+        <div class="section-title" style="margin:0 0 6px 0;">CS Guidebook</div>
+        <div class="muted">Quick links to SOPs, SLAs, and CS resources.</div>
+        <div style="margin-top:10px;">
+          <button class="btn secondary" type="button" disabled>Open Resources</button>
+        </div>
       </div>
     </div>
-  `);
+  </div>
+`);
+
 
   bindCollapsibles();
-  bindJobsTable();
+  // CS topbar actions
+  const createBtn = document.getElementById('cs-create-job');
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      const hdr = document.querySelector('[data-collapse="manual"]');
+      const body = document.querySelector('[data-collapsible="manual"]');
+      if (hdr && body && (body.style.display === 'none' || body.hasAttribute('hidden'))) {
+        hdr.click();
+      }
+      const form = document.getElementById('manual-create');
+      if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const first = form ? form.querySelector('input,select,textarea') : null;
+      if (first) first.focus();
+    });
+  }
 
+  bindJobsTable();
 
   // CS search - filters all CS tables marked with data-cs-table="1"
   const csSearch = document.getElementById('cs-search');
@@ -1360,39 +1487,32 @@ async function loadCS() {
   const csCount  = document.getElementById('cs-search-count');
 
   function csApplyFilter() {
-    const q = (csSearch ? csSearch.value : '').trim().toLowerCase();
+    const q = (csSearch?.value || '').trim().toLowerCase();
     let shown = 0;
     let total = 0;
 
     document.querySelectorAll('table[data-cs-table="1"] tbody tr').forEach(tr => {
       total++;
       const txt = (tr.textContent || '').toLowerCase();
-      const ok = (!q) || txt.includes(q);
+      const ok = !q || txt.includes(q);
       tr.style.display = ok ? '' : 'none';
       if (ok) shown++;
     });
 
-    if (csCount) {
-      csCount.textContent = q ? (shown + ' of ' + total + ' rows shown') : '';
-    }
+    if (csCount) csCount.textContent = q ? `${shown} of ${total} rows shown` : '';
   }
 
   if (csSearch) csSearch.addEventListener('input', csApplyFilter);
-  if (csClear) csClear.addEventListener('click', () => {
-    if (csSearch) csSearch.value = '';
-    csApplyFilter();
-    if (csSearch) csSearch.focus();
-  });
+  if (csClear) csClear.addEventListener('click', () => { if (csSearch) csSearch.value=''; csApplyFilter(); csSearch?.focus(); });
 
   csApplyFilter();
 
-
-  // Manual job create (Phase 0)
+  // Manual job create (Phase 0) - populate dealer dropdown and bind submit
   const createForm = $('#manual-create');
   if (createForm) {
     const dealerSel = $('#create-dealer');
     if (dealerSel) {
-      const opts = ['<option value="">Select…</option>'];
+      const opts = ['<option value="">Select...</option>'];
       dealerList.forEach((d) => {
         opts.push('<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>');
       });
@@ -1401,73 +1521,76 @@ async function loadCS() {
 
     createForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fd = new FormData(createForm);
+      const data = Object.fromEntries(new FormData(createForm).entries());
+
+      // VIN optional only for Parts Only
+      const jobType = (data.job_type || '').toUpperCase();
+      if (jobType !== 'PARTS_ONLY' && !(data.vin || '').trim()) {
+        toast('VIN required unless Parts Only', true);
+        return;
+      }
+
       const payload = {
-        customer_name: (fd.get('customer_name')||'').toString().trim(),
-        dealer_name: (fd.get('dealer_name')||'').toString().trim(),
-        vin: (fd.get('vin')||'').toString().trim(),
-        job_type: (fd.get('job_type')||'UPFIT').toString(),
-        parts_status: (fd.get('parts_status')||'NOT_READY').toString(),
-        estimated_hours: parseFloat((fd.get('estimated_hours')||'0').toString()) || 0,
-        so_number: (fd.get('so_number')||'').toString().trim(),
-        due_date: ((fd.get('due_date')||'').toString().trim() || null),
+        customer_name: (data.customer_name || '').trim(),
+        dealer_name:   (data.dealer_name || '').trim(),
+        vin:           (data.vin || '').trim(),
+        job_type:      jobType,
+        parts_status:  (data.parts_status || 'NOT_READY').toUpperCase(),
+        estimated_minutes: Math.round(parseFloat(data.estimated_hours || '0') * 60),
+        so_number:     (data.so_number || '').trim(),
+        due_date:      (data.due_date || '').trim(),
+        created_from:  'manual',
       };
 
-      if (!payload.job_type) { alert('Job Type required'); return; }
-      if (!payload.parts_status) { alert('Parts Status required'); return; }
-      if (!payload.estimated_hours || payload.estimated_hours <= 0) { alert('Estimated Hours required'); return; }
-      if (payload.job_type !== 'PARTS_ONLY' && !payload.vin) { alert('VIN required (unless Parts Only)'); return; }
-      if (!payload.customer_name && !payload.dealer_name) { alert('Customer or Dealer required'); return; }
+      const status = $('#create-status');
+      if (status) status.textContent = 'Creating...';
 
-      const statusEl = $('#create-status');
-      if (statusEl) statusEl.textContent = 'Creating…';
-      const btn = createForm.querySelector('button[type="submit"]');
-      if (btn) btn.disabled = true;
-
-      try {
-        const res = await api.createJob(payload);
-        if (statusEl) statusEl.textContent = 'Created';
-        const newId = res && (res.job_id || res.id);
-        if (newId) location.hash = '#/job/' + newId;
-        else router();
-      } catch (err) {
-        alert((err && err.message) ? err.message : 'Create failed');
-        if (statusEl) statusEl.textContent = '';
-      } finally {
-        if (btn) btn.disabled = false;
+      const resp = await api.create_job(payload);
+      if (status) status.textContent = resp.ok ? 'Created.' : (resp.message || 'Error');
+      if (resp.ok) {
+        toast('Job created');
+        route('/ops/cs'); // refresh CS page
+      } else {
+        toast(resp.message || 'Error', true);
       }
     });
   }
 
-  $$('.intake-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const jobId = parseInt(btn.dataset.id, 10);
-      const job   = portalNeeds.find(j => j.job_id === jobId);
-      const panel = $('#intake-panel');
-      panel.style.display = '';
-      renderIntakeForm($('#intake-form-content'), job, dealerList, salesList);
-      panel.scrollIntoView({behavior:'smooth', block:'start'});
+  // Intake button opens intake form
+  document.querySelectorAll('.intake-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      await openIntake(id, dealerList, salesList);
     });
   });
 
-  $$('.save-so').forEach(btn => {
+  // Save SO# for manual jobs
+  document.querySelectorAll('.save-so').forEach(btn => {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
-      const id = parseInt(tr.dataset.id, 10);
-      const so = $('.so', tr).value.trim();
-      if (!so) { alert('SO# required'); return; }
-      btn.disabled = true;
-      btn.textContent = 'Saving…';
-      try {
-        await api.setSO(id, so);
-        btn.textContent = 'Saved';
-        setTimeout(() => router(), 250);
-      } catch(e) {
-        alert(e.message);
-        btn.textContent = 'Save';
-      } finally {
-        btn.disabled = false;
+      if (!tr) return;
+      const id = tr.getAttribute('data-id');
+      const so = tr.querySelector('input.so')?.value?.trim() || '';
+      if (!id || !so) {
+        toast('Missing SO#', true);
+        return;
       }
+      const resp = await api.update_job(id, { so_number: so });
+      if (resp.ok) {
+        toast('Saved');
+        route('/ops/cs');
+      } else {
+        toast(resp.message || 'Error', true);
+      }
+    });
+  });
+
+  // View buttons
+  document.querySelectorAll('[data-open-job]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-open-job');
+      if (id) route('/ops/job/' + id);
     });
   });
 }
@@ -1677,7 +1800,7 @@ async function loadSchedule(){
         });
         const cards = dayJobs.map(j=>{
           const pri = j.priority && j.priority <= 2;
-          return `<div class="sched-card${pri?' sched-card-priority':''}" draggable="true" data-job-id="${j.job_id}" data-bay="${escapeHtml(bay.name)}">
+          return `<div class="sched-card${pri?' sched-card-priority':''}" draggable="true" data-id="${j.job_id}" data-bay="${escapeHtml(bay.name)}">
             <div class="sched-card-title">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
             <div class="sched-card-so">${escapeHtml(j.so_number||'')}</div>
             <div class="sched-card-meta">${escapeHtml(j.job_type?fmtStatus(j.job_type):'') }${j.assigned_name?' · '+escapeHtml(j.assigned_name):''}</div>
@@ -1693,7 +1816,7 @@ async function loadSchedule(){
 
     // unscheduled list
     const unsRows = unscheduled.slice(0,20).map(j=>`
-      <div class="sched-unscheduled-item" draggable="true" data-job-id="${j.job_id}">
+      <div class="sched-unscheduled-item" draggable="true" data-id="${j.job_id}">
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
           <div class="muted" style="font-size:11px;">${escapeHtml(j.so_number||'')}${j.estimated_minutes?' · '+minutesToHours(j.estimated_minutes)+'h':''}</div>
