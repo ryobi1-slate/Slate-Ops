@@ -981,3 +981,37 @@ form.grid > label select{
   width:auto !important;
   display:block !important;
 }
+
+/* =========================
+   CS Dashboard (v0.6.6)
+   ========================= */
+
+.cs-topbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+  padding: 6px 2px 10px 2px;
+}
+.cs-title{margin:0; font-size:20px; letter-spacing:-0.01em;}
+.cs-topbar-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
+.cs-search{position:relative; min-width:280px; max-width:420px; flex:1;}
+.cs-search-input{padding-left:40px; width:100%;}
+.cs-search-icon{position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:20px; color: var(--muted);}
+
+.cs-metrics{display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; margin-top:8px;}
+.cs-kpi{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px;}
+.cs-kpi-label{font-size:12px; color:var(--muted);}
+.cs-kpi-value{font-size:24px; font-weight:800; color:var(--ink); margin-top:6px;}
+
+.cs-grid{display:grid; grid-template-columns: 2fr 1fr; gap:12px; margin-top:12px; align-items:start;}
+.cs-card{border-radius:16px;}
+
+.cs-placeholder{margin-top:10px; padding:12px; border:1px dashed var(--border); border-radius:12px; background: var(--bg);}
+.cs-placeholder-title{font-weight:800; margin-bottom:4px;}
+
+@media (max-width: 980px){
+  .cs-metrics{grid-template-columns: repeat(2, minmax(0, 1fr));}
+  .cs-grid{grid-template-columns: 1fr;}
+  .cs-search{min-width:220px;}
+}
