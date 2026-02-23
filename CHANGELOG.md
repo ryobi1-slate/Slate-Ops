@@ -1,3 +1,9 @@
+## 0.6.2 – 2026-02-23
+### Fixed
+- CS page: manual create form now uses a real grid layout (JS used class="grid" without CSS)
+- Sidebar logo: replaced SVG to remove white background block and render clean on Sage sidebar
+
+
 ## 0.6.1 – 2026-02-22
 ### Changed
 - UI polish: neutral canvas, unified card borders/shadows, sharper sidebar active state

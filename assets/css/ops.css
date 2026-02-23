@@ -934,3 +934,50 @@ body.slate-ops{
 .section-header:hover .collapse-title{
   color:var(--ui-text) !important;
 }
+
+
+/* =========================
+   0.6.2 UI Fixes
+   - Fix CS manual-create form (class="grid" had no styles)
+   - Tighten logo rendering (svg has no background now)
+   ========================= */
+
+/* Generic grid utility used by JS templates */
+form.grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap:12px;
+  align-items:end;
+}
+@media (max-width: 1100px){
+  form.grid{ grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+}
+@media (max-width: 640px){
+  form.grid{ grid-template-columns: 1fr; }
+}
+
+/* Make label+field stacks consistent across pages */
+form.grid > label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--ui-text);
+}
+form.grid > label input,
+form.grid > label select{
+  width:100%;
+}
+
+/* CS: keep the button row clean */
+#manual-create > div[style*="grid-column"]{
+  justify-content:flex-start !important;
+}
+
+/* Sidebar brand svg sizing */
+.ops-brand svg{
+  height:24px !important;
+  width:auto !important;
+  display:block !important;
+}

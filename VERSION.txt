@@ -1,4 +1,4 @@
 Slate Ops
-Version: 0.6.1
+Version: 0.6.2
 Environment: (DEV/STAGING/PROD)
-Build Date: 2026-02-22
+Build Date: 2026-02-23
