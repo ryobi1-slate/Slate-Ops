@@ -1304,6 +1304,16 @@ async function loadCS() {
         </table>
       </div>
     </div>
+
+    <div class="card">
+      <button class="section-header" data-collapse="create-manual">
+        <span class="collapse-title">Create Manual Job</span>
+        <span class="collapse-chevron">▸</span>
+      </button>
+      <div class="collapse-body" id="collapse-create-manual" style="display:none;">
+        <div id="cs-manual-form"></div>
+      </div>
+    </div>
   `);
 
   bindCollapsibles();
