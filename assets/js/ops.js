@@ -872,36 +872,54 @@
     }
 
     view(`
-      <div class="card">
-        <h2>Settings</h2>
-        <div class="row">
-          <div style="flex:1 1 180px;">
-            <div class="label" style="margin-bottom:6px;">Shift Start</div>
-            <input class="input" id="shift_start" value="${s.shift_start || '07:00:00'}" />
+      <div style="margin-bottom:20px;">
+        <h1 style="font-size:22px;font-weight:900;color:var(--sage);letter-spacing:-0.01em;margin:0 0 4px;">System Settings</h1>
+        <p class="muted">Configure shifts, dealers, and sales people.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px;">
+
+        <div class="card" style="margin-bottom:0;padding:0;overflow:hidden;">
+          <div style="padding:16px 20px 14px;background:rgba(0,0,0,0.025);border-bottom:1px solid rgba(0,0,0,0.08);">
+            <h2 style="font-size:15px;margin:0 0 2px;">Shift Schedule</h2>
+            <div class="label">Production Hours</div>
           </div>
-          <div style="flex:1 1 180px;">
-            <div class="label" style="margin-bottom:6px;">Shift End</div>
-            <input class="input" id="shift_end" value="${s.shift_end || '15:30:00'}" />
+          <div style="padding:20px;" class="form-grid">
+            <label><div class="label" style="margin-bottom:6px;">Shift Start</div><input class="input" id="shift_start" value="${escapeHtml(s.shift_start || '07:00:00')}" /></label>
+            <label><div class="label" style="margin-bottom:6px;">Shift End</div><input class="input" id="shift_end" value="${escapeHtml(s.shift_end || '15:30:00')}" /></label>
+            <label><div class="label" style="margin-bottom:6px;">Lunch (min)</div><input class="input" id="lunch_minutes" type="number" min="0" value="${parseInt(s.lunch_minutes)||30}" /></label>
+            <label><div class="label" style="margin-bottom:6px;">Break (min)</div><input class="input" id="break_minutes" type="number" min="0" value="${parseInt(s.break_minutes)||20}" /></label>
           </div>
-          <div style="flex:1 1 180px;">
-            <div class="label" style="margin-bottom:6px;">Lunch Minutes</div>
-            <input class="input" id="lunch_minutes" value="${s.lunch_minutes || 30}" />
-          </div>
-          <div style="flex:1 1 180px;">
-            <div class="label" style="margin-bottom:6px;">Break Minutes</div>
-            <input class="input" id="break_minutes" value="${s.break_minutes || 20}" />
+          <div style="padding:12px 20px;background:rgba(0,0,0,0.025);border-top:1px solid rgba(0,0,0,0.08);display:flex;justify-content:flex-end;">
+            <button class="btn" id="save_shift">Save Shift</button>
           </div>
         </div>
-        <div style="margin-top:14px;">
-          <div class="label" style="margin-bottom:6px;">Dealers</div>
-          ${tagListHtml('dealers', dealers, 'Dealer name...')}
+
+        <div class="card" style="margin-bottom:0;padding:0;overflow:hidden;">
+          <div style="padding:16px 20px 14px;background:rgba(0,0,0,0.025);border-bottom:1px solid rgba(0,0,0,0.08);">
+            <h2 style="font-size:15px;margin:0 0 2px;">Dealers</h2>
+            <div class="label">Authorized Dealerships</div>
+          </div>
+          <div style="padding:20px;">
+            ${tagListHtml('dealers', dealers, 'Dealer name…')}
+          </div>
+          <div style="padding:12px 20px;background:rgba(0,0,0,0.025);border-top:1px solid rgba(0,0,0,0.08);display:flex;justify-content:flex-end;">
+            <button class="btn" id="save_dealers">Save Dealers</button>
+          </div>
         </div>
-        <div style="margin-top:14px;">
-          <div class="label" style="margin-bottom:6px;">Sales People</div>
-          ${tagListHtml('sales_people', salesPeople, 'Sales person name...')}
+
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:16px 20px 14px;background:rgba(0,0,0,0.025);border-bottom:1px solid rgba(0,0,0,0.08);">
+          <h2 style="font-size:15px;margin:0 0 2px;">Sales People</h2>
+          <div class="label">Sales Team</div>
         </div>
-        <div style="margin-top:12px;">
-          <button class="btn" id="save_settings">Save</button>
+        <div style="padding:20px;">
+          ${tagListHtml('sales_people', salesPeople, 'Sales person name…')}
+        </div>
+        <div style="padding:12px 20px;background:rgba(0,0,0,0.025);border-top:1px solid rgba(0,0,0,0.08);display:flex;justify-content:flex-end;">
+          <button class="btn" id="save_sales">Save Sales People</button>
         </div>
       </div>
     `);
@@ -946,22 +964,36 @@
     bindAdd('dealers', () => dealers, (val) => { if (!dealers.includes(val)) dealers.push(val); });
     bindAdd('sales_people', () => salesPeople, (val) => { if (!salesPeople.includes(val)) salesPeople.push(val); });
 
-    $('#save_settings').onclick = async () => {
-      try{
-        const payload = {
-          shift_start: $('#shift_start').value.trim(),
-          shift_end: $('#shift_end').value.trim(),
-          lunch_minutes: parseInt($('#lunch_minutes').value, 10),
-          break_minutes: parseInt($('#break_minutes').value, 10),
-          dealers,
-          sales_people: salesPeople,
-        };
-        await api.updateSettings(payload);
-        alert('Saved.');
-      }catch(e){
+    function buildPayload() {
+      return {
+        shift_start: $('#shift_start').value.trim(),
+        shift_end: $('#shift_end').value.trim(),
+        lunch_minutes: parseInt($('#lunch_minutes').value, 10) || 0,
+        break_minutes: parseInt($('#break_minutes').value, 10) || 0,
+        dealers,
+        sales_people: salesPeople,
+      };
+    }
+
+    async function saveSettings(btnId) {
+      const btn = $(btnId);
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        await api.updateSettings(buildPayload());
+        btn.textContent = 'Saved';
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+      } catch(e) {
         alert(e.message);
+        btn.textContent = orig;
+        btn.disabled = false;
       }
-    };
+    }
+
+    $('#save_shift').onclick   = () => saveSettings('#save_shift');
+    $('#save_dealers').onclick = () => saveSettings('#save_dealers');
+    $('#save_sales').onclick   = () => saveSettings('#save_sales');
   }
 
   async function loadCreateJob(){
