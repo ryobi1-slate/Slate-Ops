@@ -1341,6 +1341,28 @@ async function loadCS() {
   bindCollapsibles();
   bindJobsTable();
 
+/* CS dashboard bindings */
+const search = document.getElementById('cs-search');
+if (search) {
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    const rows = Array.from(document.querySelectorAll('#cs-directory tbody tr'));
+    rows.forEach(tr => {
+      const txt = (tr.textContent || '').toLowerCase();
+      tr.style.display = (!q || txt.includes(q)) ? '' : 'none';
+    });
+  });
+}
+
+// Toolbar buttons that toggle existing collapsibles
+document.querySelectorAll('[data-collapse-toggle]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.getAttribute('data-collapse-toggle');
+    const header = document.querySelector(`[data-collapse="${key}"]`);
+    if (header) header.click();
+  });
+});
+
   // Manual job create (Phase 0)
   const createForm = $('#manual-create');
   if (createForm) {
