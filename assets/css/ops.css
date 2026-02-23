@@ -251,6 +251,21 @@ body.slate-ops{
 }
 textarea{min-height:90px;}
 
+/* ─── Link-style button (SO# / order links) ─────────────── */
+.btn-link{
+  background:none;
+  border:none;
+  padding:0;
+  color:var(--arches);
+  font-weight:700;
+  font-size:inherit;
+  font-family:inherit;
+  cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+.btn-link:hover{color:#b05b17;}
+
 /* ─── Buttons ────────────────────────────────────────────── */
 /* Primary: solid sage */
 .btn{

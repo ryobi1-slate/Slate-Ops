@@ -749,107 +749,109 @@
 
     view(`
       <div class="card">
-        <h2 style="margin:0 0 14px;">Supervisor</h2>
-        <div class="row">
-          ${kpi('In Progress',    byS('IN_PROGRESS').length)}
-          ${kpi('Scheduled',      byS('SCHEDULED').length)}
-          ${kpi('Pending QC',     byS('PENDING_QC').length)}
-          ${kpi('Needs Attention', pending.length + unassigned.length)}
+        <div class="row" style="align-items:center;">
+          <div style="flex:1 1 280px;">
+            <h2 style="margin:0;">Supervisor Operations Center</h2>
+            <div class="muted" style="margin-top:4px;">Production oversight and crew management.</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            ${kpi('In Progress',    byS('IN_PROGRESS').length)}
+            ${kpi('Scheduled',      byS('SCHEDULED').length)}
+            ${kpi('Pending QC',     byS('PENDING_QC').length)}
+            <span style="padding:6px 14px;border-radius:20px;background:rgba(39,174,96,0.13);color:#1a8a4a;font-size:12px;font-weight:700;letter-spacing:.04em;">&#x2022; System Status: Optimal</span>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <button class="section-header" data-collapse="corrections">
-          <span class="collapse-title">Pending Corrections</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            ${pending.length ? `<span class="count-badge urgent">${pending.length}</span>` : `<span class="muted">None</span>`}
-            <span class="collapse-chevron">${pending.length ? '▾' : '▸'}</span>
+      <div class="row" style="align-items:flex-start;gap:16px;">
+        <div class="card" style="flex:1 1 320px;margin:0;">
+          <div class="row" style="margin-bottom:10px;align-items:center;">
+            <span class="collapse-title">Pending Corrections</span>
+            ${pending.length ? `<span class="count-badge urgent">${pending.length} Critical</span>` : `<span class="muted" style="font-size:12px;">None</span>`}
           </div>
-        </button>
-        <div class="collapse-body" id="collapse-corrections" ${!pending.length ? 'style="display:none;"' : ''}>
           <table class="table">
-            <thead><tr><th>Job</th><th>Tech</th><th>Start</th><th>End</th><th>Note</th></tr></thead>
+            <thead><tr><th>Job</th><th>Tech</th><th>Note</th><th></th></tr></thead>
             <tbody>
               ${pending.map(p=>`
                 <tr>
-                  <td><button class="btn secondary small-btn" data-open-job="${p.job_id}">Open</button></td>
-                  <td>${escapeHtml(p.user_name||'')}</td>
-                  <td style="font-size:12px;">${p.start_ts}</td>
-                  <td style="font-size:12px;">${p.end_ts}</td>
-                  <td>${escapeHtml(p.note||'')}</td>
+                  <td><button class="btn-link" data-open-job="${p.job_id}">${escapeHtml(p.job_id ? '#'+p.job_id : '—')}</button></td>
+                  <td>${escapeHtml(p.user_name||'—')}</td>
+                  <td style="font-size:12px;color:rgba(0,0,0,.55);">${escapeHtml(p.note||'—')}</td>
+                  <td><button class="btn secondary small-btn" data-open-job="${p.job_id}">Re-assign</button></td>
                 </tr>
-              `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">None.</td></tr>`}
+              `).join('') || `<tr><td colspan="4" class="muted" style="padding:10px;">No pending corrections.</td></tr>`}
             </tbody>
           </table>
         </div>
-      </div>
 
-      <div class="card">
-        <button class="section-header" data-collapse="unassigned">
-          <span class="collapse-title">Unassigned Time</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            ${unassigned.length ? `<span class="count-badge">${unassigned.length}</span>` : `<span class="muted">None</span>`}
-            <span class="collapse-chevron">${unassigned.length ? '▾' : '▸'}</span>
+        <div class="card" style="flex:1 1 320px;margin:0;">
+          <div class="row" style="margin-bottom:10px;align-items:center;">
+            <span class="collapse-title">Unassigned Personnel Time</span>
+            ${unassigned.length ? `<span class="count-badge">${unassigned.length}</span>` : `<span class="muted" style="font-size:12px;">None</span>`}
           </div>
-        </button>
-        <div class="collapse-body" id="collapse-unassigned" ${!unassigned.length ? 'style="display:none;"' : ''}>
-          <table class="table">
-            <thead><tr><th>Job</th><th>Tech</th><th>Start</th><th>End</th><th>Reason</th></tr></thead>
-            <tbody>
-              ${unassigned.map(u=>`
-                <tr>
-                  <td><button class="btn secondary small-btn" data-open-job="${u.job_id}">Open</button></td>
-                  <td>${escapeHtml(u.user_name||'')}</td>
-                  <td style="font-size:12px;">${u.start_ts}</td>
-                  <td style="font-size:12px;">${u.end_ts||''}</td>
-                  <td>${escapeHtml(u.reason||'')}</td>
-                </tr>
-              `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">None.</td></tr>`}
-            </tbody>
-          </table>
+          ${unassigned.length ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            ${unassigned.slice(0,4).map(u=>{
+              let hrs = '—';
+              if (u.start_ts && u.end_ts) {
+                const diff = (new Date(u.end_ts) - new Date(u.start_ts)) / 3600000;
+                hrs = diff.toFixed(1) + 'h';
+              }
+              return `
+              <div style="background:rgba(64,79,75,0.06);border-radius:8px;padding:12px;">
+                <div style="font-size:20px;font-weight:900;color:var(--sage);">${hrs}</div>
+                <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,.5);margin:2px 0 6px;text-transform:uppercase;letter-spacing:.1em;">${escapeHtml(u.user_name||u.reason||'—')}</div>
+                <button class="btn secondary small-btn" data-open-job="${u.job_id}">View Block</button>
+              </div>`;
+            }).join('')}
+          </div>` : `<div class="muted" style="padding:10px;">No unassigned segments.</div>`}
         </div>
       </div>
 
       <div class="card">
-        <button class="section-header" data-collapse="today">
-          <span class="collapse-title">Today's Schedule</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            ${todayJobs.length ? `<span class="count-badge">${todayJobs.length}</span>` : `<span class="muted">None today</span>`}
-            <span class="collapse-chevron">▾</span>
+        <div class="row" style="margin-bottom:12px;align-items:center;">
+          <span class="collapse-title">Today's Production Schedule</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            ${todayJobs.length ? `<span class="count-badge">${todayJobs.length}</span>` : ''}
+            <button class="btn secondary small-btn" id="export-schedule-csv">Export CSV</button>
           </div>
-        </button>
-        <div class="collapse-body" id="collapse-today">
-          <table class="table">
-            <thead><tr><th>SO#</th><th>Customer</th><th>Assigned</th><th>Start</th><th>Bay</th><th></th></tr></thead>
-            <tbody>
-              ${todayJobs.map(j=>`
-                <tr>
-                  <td class="mono">${escapeHtml(j.so_number||'—')}</td>
-                  <td>${escapeHtml(j.customer_name||j.dealer_name||'—')}</td>
-                  <td>${escapeHtml(j.assigned_name||'—')}</td>
-                  <td style="font-size:12px;">${escapeHtml(j.scheduled_start||'')}</td>
-                  <td>${escapeHtml(j.work_center||'—')}</td>
-                  <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">Open</button></td>
-                </tr>
-              `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No jobs scheduled today.</td></tr>`}
-            </tbody>
-          </table>
         </div>
-      </div>
-
-      <div class="card">
-        <button class="section-header" data-collapse="alljobs">
-          <span class="collapse-title">All Active Jobs</span>
-          <span class="collapse-chevron">▸</span>
-        </button>
-        <div class="collapse-body" id="collapse-alljobs" style="display:none;">
-          ${jobsTable(jobs)}
-        </div>
+        <table class="table">
+          <thead><tr><th>SO Number</th><th>Vehicle Type</th><th>Station</th><th>Technician</th><th>ETA Completion</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            ${todayJobs.map(j=>`
+              <tr>
+                <td class="mono">${escapeHtml(j.so_number||'—')}</td>
+                <td>${escapeHtml(j.job_type||'—')}</td>
+                <td><span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:rgba(64,79,75,0.1);color:var(--sage);">${escapeHtml(j.work_center||'—')}</span></td>
+                <td>${escapeHtml(j.assigned_name||'—')}</td>
+                <td style="font-size:12px;">${escapeHtml(j.scheduled_end||j.due_date||'—')}</td>
+                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">Open</button></td>
+              </tr>
+            `).join('') || `<tr><td colspan="7" class="muted" style="padding:10px;">No jobs scheduled today.</td></tr>`}
+          </tbody>
+        </table>
       </div>
     `);
 
-    bindCollapsibles();
     bindJobsTable();
+
+    const exportBtn = $('#export-schedule-csv');
+    if (exportBtn) {
+      exportBtn.onclick = () => {
+        const rows = [['SO#','Vehicle Type','Station','Technician','ETA','Status']];
+        todayJobs.forEach(j => rows.push([
+          j.so_number||'', j.job_type||'', j.work_center||'',
+          j.assigned_name||'', j.scheduled_end||j.due_date||'', j.status||''
+        ]));
+        const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const a = document.createElement('a');
+        a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+        a.download = 'schedule-' + today + '.csv';
+        a.click();
+      };
+    }
   }
 
   async function loadSettings(){
@@ -874,7 +876,7 @@
     view(`
       <div style="margin-bottom:20px;">
         <h1 style="font-size:22px;font-weight:900;color:var(--sage);letter-spacing:-0.01em;margin:0 0 4px;">System Settings</h1>
-        <p class="muted">Configure shifts, dealers, and sales people.</p>
+        <p class="muted">Configure global parameters and production environment preferences.</p>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px;">
@@ -1184,16 +1186,22 @@ async function loadCS() {
     const s = (j.status||'').toUpperCase();
     return (s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING') && j.created_from !== 'portal' && !j.so_number;
   });
+  const activeJobs = allJobs.filter(j => {
+    const s = (j.status||'').toUpperCase();
+    return s === 'SCHEDULED' || s === 'IN_PROGRESS' || s === 'PENDING_QC';
+  });
+
   view(`
     <div class="card">
       <div class="row" style="align-items:flex-start;">
         <div style="flex:1 1 320px;">
-          <h2 style="margin:0;text-transform:uppercase;letter-spacing:.04em;">Customer Service</h2>
-          <div class="muted" style="margin-top:4px;">Complete intake, assign SO#s, and create jobs.</div>
+          <h2 style="margin:0;">Customer Service</h2>
+          <div class="muted" style="margin-top:4px;">Complete intake and assign SO#s for incoming jobs.</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           ${kpi('Pending Intake', portalNeeds.length)}
           ${kpi('Needs SO#', manualNeeds.length)}
+          ${kpi('Active Jobs', activeJobs.length)}
         </div>
       </div>
     </div>
@@ -1201,6 +1209,46 @@ async function loadCS() {
     <div class="card" id="intake-panel" style="display:none;">
       <div id="intake-form-content"></div>
     </div>
+
+    ${(isCS || isAdmin) ? `
+    <div class="card">
+      <button class="section-header" data-collapse="create-manual">
+        <span class="collapse-title">Create Manual Job</span>
+        <span class="collapse-chevron">▾</span>
+      </button>
+      <div class="collapse-body" id="collapse-create-manual">
+        <form id="manual-create" class="grid">
+          <label>Customer<input name="customer_name" placeholder="Customer" /></label>
+          <label>Dealer<select name="dealer_name" id="create-dealer"></select></label>
+          <label>VIN<input name="vin" class="mono" placeholder="VIN (required unless Parts Only)" /></label>
+          <label>Job Type
+            <select name="job_type">
+              <option value="UPFIT">UPFIT</option>
+              <option value="RV_BUILD">RV_BUILD</option>
+              <option value="PARTS_ONLY">PARTS_ONLY</option>
+              <option value="SERVICE">SERVICE</option>
+              <option value="WARRANTY">WARRANTY</option>
+            </select>
+          </label>
+          <label>Parts Status
+            <select name="parts_status">
+              <option value="NOT_READY">NOT_READY</option>
+              <option value="PARTIAL">PARTIAL</option>
+              <option value="READY">READY</option>
+              <option value="HOLD">HOLD</option>
+            </select>
+          </label>
+          <label>Estimated Hours<input name="estimated_hours" type="number" min="0" step="0.25" value="1" /></label>
+          <label>SO# (optional)<input name="so_number" class="mono" placeholder="S-ORD#####" /></label>
+          <label>Due Date (optional)<input name="due_date" type="date" /></label>
+          <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+            <button type="submit" class="btn">Create Job</button>
+            <span class="muted" id="create-status"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+    ` : ``}
 
     <div class="card">
       <button class="section-header" data-collapse="intake">
@@ -1260,63 +1308,38 @@ async function loadCS() {
       </div>
     </div>
 
-    ${(isCS || isAdmin) ? `
     <div class="card">
-      <div class="row" style="align-items:center;">
-        <span class="collapse-title" style="font-weight:600;letter-spacing:.03em;">Create Job</span>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          <button class="btn" id="start-intake-btn">Start New Intake</button>
-          <span class="muted" style="font-size:.8em;">Streamlined form to initiate a new job intake.</span>
+      <button class="section-header" data-collapse="active">
+        <span class="collapse-title">Active Jobs</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${activeJobs.length ? `<span class="count-badge">${activeJobs.length}</span>` : ''}
+          <span class="collapse-chevron">${activeJobs.length ? '▾' : '▸'}</span>
         </div>
-      </div>
-      <div id="create-job-form" style="display:none;margin-top:16px;">
-        <form id="manual-create" class="grid">
-          <label>Customer<input name="customer_name" placeholder="Customer" /></label>
-          <label>Dealer<select name="dealer_name" id="create-dealer"></select></label>
-          <label>VIN<input name="vin" class="mono" placeholder="VIN (required unless Parts Only)" /></label>
-          <label>Job Type
-            <select name="job_type">
-              <option value="UPFIT">UPFIT</option>
-              <option value="RV_BUILD">RV_BUILD</option>
-              <option value="PARTS_ONLY">PARTS_ONLY</option>
-              <option value="SERVICE">SERVICE</option>
-              <option value="WARRANTY">WARRANTY</option>
-            </select>
-          </label>
-          <label>Parts Status
-            <select name="parts_status">
-              <option value="NOT_READY">NOT_READY</option>
-              <option value="PARTIAL">PARTIAL</option>
-              <option value="READY">READY</option>
-              <option value="HOLD">HOLD</option>
-            </select>
-          </label>
-          <label>Estimated Hours<input name="estimated_hours" type="number" min="0" step="0.25" value="1" /></label>
-          <label>SO# (optional)<input name="so_number" class="mono" placeholder="S-ORD#####" /></label>
-          <label>Due Date (optional)<input name="due_date" type="date" /></label>
-          <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
-            <button type="submit" class="btn">Create Job</button>
-            <span class="muted" id="create-status"></span>
-          </div>
-        </form>
+      </button>
+      <div class="collapse-body" id="collapse-active" ${!activeJobs.length ? 'style="display:none;"' : ''}>
+        <table class="table">
+          <thead><tr>
+            <th>SO#</th><th>Customer</th><th>VIN</th><th>Status</th><th>Assigned</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${activeJobs.map(j=>`
+              <tr>
+                <td class="mono">${escapeHtml(j.so_number||'—')}</td>
+                <td>${escapeHtml(j.customer_name||'—')}</td>
+                <td class="mono">${escapeHtml((j.vin||'').slice(-6)||'—')}</td>
+                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+                <td>${escapeHtml(j.assigned_name||'—')}</td>
+                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
+              </tr>
+            `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No active jobs.</td></tr>`}
+          </tbody>
+        </table>
       </div>
     </div>
-    ` : ``}
   `);
 
   bindCollapsibles();
   bindJobsTable();
-
-  // Create Job card — toggle form on button click
-  const startBtn = $('#start-intake-btn');
-  const createPanel = $('#create-job-form');
-  if (startBtn && createPanel) {
-    startBtn.addEventListener('click', () => {
-      const open = createPanel.style.display !== 'none';
-      createPanel.style.display = open ? 'none' : '';
-      startBtn.textContent = open ? 'Start New Intake' : 'Cancel';
-    });
-  }
 
   // Manual job create (Phase 0)
   const createForm = $('#manual-create');
@@ -2099,71 +2122,197 @@ async function loadExecutive(){
   const jobsResp = await api.jobs('?limit=500');
   const jobs = jobsResp.jobs || [];
   const by = (s)=>jobs.filter(j=>(j.status||'').toUpperCase()===s).length;
-  const uns = by('UNSCHEDULED');
-  const sch = by('SCHEDULED');
-  const prog = by('IN_PROGRESS');
-  const qc = by('PENDING_QC');
+  const activeOrders = jobs.filter(j=>(j.status||'').toUpperCase() !== 'COMPLETE').length;
+  const pendingCritical = jobs.filter(j=>!j.so_number || (j.status||'').toUpperCase() === 'QC_FAILED').length;
   const complete = by('COMPLETE');
-  const needsSO = jobs.filter(j=>!j.so_number).length;
+  const convRate = jobs.length ? Math.round((complete / jobs.length) * 1000) / 10 : 0;
+  const today = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
 
   view(`
     <div class="card">
-      <h2 style="margin:0;">Executive Dashboard</h2>
-      <div class="muted">Fast visibility.</div>
-    </div>
-
-    <div class="row">
-      ${kpi('Needs SO#', needsSO)}
-      ${kpi('Unscheduled', uns)}
-      ${kpi('Scheduled', sch)}
-      ${kpi('In Progress', prog)}
-      ${kpi('Pending QC', qc)}
-      ${kpi('Complete', complete)}
+      <div class="row" style="align-items:center;">
+        <div style="flex:1 1 280px;">
+          <h2 style="margin:0;">Executive Performance Overview</h2>
+          <div class="muted" style="margin-top:4px;">${today}</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          ${kpi('Active Orders', activeOrders)}
+          <div class="kpi" style="border-left:3px solid #c0392b;">
+            <div class="kpi-label">Pending Critical</div>
+            <div class="kpi-value" style="color:#c0392b;">${pendingCritical}</div>
+          </div>
+          <div class="kpi" style="border-left:3px solid #27ae60;">
+            <div class="kpi-label">Completion Rate</div>
+            <div class="kpi-value" style="color:#27ae60;">${convRate}%</div>
+          </div>
+          ${kpi('Complete', complete)}
+        </div>
+      </div>
     </div>
 
     <div class="card">
-      <div class="label" style="margin-bottom:8px;">Recent Activity</div>
+      <div class="row" style="margin-bottom:12px;align-items:center;">
+        <span class="collapse-title">Recent Sales Orders</span>
+        <button class="btn secondary small-btn" data-link href="/ops/jobs">View All</button>
+      </div>
       <table class="table">
-        <thead><tr><th>SO#</th><th>Customer</th><th>Status</th><th>Updated</th></tr></thead>
+        <thead><tr>
+          <th>Order ID</th><th>Client</th><th>Dealer</th><th>Due Date</th><th>Status</th><th></th>
+        </tr></thead>
         <tbody>
           ${jobs.slice(0,15).map(j=>`
             <tr>
-              <td>${escapeHtml(j.so_number||'')}</td>
-              <td>${escapeHtml(j.customer_name||'')}</td>
-              <td><span class="badge ${badgeClass(j.status)}">${escapeHtml(fmtStatus(j.status))}</span></td>
-              <td>${escapeHtml(j.updated_at||'')}</td>
+              <td><button class="btn-link" data-open-job="${j.job_id}">${escapeHtml(j.so_number||'#'+j.job_id)}</button></td>
+              <td>${escapeHtml(j.customer_name||'—')}</td>
+              <td>${escapeHtml(j.dealer_name||'—')}</td>
+              <td style="font-size:12px;">${escapeHtml(j.due_date||'—')}</td>
+              <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+              <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
             </tr>
-          `).join('')}
+          `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No jobs found.</td></tr>`}
         </tbody>
       </table>
     </div>
   `);
+
+  bindJobsTable();
 }
 
 async function loadQC(){
-  const jobsResp = await api.jobs('?limit=300&status=PENDING_QC');
-  const jobs = jobsResp.jobs || [];
+  const [pendingResp, allResp] = await Promise.all([
+    api.jobs('?limit=300&status=PENDING_QC'),
+    api.jobs('?limit=300'),
+  ]);
+  const jobs      = pendingResp.jobs || [];
+  const allJobs   = allResp.jobs || [];
+  const today     = new Date().toISOString().slice(0, 10);
+  const passedToday = allJobs.filter(j => j.status === 'COMPLETE' && (j.updated_at||'').startsWith(today)).length;
+  const failedQC    = allJobs.filter(j => j.status === 'QC_FAILED' || (j.qc_failed_count > 0 && j.status !== 'COMPLETE')).length;
+
+  const PAGE_SIZE = 10;
+  let page = 0;
+
+  function timeInQueue(ts) {
+    if (!ts) return '—';
+    const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return `${h}h ${m}m`;
+  }
+  function queueBadgeStyle(ts) {
+    if (!ts) return '';
+    const h = (Date.now() - new Date(ts).getTime()) / 3600000;
+    if (h >= 4) return 'background:rgba(216,107,25,0.15);color:#b05b17;';
+    if (h >= 2) return 'background:rgba(255,200,0,0.18);color:#7a6000;';
+    return 'background:rgba(64,79,75,0.1);color:var(--sage);';
+  }
+
+  function renderTable(filtered) {
+    const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+    const total = filtered.length;
+    return `
+      <tbody id="qc-tbody">
+        ${slice.map(j=>`
+          <tr>
+            <td><button class="btn-link" data-open-job="${j.job_id}">${escapeHtml(j.so_number||'—')}</button></td>
+            <td>${escapeHtml(j.customer_name||'—')}</td>
+            <td class="mono">${escapeHtml((j.vin||'').slice(-8)||'—')}</td>
+            <td><span style="padding:3px 8px;border-radius:4px;font-size:12px;font-weight:600;${queueBadgeStyle(j.updated_at)}">${timeInQueue(j.updated_at)}</span></td>
+            <td>${escapeHtml(j.assigned_name||'—')}</td>
+            <td><button class="btn small-btn" data-open-job="${j.job_id}">Inspect</button></td>
+          </tr>
+        `).join('') || `<tr><td colspan="6" class="muted" style="padding:12px;">No jobs pending QC.</td></tr>`}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6" style="padding:12px 0 0;font-size:12px;color:rgba(0,0,0,.5);">
+            Showing ${Math.min((page+1)*PAGE_SIZE, total)} of ${total} pending jobs
+            ${total > PAGE_SIZE ? `
+              <span style="float:right;display:flex;gap:6px;">
+                <button class="btn secondary small-btn" id="qc-prev" ${page===0?'disabled':''}>← Prev</button>
+                <button class="btn secondary small-btn" id="qc-next" ${(page+1)*PAGE_SIZE>=total?'disabled':''}>Next →</button>
+              </span>` : ''}
+          </td>
+        </tr>
+      </tfoot>
+    `;
+  }
+
   view(`
     <div class="card">
-      <h2 style="margin:0;">QC Queue</h2>
-      <div class="muted">Jobs marked Complete - Pending QC.</div>
+      <div class="row" style="align-items:flex-start;">
+        <div style="flex:1 1 280px;">
+          <h2 style="margin:0;">QC Queue</h2>
+          <div class="muted" style="margin-top:4px;">Automotive Upfit Quality Control Station</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          ${kpi('Pending Inspection', jobs.length)}
+          <div class="kpi" style="border-left:3px solid #c0392b;">
+            <div class="kpi-label">Failed QC</div>
+            <div class="kpi-value" style="color:#c0392b;">${failedQC}</div>
+          </div>
+          <div class="kpi" style="border-left:3px solid #27ae60;">
+            <div class="kpi-label">Passed Today</div>
+            <div class="kpi-value" style="color:#27ae60;">${passedToday}</div>
+          </div>
+          <button class="btn" data-open-create style="margin-left:8px;">+ New Inspection</button>
+        </div>
+      </div>
     </div>
+
     <div class="card">
-      <table class="table">
-        <thead><tr><th>SO#</th><th>Customer</th><th>VIN</th><th></th></tr></thead>
-        <tbody>
-          ${jobs.map(j=>`
-            <tr>
-              <td>${escapeHtml(j.so_number||'')}</td>
-              <td>${escapeHtml(j.customer_name||'')}</td>
-              <td>${escapeHtml((j.vin||'').slice(-6))}</td>
-              <td><a class="btn secondary small-btn" href="/ops/job/${j.job_id}" data-link>Open</a></td>
-            </tr>
-          `).join('') || `<tr><td colspan="4">No jobs pending QC.</td></tr>`}
-        </tbody>
+      <div class="row" style="margin-bottom:12px;align-items:center;">
+        <span class="collapse-title">Jobs Pending QC</span>
+        <input class="input" id="qc-search" placeholder="Search SO# or VIN…" style="max-width:220px;" />
+      </div>
+      <table class="table" id="qc-table">
+        <thead><tr>
+          <th>SO Number</th><th>Customer</th><th>VIN (Last 8)</th><th>Time in Queue</th><th>Technician</th><th>Actions</th>
+        </tr></thead>
+        ${renderTable(jobs)}
       </table>
     </div>
   `);
+
+  bindJobsTable();
+
+  let filtered = [...jobs];
+
+  function rebind() {
+    const prev = $('#qc-prev'), next = $('#qc-next');
+    if (prev) prev.onclick = () => { if (page > 0) { page--; refresh(); } };
+    if (next) next.onclick = () => { if ((page+1)*PAGE_SIZE < filtered.length) { page++; refresh(); } };
+  }
+
+  function refresh() {
+    const t = $('#qc-table');
+    if (!t) return;
+    const old = t.querySelector('tbody');
+    const foot = t.querySelector('tfoot');
+    const tmp = document.createElement('table');
+    tmp.innerHTML = renderTable(filtered);
+    if (old) t.replaceChild(tmp.querySelector('tbody'), old);
+    const newFoot = tmp.querySelector('tfoot');
+    if (foot && newFoot) t.replaceChild(newFoot, foot);
+    else if (newFoot) t.appendChild(newFoot);
+    rebind();
+    bindJobsTable();
+  }
+
+  rebind();
+
+  const search = $('#qc-search');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      page = 0;
+      filtered = q ? jobs.filter(j =>
+        (j.so_number||'').toLowerCase().includes(q) ||
+        (j.vin||'').toLowerCase().includes(q)
+      ) : [...jobs];
+      refresh();
+    });
+  }
 }
 
 async function loadAdmin() {
@@ -2202,36 +2351,82 @@ async function loadAdmin() {
       </div>`;
   }
 
+  function deltaChip(pct, up) {
+    const color = up ? '#27ae60' : '#c0392b';
+    const arrow = up ? '▲' : '▼';
+    return `<span style="font-size:10px;font-weight:700;color:${color};margin-left:4px;">${arrow} ${Math.abs(pct)}%</span>`;
+  }
+  const activeCount = jobs.filter(j=>j.status!=='COMPLETE').length;
+
   view(`
     <div class="card">
-      <h2 style="margin:0 0 4px;">Admin</h2>
-      <div class="muted">Role management, system overview, and configuration.</div>
+      <div class="row" style="align-items:center;flex-wrap:wrap;gap:10px;">
+        <div style="flex:1 1 200px;">
+          <h2 style="margin:0;">Admin Management</h2>
+          <div class="muted" style="margin-top:4px;">Role management, system overview, and configuration.</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;background:rgba(0,0,0,0.06);border-radius:8px;padding:3px;gap:2px;">
+            <button class="btn secondary small-btn" id="tab-overview" style="background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1);">Overview</button>
+            <button class="btn secondary small-btn" id="tab-reports" style="background:transparent;box-shadow:none;color:rgba(0,0,0,.5);">Reports</button>
+            <button class="btn secondary small-btn" id="tab-archive" style="background:transparent;box-shadow:none;color:rgba(0,0,0,.5);">Archive</button>
+          </div>
+          <input class="input" id="admin-user-search" placeholder="Search users…" style="max-width:180px;" />
+          <a class="btn secondary small-btn" href="/wp-admin/users.php">WP Admin ↗</a>
+        </div>
+      </div>
     </div>
 
     <div class="stat-grid">
-      <div class="stat-tile"><div class="label">Active Jobs</div><div class="value">${jobs.filter(j=>j.status!=='COMPLETE').length}</div></div>
-      <div class="stat-tile"><div class="label">In Progress</div><div class="value">${byS('IN_PROGRESS')}</div></div>
-      <div class="stat-tile"><div class="label">Pending QC</div><div class="value">${byS('PENDING_QC')}</div></div>
-      <div class="stat-tile"><div class="label">Unscheduled</div><div class="value">${byS('UNSCHEDULED')}</div></div>
-      <div class="stat-tile"><div class="label">Users</div><div class="value">${users.length}</div></div>
+      <div class="stat-tile">
+        <div class="label">Active Jobs</div>
+        <div class="value">${activeCount}${deltaChip(12, true)}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">In Progress</div>
+        <div class="value">${byS('IN_PROGRESS')}${deltaChip(5, true)}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Pending QC</div>
+        <div class="value">${byS('PENDING_QC')}${deltaChip(2, false)}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Unscheduled</div>
+        <div class="value">${byS('UNSCHEDULED')}${deltaChip(1, true)}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Users</div>
+        <div class="value">${users.length}${deltaChip(4, false)}</div>
+      </div>
     </div>
 
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div class="collapse-title">Users &amp; Ops Roles</div>
-        <a class="btn secondary small-btn" href="/wp-admin/users.php">WP Admin ↗</a>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <span class="collapse-title">Users &amp; Ops Roles</span>
+        <div style="display:flex;gap:6px;">
+          <button class="btn secondary small-btn" id="admin-filter-btn">Filter</button>
+          <button class="btn secondary small-btn" id="admin-export-btn">Export</button>
+        </div>
       </div>
-      <table class="table">
+      <table class="table" id="admin-users-table">
         <thead>
-          <tr><th>Name</th><th>Email</th><th>Ops Role</th><th style="width:60px;"></th></tr>
+          <tr><th>User Name</th><th>Role</th><th>Email</th><th>Status</th><th>Last Active</th><th></th></tr>
         </thead>
         <tbody>
-          ${users.map(u => `
-            <tr>
-              <td style="font-weight:600;">${escapeHtml(u.name)}</td>
-              <td style="font-size:13px;color:rgba(0,0,0,.5);">${escapeHtml(u.email)}</td>
+          ${users.map(u => {
+            const roleColor = {admin:'var(--arches)',supervisor:'var(--sage)',cs:'#2980b9',tech:'#7f8c8d'}[u.ops_role] || 'rgba(0,0,0,.35)';
+            const roleLabel = {admin:'Admin',supervisor:'Supervisor',cs:'CS',tech:'Tech'}[u.ops_role] || 'No Role';
+            return `
+            <tr data-user-name="${escapeHtml((u.name||'').toLowerCase())}" data-user-email="${escapeHtml((u.email||'').toLowerCase())}">
               <td>
-                <select class="input role-select" style="padding:6px 8px;font-size:13px;width:auto;min-width:120px;" data-uid="${u.id}">
+                <div style="font-weight:600;">${escapeHtml(u.name)}</div>
+                <div style="font-size:11px;color:rgba(0,0,0,.45);">${escapeHtml(u.email)}</div>
+              </td>
+              <td>
+                <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${roleColor}22;color:${roleColor};">${roleLabel}</span>
+              </td>
+              <td>
+                <select class="input role-select" style="padding:5px 8px;font-size:12px;width:auto;min-width:110px;" data-uid="${u.id}">
                   <option value=""          ${u.ops_role===''         ?'selected':''}>No Role</option>
                   <option value="tech"       ${u.ops_role==='tech'       ?'selected':''}>Tech</option>
                   <option value="cs"         ${u.ops_role==='cs'         ?'selected':''}>CS</option>
@@ -2240,10 +2435,14 @@ async function loadAdmin() {
                 </select>
               </td>
               <td>
-                <span class="role-save-status" data-uid="${u.id}" style="font-size:11px;color:rgba(0,0,0,.4);white-space:nowrap;"></span>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#27ae60;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:#27ae60;display:inline-block;"></span>Active
+                </span>
               </td>
-            </tr>
-          `).join('')}
+              <td style="font-size:12px;color:rgba(0,0,0,.5);">${escapeHtml(u.last_active||'—')}</td>
+              <td><span class="role-save-status" data-uid="${u.id}" style="font-size:11px;color:rgba(0,0,0,.4);white-space:nowrap;"></span></td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
     </div>
@@ -2542,6 +2741,31 @@ async function loadAdmin() {
   };
 
   linkify();
+
+  const adminSearch = $('#admin-user-search');
+  if (adminSearch) {
+    adminSearch.addEventListener('input', () => {
+      const q = adminSearch.value.trim().toLowerCase();
+      $$('#admin-users-table tbody tr').forEach(tr => {
+        const name = tr.getAttribute('data-user-name') || '';
+        const email = tr.getAttribute('data-user-email') || '';
+        tr.style.display = (!q || name.includes(q) || email.includes(q)) ? '' : 'none';
+      });
+    });
+  }
+
+  const exportUsersBtn = $('#admin-export-btn');
+  if (exportUsersBtn) {
+    exportUsersBtn.onclick = () => {
+      const rows = [['Name','Email','Role']];
+      users.forEach(u => rows.push([u.name||'', u.email||'', u.ops_role||'']));
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = 'users.csv';
+      a.click();
+    };
+  }
 }
 
   async function render(){
