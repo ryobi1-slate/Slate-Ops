@@ -774,3 +774,163 @@ textarea{min-height:90px;}
   gap:10px;
   padding:0 22px 20px;
 }
+
+
+/* =========================
+   Slate Ops - SaaS Polish (Overrides)
+   Paste at END of ops.css
+   ========================= */
+
+:root{
+  --ui-canvas:#F6F7F9;
+  --ui-surface:#FFFFFF;
+  --ui-border:#E6E8EC;
+  --ui-text:#0F172A;
+  --ui-muted:#64748B;
+
+  /* lighter, calmer depth */
+  --ui-shadow:0 1px 2px rgba(15,23,42,0.06);
+}
+
+/* Canvas */
+body.slate-ops{
+  background:var(--ui-canvas) !important;
+  color:var(--ui-text) !important;
+}
+.ops-content{
+  background:var(--ui-canvas) !important;
+}
+
+/* Header: remove “separate product” feel */
+.ops-header{
+  background:transparent !important;
+  border-bottom:0 !important;
+  height:auto !important;
+  padding:18px 22px 10px !important;
+}
+.ops-page-title{
+  color:var(--ui-text) !important;
+  font-size:18px !important;
+  letter-spacing:0.06em !important;
+}
+
+/* Sidebar: sharpen active state */
+.ops-nav-link:hover{
+  background:rgba(255,255,255,0.08) !important;
+}
+.ops-nav-link.active{
+  background:rgba(255,255,255,0.12) !important;
+  position:relative;
+}
+.ops-nav-link.active::before{
+  content:"";
+  position:absolute;
+  left:6px;
+  top:10px;
+  bottom:10px;
+  width:3px;
+  border-radius:3px;
+  background:var(--arches);
+}
+
+/* Cards: unify surface + border + shadow */
+.card,
+.kpi,
+.stat-tile,
+.tech-job-card,
+.active-job-card{
+  background:var(--ui-surface) !important;
+  border-color:var(--ui-border) !important;
+  box-shadow:var(--ui-shadow) !important;
+  border-radius:14px !important;
+}
+
+/* Kill the “thick warning borders” look on active cards */
+.active-job-card{
+  border-width:1px !important;
+  border-color:rgba(214,139,25,0.35) !important;
+}
+
+/* Tech cards: less aggressive left stripe */
+.tech-job-card{
+  border-left-width:3px !important;
+}
+.tech-job-so{
+  color:var(--ui-text) !important;
+  font-weight:800 !important;
+}
+.timer-display{
+  color:var(--arches) !important;
+}
+
+/* KPI + Stat tiles: calmer typography */
+.kpi .value,
+.stat-tile .value{
+  font-weight:800 !important;
+  font-size:24px !important;
+  color:var(--ui-text) !important;
+}
+.kpi .label,
+.stat-tile .label{
+  color:var(--ui-muted) !important;
+  font-weight:700 !important;
+  letter-spacing:0.14em !important;
+}
+
+/* Tables: cleaner lines */
+.table th,.table td{
+  border-bottom:1px solid var(--ui-border) !important;
+}
+.table th{
+  color:var(--ui-muted) !important;
+}
+.table tbody tr:hover{
+  background:rgba(15,23,42,0.03) !important;
+}
+
+/* Inputs: modern focus ring using Arches */
+.input:focus,select:focus,textarea:focus{
+  border-color:var(--arches) !important;
+  box-shadow:0 0 0 3px rgba(214,139,25,0.18) !important;
+}
+
+/* Buttons: keep yours, just soften letter spacing */
+.btn{
+  letter-spacing:0.02em !important;
+  border-radius:10px !important;
+}
+.btn.secondary{
+  border-color:var(--ui-border) !important;
+}
+
+/* Badges: quieter base badge */
+.badge.scheduled{
+  background:rgba(15,23,42,0.04) !important;
+  border-color:var(--ui-border) !important;
+  color:var(--ui-muted) !important;
+}
+.badge.progress{
+  background:rgba(214,139,25,0.10) !important;
+  border-color:rgba(214,139,25,0.22) !important;
+  color:#8b4a10 !important;
+}
+.badge.complete{
+  background:rgba(64,79,75,0.10) !important;
+  border-color:rgba(64,79,75,0.18) !important;
+  color:var(--sage) !important;
+}
+
+/* Notes: sand is allowed here only */
+.note-bubble{
+  background:var(--sand) !important;
+  border-color:rgba(15,23,42,0.08) !important;
+  box-shadow:none !important;
+}
+
+/* Collapsible headers: less orange splash */
+.section-header:hover{
+  background:rgba(15,23,42,0.03) !important;
+}
+.section-header:hover .collapse-title{
+  color:var(--ui-text) !important;
+}

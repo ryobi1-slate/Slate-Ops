@@ -1,2 +1,4 @@
-Slate SaaS Portal UI
-Version: 0.6.0
+Slate Ops
+Version: 0.6.1
+Environment: (DEV/STAGING/PROD)
+Build Date: 2026-02-22
