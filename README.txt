@@ -1,3 +1,5 @@
+Version: 0.6.0
+
 Slate SaaS Portal UI (Static Shell)
 
 Files:
