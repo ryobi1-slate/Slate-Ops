@@ -1,157 +1,129 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<title>Slate Upfit – Dashboard</title>
+<?php
+if (!defined('ABSPATH')) exit;
 
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        'sand-bg': '#e1dfc8',
-        'sage-sidebar': '#404f4b',
-        'arches-orange': '#d86b19'
-      },
-      fontFamily: { sans: ['Roboto Flex','sans-serif'] }
+class Slate_Ops_Utils {
+
+  const CAP_TECH = 'slate_ops_tech';
+  const CAP_SUPERVISOR = 'slate_ops_supervisor';
+  const CAP_CS = 'slate_ops_customer_service';
+  const CAP_ADMIN = 'slate_ops_admin';
+
+  public static function current_user_caps_summary() {
+    return [
+      'tech' => current_user_can(self::CAP_TECH),
+      'supervisor' => current_user_can(self::CAP_SUPERVISOR),
+      'cs' => current_user_can(self::CAP_CS),
+      'admin' => current_user_can(self::CAP_ADMIN),
+    ];
+  }
+
+  public static function require_ops_access() {
+    if (is_user_logged_in() && (current_user_can(self::CAP_TECH) || current_user_can(self::CAP_SUPERVISOR) || current_user_can(self::CAP_CS) || current_user_can(self::CAP_ADMIN))) {
+      return true;
     }
+    return false;
+  }
+
+  public static function so_is_valid($so) {
+    $so = strtoupper(trim((string)$so));
+    return (bool) preg_match('/^S-ORD\d{6}$/', $so);
+  }
+
+  public static function vin_last8_is_valid($vin_last8) {
+    return (bool) preg_match('/^[A-HJ-NPR-Z0-9]{7,8}$/', strtoupper((string) $vin_last8));
+  }
+
+  public static function cs_job_types() {
+    return [
+      'UPFIT',
+      'COMMERCIAL_UPFIT',
+      'COMMERCIAL_BUILD',
+      'RV_BUILD',
+      'RV_UPFIT',
+      'PARTS_ONLY',
+      'SERVICE',
+      'WARRANTY',
+    ];
+  }
+
+  public static function cs_created_from_values() {
+    return ['portal', 'manual'];
+  }
+
+  public static function cs_parts_statuses() {
+    return ['NOT_READY', 'PARTIAL', 'READY', 'HOLD'];
+  }
+
+  public static function dealer_list() {
+    $default_dealers = [
+      'Northwest Fleet',
+      'Pacific Utility Vehicles',
+      'Summit Commercial',
+      'Canyon RV Center',
+      'Metro Work Trucks',
+    ];
+
+    $saved = get_option('slate_ops_dealers', null);
+    $dealers = is_array($saved) ? $saved : $default_dealers;
+
+    $dealers = apply_filters('slate_ops_dealer_list', $dealers);
+
+    if (!is_array($dealers)) {
+      return [];
+    }
+
+    return array_values(array_filter(array_map('sanitize_text_field', $dealers)));
+  }
+
+
+  public static function sales_person_list() {
+    $saved = get_option('slate_ops_sales_people', []);
+    if (!is_array($saved)) {
+      $saved = [];
+    }
+
+    $people = apply_filters('slate_ops_sales_person_list', $saved);
+    if (!is_array($people)) {
+      return [];
+    }
+
+    return array_values(array_filter(array_map('sanitize_text_field', $people)));
+  }
+
+  public static function dealer_status_from_internal($status) {
+    $status = strtoupper((string)$status);
+    $waiting = ['UNSCHEDULED','READY_FOR_SCHEDULING','SCHEDULED','DELAYED','BLOCKED'];
+    if (in_array($status, $waiting, true)) return 'waiting';
+    if (in_array($status, ['IN_PROGRESS','PENDING_QC'], true)) return 'in_process';
+    if ($status === 'COMPLETE') return 'complete';
+    return 'waiting';
+  }
+
+  public static function now_gmt() {
+    return gmdate('Y-m-d H:i:s');
+  }
+
+  public static function sanitize_reason($reason) {
+    $allowed = [
+      'helping_assigned_tech',
+      'parts_kit_support',
+      'qc_support',
+      'diagnosis',
+      'rework',
+      'other',
+    ];
+    $reason = sanitize_key($reason);
+    if (!in_array($reason, $allowed, true)) $reason = 'other';
+    return $reason;
+  }
+
+  public static function pad_sj($job_id) {
+    return 'SJ-' . str_pad((string)intval($job_id), 6, '0', STR_PAD_LEFT);
+  }
+
+  public static function user_display($user_id) {
+    $u = get_user_by('id', (int)$user_id);
+    if (!$u) return 'Unknown';
+    return $u->display_name ?: $u->user_login;
   }
 }
-</script>
-<link rel="stylesheet" href="assets/app.css">
-
-<style>body{font-family:'Roboto Flex',sans-serif;}</style>
-</head>
-<body class="bg-sand-bg min-h-screen flex">
-
-<aside class="w-64 bg-sage-sidebar flex-shrink-0 flex flex-col h-screen sticky top-0">
-  <div class="p-6 border-b border-white/10 flex items-center justify-start">
-    <img src="assets/slate-logo-white.svg" alt="Slate Upfit" class="h-6 w-auto">
-  </div>
-
-  <nav class="mt-6 flex-grow px-4 space-y-2">
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors bg-white/20 font-bold" href="dashboard.html">Dashboard</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="cs.html">CS</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="supervisor.html">Supervisor</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="jobs.html">Jobs</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="qc.html">QC</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="schedule.html">Schedule</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="settings.html">Settings</a>
-  </nav>
-
-  <div class="p-6 mt-auto border-t border-white/10">
-    <div class="flex items-center">
-      <div class="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white font-bold mr-3">JD</div>
-      <div class="overflow-hidden">
-        <p class="text-white text-sm font-semibold truncate">John Doe</p>
-        <p class="text-white/60 text-xs truncate">Ops Manager</p>
-      </div>
-    </div>
-  </div>
-</aside>
-
-<main class="flex-grow p-8 overflow-y-auto">
-<header class="mb-8 flex items-start justify-between gap-6">
-  <div>
-    <h1 class="text-3xl font-black text-sage-sidebar tracking-tight">Dashboard</h1>
-    <p class="text-slate-600">Operational snapshot across bays and jobs.</p>
-  </div>
-  
-</header>
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <p class="kicker">Today</p>
-    <p class="mt-2 text-2xl font-black text-sage-sidebar">7</p>
-    <p class="text-sm text-slate-600">Jobs in progress</p>
-  </div>
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <p class="kicker">Next 7 days</p>
-    <p class="mt-2 text-2xl font-black text-sage-sidebar">12</p>
-    <p class="text-sm text-slate-600">Scheduled starts</p>
-  </div>
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <p class="kicker">At risk</p>
-    <p class="mt-2 text-2xl font-black text-sage-sidebar">3</p>
-    <p class="text-sm text-slate-600">Due within 48 hours</p>
-  </div>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-  <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
-    <div>
-      <h2 class="text-lg font-bold text-sage-sidebar">Recent Activity</h2>
-      <p class="kicker mt-1">Updates</p>
-    </div>
-    
-  </div>
-  <div class="p-6">
-    
-    <div class="space-y-4">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <p class="font-bold text-slate-800">S-ORD10432 moved to In Progress</p>
-          <p class="text-sm text-slate-600">Assigned to Jake - Bay A1</p>
-        </div>
-        <span class="badge badge-neutral">2m ago</span>
-      </div>
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <p class="font-bold text-slate-800">QC fail flagged</p>
-          <p class="text-sm text-slate-600">S-ORD10408 - Electrical checklist</p>
-        </div>
-        <span class="badge badge-warn">1h ago</span>
-      </div>
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <p class="font-bold text-slate-800">New job created</p>
-          <p class="text-sm text-slate-600">S-ORD10455 - Parts not ready</p>
-        </div>
-        <span class="badge badge-neutral">Today</span>
-      </div>
-    </div>
-    
-  </div>
-  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="text-sage-sidebar border border-sage-sidebar hover:bg-sage-sidebar/5 px-4 py-2 rounded-md text-sm font-bold transition-colors">View all</button></div>
-</section>
-  <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
-    <div>
-      <h2 class="text-lg font-bold text-sage-sidebar">Quick Actions</h2>
-      <p class="kicker mt-1">Common tasks</p>
-    </div>
-    
-  </div>
-  <div class="p-6">
-    
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <a href="cs.html" class="block border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-        <p class="font-bold text-slate-800">Create job</p>
-        <p class="text-sm text-slate-600">Manual entry for Phase 1</p>
-      </a>
-      <a href="schedule.html" class="block border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-        <p class="font-bold text-slate-800">Assign schedule</p>
-        <p class="text-sm text-slate-600">Drag jobs into bays</p>
-      </a>
-      <a href="qc.html" class="block border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-        <p class="font-bold text-slate-800">QC queue</p>
-        <p class="text-sm text-slate-600">Review pending checks</p>
-      </a>
-      <a href="settings.html" class="block border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-        <p class="font-bold text-slate-800">System settings</p>
-        <p class="text-sm text-slate-600">Bays, alerts, preferences</p>
-      </a>
-    </div>
-    
-  </div>
-  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="bg-sage-sidebar text-white px-4 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors shadow-sm">Create job</button></div>
-</section>
-</div>
-</main>
-</body>
-</html>
