@@ -17,9 +17,9 @@ function get_slate_internal_jobs() {
     // Active jobs: not archived, and either not yet complete or completed within the last 7 days.
     $rows = $wpdb->get_results( $wpdb->prepare(
         "SELECT j.job_id, j.so_number, j.customer_name, j.dealer_name,
-                j.vin, j.vin_last8, j.status, j.delay_reason,
-                j.work_center, j.estimated_minutes, j.parts_status,
-                j.scheduled_start, j.scheduled_finish, j.job_type, j.notes,
+                j.vin, j.status, j.delay_reason, j.sales_person,
+                j.work_center, j.estimated_minutes,
+                j.scheduled_start, j.scheduled_finish, j.notes,
                 u.display_name AS assigned_user_name
          FROM {$table} j
          LEFT JOIN {$wpdb->users} u ON u.ID = j.assigned_user_id
@@ -38,20 +38,17 @@ function get_slate_internal_jobs() {
     foreach ( $rows as $job ) {
         $out[] = [
             'job_id'             => (int)    $job['job_id'],
-            'so_number'          => (string) ( $job['so_number'] ?? '' ),
+            'so_number'          => (string) ( $job['so_number']     ?? '' ),
             'customer_name'      => (string) ( $job['customer_name'] ?? '' ),
-            'dealer_name'        => (string) ( $job['dealer_name'] ?? '' ),
-            'vin'                => (string) ( $job['vin'] ?? '' ),
-            'vin_last8'          => (string) ( $job['vin_last8'] ?? '' ),
-            'status'             => (string) ( $job['status'] ?? '' ),
-            'delay_reason'       => (string) ( $job['delay_reason'] ?? '' ),
-            'work_center'        => (string) ( $job['work_center'] ?? '' ),
+            'dealer_name'        => (string) ( $job['dealer_name']   ?? '' ),
+            'vin'                => (string) ( $job['vin']           ?? '' ),
+            'sales_person'       => (string) ( $job['sales_person']  ?? '' ),
+            'status'             => (string) ( $job['status']        ?? '' ),
+            'delay_reason'       => (string) ( $job['delay_reason']  ?? '' ),
             'estimated_minutes'  => (int)    ( $job['estimated_minutes'] ?? 0 ),
-            'parts_status'       => (string) ( $job['parts_status'] ?? '' ),
-            'scheduled_start'    => $job['scheduled_start'] ? substr( $job['scheduled_start'], 0, 10 ) : null,
+            'scheduled_start'    => $job['scheduled_start']  ? substr( $job['scheduled_start'],  0, 10 ) : null,
             'scheduled_finish'   => $job['scheduled_finish'] ? substr( $job['scheduled_finish'], 0, 10 ) : null,
-            'job_type'           => (string) ( $job['job_type'] ?? '' ),
-            'notes'              => (string) ( $job['notes'] ?? '' ),
+            'notes'              => (string) ( $job['notes']              ?? '' ),
             'assigned_user_name' => (string) ( $job['assigned_user_name'] ?? '' ),
         ];
     }
