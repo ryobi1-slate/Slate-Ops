@@ -179,11 +179,6 @@ KEY created_from_idx (created_from)
       ]);
     }
 
-    // Phase 0 scheduler tables + seed weeks.
-    Slate_Ops_Scheduler_DB::create_tables();
-    $weeks_ahead = (int) get_option('slate_scheduler_weeks_ahead', 12);
-    Slate_Ops_Scheduler_DB::seed_weeks($weeks_ahead);
-
     update_option('slate_ops_version', SLATE_OPS_VERSION);
 
     if ($flush_rewrites) {
