@@ -88,7 +88,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, accentColor }) => {
             <div className="flex flex-col items-end text-right flex-1 min-w-0 pl-1">
                 
                 {/* VIN - Tier 3: Dimmed (Slate-600), Monospace */}
-                <div className="font-mono text-[9px] text-slate-600 font-medium tracking-tight mb-1 opacity-70">
+                <div className="font-mono text-[9px] text-white font-medium tracking-tight mb-1">
                     {job.vin}
                 </div>
 
