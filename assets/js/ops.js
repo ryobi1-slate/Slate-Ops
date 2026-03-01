@@ -89,6 +89,14 @@
     return (Math.round(h*10)/10).toFixed(1);
   }
 
+  function toast(msg, isError=false){
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity .3s;background:' + (isError ? '#dc2626' : '#16a34a');
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+  }
+
   function router(){
     const path = window.location.pathname.replace(/^\/ops/, '') || '/';
     state.route = path === '' ? '/' : path;
