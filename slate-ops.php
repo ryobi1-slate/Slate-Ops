@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.6.7
+ * Version: 0.6.9
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.6.7');
+define('SLATE_OPS_VERSION', '0.6.9');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -31,6 +31,17 @@ add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
+
+  // Tailwind (CDN) to support the newer dashboard layout.
+  // Loaded before ops.js so templates can rely on Tailwind utility classes.
+  wp_enqueue_script('slate-ops-tailwind', 'https://cdn.tailwindcss.com?plugins=forms,typography', [], SLATE_OPS_VERSION, false);
+
+  // Minimal Tailwind config aligned to Slate palette.
+  wp_add_inline_script(
+    'slate-ops-tailwind',
+    "tailwind.config = { theme: { extend: { colors: { slateSage: '#40464b', slateSand: '#e1d8cb', slateArches: '#d68b19', slateRedwood: '#0f3a2a' } } } };",
+    'after'
+  );
 
   wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
   wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', ['material-symbols'], SLATE_OPS_VERSION);

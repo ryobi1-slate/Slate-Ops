@@ -1,106 +1,161 @@
-<?php
-if (!defined('ABSPATH')) exit;
-Slate_Ops_Routes::require_access_or_redirect();
-
-$caps      = Slate_Ops_Utils::current_user_caps_summary();
-$role_class = $caps['admin'] ? 'ops-role-admin'
-  : ($caps['supervisor'] ? 'ops-role-supervisor'
-  : ($caps['cs']         ? 'ops-role-cs'
-  : ($caps['tech']       ? 'ops-role-tech' : '')));
-
-$role_label = $caps['admin'] ? 'Admin'
-  : ($caps['supervisor'] ? 'Supervisor'
-  : ($caps['cs']         ? 'Customer Service'
-  : ($caps['tech']       ? 'Technician' : '')));
-
-$user = wp_get_current_user();
-
-function ops_nav_link( $href, $route, $icon, $label ) {
-  echo '<a href="' . esc_url( $href ) . '" data-route="' . esc_attr( $route ) . '" class="ops-nav-link">'
-    . '<span class="material-symbols-outlined">' . esc_html( $icon ) . '</span>'
-    . '<span class="ops-nav-label">' . esc_html( $label ) . '</span>'
-    . '</a>';
-}
-?><!doctype html>
-<html <?php language_attributes(); ?>>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="<?php bloginfo('charset'); ?>">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Slate Ops</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..900&display=swap" rel="stylesheet">
-  <?php wp_head(); ?>
+<title>Slate Upfit – Supervisor</title>
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        'sand-bg': '#e1dfc8',
+        'sage-sidebar': '#404f4b',
+        'arches-orange': '#d86b19'
+      },
+      fontFamily: { sans: ['Roboto Flex','sans-serif'] }
+    }
+  }
+}
+</script>
+<link rel="stylesheet" href="assets/app.css">
+
+<style>body{font-family:'Roboto Flex',sans-serif;}</style>
 </head>
-<body class="slate-ops <?php echo esc_attr( $role_class ); ?>">
-<div id="slate-ops-app" class="ops-shell">
+<body class="bg-sand-bg min-h-screen flex">
 
-  <aside class="ops-sidebar">
-    <div class="ops-brand">
-      <?php echo Slate_Ops_Assets::logo_img(36); ?>
-    </div>
-
-    <nav class="ops-nav">
-      <?php if ( current_user_can( Slate_Ops_Utils::CAP_TECH ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) && ! current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) && ! current_user_can( Slate_Ops_Utils::CAP_CS ) ) : ?>
-        <?php ops_nav_link( '/ops/tech',  '/tech',  'build',        'Tech' ); ?>
-        <?php ops_nav_link( '/ops/jobs',  '/jobs',  'construction', 'Jobs' ); ?>
-      <?php endif; ?>
-
-      <?php if ( current_user_can( Slate_Ops_Utils::CAP_CS ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) && ! current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) ) : ?>
-        <?php ops_nav_link( '/ops/cs',       '/cs',       'headset_mic',    'CS' ); ?>
-        <?php ops_nav_link( '/ops/schedule', '/schedule', 'calendar_today', 'Schedule' ); ?>
-        <?php ops_nav_link( '/ops/jobs',     '/jobs',     'construction',   'Jobs' ); ?>
-        <?php ops_nav_link( '/ops/new',      '/new',      'add_circle',     'Create Job' ); ?>
-      <?php endif; ?>
-
-      <?php if ( current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) ) : ?>
-        <?php ops_nav_link( '/ops/supervisor', '/supervisor', 'engineering',    'Supervisor' ); ?>
-        <?php ops_nav_link( '/ops/exec',       '/exec',       'dashboard',      'Dashboard' ); ?>
-        <?php ops_nav_link( '/ops/jobs',       '/jobs',       'construction',   'Jobs' ); ?>
-        <?php ops_nav_link( '/ops/qc',         '/qc',         'fact_check',     'QC' ); ?>
-        <?php ops_nav_link( '/ops/schedule',   '/schedule',   'calendar_today', 'Schedule' ); ?>
-        <?php ops_nav_link( '/ops/settings',   '/settings',   'settings',       'Settings' ); ?>
-      <?php endif; ?>
-
-      <?php if ( current_user_can( Slate_Ops_Utils::CAP_ADMIN ) ) : ?>
-        <?php ops_nav_link( '/ops/admin',      '/admin',      'shield_person',  'Admin' ); ?>
-        <?php ops_nav_link( '/ops/exec',       '/exec',       'dashboard',      'Dashboard' ); ?>
-        <?php ops_nav_link( '/ops/cs',         '/cs',         'headset_mic',    'CS' ); ?>
-        <?php ops_nav_link( '/ops/supervisor', '/supervisor', 'engineering',    'Supervisor' ); ?>
-        <?php ops_nav_link( '/ops/jobs',       '/jobs',       'construction',   'Jobs' ); ?>
-        <?php ops_nav_link( '/ops/qc',         '/qc',         'fact_check',     'QC' ); ?>
-        <?php ops_nav_link( '/ops/schedule',   '/schedule',   'calendar_today', 'Schedule' ); ?>
-      <?php endif; ?>
-
-      <?php if ( ! current_user_can( Slate_Ops_Utils::CAP_TECH ) && ! current_user_can( Slate_Ops_Utils::CAP_CS ) && ! current_user_can( Slate_Ops_Utils::CAP_SUPERVISOR ) && ! current_user_can( Slate_Ops_Utils::CAP_ADMIN ) ) : ?>
-        <?php ops_nav_link( '/ops/exec', '/exec', 'dashboard',    'Dashboard' ); ?>
-        <?php ops_nav_link( '/ops/jobs', '/jobs', 'construction', 'Jobs' ); ?>
-      <?php endif; ?>
-    </nav>
-
-    <div class="ops-sidebar-footer">
-      <div class="ops-sidebar-user">
-        <div class="ops-sidebar-user-name"><?php echo esc_html( $user->display_name ); ?></div>
-        <?php if ( $role_label ) : ?>
-          <div class="ops-sidebar-user-role"><?php echo esc_html( $role_label ); ?></div>
-        <?php endif; ?>
-      </div>
-      <a class="ops-sidebar-logout" href="<?php echo esc_url( wp_logout_url( home_url('/') ) ); ?>" title="Log out">
-        <span class="material-symbols-outlined">logout</span>
-      </a>
-    </div>
-  </aside>
-
-  <div class="ops-body">
-    <header class="ops-header">
-      <span class="ops-page-title" id="ops-page-title"></span>
-    </header>
-    <section class="ops-content">
-      <div id="ops-view"></div>
-    </section>
+<aside class="w-64 bg-sage-sidebar flex-shrink-0 flex flex-col h-screen sticky top-0">
+  <div class="p-6 border-b border-white/10 flex items-center justify-start">
+    <img src="assets/slate-logo-white.svg" alt="Slate Upfit" class="h-6 w-auto">
   </div>
 
+  <nav class="mt-6 flex-grow px-4 space-y-2">
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="dashboard.html">Dashboard</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="cs.html">CS</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors bg-white/20 font-bold" href="supervisor.html">Supervisor</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="jobs.html">Jobs</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="qc.html">QC</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="schedule.html">Schedule</a>
+    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="settings.html">Settings</a>
+  </nav>
+
+  <div class="p-6 mt-auto border-t border-white/10">
+    <div class="flex items-center">
+      <div class="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white font-bold mr-3">JD</div>
+      <div class="overflow-hidden">
+        <p class="text-white text-sm font-semibold truncate">John Doe</p>
+        <p class="text-white/60 text-xs truncate">Ops Manager</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-grow p-8 overflow-y-auto">
+<header class="mb-8 flex items-start justify-between gap-6">
+  <div>
+    <h1 class="text-3xl font-black text-sage-sidebar tracking-tight">Supervisor</h1>
+    <p class="text-slate-600">Monitor bays and manage assignments.</p>
+  </div>
+  
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
+    <div>
+      <h2 class="text-lg font-bold text-sage-sidebar">Shop Overview</h2>
+      <p class="kicker mt-1">Bays and load</p>
+    </div>
+    
+  </div>
+  <div class="p-6">
+    
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-bold text-slate-800">BAY-A1</p>
+          <p class="text-sm text-slate-600">Full Lift / Electrical</p>
+        </div>
+        <span class="badge badge-success">Active</span>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-2">
+        <div class="bg-sage-sidebar h-2 rounded-full" style="width: 70%"></div>
+      </div>
+
+      <div class="flex items-center justify-between pt-4">
+        <div>
+          <p class="font-bold text-slate-800">BAY-A2</p>
+          <p class="text-sm text-slate-600">Full Lift / Electrical</p>
+        </div>
+        <span class="badge badge-success">Active</span>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-2">
+        <div class="bg-sage-sidebar h-2 rounded-full" style="width: 55%"></div>
+      </div>
+
+      <div class="flex items-center justify-between pt-4">
+        <div>
+          <p class="font-bold text-slate-800">BAY-B1</p>
+          <p class="text-sm text-slate-600">Storage / Pre-staging</p>
+        </div>
+        <span class="badge badge-warn">Maintenance</span>
+      </div>
+    </div>
+    
+  </div>
+  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="text-sage-sidebar border border-sage-sidebar hover:bg-sage-sidebar/5 px-4 py-2 rounded-md text-sm font-bold transition-colors">Edit bays</button></div>
+</section>
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
+    <div>
+      <h2 class="text-lg font-bold text-sage-sidebar">Tech Assignments</h2>
+      <p class="kicker mt-1">This week</p>
+    </div>
+    
+  </div>
+  <div class="p-6">
+    
+    <div class="overflow-x-auto">
+      <table class="w-full text-left table-hover">
+        <thead>
+          <tr class="text-slate-400 text-xs font-bold uppercase border-b border-slate-100">
+            <th class="pb-3 px-2">Tech</th>
+            <th class="pb-3 px-2">Job</th>
+            <th class="pb-3 px-2">Bay</th>
+            <th class="pb-3 px-2">Status</th>
+          </tr>
+        </thead>
+        <tbody class="text-sm">
+          <tr class="border-b border-slate-50">
+            <td class="py-4 px-2 font-bold">Jake</td>
+            <td class="py-4 px-2">S-ORD10432</td>
+            <td class="py-4 px-2">BAY-A1</td>
+            <td class="py-4 px-2"><span class="badge badge-neutral">In Progress</span></td>
+          </tr>
+          <tr class="border-b border-slate-50">
+            <td class="py-4 px-2 font-bold">Seth</td>
+            <td class="py-4 px-2">S-ORD10408</td>
+            <td class="py-4 px-2">BAY-A2</td>
+            <td class="py-4 px-2"><span class="badge badge-warn">QC Hold</span></td>
+          </tr>
+          <tr>
+            <td class="py-4 px-2 font-bold">Tim</td>
+            <td class="py-4 px-2">S-ORD10455</td>
+            <td class="py-4 px-2">BAY-A1</td>
+            <td class="py-4 px-2"><span class="badge badge-neutral">Scheduled</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+  </div>
+  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="bg-sage-sidebar text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors shadow-sm">Assign tech</button></div>
+</section>
 </div>
-<?php wp_footer(); ?>
+</main>
 </body>
 </html>
