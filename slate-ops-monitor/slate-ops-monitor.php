@@ -246,15 +246,33 @@ CSS;
         wp_enqueue_style( 'slate-ops-monitor-inline' );
         wp_add_inline_style( 'slate-ops-monitor-inline', $inline_css );
 
-        $asset_dir = plugin_dir_path( __FILE__ ) . 'assets/';
-        $bundle    = self::find_bundle( $asset_dir );
+        // Prefer wp-content/uploads/slate-ops-monitor/ so a large bundle can be
+        // deployed via SFTP without going through git.  Falls back to the plugin's
+        // own assets/ directory (or a Git LFS-tracked file placed there).
+        $upload     = wp_upload_dir();
+        $upload_dir = trailingslashit( $upload['basedir'] ) . 'slate-ops-monitor/';
+        $upload_url = trailingslashit( $upload['baseurl'] ) . 'slate-ops-monitor/';
+
+        $bundle = self::find_bundle( $upload_dir );
+        if ( $bundle ) {
+            $asset_dir = $upload_dir;
+            $asset_url = $upload_url;
+        } else {
+            $asset_dir = plugin_dir_path( __FILE__ ) . 'assets/';
+            $asset_url = plugin_dir_url( __FILE__ ) . 'assets/';
+            $bundle    = self::find_bundle( $asset_dir );
+        }
+
         if ( ! $bundle ) {
-            return '<div style="color:#fff;background:#b91c1c;padding:12px;">JS bundle not found in /assets.</div>';
+            return '<div style="color:#fff;background:#b91c1c;padding:12px;">'
+                . 'JS bundle not found. Place an <code>index-*.js</code> file in '
+                . '<code>wp-content/uploads/slate-ops-monitor/</code> or the plugin\'s <code>assets/</code> folder.'
+                . '</div>';
         }
 
         wp_enqueue_script(
             self::SCRIPT_HANDLE,
-            plugin_dir_url( __FILE__ ) . 'assets/' . $bundle,
+            $asset_url . $bundle,
             [],
             filemtime( $asset_dir . $bundle ),
             true
