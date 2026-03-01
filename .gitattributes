@@ -1,2 +1,1 @@
-# Track compiled JS bundles with Git LFS so large monitor builds don't hit GitHub's 100 MB hard limit.
-slate-ops-monitor/dist/assets/*.js filter=lfs diff=lfs merge=lfs -text
+# No LFS needed — the compiled monitor bundle is ~200KB, well under GitHub's limits.
