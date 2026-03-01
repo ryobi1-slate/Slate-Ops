@@ -1294,6 +1294,7 @@ async function loadCS() {
           <label>Estimated Hours<input name="estimated_hours" type="number" min="0" step="0.25" value="1" /></label>
           <label>SO# (optional)<input name="so_number" class="mono" placeholder="S-ORD#####" /></label>
           <label>Due Date (optional)<input name="due_date" type="date" /></label>
+          <label style="grid-column:1/-1;">Notes (optional)<textarea name="notes" rows="3" placeholder="Special instructions, parts details, customer requests…"></textarea></label>
           <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
             <button type="submit" class="btn">Create Job</button>
             <span class="muted" id="create-status"></span>
@@ -1474,28 +1475,33 @@ async function loadCS() {
         return;
       }
 
+      const notesVal = (data.notes || '').trim();
       const payload = {
-        customer_name: (data.customer_name || '').trim(),
-        dealer_name:   (data.dealer_name || '').trim(),
-        vin:           (data.vin || '').trim(),
-        job_type:      jobType,
-        parts_status:  (data.parts_status || 'NOT_READY').toUpperCase(),
-        estimated_minutes: Math.round(parseFloat(data.estimated_hours || '0') * 60),
-        so_number:     (data.so_number || '').trim(),
-        due_date:      (data.due_date || '').trim(),
-        created_from:  'manual',
+        customer_name:   (data.customer_name || '').trim(),
+        dealer_name:     (data.dealer_name || '').trim(),
+        vin_last8:       (data.vin || '').trim(),
+        job_type:        jobType,
+        parts_status:    (data.parts_status || 'NOT_READY').toUpperCase(),
+        estimated_hours: data.estimated_hours || '0',
+        so_number:       (data.so_number || '').trim(),
+        requested_date:  (data.due_date || '').trim(),
+        notes:           notesVal,
+        notes_type:      notesVal.toLowerCase().includes('part') ? 'parts' : '',
+        created_from:    'manual',
       };
 
       const status = $('#create-status');
       if (status) status.textContent = 'Creating...';
 
-      const resp = await api.create_job(payload);
-      if (status) status.textContent = resp.ok ? 'Created.' : (resp.message || 'Error');
-      if (resp.ok) {
+      try {
+        const job = await api.createJob(payload);
+        if (status) status.textContent = 'Created.';
         toast('Job created');
-        route('/ops/cs'); // refresh CS page
-      } else {
-        toast(resp.message || 'Error', true);
+        route('/ops/cs');
+      } catch(e) {
+        const message = e?.data?.data?.message || e?.data?.message || e?.message || 'Error creating job';
+        if (status) status.textContent = message;
+        toast(message, true);
       }
     });
   }
