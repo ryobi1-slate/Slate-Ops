@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.6.6
+ * Version: 0.7.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.6.6');
+define('SLATE_OPS_VERSION', '0.7.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -21,6 +21,11 @@ require_once SLATE_OPS_PATH . 'includes/class-slate-ops-rest.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-clickup.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-utils.php';
 
+// Phase 0 scheduler.
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-scheduler-db.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-scheduler-rest.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-admin.php';
+
 register_activation_hook(__FILE__, ['Slate_Ops_Install', 'activate']);
 register_deactivation_hook(__FILE__, ['Slate_Ops_Install', 'deactivate']);
 
@@ -28,6 +33,12 @@ add_action('init', ['Slate_Ops_Roles', 'register_roles_caps']);
 add_action('init', ['Slate_Ops_Install', 'maybe_upgrade']);
 add_action('init', ['Slate_Ops_Routes', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
+add_action('rest_api_init', ['Slate_Ops_Scheduler_REST', 'register_routes']);
+
+// Phase 0 admin menu (only when in admin context).
+if (is_admin()) {
+  Slate_Ops_Admin::init();
+}
 
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
