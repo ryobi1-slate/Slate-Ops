@@ -12,24 +12,28 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class Slate_Ops_Monitor_Service {
 
     public function get_jobs() {
-        $response = wp_remote_get( rest_url( 'slate/v2/shop-floor' ), array(
-            'timeout' => 10,
-        ) );
+        global $wpdb;
+        $table = $wpdb->prefix . 'slate_ops_jobs';
 
-        if ( is_wp_error( $response ) ) {
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT j.job_id, j.so_number, j.customer_name, j.dealer_name,
+                    j.vin, j.status, j.delay_reason, j.sales_person,
+                    j.estimated_minutes, j.scheduled_start, j.scheduled_finish,
+                    j.notes, u.display_name AS assigned_user_name
+             FROM {$table} j
+             LEFT JOIN {$wpdb->users} u ON u.ID = j.assigned_user_id
+             WHERE j.archived_at IS NULL
+               AND ( j.status != %s OR j.status_updated_at >= %s )
+             ORDER BY j.priority ASC, j.scheduled_start ASC",
+            'COMPLETE',
+            gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) )
+        ), ARRAY_A );
+
+        if ( ! $rows ) {
             return array();
         }
 
-        if ( (int) wp_remote_retrieve_response_code( $response ) !== 200 ) {
-            return array();
-        }
-
-        $raw = json_decode( wp_remote_retrieve_body( $response ), true );
-        if ( ! is_array( $raw ) ) {
-            return array();
-        }
-
-        return array_values( array_map( array( $this, 'normalize' ), $raw ) );
+        return array_values( array_map( array( $this, 'normalize' ), $rows ) );
     }
 
     // -------------------------------------------------------------------------
@@ -92,8 +96,8 @@ class Slate_Ops_Monitor_Service {
             'customer'      => $this->s( $job['customer_name'] ?? '' ),
             'sales_person'  => $this->s( $job['sales_person'] ?? '' ),
             'assigned_tech' => $this->format_tech( $job['assigned_user_name'] ?? '' ),
-            'start_date'    => $this->s( $job['scheduled_start']  ?? '' ),
-            'due_date'      => $this->s( $job['scheduled_finish'] ?? '' ),
+            'start_date'    => $job['scheduled_start']  ? substr( $job['scheduled_start'],  0, 10 ) : '',
+            'due_date'      => $job['scheduled_finish'] ? substr( $job['scheduled_finish'], 0, 10 ) : '',
             'time_estimate' => $hours > 0 ? $hours . ' hrs' : '',
             'notes'         => $this->s( $job['notes'] ?? '' ),
             'status'        => $this->map_status( $job['status'] ?? '', $job['delay_reason'] ?? '' ),
