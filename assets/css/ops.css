@@ -942,6 +942,18 @@ body.slate-ops{
    - Tighten logo rendering (svg has no background now)
    ========================= */
 
+/* =========================
+   0.6.7 UI Fixes
+   - Logo: replace rasterized PNG-in-SVG with clean vector wordmark
+     (orange accent bar + SLATE text, viewBox 116×26); renders
+     crisply at sidebar heights instead of blurry bitmap
+   - Sidebar SVG height 24px → 28px
+   - CS form grid: align-items end → start (fields top-align)
+   - CS form inputs: bare <input> now styled identically to
+     <select> (height:38px, padding, border, focus ring);
+     label text styled as uppercase kicker for readability
+   ========================= */
+
 /* Generic grid utility used by JS templates */
 form.grid{
   display:grid;
