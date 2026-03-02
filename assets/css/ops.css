@@ -1029,3 +1029,21 @@ form.grid > label textarea:focus{
   width:auto !important;
   display:block !important;
 }
+
+/* Version badge (bottom-right) */
+.ops-version-badge{
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 99999;
+  font-size: 12px;
+  line-height: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(225,216,203,0.8); /* Sand */
+  background: rgba(64,70,75,0.92); /* Sage */
+  color: #ffffff;
+  letter-spacing: .2px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+.ops-version-badge strong{ font-weight: 600; }
