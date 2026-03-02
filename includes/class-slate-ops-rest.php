@@ -126,6 +126,15 @@ class Slate_Ops_REST {
       'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
       'callback' => [__CLASS__, 'supervisor_queues'],
     ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/activity', [
+      'methods'             => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback'            => [__CLASS__, 'get_job_activity'],
+      'args'                => [
+        'id' => ['validate_callback' => function($v){ return is_numeric($v); }],
+      ],
+    ]);
   }
 
   // Permissions
@@ -1346,5 +1355,28 @@ self::audit('job', $job_id, 'create', null, null, wp_json_encode(['created_from'
 $job = self::job_by_id($job_id);
 self::maybe_create_clickup_task($job);
 self::maybe_push_dealer_portal_status($job);
+  }
+
+  public static function get_job_activity( WP_REST_Request $req ) {
+    global $wpdb;
+    $job_id   = (int) $req['id'];
+    $tbl_log  = $wpdb->prefix . 'slate_ops_audit_log';
+    $tbl_u    = $wpdb->users;
+
+    $rows = $wpdb->get_results(
+      $wpdb->prepare(
+        "SELECT a.audit_id, a.action, a.field_name, a.old_value, a.new_value,
+                a.note, a.created_at, COALESCE(u.display_name,'System') AS user_name
+         FROM {$tbl_log} a
+         LEFT JOIN {$tbl_u} u ON u.ID = a.user_id
+         WHERE a.entity_type = 'job' AND a.entity_id = %d
+         ORDER BY a.created_at DESC
+         LIMIT 200",
+        $job_id
+      ),
+      ARRAY_A
+    );
+
+    return rest_ensure_response(['activity' => $rows ?: []]);
   }
 }

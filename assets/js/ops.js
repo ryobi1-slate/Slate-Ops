@@ -41,7 +41,8 @@
     supervisorQueues(){ return this.req('/supervisor/queues'); },
     editJob(id, payload){ return this.req('/jobs/' + id, {method:'PATCH', body: JSON.stringify(payload)}); },
     addNote(id, note){ return this.req('/jobs/' + id + '/notes', {method:'POST', body: JSON.stringify({note})}); },
-    updateUserRole(id, role){ return this.req('/users/' + id + '/role', {method:'POST', body: JSON.stringify({role})}); }
+    updateUserRole(id, role){ return this.req('/users/' + id + '/role', {method:'POST', body: JSON.stringify({role})}); },
+    getActivity(id){ return this.req('/jobs/' + id + '/activity'); }
   };
 
   const state = {
@@ -218,10 +219,11 @@
   }
 
   async function loadJobDetail(id){
-    const [job, settingsResp, usersResp] = await Promise.all([
+    const [job, settingsResp, usersResp, activityResp] = await Promise.all([
       api.job(id),
       api.settings(),
       api.users().catch(() => ({users:[]})),
+      api.getActivity(id).catch(() => ({activity:[]})),
     ]);
 
     const caps = slateOpsSettings.user.caps || {};
@@ -235,6 +237,10 @@
     const actHrs = t.approved_minutes_total / 60;
     const varHrs = actHrs - estHrs;
     const notesLog = job.notes_log || [];
+    const actLog = activityResp.activity || [];
+    const partsHold    = job.status === 'BLOCKED' && job.delay_reason === 'parts';
+    const approvalHold = job.status === 'BLOCKED' && job.delay_reason === 'approval';
+    const hasHold      = partsHold || approvalHold;
 
     const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','HOLD':'Hold'};
     const jobTypeLabel = {
@@ -373,6 +379,51 @@
           </div>
         ` : ``}
       </div>
+
+      ${canEdit ? `
+      <div class="card" id="blockers-card" style="margin-top:16px;">
+        <h2 style="margin-top:0;">Blockers</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn${partsHold ? ' btn-hold-active' : ' secondary'}" id="parts-hold-btn">
+            ${partsHold ? '● ' : ''}Parts Hold
+          </button>
+          <button class="btn${approvalHold ? ' btn-hold-active' : ' secondary'}" id="approval-hold-btn">
+            ${approvalHold ? '● ' : ''}Approval Hold
+          </button>
+          ${hasHold ? `<button class="btn secondary" id="clear-hold-btn">Clear Hold</button>` : ''}
+        </div>
+        <div id="blocker-note-area"${hasHold ? '' : ' style="display:none;"'}>
+          <div class="label" style="margin-bottom:6px;">Hold Note</div>
+          <textarea class="input" id="blocker-note" rows="2" placeholder="Reason for hold…">${escapeHtml(job.delay_reason_note || '')}</textarea>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
+            <button class="btn" id="save-hold-note">Save Note</button>
+            <div class="field-error" data-error-for="hold-note" style="flex:1;"></div>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="card" id="activity-card" style="margin-top:16px;">
+        <h2 style="margin-top:0;">Activity Log</h2>
+        ${actLog.length === 0
+          ? '<div style="color:rgba(0,0,0,0.4);font-size:14px;">No activity recorded yet.</div>'
+          : `<table class="table activity-log-table" style="width:100%;font-size:13px;">
+              <thead><tr>
+                <th>When</th><th>Who</th><th>Action</th><th>Detail</th>
+              </tr></thead>
+              <tbody>
+                ${actLog.map(a => `
+                  <tr>
+                    <td style="white-space:nowrap;font-size:11px;color:rgba(0,0,0,0.45);">${escapeHtml(a.created_at || '')}</td>
+                    <td style="font-weight:600;">${escapeHtml(a.user_name || 'System')}</td>
+                    <td><span class="badge scheduled" style="font-size:11px;">${escapeHtml(a.action || '')}</span></td>
+                    <td style="font-size:12px;">${a.field_name ? '<strong>' + escapeHtml(a.field_name) + '</strong>: ' : ''}${a.old_value ? escapeHtml(String(a.old_value)) + ' \u2192 ' : ''}${escapeHtml(String(a.new_value || a.note || ''))}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>`
+        }
+      </div>
     `);
 
     // Start/Stop
@@ -476,6 +527,48 @@
           btn.disabled = false;
           btn.textContent = 'Add Note';
         }
+      };
+    }
+
+    if ($('#parts-hold-btn')) {
+      $('#parts-hold-btn').onclick = async () => {
+        if (partsHold) { $('#blocker-note-area').style.display = ''; return; }
+        try {
+          await api.editJob(job.job_id, {status: 'BLOCKED', delay_reason: 'parts'});
+          router();
+        } catch(e) { alert(e.message); }
+      };
+    }
+
+    if ($('#approval-hold-btn')) {
+      $('#approval-hold-btn').onclick = async () => {
+        if (approvalHold) { $('#blocker-note-area').style.display = ''; return; }
+        try {
+          await api.editJob(job.job_id, {status: 'BLOCKED', delay_reason: 'approval'});
+          router();
+        } catch(e) { alert(e.message); }
+      };
+    }
+
+    if ($('#clear-hold-btn')) {
+      $('#clear-hold-btn').onclick = async () => {
+        try {
+          await api.editJob(job.job_id, {status: 'SCHEDULED', delay_reason: ''});
+          router();
+        } catch(e) { alert(e.message); }
+      };
+    }
+
+    if ($('#save-hold-note')) {
+      $('#save-hold-note').onclick = async () => {
+        const note = $('#blocker-note').value.trim();
+        const errEl = $('[data-error-for="hold-note"]');
+        errEl.textContent = '';
+        if (!note) { errEl.textContent = 'Note cannot be empty.'; return; }
+        try {
+          await api.addNote(job.job_id, '[HOLD NOTE] ' + note);
+          router();
+        } catch(e) { errEl.textContent = e.message; }
       };
     }
   }

@@ -1030,7 +1030,7 @@ form.grid > label textarea:focus{
   display:block !important;
 }
 
-/* Version badge (bottom-right) */
+/* Version badge — legacy rule kept for reference; overridden below */
 .ops-version-badge{
   position: fixed;
   right: 12px;
@@ -1040,10 +1040,112 @@ form.grid > label textarea:focus{
   line-height: 1;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(225,216,203,0.8); /* Sand */
-  background: rgba(64,70,75,0.92); /* Sage */
+  border: 1px solid rgba(225,216,203,0.8);
+  background: rgba(64,70,75,0.92);
   color: #ffffff;
   letter-spacing: .2px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.25);
 }
 .ops-version-badge strong{ font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════
+   Phase 0 Design Refresh — dark navy sidebar + orange accent
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --p0-sidebar: #1e2132;
+  --p0-accent:  #e07444;
+  --p0-canvas:  #f0f2f5;
+  --p0-surface: #ffffff;
+}
+
+/* Canvas */
+body.slate-ops{ background: var(--p0-canvas); }
+
+/* Sidebar: dark navy */
+.ops-sidebar{
+  background: var(--p0-sidebar) !important;
+  width: 220px !important;
+}
+.ops-brand{ border-bottom-color: rgba(255,255,255,0.08) !important; }
+.ops-brand-name{ color: #fff !important; }
+
+/* Nav links */
+.ops-nav-link{ color: rgba(255,255,255,0.65) !important; border-left: 2px solid transparent; }
+.ops-nav-link:hover{ background: rgba(255,255,255,0.07) !important; color: #fff !important; }
+.ops-nav-link.active{
+  background: rgba(224,116,68,0.18) !important;
+  border-left-color: var(--p0-accent) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+.ops-nav-link.active::before{ background: var(--p0-accent) !important; }
+
+/* Nav icon: material symbol inside the link */
+.ops-nav-icon{
+  font-family: 'Material Symbols Outlined';
+  font-size: 18px;
+  line-height: 1;
+  width: 22px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* Header */
+.ops-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  background: var(--p0-surface);
+}
+
+/* Version badge: static, top-right of header */
+.ops-version-badge{
+  position: static !important;
+  box-shadow: none !important;
+  z-index: auto !important;
+  background: rgba(0,0,0,0.05) !important;
+  color: rgba(0,0,0,0.45) !important;
+  border: 1px solid rgba(0,0,0,0.10) !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  letter-spacing: .1px !important;
+}
+
+/* Primary buttons: orange */
+.btn:not(.secondary):not(.danger):not(.ghost){
+  background: var(--p0-accent) !important;
+  border-color: var(--p0-accent) !important;
+  color: #fff !important;
+}
+.btn:not(.secondary):not(.danger):not(.ghost):hover{
+  background: #c8673c !important;
+  border-color: #c8673c !important;
+}
+.btn.danger{ background: #b84e0f !important; border-color: #b84e0f !important; }
+
+/* Input focus: orange ring */
+.input:focus, select:focus, textarea:focus{
+  border-color: var(--p0-accent) !important;
+  box-shadow: 0 0 0 3px rgba(224,116,68,0.18) !important;
+  outline: none !important;
+}
+
+/* Cards on canvas */
+.card{ background: var(--p0-surface) !important; }
+
+/* Blocker buttons */
+.btn-hold-active{
+  background: #fef3c7 !important;
+  border-color: #d97706 !important;
+  color: #92400e !important;
+  font-weight: 700;
+}
+.btn-hold-active:hover{ background: #fde68a !important; }
+
+/* Activity log table */
+.activity-log-table td{ vertical-align: top; padding: 8px 10px; }
+.activity-log-table thead th{ font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: rgba(0,0,0,0.4); padding: 6px 10px; }

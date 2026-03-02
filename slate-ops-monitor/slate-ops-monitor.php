@@ -73,6 +73,7 @@ class Slate_Ops_Shop_Monitor {
             'interval'  => $interval,
             'scale'     => $scale,
             'pluginUrl' => esc_url_raw( SLATE_OPS_MONITOR_URL ),
+            'version'   => defined( 'SLATE_OPS_VERSION' ) ? SLATE_OPS_VERSION : '0.7.0',
         ) );
 
         $css = "html, body { height:100%; margin:0; padding:0; background:#020617; overflow:hidden; }\n"

@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Slate Upfit – Jobs</title>
-
+<title>Slate Ops – Jobs</title>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,9 +13,9 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        'sand-bg': '#e1dfc8',
-        'sage-sidebar': '#404f4b',
-        'arches-orange': '#d86b19'
+        'app-bg':        '#f0f2f5',
+        'sidebar-dark':  '#1e2132',
+        'accent-orange': '#e07444',
       },
       fontFamily: { sans: ['Roboto Flex','sans-serif'] }
     }
@@ -24,104 +23,119 @@ tailwind.config = {
 }
 </script>
 <link rel="stylesheet" href="assets/app.css">
-
 <style>body{font-family:'Roboto Flex',sans-serif;}</style>
 </head>
-<body class="bg-sand-bg min-h-screen flex">
+<body class="bg-app-bg min-h-screen flex">
 
-<aside class="w-64 bg-sage-sidebar flex-shrink-0 flex flex-col h-screen sticky top-0">
-  <div class="p-6 border-b border-white/10 flex items-center justify-start">
-    <img src="assets/slate-logo-white.svg" alt="Slate Upfit" class="h-6 w-auto">
+<!-- Sidebar -->
+<aside class="w-64 bg-sidebar-dark flex-shrink-0 flex flex-col h-screen sticky top-0">
+  <div class="p-6 border-b border-white/10 flex items-center gap-3">
+    <img src="assets/slate-logo-white.svg" alt="Slate Ops" class="h-6 w-auto">
   </div>
 
-  <nav class="mt-6 flex-grow px-4 space-y-2">
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="dashboard.html">Dashboard</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="cs.html">CS</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="supervisor.html">Supervisor</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors bg-white/20 font-bold" href="jobs.html">Jobs</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="qc.html">QC</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="schedule.html">Schedule</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="settings.html">Settings</a>
+  <nav class="mt-4 flex-grow px-3 space-y-1">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="dashboard.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="cs.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Customer Service
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="supervisor.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 4a2 2 0 100-4 2 2 0 000 4zM3 16a2 2 0 100-4 2 2 0 000 4z"/></svg>
+      Supervisor
+    </a>
+    <a class="nav-active flex items-center px-3 py-2.5 rounded-lg transition-colors" href="jobs.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9-4h2a2 2 0 012 2v2H9V5a2 2 0 012-2z"/></svg>
+      Jobs
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="qc.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      QC
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="schedule.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Schedule
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="settings.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Settings
+    </a>
   </nav>
 
-  <div class="p-6 mt-auto border-t border-white/10">
-    <div class="flex items-center">
-      <div class="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white font-bold mr-3">JD</div>
+  <div class="p-4 mt-auto border-t border-white/10">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-accent-orange/20 border border-accent-orange/30 flex items-center justify-center text-accent-orange text-sm font-bold flex-shrink-0">JD</div>
       <div class="overflow-hidden">
         <p class="text-white text-sm font-semibold truncate">John Doe</p>
-        <p class="text-white/60 text-xs truncate">Ops Manager</p>
+        <p class="text-white/50 text-xs truncate">Ops Manager</p>
       </div>
     </div>
   </div>
 </aside>
 
+<!-- Main -->
 <main class="flex-grow p-8 overflow-y-auto">
-<header class="mb-8 flex items-start justify-between gap-6">
-  <div>
-    <h1 class="text-3xl font-black text-sage-sidebar tracking-tight">Jobs</h1>
-    <p class="text-slate-600">Search and manage active work orders.</p>
-  </div>
-  
-</header>
-<div class='max-w-5xl'><section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
+  <header class="mb-8 flex items-start justify-between gap-6">
     <div>
-      <h2 class="text-lg font-bold text-sage-sidebar">Jobs</h2>
-      <p class="kicker mt-1">All open work</p>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Jobs</h1>
+      <p class="text-slate-500 text-sm mt-1">Search and manage active work orders.</p>
     </div>
-    
-  </div>
-  <div class="p-6">
-    
+  </header>
+
+  <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4">
+      <div>
+        <h2 class="text-base font-bold text-slate-900">All Open Work</h2>
+        <p class="kicker mt-0.5">Active jobs</p>
+      </div>
+    </div>
     <div class="overflow-x-auto">
       <table class="w-full text-left table-hover">
         <thead>
           <tr class="text-slate-400 text-xs font-bold uppercase border-b border-slate-100">
-            <th class="pb-3 px-2">SO#</th>
-            <th class="pb-3 px-2">Type</th>
-            <th class="pb-3 px-2">Dealer</th>
-            <th class="pb-3 px-2">Parts</th>
-            <th class="pb-3 px-2">Due</th>
-            <th class="pb-3 px-2 text-right">Action</th>
+            <th class="pb-3 pt-4 px-6">SO#</th>
+            <th class="pb-3 pt-4 px-4">Type</th>
+            <th class="pb-3 pt-4 px-4">Dealer</th>
+            <th class="pb-3 pt-4 px-4">Parts</th>
+            <th class="pb-3 pt-4 px-4">Due</th>
+            <th class="pb-3 pt-4 px-4 text-right">Action</th>
           </tr>
         </thead>
         <tbody class="text-sm">
           <tr class="border-b border-slate-50">
-            <td class="py-4 px-2 font-bold">S-ORD10432</td>
-            <td class="py-4 px-2">UPFIT</td>
-            <td class="py-4 px-2">MB Wilsonville</td>
-            <td class="py-4 px-2"><span class="badge badge-neutral">READY</span></td>
-            <td class="py-4 px-2">Fri</td>
-            <td class="py-4 px-2 text-right"><button class="text-slate-400 hover:text-sage-sidebar px-2 font-bold">View</button></td>
+            <td class="py-4 px-6 font-semibold text-slate-900">S-ORD10432</td>
+            <td class="py-4 px-4 text-slate-600">UPFIT</td>
+            <td class="py-4 px-4 text-slate-600">MB Wilsonville</td>
+            <td class="py-4 px-4"><span class="badge badge-success">READY</span></td>
+            <td class="py-4 px-4 text-slate-600">Fri</td>
+            <td class="py-4 px-4 text-right"><button class="text-accent-orange hover:underline text-sm font-semibold">View</button></td>
           </tr>
           <tr class="border-b border-slate-50">
-            <td class="py-4 px-2 font-bold">S-ORD10408</td>
-            <td class="py-4 px-2">RV_BUILD</td>
-            <td class="py-4 px-2">MB Seattle</td>
-            <td class="py-4 px-2"><span class="badge badge-warn">PARTIAL</span></td>
-            <td class="py-4 px-2">Mon</td>
-            <td class="py-4 px-2 text-right"><button class="text-slate-400 hover:text-sage-sidebar px-2 font-bold">View</button></td>
+            <td class="py-4 px-6 font-semibold text-slate-900">S-ORD10408</td>
+            <td class="py-4 px-4 text-slate-600">RV_BUILD</td>
+            <td class="py-4 px-4 text-slate-600">MB Seattle</td>
+            <td class="py-4 px-4"><span class="badge badge-warn">PARTIAL</span></td>
+            <td class="py-4 px-4 text-slate-600">Mon</td>
+            <td class="py-4 px-4 text-right"><button class="text-accent-orange hover:underline text-sm font-semibold">View</button></td>
           </tr>
           <tr>
-            <td class="py-4 px-2 font-bold">S-ORD10455</td>
-            <td class="py-4 px-2">SERVICE</td>
-            <td class="py-4 px-2">MB Anchorage</td>
-            <td class="py-4 px-2"><span class="badge badge-danger">NOT_READY</span></td>
-            <td class="py-4 px-2">Wed</td>
-            <td class="py-4 px-2 text-right"><button class="text-slate-400 hover:text-sage-sidebar px-2 font-bold">View</button></td>
+            <td class="py-4 px-6 font-semibold text-slate-900">S-ORD10455</td>
+            <td class="py-4 px-4 text-slate-600">SERVICE</td>
+            <td class="py-4 px-4 text-slate-600">MB Anchorage</td>
+            <td class="py-4 px-4"><span class="badge badge-danger">NOT_READY</span></td>
+            <td class="py-4 px-4 text-slate-600">Wed</td>
+            <td class="py-4 px-4 text-right"><button class="text-accent-orange hover:underline text-sm font-semibold">View</button></td>
           </tr>
         </tbody>
       </table>
     </div>
-    
-  </div>
-  <div class="px-6 py-4 bg-slate-50 flex justify-end">
-      <div class="flex items-center gap-3">
-        <button class="text-sage-sidebar border border-sage-sidebar hover:bg-sage-sidebar/5 px-4 py-2 rounded-md text-sm font-bold transition-colors">Export</button>
-        <button class="bg-sage-sidebar text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors shadow-sm">New job</button>
-      </div>
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+      <button class="text-accent-orange border border-accent-orange hover:bg-accent-orange/5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Export</button>
+      <button class="bg-accent-orange text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-sm text-sm">New job</button>
     </div>
-</section></div>
+  </section>
 </main>
 </body>
 </html>
