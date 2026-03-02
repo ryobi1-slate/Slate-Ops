@@ -11,6 +11,7 @@ declare global {
       interval: string;
       scale?: string;
       pluginUrl?: string;
+      version?: string;
     };
   }
 }
@@ -21,7 +22,8 @@ const DEFAULT_SETTINGS = {
   interval: '60000',
   nonce: '',
   scale: '1',
-  pluginUrl: ''
+  pluginUrl: '',
+  version: ''
 };
 
 // MOCK DATA FOR DEMONSTRATION
@@ -268,6 +270,12 @@ const App: React.FC = () => {
                     {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                  </span>
             </div>
+            {/* Version chip */}
+            {settings.version && (
+              <div className="mt-0.5 font-mono text-[9px] text-slate-700 opacity-60">
+                Slate Ops v{settings.version}
+              </div>
+            )}
         </div>
       </div>
 

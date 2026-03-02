@@ -94,6 +94,7 @@ function ops_nav_link( $href, $route, $icon, $label ) {
   <div class="ops-body">
     <header class="ops-header">
       <span class="ops-page-title" id="ops-page-title"></span>
+      <div class="ops-version-badge" aria-label="Slate Ops version"><strong>Slate Ops</strong> v<?php echo esc_html( SLATE_OPS_VERSION ); ?></div>
     </header>
     <section class="ops-content">
       <div id="ops-view"></div>
@@ -102,6 +103,5 @@ function ops_nav_link( $href, $route, $icon, $label ) {
 
 </div>
 <?php wp_footer(); ?>
-  <div class="ops-version-badge" aria-label="Slate Ops version"><strong>Slate Ops</strong> v<?php echo esc_html( SLATE_OPS_VERSION ); ?></div>
 </body>
 </html>
