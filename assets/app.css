@@ -1,18 +1,39 @@
 /* Shared layout tweaks to keep the SaaS look consistent */
-:root{
-  --sand-bg:#e1dfc8;
-  --sage-sidebar:#404f4b;
-  --arches-orange:#d86b19;
+:root {
+  /* New design system tokens */
+  --app-bg:        #f0f2f5;
+  --sidebar-dark:  #1e2132;
+  --accent-orange: #e07444;
+  /* Legacy aliases */
+  --sand-bg:       #f0f2f5;
+  --sage-sidebar:  #1e2132;
+  --arches-orange: #e07444;
 }
-html,body{height:100%;}
-body{color:#000;}
+html, body { height: 100%; }
+body { color: #0f172a; }
 /* Subtle table hover everywhere */
-.table-hover tbody tr:hover{background-color: rgba(15, 23, 42, 0.03);}
+.table-hover tbody tr:hover { background-color: rgba(15, 23, 42, 0.03); }
 /* Badge primitives */
-.badge{display:inline-flex;align-items:center;gap:.375rem;padding:.25rem .5rem;border-radius:.5rem;font-weight:600;font-size:.75rem;line-height:1;}
-.badge-success{background:#ecfdf5;color:#047857;}
-.badge-warn{background:#fffbeb;color:#b45309;}
-.badge-danger{background:#fef2f2;color:#b91c1c;}
-.badge-neutral{background:#f1f5f9;color:#334155;}
+.badge { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .625rem; border-radius: .5rem; font-weight: 600; font-size: .75rem; line-height: 1; }
+.badge-success { background: #ecfdf5; color: #047857; }
+.badge-warn    { background: #fff7ed; color: #c2410c; }
+.badge-danger  { background: #fef2f2; color: #b91c1c; }
+.badge-neutral { background: #f1f5f9; color: #334155; }
+.badge-orange  { background: #fff3e8; color: #c2410c; }
 /* Consistent section subtitle */
-.kicker{font-size:.75rem;letter-spacing:.22em;text-transform:uppercase;color:#64748b;font-weight:600;}
+.kicker { font-size: .75rem; letter-spacing: .22em; text-transform: uppercase; color: #64748b; font-weight: 600; }
+/* Sidebar nav active state */
+.nav-active {
+  background-color: rgba(224, 116, 68, 0.18);
+  border-left: 2px solid #e07444;
+  color: #fff;
+  font-weight: 600;
+}
+.nav-inactive {
+  color: rgba(255,255,255,0.65);
+  border-left: 2px solid transparent;
+}
+.nav-inactive:hover {
+  background-color: rgba(255,255,255,0.07);
+  color: #fff;
+}

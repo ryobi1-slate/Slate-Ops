@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Slate Upfit – System Settings</title>
-
+<title>Slate Ops – Settings</title>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,9 +13,9 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        'sand-bg': '#e1dfc8',
-        'sage-sidebar': '#404f4b',
-        'arches-orange': '#d86b19'
+        'app-bg':        '#f0f2f5',
+        'sidebar-dark':  '#1e2132',
+        'accent-orange': '#e07444',
       },
       fontFamily: { sans: ['Roboto Flex','sans-serif'] }
     }
@@ -24,211 +23,177 @@ tailwind.config = {
 }
 </script>
 <link rel="stylesheet" href="assets/app.css">
-
 <style>body{font-family:'Roboto Flex',sans-serif;}</style>
 </head>
-<body class="bg-sand-bg min-h-screen flex">
+<body class="bg-app-bg min-h-screen flex">
 
-<aside class="w-64 bg-sage-sidebar flex-shrink-0 flex flex-col h-screen sticky top-0">
-  <div class="p-6 border-b border-white/10 flex items-center justify-start">
-    <img src="assets/slate-logo-white.svg" alt="Slate Upfit" class="h-6 w-auto">
+<!-- Sidebar -->
+<aside class="w-64 bg-sidebar-dark flex-shrink-0 flex flex-col h-screen sticky top-0">
+  <div class="p-6 border-b border-white/10 flex items-center gap-3">
+    <img src="assets/slate-logo-white.svg" alt="Slate Ops" class="h-6 w-auto">
   </div>
 
-  <nav class="mt-6 flex-grow px-4 space-y-2">
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="dashboard.html">Dashboard</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="cs.html">CS</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="supervisor.html">Supervisor</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="jobs.html">Jobs</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="qc.html">QC</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors text-white hover:bg-white/10 font-medium" href="schedule.html">Schedule</a>
-    <a class="flex items-center px-4 py-3 rounded-lg transition-colors bg-white/20 font-bold" href="settings.html">Settings</a>
+  <nav class="mt-4 flex-grow px-3 space-y-1">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="dashboard.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="cs.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Customer Service
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="supervisor.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 4a2 2 0 100-4 2 2 0 000 4zM3 16a2 2 0 100-4 2 2 0 000 4z"/></svg>
+      Supervisor
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="jobs.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9-4h2a2 2 0 012 2v2H9V5a2 2 0 012-2z"/></svg>
+      Jobs
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="qc.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      QC
+    </a>
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="schedule.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Schedule
+    </a>
+    <a class="nav-active flex items-center px-3 py-2.5 rounded-lg transition-colors" href="settings.html">
+      <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Settings
+    </a>
   </nav>
 
-  <div class="p-6 mt-auto border-t border-white/10">
-    <div class="flex items-center">
-      <div class="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white font-bold mr-3">JD</div>
+  <div class="p-4 mt-auto border-t border-white/10">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-accent-orange/20 border border-accent-orange/30 flex items-center justify-center text-accent-orange text-sm font-bold flex-shrink-0">JD</div>
       <div class="overflow-hidden">
         <p class="text-white text-sm font-semibold truncate">John Doe</p>
-        <p class="text-white/60 text-xs truncate">Ops Manager</p>
+        <p class="text-white/50 text-xs truncate">Ops Manager</p>
       </div>
     </div>
   </div>
 </aside>
 
+<!-- Main -->
 <main class="flex-grow p-8 overflow-y-auto">
-<header class="mb-8 flex items-start justify-between gap-6">
-  <div>
-    <h1 class="text-3xl font-black text-sage-sidebar tracking-tight">System Settings</h1>
-    <p class="text-slate-600">Configure global parameters and production environment preferences.</p>
-  </div>
-  
-</header>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-  <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
-    <div>
-      <h2 class="text-lg font-bold text-sage-sidebar">General Settings</h2>
-      <p class="kicker mt-1">Global configuration</p>
-    </div>
-    
-  </div>
-  <div class="p-6">
-    
-    <div class="space-y-6">
-      <div class="space-y-1">
-        <label class="block text-sm font-bold text-slate-700">Company Legal Name</label>
-        <input class="w-full border-slate-300 rounded-md shadow-sm focus:border-sage-sidebar focus:ring-sage-sidebar"
-               type="text" value="Slate Automotive Upfitting Solutions Inc."/>
-      </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-1">
-          <label class="block text-sm font-bold text-slate-700">Timezone</label>
-          <select class="w-full border-slate-300 rounded-md shadow-sm focus:border-sage-sidebar focus:ring-sage-sidebar">
-            <option>Pacific Standard Time (PST)</option>
-            <option>Mountain Standard Time (MST)</option>
-            <option>Central Standard Time (CST)</option>
-            <option>Eastern Standard Time (EST)</option>
-          </select>
-        </div>
-        <div class="space-y-1">
-          <label class="block text-sm font-bold text-slate-700">Currency Display</label>
-          <select class="w-full border-slate-300 rounded-md shadow-sm focus:border-sage-sidebar focus:ring-sage-sidebar">
-            <option>USD ($)</option>
-            <option>CAD ($)</option>
-          </select>
-        </div>
-      </div>
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Settings</h1>
+    <p class="text-slate-500 text-sm mt-1">Configure global parameters and production environment preferences.</p>
+  </header>
 
-      <div class="flex items-center justify-between py-2">
+  <div class="space-y-8 max-w-4xl">
+
+    <!-- User Role Management -->
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <p class="font-bold text-slate-700">Public Holiday Sync</p>
-          <p class="text-sm text-slate-500">Automatically block off national holidays on the schedule.</p>
+          <h2 class="text-base font-bold text-slate-900">User Role Management</h2>
+          <p class="kicker mt-0.5">Access and permissions</p>
         </div>
-        <input type="checkbox" checked class="h-5 w-5 text-arches-orange focus:ring-arches-orange border-slate-300 rounded">
+        <button class="bg-accent-orange text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-sm text-sm">+ Add User</button>
       </div>
-    </div>
-    
-  </div>
-  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="bg-sage-sidebar text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors shadow-sm">Save General</button></div>
-</section>
-  <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
-    <div>
-      <h2 class="text-lg font-bold text-sage-sidebar">Production Bay Configuration</h2>
-      <p class="kicker mt-1">Workshop capacity</p>
-    </div>
-    
-  </div>
-  <div class="p-6">
-    
-    <div class="overflow-x-auto">
-      <table class="w-full text-left table-hover">
-        <thead>
-          <tr class="text-slate-400 text-xs font-bold uppercase border-b border-slate-100">
-            <th class="pb-3 px-2">Bay ID</th>
-            <th class="pb-3 px-2">Equipment Level</th>
-            <th class="pb-3 px-2">Status</th>
-            <th class="pb-3 px-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="text-sm">
-          <tr class="border-b border-slate-50">
-            <td class="py-4 px-2 font-bold">BAY-A1</td>
-            <td class="py-4 px-2"><span class="badge badge-neutral">Full Lift / Electrical</span></td>
-            <td class="py-4 px-2"><span class="badge badge-success">Active</span></td>
-            <td class="py-4 px-2 text-right"><button class="text-slate-400 hover:text-sage-sidebar px-2 font-bold">Edit</button></td>
-          </tr>
-          <tr class="border-b border-slate-50">
-            <td class="py-4 px-2 font-bold">BAY-A2</td>
-            <td class="py-4 px-2"><span class="badge badge-neutral">Full Lift / Electrical</span></td>
-            <td class="py-4 px-2"><span class="badge badge-success">Active</span></td>
-            <td class="py-4 px-2 text-right"><button class="text-slate-400 hover:text-sage-sidebar px-2 font-bold">Edit</button></td>
-          </tr>
-          <tr>
-            <td class="py-4 px-2 font-bold">BAY-B1</td>
-            <td class="py-4 px-2"><span class="badge badge-neutral">Storage / Pre-staging</span></td>
-            <td class="py-4 px-2"><span class="badge badge-warn">Maintenance</span></td>
-            <td class="py-4 px-2 text-right"><button class="text-slate-400 hover:text-sage-sidebar px-2 font-bold">Edit</button></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="mt-4 text-xs text-slate-400 italic font-medium">Note: Changing bay configuration might affect the master production schedule.</p>
-    
-  </div>
-  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="text-sage-sidebar border border-sage-sidebar hover:bg-sage-sidebar/5 px-4 py-2 rounded-md text-sm font-bold transition-colors">+ Add Bay</button></div>
-</section>
-  <div class="lg:col-span-2"><section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-  <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-6">
-    <div>
-      <h2 class="text-lg font-bold text-sage-sidebar">Notification Preferences</h2>
-      <p class="kicker mt-1">Alerts and communication</p>
-    </div>
-    
-  </div>
-  <div class="p-6">
-    
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div class="space-y-4">
-        <h3 class="font-bold text-slate-700 text-sm border-b pb-2">Internal Staff Alerts</h3>
-        <label class="flex items-start gap-3">
-          <input type="checkbox" checked class="mt-1 rounded border-slate-300 text-arches-orange focus:ring-arches-orange">
-          <span>
-            <span class="block font-bold text-slate-800 text-sm">New Job Assignments</span>
-            <span class="block text-xs text-slate-500">Email supervisor when new job is booked.</span>
-          </span>
-        </label>
-        <label class="flex items-start gap-3">
-          <input type="checkbox" checked class="mt-1 rounded border-slate-300 text-arches-orange focus:ring-arches-orange">
-          <span>
-            <span class="block font-bold text-slate-800 text-sm">QC Failure Warning</span>
-            <span class="block text-xs text-slate-500">Push notification if QC check fails twice.</span>
-          </span>
-        </label>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left table-hover">
+          <thead>
+            <tr class="text-slate-400 text-xs font-bold uppercase border-b border-slate-100">
+              <th class="pb-3 pt-4 px-6">Name</th>
+              <th class="pb-3 pt-4 px-4">Email</th>
+              <th class="pb-3 pt-4 px-4">Role</th>
+              <th class="pb-3 pt-4 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="text-sm">
+            <tr class="border-b border-slate-50">
+              <td class="py-4 px-6 font-semibold text-slate-900">John Doe</td>
+              <td class="py-4 px-4 text-slate-500">john@slateops.com</td>
+              <td class="py-4 px-4">
+                <select class="border-slate-300 rounded-lg text-sm focus:border-accent-orange focus:ring-accent-orange py-1">
+                  <option selected>Ops Admin</option>
+                  <option>Shop Supervisor</option>
+                  <option>Customer Service</option>
+                  <option>Tech</option>
+                </select>
+              </td>
+              <td class="py-4 px-4 text-right"><button class="text-accent-orange hover:underline text-sm font-semibold">Edit</button></td>
+            </tr>
+            <tr class="border-b border-slate-50">
+              <td class="py-4 px-6 font-semibold text-slate-900">Jake Miller</td>
+              <td class="py-4 px-4 text-slate-500">jake@slateops.com</td>
+              <td class="py-4 px-4">
+                <select class="border-slate-300 rounded-lg text-sm focus:border-accent-orange focus:ring-accent-orange py-1">
+                  <option>Ops Admin</option>
+                  <option selected>Shop Supervisor</option>
+                  <option>Customer Service</option>
+                  <option>Tech</option>
+                </select>
+              </td>
+              <td class="py-4 px-4 text-right"><button class="text-accent-orange hover:underline text-sm font-semibold">Edit</button></td>
+            </tr>
+            <tr class="border-b border-slate-50">
+              <td class="py-4 px-6 font-semibold text-slate-900">Sarah Connor</td>
+              <td class="py-4 px-4 text-slate-500">sarah@slateops.com</td>
+              <td class="py-4 px-4">
+                <select class="border-slate-300 rounded-lg text-sm focus:border-accent-orange focus:ring-accent-orange py-1">
+                  <option>Ops Admin</option>
+                  <option>Shop Supervisor</option>
+                  <option selected>Customer Service</option>
+                  <option>Tech</option>
+                </select>
+              </td>
+              <td class="py-4 px-4 text-right"><button class="text-accent-orange hover:underline text-sm font-semibold">Edit</button></td>
+            </tr>
+            <tr>
+              <td class="py-4 px-6 font-semibold text-slate-900">Tim O'Brien</td>
+              <td class="py-4 px-4 text-slate-500">tim@slateops.com</td>
+              <td class="py-4 px-4">
+                <select class="border-slate-300 rounded-lg text-sm focus:border-accent-orange focus:ring-accent-orange py-1">
+                  <option>Ops Admin</option>
+                  <option>Shop Supervisor</option>
+                  <option>Customer Service</option>
+                  <option selected>Tech</option>
+                </select>
+              </td>
+              <td class="py-4 px-4 text-right"><button class="text-accent-orange hover:underline text-sm font-semibold">Edit</button></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </section>
 
-      <div class="space-y-4">
-        <h3 class="font-bold text-slate-700 text-sm border-b pb-2">Customer Communications</h3>
-        <label class="flex items-start gap-3">
-          <input type="checkbox" checked class="mt-1 rounded border-slate-300 text-arches-orange focus:ring-arches-orange">
-          <span>
-            <span class="block font-bold text-slate-800 text-sm">Completion SMS</span>
-            <span class="block text-xs text-slate-500">Auto-text when job moves to 'Ready for Pickup'.</span>
-          </span>
-        </label>
-        <label class="flex items-start gap-3">
-          <input type="checkbox" class="mt-1 rounded border-slate-300 text-sage-sidebar focus:ring-sage-sidebar">
-          <span>
-            <span class="block font-bold text-slate-800 text-sm">Marketing Emails</span>
-            <span class="block text-xs text-slate-500">Newsletter and upfit recommendations.</span>
-          </span>
-        </label>
+    <!-- System Configuration -->
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100">
+        <h2 class="text-base font-bold text-slate-900">System Configuration</h2>
+        <p class="kicker mt-0.5">Production environment defaults</p>
       </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Shift Start Time</label>
+            <input type="time" value="07:00" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"/>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Shift End Time</label>
+            <input type="time" value="16:00" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"/>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Lunch Duration (min)</label>
+            <input type="number" value="30" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"/>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Default Lead Time (days)</label>
+            <input type="number" value="3" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"/>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <button class="bg-accent-orange text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-sm text-sm">Save Configuration</button>
+      </div>
+    </section>
 
-      <div class="space-y-4">
-        <h3 class="font-bold text-slate-700 text-sm border-b pb-2">System Reports</h3>
-        <label class="flex items-start gap-3">
-          <input type="checkbox" checked class="mt-1 rounded border-slate-300 text-arches-orange focus:ring-arches-orange">
-          <span>
-            <span class="block font-bold text-slate-800 text-sm">Daily Ops Summary</span>
-            <span class="block text-xs text-slate-500">Sent every day at 18:00 local time.</span>
-          </span>
-        </label>
-        <label class="flex items-start gap-3">
-          <input type="checkbox" class="mt-1 rounded border-slate-300 text-sage-sidebar focus:ring-sage-sidebar">
-          <span>
-            <span class="block font-bold text-slate-800 text-sm">Weekly Inventory Report</span>
-            <span class="block text-xs text-slate-500">Low stock level warnings across all bays.</span>
-          </span>
-        </label>
-      </div>
-    </div>
-    
   </div>
-  <div class="px-6 py-4 bg-slate-50 flex justify-end"><button class="bg-sage-sidebar text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700 transition-colors shadow-sm">Apply Preferences</button></div>
-</section></div>
-</div>
 </main>
 </body>
 </html>
