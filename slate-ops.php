@@ -17,9 +17,17 @@ require_once SLATE_OPS_PATH . 'includes/class-slate-ops-contract.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-install.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-roles.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-routes.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-utils.php';
+require_once SLATE_OPS_PATH . 'includes/functions.php';
+
+// Data helpers (must load after Utils)
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-activitylog.php';
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-timelogs.php';
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-jobs.php';
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-schedule.php';
+
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-rest.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-clickup.php';
-require_once SLATE_OPS_PATH . 'includes/class-slate-ops-utils.php';
 
 register_activation_hook(__FILE__, ['Slate_Ops_Install', 'activate']);
 register_deactivation_hook(__FILE__, ['Slate_Ops_Install', 'deactivate']);
@@ -44,8 +52,13 @@ add_action('wp_enqueue_scripts', function() {
   );
 
   wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
-  wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', ['material-symbols'], SLATE_OPS_VERSION);
+  // ops-shell.css: structural shell tokens (sidebar, topbar, version badge).
+  // Must load before ops.css so ops.css overrides can win specificity races.
+  wp_enqueue_style('slate-ops-shell', SLATE_OPS_URL . 'assets/css/ops-shell.css', ['material-symbols'], SLATE_OPS_VERSION);
+  wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', ['slate-ops-shell'], SLATE_OPS_VERSION);
   wp_enqueue_script('slate-ops', SLATE_OPS_URL . 'assets/js/ops.js', [], SLATE_OPS_VERSION, true);
+  // Phase 0 scheduler helpers (bulk save, tech-assign in modal).
+  wp_enqueue_script('slate-ops-scheduler-p0', SLATE_OPS_URL . 'assets/js/scheduler-phase0.js', ['slate-ops'], SLATE_OPS_VERSION, true);
 
   wp_localize_script('slate-ops', 'slateOpsSettings', [
     'restRoot' => esc_url_raw(rest_url('slate-ops/v1')),
