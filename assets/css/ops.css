@@ -340,6 +340,53 @@ textarea{min-height:90px;}
 }
 .count-badge.urgent{background:var(--arches);}
 
+/* ─── Customer Service page refresh ─────────────────────── */
+.cs-shell{display:flex;flex-direction:column;gap:12px;}
+.cs-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:stretch;
+}
+.cs-hero-main,
+.cs-kpi,
+.cs-block,
+.cs-search{
+  background:#efefef;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,.12);
+}
+.cs-hero-main{padding:18px 22px;}
+.cs-hero-main h2{
+  margin:0;
+  color:#40534a;
+  font-size:48px;
+  line-height:1;
+  text-transform:uppercase;
+  letter-spacing:.01em;
+}
+.cs-hero-main .muted{font-size:16px;color:rgba(0,0,0,.8);margin-top:6px;}
+.cs-hero-kpis{display:flex;gap:12px;}
+.cs-kpi{min-width:140px;padding:14px 18px;text-align:center;}
+.cs-kpi .kpi-label{color:rgba(0,0,0,.85);letter-spacing:.06em;font-size:12px;}
+.cs-kpi .kpi-value{font-size:54px;line-height:1;color:#000;margin-top:4px;}
+.cs-search.card,.cs-block.card{margin-bottom:0;padding:16px 18px;}
+.cs-block-title{
+  font-size:46px;
+  line-height:1;
+  text-transform:uppercase;
+  color:#40534a;
+  font-weight:800;
+  margin:2px 0 14px;
+}
+
+@media (max-width: 980px){
+  .cs-hero{grid-template-columns:1fr;}
+  .cs-kpi{flex:1;}
+  .cs-hero-main h2,.cs-block-title{font-size:34px;}
+}
+
 /* ─── Role helpers ───────────────────────────────────────── */
 .small-btn{padding:6px 11px;font-size:12px;border-radius:6px;}
 .kpi-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:rgba(0,0,0,.50);}

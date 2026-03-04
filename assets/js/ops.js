@@ -1173,79 +1173,76 @@ async function loadCS() {
   });
 
   view(`
-    <div class="card">
-      <div class="row" style="align-items:flex-start;gap:16px;">
-        <div style="flex:1 1 360px;">
-          <h2 style="margin:0;">Customer Service</h2>
-          <div class="muted" style="margin-top:4px;">Complete intake, assign SO#s, and keep jobs moving.</div>
+    <div class="cs-shell">
+      <div class="cs-hero">
+        <div class="cs-hero-main">
+          <h2>Customer Service</h2>
+          <div class="muted">Complete intake, assign SO#s, and create jobs.</div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-          ${kpi('Pending Intake', portalNeeds.length)}
-          ${kpi('Needs SO#', manualNeeds.length)}
-          ${kpi('Active Jobs', activeJobs.length)}
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="row" style="gap:10px;align-items:center;">
-        <input id="cs-search" class="input" type="text" placeholder="Search SO#, VIN, customer, dealer..." style="flex:1;min-width:260px;" />
-        <button type="button" class="btn secondary" id="cs-search-clear">Clear</button>
-      </div>
-      <div class="muted" style="margin-top:8px;" id="cs-search-count"></div>
-    </div>
-
-    <div class="card" id="intake-panel" style="display:none;margin-top:12px;">
-      <div id="intake-form-content"></div>
-    </div>
-
-    <div class="row" style="gap:12px;align-items:stretch;flex-wrap:wrap;margin-top:12px;">
-      <div class="card" style="flex:1 1 420px;">
-        <div class="row" style="justify-content:space-between;align-items:center;">
-          <div>
-            <div style="font-weight:800;">Recent Intake</div>
-            <div class="muted" style="margin-top:2px;">Portal jobs waiting on intake.</div>
+        <div class="cs-hero-kpis">
+          <div class="cs-kpi">
+            <div class="kpi-label">Pending Intake</div>
+            <div class="kpi-value">${portalNeeds.length}</div>
           </div>
-          ${portalNeeds.length ? `<span class="count-badge urgent">${portalNeeds.length}</span>` : ``}
-        </div>
-        <div style="margin-top:10px;">
-          ${(portalNeeds.slice(0,6).map(j => `
-            <div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);">
-              <div style="font-weight:700;">${escapeHtml(j.customer_name||'—')}</div>
-              <div class="muted" style="margin-top:2px;">Dealer: ${escapeHtml(j.dealer_name||'—')} • VIN: <span class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</span></div>
-              <div style="margin-top:8px;display:flex;gap:8px;">
-                <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
-                <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
-              </div>
-            </div>
-          `).join('')) || `<div class="muted" style="padding:10px 0;">No portal jobs pending intake.</div>`}
-        </div>
-      </div>
-
-      <div class="card" style="flex:1 1 420px;">
-        <div class="row" style="justify-content:space-between;align-items:center;">
-          <div>
-            <div style="font-weight:800;">Active Jobs</div>
-            <div class="muted" style="margin-top:2px;">Quick visibility for updates.</div>
+          <div class="cs-kpi">
+            <div class="kpi-label">Needs SO#</div>
+            <div class="kpi-value">${manualNeeds.length}</div>
           </div>
-          ${activeJobs.length ? `<span class="count-badge">${activeJobs.length}</span>` : ``}
-        </div>
-        <div style="margin-top:10px;">
-          ${(activeJobs.slice(0,6).map(j => `
-            <div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);">
-              <div style="font-weight:700;">SO# <span class="mono">${escapeHtml(j.so_number||'—')}</span> • ${escapeHtml(j.customer_name||'—')}</div>
-              <div class="muted" style="margin-top:2px;">Status: ${fmtStatus(j.status)} • Tech: ${escapeHtml(j.assigned_name||'—')}</div>
-              <div style="margin-top:8px;">
-                <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
-              </div>
-            </div>
-          `).join('')) || `<div class="muted" style="padding:10px 0;">No active jobs.</div>`}
         </div>
       </div>
-    </div>
 
-    ${(isCS || isAdmin) ? `
-    <div class="card" style="margin-top:12px;">
+      <div class="cs-search card">
+        <div class="row" style="gap:10px;align-items:center;">
+          <input id="cs-search" class="input" type="text" placeholder="Search SO#, VIN, customer, dealer..." style="flex:1;min-width:260px;" />
+          <button type="button" class="btn secondary" id="cs-search-clear">Clear</button>
+        </div>
+        <div class="muted" style="margin-top:8px;" id="cs-search-count"></div>
+      </div>
+
+      <div class="card" id="intake-panel" style="display:none;">
+        <div id="intake-form-content"></div>
+      </div>
+
+      <div class="card cs-block">
+        <div class="cs-block-title">Pending Intake — Portal Jobs</div>
+        <table class="table" data-cs-table="1">
+          <thead><tr><th>Customer</th><th>VIN</th><th>Dealer</th><th></th></tr></thead>
+          <tbody>
+            ${portalNeeds.map(j=>`
+              <tr data-id="${j.job_id}">
+                <td>${escapeHtml(j.customer_name||'—')}</td>
+                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
+                <td>${escapeHtml(j.dealer_name||'—')}</td>
+                <td>
+                  <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
+                  <button class="btn secondary small-btn" data-open-job="${j.job_id}" style="margin-left:4px;">View</button>
+                </td>
+              </tr>
+            `).join('') || `<tr><td colspan="4" class="muted" style="padding:10px;">No portal jobs pending intake.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card cs-block">
+        <div class="cs-block-title">Needs SO# — Manual Jobs</div>
+        <table class="table" data-cs-table="1">
+          <thead><tr><th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th></tr></thead>
+          <tbody>
+            ${manualNeeds.map(j=>`
+              <tr data-id="${j.job_id}">
+                <td>${escapeHtml(j.customer_name||'')}</td>
+                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
+                <td>${escapeHtml(j.dealer_name||'')}</td>
+                <td><input class="input so" placeholder="S-ORD101350" /></td>
+                <td><button class="btn small-btn save-so">Save</button></td>
+              </tr>
+            `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">All manual jobs have SO#s.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+
+      ${(isCS || isAdmin) ? `
+      <div class="card" style="margin-top:12px;">
       <button class="section-header" data-collapse="manual">
         <span class="collapse-title">Create Manual Job</span>
         <span class="collapse-chevron">▾</span>
@@ -1283,9 +1280,9 @@ async function loadCS() {
         </form>
       </div>
     </div>
-    ` : ``}
+      ` : ``}
 
-    <div class="card" style="margin-top:12px;">
+      <div class="card" style="margin-top:12px;">
       <div class="row" style="justify-content:space-between;align-items:center;">
         <div>
           <div style="font-weight:800;">Work Queue</div>
@@ -1322,61 +1319,7 @@ async function loadCS() {
       </div>
     </div>
 
-    <div class="card" style="margin-top:12px;">
-      <button class="section-header" data-collapse="intake">
-        <span class="collapse-title">Pending Intake - Portal Jobs</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${portalNeeds.length ? `<span class="count-badge urgent">${portalNeeds.length}</span>` : ''}
-          <span class="collapse-chevron">${portalNeeds.length ? '▾' : '▸'}</span>
-        </div>
-      </button>
-      <div class="collapse-body" id="collapse-intake" ${!portalNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table" data-cs-table="1">
-          <thead><tr><th>Customer</th><th>VIN</th><th>Dealer</th><th></th></tr></thead>
-          <tbody>
-            ${portalNeeds.map(j=>`
-              <tr data-id="${j.job_id}">
-                <td>${escapeHtml(j.customer_name||'—')}</td>
-                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
-                <td>${escapeHtml(j.dealer_name||'—')}</td>
-                <td>
-                  <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
-                  <button class="btn secondary small-btn" data-open-job="${j.job_id}" style="margin-left:4px;">View</button>
-                </td>
-              </tr>
-            `).join('') || `<tr><td colspan="4" class="muted" style="padding:10px;">No portal jobs pending intake.</td></tr>`}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <button class="section-header" data-collapse="so">
-        <span class="collapse-title">Needs SO# - Manual Jobs</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${manualNeeds.length ? `<span class="count-badge">${manualNeeds.length}</span>` : ''}
-          <span class="collapse-chevron">${manualNeeds.length ? '▾' : '▸'}</span>
-        </div>
-      </button>
-      <div class="collapse-body" id="collapse-so" ${!manualNeeds.length ? 'style="display:none;"' : ''}>
-        <table class="table" data-cs-table="1">
-          <thead><tr><th>Customer</th><th>VIN</th><th>Dealer</th><th>SO#</th><th></th></tr></thead>
-          <tbody>
-            ${manualNeeds.map(j=>`
-              <tr data-id="${j.job_id}">
-                <td>${escapeHtml(j.customer_name||'')}</td>
-                <td class="mono">${escapeHtml((j.vin||j.vin_last8||'').slice(-6)||'—')}</td>
-                <td>${escapeHtml(j.dealer_name||'')}</td>
-                <td><input class="input so" placeholder="S-ORD101350" /></td>
-                <td><button class="btn small-btn save-so">Save</button></td>
-              </tr>
-            `).join('') || `<tr><td colspan="5" class="muted" style="padding:10px;">All manual jobs have SO#s.</td></tr>`}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
+      <div class="card" style="margin-top:12px;">
       <button class="section-header" data-collapse="active">
         <span class="collapse-title">Active Jobs</span>
         <div style="display:flex;align-items:center;gap:8px;">
