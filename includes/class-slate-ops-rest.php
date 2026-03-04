@@ -135,6 +135,13 @@ class Slate_Ops_REST {
         'id' => ['validate_callback' => function($v){ return is_numeric($v); }],
       ],
     ]);
+
+    // Phase 0: bulk schedule update — saves [{job_id, scheduled_start, scheduled_finish, assigned_user_id, work_center}]
+    register_rest_route('slate-ops/v1', '/schedule/bulk', [
+      'methods'             => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback'            => [__CLASS__, 'bulk_schedule'],
+    ]);
   }
 
   // Permissions
@@ -1378,5 +1385,114 @@ self::maybe_push_dealer_portal_status($job);
     );
 
     return rest_ensure_response(['activity' => $rows ?: []]);
+  }
+
+  /**
+   * POST /slate-ops/v1/schedule/bulk
+   *
+   * Accepts a JSON body: { updates: [ {job_id, scheduled_start, scheduled_finish, assigned_user_id, work_center}, … ] }
+   * All fields except job_id are optional — only non-null values are written.
+   * Each update is applied to wp_slate_ops_jobs and an activity-log entry is written.
+   * Returns { saved: [job_id, …], errors: [{job_id, message}, …] }.
+   */
+  public static function bulk_schedule( WP_REST_Request $req ) {
+    global $wpdb;
+
+    $body    = $req->get_json_params() ?: [];
+    $updates = isset($body['updates']) && is_array($body['updates']) ? $body['updates'] : [];
+
+    if (empty($updates)) {
+      return new WP_Error('bad_request', 'No updates provided.', ['status' => 400]);
+    }
+
+    if (count($updates) > 200) {
+      return new WP_Error('too_many', 'Maximum 200 updates per request.', ['status' => 400]);
+    }
+
+    $t_jobs = $wpdb->prefix . 'slate_ops_jobs';
+    $now    = Slate_Ops_Utils::now_gmt();
+    $uid    = get_current_user_id();
+
+    $saved  = [];
+    $errors = [];
+
+    foreach ($updates as $item) {
+      $job_id = isset($item['job_id']) ? (int) $item['job_id'] : 0;
+      if ($job_id <= 0) {
+        $errors[] = ['job_id' => 0, 'message' => 'Missing job_id'];
+        continue;
+      }
+
+      // Verify the job exists.
+      $exists = $wpdb->get_var( $wpdb->prepare( "SELECT job_id FROM $t_jobs WHERE job_id=%d", $job_id ) );
+      if (!$exists) {
+        $errors[] = ['job_id' => $job_id, 'message' => 'Job not found'];
+        continue;
+      }
+
+      $update = ['updated_at' => $now];
+      $changes = [];
+
+      if (isset($item['scheduled_start']) && $item['scheduled_start'] !== null) {
+        $v = sanitize_text_field($item['scheduled_start']);
+        $update['scheduled_start'] = $v ?: null;
+        $changes['scheduled_start'] = $v ?: null;
+      }
+      if (isset($item['scheduled_finish']) && $item['scheduled_finish'] !== null) {
+        $v = sanitize_text_field($item['scheduled_finish']);
+        $update['scheduled_finish'] = $v ?: null;
+        $changes['scheduled_finish'] = $v ?: null;
+      }
+      if (isset($item['assigned_user_id'])) {
+        $v = $item['assigned_user_id'] ? (int) $item['assigned_user_id'] : null;
+        $update['assigned_user_id'] = $v;
+        $changes['assigned_user_id'] = $v;
+      }
+      if (isset($item['work_center'])) {
+        $v = sanitize_text_field($item['work_center'] ?? '');
+        $update['work_center'] = $v ?: null;
+        $changes['work_center'] = $v ?: null;
+      }
+      if (isset($item['estimated_minutes'])) {
+        $v = max(0, (int) $item['estimated_minutes']);
+        $update['estimated_minutes'] = $v ?: null;
+        $changes['estimated_minutes'] = $v ?: null;
+      }
+
+      // If the job is unscheduled/ready and we are setting dates, promote status.
+      if (!empty($changes['scheduled_start'])) {
+        $cur_status = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM $t_jobs WHERE job_id=%d", $job_id ) );
+        if (in_array(strtoupper((string)$cur_status), ['UNSCHEDULED','READY_FOR_SCHEDULING'], true)) {
+          $update['status'] = 'SCHEDULED';
+          $update['status_updated_at'] = $now;
+          $changes['status'] = 'SCHEDULED';
+        }
+      }
+
+      $result = $wpdb->update($t_jobs, $update, ['job_id' => $job_id]);
+
+      if ($result === false) {
+        $errors[] = ['job_id' => $job_id, 'message' => $wpdb->last_error ?: 'DB error'];
+        continue;
+      }
+
+      // Append activity log entry.
+      self::audit(
+        'job',
+        $job_id,
+        'update',
+        'bulk_schedule',
+        null,
+        wp_json_encode($changes),
+        'Bulk schedule update'
+      );
+
+      $saved[] = $job_id;
+    }
+
+    return rest_ensure_response([
+      'saved'  => $saved,
+      'errors' => $errors,
+    ]);
   }
 }

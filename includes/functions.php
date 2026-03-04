@@ -1,4 +1,20 @@
 /**
+ * Returns the running plugin version.
+ *
+ * Reads VERSION.txt from the plugin root when present so a deploy script can
+ * bump the file without editing PHP headers. Falls back to the constant that
+ * slate-ops.php defines from the plugin header.
+ */
+function slate_ops_get_version() {
+  $file = defined('SLATE_OPS_PATH') ? SLATE_OPS_PATH . 'VERSION.txt' : '';
+  if ($file && file_exists($file)) {
+    $v = trim(file_get_contents($file));
+    if ($v !== '') return $v;
+  }
+  return defined('SLATE_OPS_VERSION') ? SLATE_OPS_VERSION : '0.0.0';
+}
+
+/**
  * Register the Sovereign ERP API
  * This enables the staging path for the Revised Monitor
  */
