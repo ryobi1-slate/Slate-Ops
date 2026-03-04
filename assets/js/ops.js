@@ -229,8 +229,7 @@
     const caps = slateOpsSettings.user.caps || {};
     const isSupervisor = !!caps.supervisor || !!caps.admin;
     const isCS = !!caps.cs || !!caps.admin;
-    const csOnly = !!caps.cs && !caps.supervisor && !caps.admin;
-    const canEdit = isSupervisor || isCS || isAdmin;// CS/Admin need to edit job details during Phase 0 manual intake
+    const canEdit = isSupervisor || isCS || isAdmin;
 
     const t = job.time || {approved_minutes_total:0, pending_minutes_total:0, by_tech:[]};
     const estHrs = job.estimated_minutes ? (job.estimated_minutes / 60) : 0;
@@ -249,185 +248,126 @@
     };
 
     view(`
-      <div class="card">
+      <!-- Job header (always visible) -->
+      <div class="card job-detail-header">
         <div class="row" style="align-items:flex-start;margin-bottom:14px;">
           <div style="flex:1;">
-            <h2 style="margin:0 0 4px;">${escapeHtml(job.so_number || 'No SO#')}</h2>
+            <div class="job-detail-so">${escapeHtml(job.so_number || 'No SO#')}</div>
             <div class="muted">${escapeHtml(job.customer_name || '')}${job.dealer_name ? ' &middot; ' + escapeHtml(job.dealer_name) : ''}</div>
           </div>
-          <span class="badge ${badgeClass(job.status)}">${fmtStatus(job.status)}</span>
-        </div>
-
-        <div class="row">
-          <div class="kpi">
-            <div class="label">Estimate</div>
-            <div class="value">${estHrs ? estHrs.toFixed(1) : '—'} hrs</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Actual Approved</div>
-            <div class="value">${minutesToHours(t.approved_minutes_total)} hrs</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Pending</div>
-            <div class="value">${minutesToHours(t.pending_minutes_total)} hrs</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Variance</div>
-            <div class="value">${estHrs ? (Math.round(varHrs*10)/10).toFixed(1) : '—'} hrs</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            ${hasHold?`<span class="badge badge-hold">${partsHold?'Parts Hold':'Approval Hold'}</span>`:''}
+            <span class="badge ${badgeClass(job.status)}">${fmtStatus(job.status)}</span>
           </div>
         </div>
-
-        <div class="form-grid" style="margin-top:14px;">
-          <div>
-            <div class="label" style="margin-bottom:4px;">VIN</div>
-            <div class="mono">${escapeHtml(job.vin || '—')}</div>
-          </div>
-          <div>
-            <div class="label" style="margin-bottom:4px;">Job Type</div>
-            <div>${escapeHtml(jobTypeLabel[job.job_type] || job.job_type || '—')}</div>
-          </div>
-          <div>
-            <div class="label" style="margin-bottom:4px;">Parts Status</div>
-            <div>${escapeHtml(partsLabel[job.parts_status] || job.parts_status || '—')}</div>
-          </div>
-          <div>
-            <div class="label" style="margin-bottom:4px;">Requested Date</div>
-            <div>${escapeHtml(job.requested_date || '—')}</div>
-          </div>
-          <div>
-            <div class="label" style="margin-bottom:4px;">Assigned Tech</div>
-            <div>${escapeHtml(job.assigned_name || '—')}</div>
-          </div>
-          <div>
-            <div class="label" style="margin-bottom:4px;">Scheduled</div>
-            <div>${escapeHtml(job.scheduled_start || '—')} &rarr; ${escapeHtml(job.scheduled_finish || '—')}</div>
-          </div>
-        </div>
-
-        ${job.notes ? `
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);">
-            <div class="label" style="margin-bottom:4px;">Notes</div>
-            <div style="white-space:pre-wrap;">${escapeHtml(job.notes)}</div>
-          </div>
-        ` : ''}
-
-        <div class="row" style="margin-top:14px;">
-          <button class="btn" id="start-btn">Start</button>
-          <button class="btn secondary" id="stop-btn">Stop</button>
-          <button class="btn secondary" id="fix-btn">Fix Time</button>
-          ${isCS ? `<button class="btn secondary" id="so-btn">Set SO#</button>` : ``}
-          ${isSupervisor ? `<button class="btn secondary" id="qc-btn">QC Approve</button>` : ``}
-          ${canEdit ? `<button class="btn secondary" id="edit-btn">Edit Job</button>` : ``}
+        <div class="job-detail-kpis">
+          <div class="kpi"><div class="label">Estimate</div><div class="value">${estHrs ? estHrs.toFixed(1) : '—'} hrs</div></div>
+          <div class="kpi"><div class="label">Actual</div><div class="value">${minutesToHours(t.approved_minutes_total)} hrs</div></div>
+          <div class="kpi"><div class="label">Pending</div><div class="value">${minutesToHours(t.pending_minutes_total)} hrs</div></div>
+          <div class="kpi"><div class="label">Variance</div><div class="value${estHrs&&varHrs>0?' kpi-over':''}">${estHrs ? (Math.round(varHrs*10)/10).toFixed(1) : '—'} hrs</div></div>
         </div>
       </div>
 
-      ${canEdit ? `
-      <div class="card" id="edit-panel" style="display:none;">
-        <div id="edit-form-content"></div>
-      </div>
-      ` : ''}
-
-      <div class="card">
-        <h2>Time Breakdown</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Tech</th>
-              <th>Approved</th>
-              <th>Pending</th>
-              <th>Segments</th>
-              <th>Last Activity</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(t.by_tech||[]).map(r => `
-              <tr>
-                <td>${escapeHtml(r.user_name || '')}</td>
-                <td>${minutesToHours(r.approved_minutes)} hrs</td>
-                <td>${minutesToHours(r.pending_minutes)} hrs</td>
-                <td>${r.segment_count}</td>
-                <td>${r.last_activity || ''}</td>
-              </tr>
-            `).join('') || `<tr><td colspan="5">No time logged yet.</td></tr>`}
-          </tbody>
-        </table>
+      <!-- Tab navigation -->
+      <div class="job-tabs">
+        <button class="job-tab active" data-tab="summary">Summary</button>
+        <button class="job-tab" data-tab="time">Time</button>
+        <button class="job-tab" data-tab="blockers">Blockers${hasHold?' <span class="job-tab-badge">!</span>':''}</button>
+        <button class="job-tab" data-tab="activity">Activity${actLog.length?\` <span class="job-tab-badge">${actLog.length}</span>\`:''}</button>
       </div>
 
-      <div class="card">
-        <h2>Notes</h2>
-        ${notesLog.length === 0 ? `<div class="muted">No notes yet.</div>` : `
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            ${notesLog.map(n => `
-              <div class="note-bubble">
-                <div class="meta">
-                  <span class="author">${escapeHtml(n.user_name || '')}</span>
-                  <span>${escapeHtml(n.created_at || '')}</span>
-                </div>
-                <div class="body">${escapeHtml(n.note || '')}</div>
-              </div>
-            `).join('')}
+      <!-- Tab: Summary -->
+      <div class="job-tab-panel" id="tab-summary">
+        <div class="card">
+          <div class="form-grid" style="margin-bottom:14px;">
+            <div><div class="label">VIN</div><div class="mono" style="margin-top:4px;">${escapeHtml(job.vin || '—')}</div></div>
+            <div><div class="label">Job Type</div><div style="margin-top:4px;">${escapeHtml(jobTypeLabel[job.job_type] || job.job_type || '—')}</div></div>
+            <div><div class="label">Parts Status</div><div style="margin-top:4px;">${escapeHtml(partsLabel[job.parts_status] || job.parts_status || '—')}</div></div>
+            <div><div class="label">Promised Date</div><div style="margin-top:4px;">${escapeHtml(job.requested_date || '—')}</div></div>
+            <div><div class="label">Assigned Tech</div><div style="margin-top:4px;">${escapeHtml(job.assigned_name || '—')}</div></div>
+            <div><div class="label">Scheduled</div><div style="margin-top:4px;">${escapeHtml((job.scheduled_start||'—').split(' ')[0])} &rarr; ${escapeHtml((job.scheduled_finish||'—').split(' ')[0])}</div></div>
           </div>
-        `}
-        ${canEdit ? `
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);">
-            <div class="label" style="margin-bottom:6px;">Add Note</div>
-            <textarea class="input" id="new-note" rows="3" placeholder="Internal note…"></textarea>
-            <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
-              <button class="btn secondary" id="add-note-btn">Add Note</button>
-              <div class="field-error" data-error-for="note" style="flex:1;"></div>
+          ${job.notes ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);"><div class="label" style="margin-bottom:4px;">Notes</div><div style="white-space:pre-wrap;">${escapeHtml(job.notes)}</div></div>` : ''}
+          <div class="row" style="margin-top:16px;flex-wrap:wrap;gap:8px;">
+            ${isCS ? `<button class="btn secondary" id="so-btn">Set SO#</button>` : ``}
+            ${isSupervisor ? `<button class="btn secondary" id="qc-btn">QC Approve</button>` : ``}
+            ${canEdit ? `<button class="btn secondary" id="edit-btn">Edit Job</button>` : ``}
+          </div>
+        </div>
+        ${canEdit ? `<div class="card" id="edit-panel" style="display:none;"><div id="edit-form-content"></div></div>` : ''}
+        <div class="card">
+          <h2>Notes</h2>
+          ${notesLog.length === 0 ? `<div class="muted">No notes yet.</div>` : `<div style="display:flex;flex-direction:column;gap:8px;">${notesLog.map(n => `<div class="note-bubble"><div class="meta"><span class="author">${escapeHtml(n.user_name || '')}</span><span>${escapeHtml(n.created_at || '')}</span></div><div class="body">${escapeHtml(n.note || '')}</div></div>`).join('')}</div>`}
+          ${canEdit ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);"><div class="label" style="margin-bottom:6px;">Add Note</div><textarea class="input" id="new-note" rows="3" placeholder="Internal note…"></textarea><div style="margin-top:8px;display:flex;align-items:center;gap:10px;"><button class="btn secondary" id="add-note-btn">Add Note</button><div class="field-error" data-error-for="note" style="flex:1;"></div></div></div>` : ``}
+        </div>
+      </div>
+
+      <!-- Tab: Time -->
+      <div class="job-tab-panel" id="tab-time" style="display:none;">
+        <div class="card">
+          <h2 style="margin-top:0;">Time Tracking</h2>
+          <div class="row" style="margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+            <button class="btn" id="start-btn">▶ Start Timer</button>
+            <button class="btn secondary" id="stop-btn">■ Stop Timer</button>
+            <button class="btn secondary" id="fix-btn">Fix Time Entry</button>
+          </div>
+          <table class="table"><thead><tr><th>Tech</th><th>Approved</th><th>Pending</th><th>Segments</th><th>Last Activity</th></tr></thead>
+            <tbody>${(t.by_tech||[]).map(r=>`<tr><td>${escapeHtml(r.user_name||'')} </td><td>${minutesToHours(r.approved_minutes)} hrs</td><td>${minutesToHours(r.pending_minutes)} hrs</td><td>${r.segment_count}</td><td style="font-size:12px;">${r.last_activity||''}</td></tr>`).join('')||`<tr><td colspan="5" class="muted" style="padding:10px 0;">No time logged yet.</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Blockers -->
+      <div class="job-tab-panel" id="tab-blockers" style="display:none;">
+        <div class="card">
+          <h2 style="margin-top:0;">Blockers</h2>
+          ${canEdit ? `
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+              <button class="btn${partsHold ? ' btn-hold-active' : ' secondary'}" id="parts-hold-btn">${partsHold ? '● ' : ''}Parts Hold</button>
+              <button class="btn${approvalHold ? ' btn-hold-active' : ' secondary'}" id="approval-hold-btn">${approvalHold ? '● ' : ''}Approval Hold</button>
+              ${hasHold ? `<button class="btn secondary" id="clear-hold-btn">Clear Hold</button>` : ''}
             </div>
-          </div>
-        ` : ``}
-      </div>
-
-      ${canEdit ? `
-      <div class="card" id="blockers-card" style="margin-top:16px;">
-        <h2 style="margin-top:0;">Blockers</h2>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="btn${partsHold ? ' btn-hold-active' : ' secondary'}" id="parts-hold-btn">
-            ${partsHold ? '● ' : ''}Parts Hold
-          </button>
-          <button class="btn${approvalHold ? ' btn-hold-active' : ' secondary'}" id="approval-hold-btn">
-            ${approvalHold ? '● ' : ''}Approval Hold
-          </button>
-          ${hasHold ? `<button class="btn secondary" id="clear-hold-btn">Clear Hold</button>` : ''}
-        </div>
-        <div id="blocker-note-area"${hasHold ? '' : ' style="display:none;"'}>
-          <div class="label" style="margin-bottom:6px;">Hold Note</div>
-          <textarea class="input" id="blocker-note" rows="2" placeholder="Reason for hold…">${escapeHtml(job.delay_reason_note || '')}</textarea>
-          <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
-            <button class="btn" id="save-hold-note">Save Note</button>
-            <div class="field-error" data-error-for="hold-note" style="flex:1;"></div>
-          </div>
+            <div id="blocker-note-area"${hasHold ? '' : ' style="display:none;"'}>
+              <div class="label" style="margin-bottom:6px;">Hold Note</div>
+              <textarea class="input" id="blocker-note" rows="2" placeholder="Reason for hold…">${escapeHtml(job.status_detail||'')} </textarea>
+              <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
+                <button class="btn" id="save-hold-note">Save Note</button>
+                <div class="field-error" data-error-for="hold-note" style="flex:1;"></div>
+              </div>
+            </div>
+          ` : `${hasHold?`<div class="dash-alert dash-alert-warn">${partsHold?'⚠ Parts Hold active':'⚠ Approval Hold active'}</div>`:`<div class="muted">No blockers active.</div>`}`}
         </div>
       </div>
-      ` : ''}
 
-      <div class="card" id="activity-card" style="margin-top:16px;">
-        <h2 style="margin-top:0;">Activity Log</h2>
-        ${actLog.length === 0
-          ? '<div style="color:rgba(0,0,0,0.4);font-size:14px;">No activity recorded yet.</div>'
-          : `<table class="table activity-log-table" style="width:100%;font-size:13px;">
-              <thead><tr>
-                <th>When</th><th>Who</th><th>Action</th><th>Detail</th>
-              </tr></thead>
-              <tbody>
-                ${actLog.map(a => `
-                  <tr>
-                    <td style="white-space:nowrap;font-size:11px;color:rgba(0,0,0,0.45);">${escapeHtml(a.created_at || '')}</td>
-                    <td style="font-weight:600;">${escapeHtml(a.user_name || 'System')}</td>
-                    <td><span class="badge scheduled" style="font-size:11px;">${escapeHtml(a.action || '')}</span></td>
-                    <td style="font-size:12px;">${a.field_name ? '<strong>' + escapeHtml(a.field_name) + '</strong>: ' : ''}${a.old_value ? escapeHtml(String(a.old_value)) + ' \u2192 ' : ''}${escapeHtml(String(a.new_value || a.note || ''))}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>`
-        }
+      <!-- Tab: Activity -->
+      <div class="job-tab-panel" id="tab-activity" style="display:none;">
+        <div class="card">
+          <h2 style="margin-top:0;">Activity Log</h2>
+          ${actLog.length===0 ? '<div class="muted">No activity recorded yet.</div>' : `<div style="overflow-x:auto;"><table class="table" style="width:100%;font-size:13px;"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead><tbody>${actLog.map(a=>`<tr><td style="white-space:nowrap;font-size:11px;color:rgba(0,0,0,0.45);">${escapeHtml(a.created_at||'')} </td><td style="font-weight:600;">${escapeHtml(a.user_name||'System')}</td><td><span class="badge scheduled" style="font-size:11px;">${escapeHtml(a.action||'')} </span></td><td style="font-size:12px;">${a.field_name?'<strong>'+escapeHtml(a.field_name)+'</strong>: ':''} ${a.old_value?escapeHtml(String(a.old_value))+' \u2192 ':''} ${escapeHtml(String(a.new_value||a.note||''))}</td></tr>`).join('')}</tbody></table></div>`}
+        </div>
       </div>
     `);
 
-    // Start/Stop
-    $('#start-btn').onclick = async () => {
+    // Tab switching
+    $$('.job-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const tabName = btn.getAttribute('data-tab');
+        $$('.job-tab').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        $$('.job-tab-panel').forEach(p=>p.style.display='none');
+        const panel = document.getElementById('tab-'+tabName);
+        if(panel) panel.style.display='';
+      });
+    });
+
+    // If there is a hold, auto-open the Blockers tab
+    if(hasHold){
+      const bTab = document.querySelector('.job-tab[data-tab="blockers"]');
+      if(bTab) bTab.click();
+    }
+
+    const startBtn = document.getElementById('start-btn');
+    if(startBtn) startBtn.onclick = async () => {
       try{
         let reason = null, note = '';
         const assigned = parseInt(job.assigned_user_id || 0, 10);
@@ -435,142 +375,82 @@
         if (assigned && assigned !== me){
           const picked = promptReason();
           if(!picked) return;
-          reason = picked.reason;
-          note = picked.note;
+          reason = picked.reason; note = picked.note;
         }
         await api.timeStart(job.job_id, reason, note);
         window.history.replaceState({}, '', '/ops/job/' + job.job_id);
         router();
-      }catch(e){
-        alert(e.message);
-      }
+      }catch(e){ alert(e.message); }
     };
 
-    $('#stop-btn').onclick = async () => {
-      try{
-        await api.timeStop();
-        router();
-      }catch(e){
-        alert(e.message);
-      }
+    const stopBtn = document.getElementById('stop-btn');
+    if(stopBtn) stopBtn.onclick = async ()=>{ try{ await api.timeStop(); router(); }catch(e){ alert(e.message); } };
+
+    const fixBtn = document.getElementById('fix-btn');
+    if(fixBtn) fixBtn.onclick = async ()=>{
+      const start = prompt('Start (YYYY-MM-DD HH:MM:SS)', ''); if(!start) return;
+      const end   = prompt('End (YYYY-MM-DD HH:MM:SS)', '');   if(!end) return;
+      const note  = prompt('Reason (required)', '');            if(!note) return;
+      try{ await api.correction({job_id:job.job_id,start_ts:start,end_ts:end,note}); alert('Submitted for supervisor review.'); router(); }catch(e){ alert(e.message); }
     };
 
-    // Fix time
-    $('#fix-btn').onclick = async () => {
-      const start = prompt('Start (YYYY-MM-DD HH:MM:SS)', '');
-      if(!start) return;
-      const end = prompt('End (YYYY-MM-DD HH:MM:SS)', '');
-      if(!end) return;
-      const note = prompt('Reason (required)', '');
-      if(!note) return;
-      try{
-        await api.correction({job_id: job.job_id, start_ts: start, end_ts: end, note});
-        alert('Submitted for supervisor review.');
-        router();
-      }catch(e){
-        alert(e.message);
-      }
+    const soBtn = document.getElementById('so-btn');
+    if(soBtn) soBtn.onclick = async ()=>{
+      const so = prompt('Enter SO# (S-ORD######)', job.so_number || ''); if(!so) return;
+      try{ await api.setSO(job.job_id, so); router(); }catch(e){ alert(e.message); }
     };
 
-    if ($('#so-btn')) {
-      $('#so-btn').onclick = async () => {
-        const so = prompt('Enter SO# (S-ORD######)', job.so_number || '');
-        if(!so) return;
-        try{
-          await api.setSO(job.job_id, so);
-          router();
-        }catch(e){
-          alert(e.message);
-        }
-      };
-    }
+    const qcBtn = document.getElementById('qc-btn');
+    if(qcBtn) qcBtn.onclick = async ()=>{
+      if(!confirm('QC Approve and mark Complete?')) return;
+      try{ await api.setStatus(job.job_id, 'COMPLETE', 'QC approved'); router(); }catch(e){ alert(e.message); }
+    };
 
-    if ($('#qc-btn')) {
-      $('#qc-btn').onclick = async () => {
-        if(!confirm('QC Approve and mark Complete?')) return;
-        try{
-          await api.setStatus(job.job_id, 'COMPLETE', 'QC approved');
-          router();
-        }catch(e){
-          alert(e.message);
-        }
-      };
-    }
+    const editBtn = document.getElementById('edit-btn');
+    if(editBtn) editBtn.onclick = ()=>{
+      const panel = document.getElementById('edit-panel');
+      if(!panel) return;
+      if(panel.style.display==='none'){ panel.style.display=''; renderEditForm(document.getElementById('edit-form-content'), job, isSupervisor, settingsResp, usersResp.users||[]); panel.scrollIntoView({behavior:'smooth',block:'start'}); }
+      else { panel.style.display='none'; }
+    };
 
-    if ($('#edit-btn')) {
-      $('#edit-btn').onclick = () => {
-        const panel = $('#edit-panel');
-        if (panel.style.display === 'none') {
-          panel.style.display = '';
-          renderEditForm($('#edit-form-content'), job, isSupervisor, settingsResp, usersResp.users || []);
-          panel.scrollIntoView({behavior: 'smooth', block: 'start'});
-        } else {
-          panel.style.display = 'none';
-        }
-      };
-    }
+    const addNoteBtn = document.getElementById('add-note-btn');
+    if(addNoteBtn) addNoteBtn.onclick = async ()=>{
+      const noteText = document.getElementById('new-note').value.trim();
+      const errEl = document.querySelector('[data-error-for="note"]');
+      if(errEl) errEl.textContent='';
+      if(!noteText){ if(errEl) errEl.textContent='Note cannot be empty.'; return; }
+      addNoteBtn.disabled=true; addNoteBtn.textContent='Adding…';
+      try{ await api.addNote(job.job_id, noteText); router(); }
+      catch(e){ if(errEl) errEl.textContent=e.message; addNoteBtn.disabled=false; addNoteBtn.textContent='Add Note'; }
+    };
 
-    if ($('#add-note-btn')) {
-      $('#add-note-btn').onclick = async () => {
-        const noteText = $('#new-note').value.trim();
-        const errEl = $('[data-error-for="note"]');
-        errEl.textContent = '';
-        if (!noteText) { errEl.textContent = 'Note cannot be empty.'; return; }
-        const btn = $('#add-note-btn');
-        btn.disabled = true;
-        btn.textContent = 'Adding…';
-        try {
-          await api.addNote(job.job_id, noteText);
-          router();
-        } catch(e) {
-          errEl.textContent = e.message;
-          btn.disabled = false;
-          btn.textContent = 'Add Note';
-        }
-      };
-    }
+    const partsHoldBtn = document.getElementById('parts-hold-btn');
+    if(partsHoldBtn) partsHoldBtn.onclick = async ()=>{
+      if(partsHold){ document.getElementById('blocker-note-area').style.display=''; return; }
+      try{ await api.editJob(job.job_id,{status:'BLOCKED',delay_reason:'parts'}); router(); }catch(e){ alert(e.message); }
+    };
 
-    if ($('#parts-hold-btn')) {
-      $('#parts-hold-btn').onclick = async () => {
-        if (partsHold) { $('#blocker-note-area').style.display = ''; return; }
-        try {
-          await api.editJob(job.job_id, {status: 'BLOCKED', delay_reason: 'parts'});
-          router();
-        } catch(e) { alert(e.message); }
-      };
-    }
+    const apprHoldBtn = document.getElementById('approval-hold-btn');
+    if(apprHoldBtn) apprHoldBtn.onclick = async ()=>{
+      if(approvalHold){ document.getElementById('blocker-note-area').style.display=''; return; }
+      try{ await api.editJob(job.job_id,{status:'BLOCKED',delay_reason:'approval'}); router(); }catch(e){ alert(e.message); }
+    };
 
-    if ($('#approval-hold-btn')) {
-      $('#approval-hold-btn').onclick = async () => {
-        if (approvalHold) { $('#blocker-note-area').style.display = ''; return; }
-        try {
-          await api.editJob(job.job_id, {status: 'BLOCKED', delay_reason: 'approval'});
-          router();
-        } catch(e) { alert(e.message); }
-      };
-    }
+    const clearHoldBtn = document.getElementById('clear-hold-btn');
+    if(clearHoldBtn) clearHoldBtn.onclick = async ()=>{
+      try{ await api.editJob(job.job_id,{status:'SCHEDULED',delay_reason:''}); router(); }catch(e){ alert(e.message); }
+    };
 
-    if ($('#clear-hold-btn')) {
-      $('#clear-hold-btn').onclick = async () => {
-        try {
-          await api.editJob(job.job_id, {status: 'SCHEDULED', delay_reason: ''});
-          router();
-        } catch(e) { alert(e.message); }
-      };
-    }
-
-    if ($('#save-hold-note')) {
-      $('#save-hold-note').onclick = async () => {
-        const note = $('#blocker-note').value.trim();
-        const errEl = $('[data-error-for="hold-note"]');
-        errEl.textContent = '';
-        if (!note) { errEl.textContent = 'Note cannot be empty.'; return; }
-        try {
-          await api.addNote(job.job_id, '[HOLD NOTE] ' + note);
-          router();
-        } catch(e) { errEl.textContent = e.message; }
-      };
-    }
+    const saveHoldNote = document.getElementById('save-hold-note');
+    if(saveHoldNote) saveHoldNote.onclick = async ()=>{
+      const note = document.getElementById('blocker-note').value.trim();
+      const errEl = document.querySelector('[data-error-for="hold-note"]');
+      if(errEl) errEl.textContent='';
+      if(!note){ if(errEl) errEl.textContent='Note cannot be empty.'; return; }
+      try{ await api.addNote(job.job_id, '[HOLD NOTE] '+note); router(); }
+      catch(e){ if(errEl) errEl.textContent=e.message; }
+    };
   }
 
   function renderEditForm(el, job, isSupervisor, settings, users) {
@@ -1851,11 +1731,12 @@ async function loadSchedule(){
         });
         const cards = dayJobs.map(j=>{
           const pri = j.priority && j.priority <= 2;
-          return `<div class="sched-card${pri?' sched-card-priority':''}" draggable="true" data-job-id="${j.job_id}" data-bay="${escapeHtml(bay.name)}">
+          const blocked = j.status==='BLOCKED';
+          return `<div class="sched-card${pri?' sched-card-priority':''}${blocked?' sched-card-blocked':''}" draggable="true" data-job-id="${j.job_id}" data-bay="${escapeHtml(bay.name)}">
             <div class="sched-card-title">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
             <div class="sched-card-so">${escapeHtml(j.so_number||'')}</div>
             <div class="sched-card-meta">${escapeHtml(j.job_type?fmtStatus(j.job_type):'') }${j.assigned_name?' · '+escapeHtml(j.assigned_name):''}</div>
-            ${pri?'<div class="sched-card-flag">PRIORITY</div>':''}
+            ${blocked?'<div class="sched-card-flag sched-card-flag-blocked">HOLD</div>':pri?'<div class="sched-card-flag">PRIORITY</div>':''}
           </div>`;
         }).join('');
         return `<td class="sched-cell${t?' sched-today':''}" data-bay="${escapeHtml(bay.name)}" data-date="${dStr}">${cards}</td>`;
@@ -1865,56 +1746,79 @@ async function loadSchedule(){
 
     const weekLabel = shortDate(dates[0])+' — '+shortDate(dates[6])+', '+dates[6].getFullYear();
 
-    // unscheduled list
-    const unsRows = unscheduled.slice(0,20).map(j=>`
-      <div class="sched-unscheduled-item" draggable="true" data-job-id="${j.job_id}">
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
-          <div class="muted" style="font-size:11px;">${escapeHtml(j.so_number||'')}${j.estimated_minutes?' · '+minutesToHours(j.estimated_minutes)+'h':''}</div>
+    // unscheduled queue items
+    const unsRows = unscheduled.map(j=>{
+      const blocked = j.status==='BLOCKED';
+      const partsHold = j.delay_reason==='parts';
+      return `
+        <div class="sched-queue-item" draggable="true" data-job-id="${j.job_id}">
+          <div class="sched-queue-item-body">
+            <div class="sched-queue-item-title">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
+            <div class="sched-queue-item-meta">${escapeHtml(j.so_number||'')}${j.estimated_minutes?' · '+minutesToHours(j.estimated_minutes)+'h':''}</div>
+            ${j.requested_date?`<div class="sched-queue-item-due">Due: ${escapeHtml(j.requested_date)}</div>`:''}
+            ${partsHold?'<span class="sched-queue-badge sched-queue-badge-hold">Parts Hold</span>':''}
+            ${j.priority<=2?'<span class="sched-queue-badge sched-queue-badge-pri">RUSH</span>':''}
+          </div>
+          <button class="btn secondary small-btn sched-quick-add" data-id="${j.job_id}">+ Schedule</button>
         </div>
-        <button class="btn secondary small-btn sched-quick-add" data-id="${j.job_id}" style="white-space:nowrap;">+ Schedule</button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     view(`
-      <div class="card" style="margin-bottom:12px;">
-        <div class="row" style="align-items:flex-start;">
-          <div style="flex:1;">
-            <h2 style="margin:0;">Production Schedule</h2>
-            <div class="muted" style="margin-top:4px;">Drag jobs to reschedule. Click to view details.</div>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            ${kpi('This Week', weekJobs.length)}
-            ${kpi('Unscheduled', unscheduled.length)}
-            ${kpi('Delayed', delayed)}
-          </div>
+      <!-- Toolbar strip -->
+      <div class="sched-topbar">
+        <div class="sched-topbar-kpis">
+          ${kpi('This Week', weekJobs.length)}
+          ${kpi('Unscheduled', unscheduled.length)}
+          ${kpi('Delayed', delayed)}
         </div>
-      </div>
-
-      <div class="card" style="padding:16px;">
-        <div class="sched-toolbar">
-          <div class="inline">
-            <button class="btn secondary small-btn" id="sched-prev">← Prev</button>
-            <button class="btn secondary small-btn" id="sched-today-btn">Today</button>
-            <button class="btn secondary small-btn" id="sched-next">Next →</button>
-            <span class="sched-week-label">${weekLabel}</span>
-          </div>
+        <div class="inline">
+          <button class="btn secondary small-btn" id="sched-prev">← Prev</button>
+          <button class="btn secondary small-btn" id="sched-today-btn">Today</button>
+          <button class="btn secondary small-btn" id="sched-next">Next →</button>
+          <span class="sched-week-label">${weekLabel}</span>
           <button class="btn small-btn" id="sched-new-entry">+ New Entry</button>
         </div>
-        <div class="sched-grid-wrap">
-          <table class="sched-grid">
-            <thead><tr><th class="sched-bay-header">Bays</th>${dayHeaders}</tr></thead>
-            <tbody>${bayRows}</tbody>
-          </table>
-        </div>
       </div>
 
-      ${unscheduled.length ? `
-      <div class="card">
-        <h2 style="margin:0 0 8px;">Unscheduled Jobs</h2>
-        <div class="muted" style="margin-bottom:10px;">Drag onto the board above, or click + Schedule.</div>
-        ${unsRows}
-      </div>` : ''}
+      <!-- 3-column layout -->
+      <div class="sched-3col">
+
+        <!-- Left: Unscheduled Queue -->
+        <div class="sched-queue-panel">
+          <div class="sched-panel-header">
+            Unscheduled / Ready
+            ${unscheduled.length?`<span class="count-badge">${unscheduled.length}</span>`:''}
+          </div>
+          <div class="sched-queue-filter-row">
+            <input class="input sched-queue-search" id="sched-q-search" placeholder="Search..." />
+          </div>
+          <div class="sched-queue-list" id="sched-queue-list">
+            ${unsRows || '<div class="sched-queue-empty">No unscheduled jobs.</div>'}
+          </div>
+        </div>
+
+        <!-- Center: Calendar Grid -->
+        <div class="sched-board-panel">
+          <div class="sched-grid-wrap">
+            <table class="sched-grid">
+              <thead><tr><th class="sched-bay-header">Bay</th>${dayHeaders}</tr></thead>
+              <tbody>${bayRows}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Inspector Panel -->
+        <div class="sched-inspector-panel" id="sched-inspector">
+          <div class="sched-panel-header">Inspector</div>
+          <div class="sched-inspector-empty" id="sched-inspector-empty">
+            <span class="material-symbols-outlined" style="font-size:28px;opacity:.3;">touch_app</span>
+            <div style="margin-top:8px;opacity:.5;font-size:12px;">Click a job card to inspect</div>
+          </div>
+          <div class="sched-inspector-content" id="sched-inspector-content" style="display:none;"></div>
+        </div>
+
+      </div>
     `);
 
     bindBoard();
@@ -1922,21 +1826,33 @@ async function loadSchedule(){
 
   // ── board bindings ──────────────────────────────────
   function bindBoard(){
-    $('#sched-prev').onclick = ()=>{ weekOffset--; renderBoard(); };
-    $('#sched-next').onclick = ()=>{ weekOffset++; renderBoard(); };
-    $('#sched-today-btn').onclick = ()=>{ weekOffset=0; renderBoard(); };
-    $('#sched-new-entry').onclick = ()=> openNewEntryModal();
+    document.getElementById('sched-prev').onclick     = ()=>{ weekOffset--; renderBoard(); };
+    document.getElementById('sched-next').onclick     = ()=>{ weekOffset++; renderBoard(); };
+    document.getElementById('sched-today-btn').onclick= ()=>{ weekOffset=0; renderBoard(); };
+    document.getElementById('sched-new-entry').onclick= ()=> openNewEntryModal();
 
-    // click card → job modal
+    // Queue search filter
+    const qSearch = document.getElementById('sched-q-search');
+    if(qSearch) qSearch.addEventListener('input', ()=>{
+      const q = qSearch.value.trim().toLowerCase();
+      document.querySelectorAll('#sched-queue-list .sched-queue-item').forEach(item=>{
+        const txt = (item.textContent||'').toLowerCase();
+        item.style.display = (!q || txt.includes(q)) ? '' : 'none';
+      });
+    });
+
+    // click card → inspector panel (not modal)
     $$('.sched-card').forEach(c=>{
       c.addEventListener('click', e=>{
         if(c.classList.contains('dragging')) return;
-        openJobModal(parseInt(c.getAttribute('data-job-id'),10));
+        $$('.sched-card').forEach(x=>x.classList.remove('sched-card-selected'));
+        c.classList.add('sched-card-selected');
+        showInspector(parseInt(c.getAttribute('data-job-id'),10));
       });
     });
 
     // ── drag from board cards ───────────────────────
-    $$('.sched-card, .sched-unscheduled-item[draggable]').forEach(el=>{
+    $$('.sched-card, .sched-queue-item[draggable]').forEach(el=>{
       el.addEventListener('dragstart', e=>{
         el.classList.add('dragging');
         e.dataTransfer.setData('text/plain', el.getAttribute('data-job-id'));
@@ -1985,6 +1901,75 @@ async function loadSchedule(){
         openNewEntryModal(jid);
       };
     });
+  }
+
+  // ── Inspector panel ─────────────────────────────────
+  async function showInspector(jobId){
+    const emptyEl   = document.getElementById('sched-inspector-empty');
+    const contentEl = document.getElementById('sched-inspector-content');
+    if(!emptyEl||!contentEl) return;
+
+    emptyEl.style.display   = 'none';
+    contentEl.style.display = '';
+    contentEl.innerHTML     = '<div class="sched-inspector-loading">Loading…</div>';
+
+    let job = allJobs.find(j=>j.job_id===jobId);
+    try { job = await api.job(jobId); } catch(_){}
+    if(!job){ contentEl.innerHTML='<div class="sched-inspector-loading muted">Job not found.</div>'; return; }
+
+    const estH       = job.estimated_minutes ? (job.estimated_minutes/60).toFixed(1) : '—';
+    const actH       = job.actual_minutes    ? (job.actual_minutes/60).toFixed(1)    : '0.0';
+    const partsHold  = job.status==='BLOCKED' && job.delay_reason==='parts';
+    const apprHold   = job.status==='BLOCKED' && job.delay_reason==='approval';
+    const t = job.time || {approved_minutes_total:0};
+
+    contentEl.innerHTML = `
+      <div class="sched-insp-header">
+        <div class="sched-insp-so">${escapeHtml(job.so_number||'#'+job.job_id)}</div>
+        <span class="badge ${badgeClass(job.status)}">${fmtStatus(job.status)}</span>
+      </div>
+      <div class="sched-insp-customer">${escapeHtml(job.customer_name||job.dealer_name||'—')}</div>
+
+      ${(partsHold||apprHold)?`<div class="sched-insp-alert">${partsHold?'⚠ Parts Hold':'⚠ Approval Hold'}</div>`:''}
+      ${job.priority&&job.priority<=2?'<div class="sched-insp-rush">⚡ RUSH</div>':''}
+
+      <div class="sched-insp-rows">
+        <div class="sched-insp-row"><span class="label">Bay</span><span>${escapeHtml(job.work_center||'—')}</span></div>
+        <div class="sched-insp-row"><span class="label">Start</span><span>${escapeHtml((job.scheduled_start||'—').split(' ')[0])}</span></div>
+        <div class="sched-insp-row"><span class="label">Finish</span><span>${escapeHtml((job.scheduled_finish||'—').split(' ')[0])}</span></div>
+        <div class="sched-insp-row"><span class="label">Tech</span><span>${escapeHtml(job.assigned_name||'—')}</span></div>
+        <div class="sched-insp-row"><span class="label">Est / Act</span><span>${estH} / ${(t.approved_minutes_total/60).toFixed(1)} hrs</span></div>
+        ${job.requested_date?`<div class="sched-insp-row"><span class="label">Promised</span><span>${escapeHtml(job.requested_date)}</span></div>`:''}
+      </div>
+
+      ${job.notes?`<div class="sched-insp-notes">${escapeHtml(job.notes)}</div>`:''}
+
+      <div class="sched-insp-btns">
+        <button class="btn btn-xl sched-insp-start-btn" data-jid="${job.job_id}">▶ Start</button>
+        <button class="btn secondary btn-xl sched-insp-stop-btn">■ Stop</button>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn secondary small-btn sched-insp-open-btn" style="width:100%;" data-jid="${job.job_id}">Open Full Detail →</button>
+      </div>
+    `;
+
+    contentEl.querySelector('.sched-insp-start-btn').onclick = async ()=>{
+      try{
+        await api.timeStart(job.job_id, null, '');
+        toast('Timer started.');
+        showInspector(job.job_id);
+      }catch(e){ toast(e.message,true); }
+    };
+    contentEl.querySelector('.sched-insp-stop-btn').onclick = async ()=>{
+      try{
+        await api.timeStop();
+        toast('Timer stopped.');
+      }catch(e){ toast(e.message,true); }
+    };
+    contentEl.querySelector('.sched-insp-open-btn').onclick = ()=>{
+      window.history.pushState({},'','/ops/job/'+job.job_id);
+      router();
+    };
   }
 
   // ── Job detail modal ────────────────────────────────
@@ -2339,63 +2324,163 @@ async function loadTech() {
 }
 
 async function loadExecutive(){
-  const jobsResp = await api.jobs('?limit=500');
-  const jobs = jobsResp.jobs || [];
-  const by = (s)=>jobs.filter(j=>(j.status||'').toUpperCase()===s).length;
-  const activeOrders = jobs.filter(j=>(j.status||'').toUpperCase() !== 'COMPLETE').length;
-  const pendingCritical = jobs.filter(j=>!j.so_number || (j.status||'').toUpperCase() === 'QC_FAILED').length;
-  const complete = by('COMPLETE');
-  const convRate = jobs.length ? Math.round((complete / jobs.length) * 1000) / 10 : 0;
-  const today = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+  const [jobsResp, settingsResp, usersResp] = await Promise.all([
+    api.jobs('?limit=500'),
+    api.settings(),
+    api.users().catch(()=>({users:[]})),
+  ]);
+  const jobs     = jobsResp.jobs || [];
+  const settings = settingsResp || {};
+  const users    = usersResp.users || [];
+
+  // ── Capacity math ──────────────────────────────────
+  function timeToH(t){ const p=(t||'0:0').split(':'); return parseInt(p[0]||0)+parseInt(p[1]||0)/60; }
+  const shiftH   = Math.max(1, timeToH(settings.shift_end||'15:30') - timeToH(settings.shift_start||'07:00') - ((parseInt(settings.lunch_minutes||30,10))/60));
+  const techCount= Math.max(1, users.filter(u=>u.ops_role==='tech'||u.ops_role==='supervisor').length);
+  const dailyCap = shiftH * techCount;
+
+  // ── Today's plan ────────────────────────────────────
+  const todayStr  = new Date().toISOString().split('T')[0];
+  const todayJobs = jobs.filter(j=>(j.scheduled_start||'').startsWith(todayStr));
+  const todayH    = todayJobs.reduce((s,j)=>s+((parseInt(j.estimated_minutes||0,10))/60),0);
+  const lateBlocked = jobs.filter(j=>{ const s=(j.status||'').toUpperCase(); return s==='DELAYED'||s==='BLOCKED'; }).length;
+  const loadPct   = dailyCap>0 ? Math.min(100,Math.round((todayH/dailyCap)*100)) : 0;
+  const capColor  = loadPct>90 ? '#dc2626' : loadPct>75 ? '#d97706' : '#16a34a';
+
+  // ── Flow health ─────────────────────────────────────
+  const stages = [
+    {key:'UNSCHEDULED',       label:'Unscheduled'},
+    {key:'READY_FOR_SCHEDULING',label:'Ready to Schedule'},
+    {key:'SCHEDULED',         label:'Scheduled'},
+    {key:'IN_PROGRESS',       label:'In Progress'},
+    {key:'PENDING_QC',        label:'Pending QC'},
+  ];
+  const now = Date.now();
+  const stageData = stages.map(({key,label})=>{
+    const group = jobs.filter(j=>(j.status||'').toUpperCase()===key);
+    const oldest = group.length
+      ? Math.max(...group.map(j=>Math.round((now-new Date(j.created_at||j.updated_at||now))/(1000*3600*24))))
+      : 0;
+    return {label, count:group.length, oldest};
+  });
+
+  // ── Alerts ──────────────────────────────────────────
+  const partsHold    = jobs.filter(j=>j.delay_reason==='parts').length;
+  const approvalHold = jobs.filter(j=>j.delay_reason==='approval').length;
+  const overHours    = jobs.filter(j=>{ const e=parseInt(j.estimated_minutes||0,10); const a=parseInt(j.actual_minutes||0,10); return e>0&&a>e*1.15; }).length;
+
+  const todayLabel = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
   view(`
-    <div class="card">
-      <div class="row" style="align-items:center;">
-        <div style="flex:1 1 280px;">
-          <h2 style="margin:0;">Executive Performance Overview</h2>
-          <div class="muted" style="margin-top:4px;">${today}</div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          ${kpi('Active Orders', activeOrders)}
-          <div class="kpi" style="border-left:3px solid #c0392b;">
-            <div class="kpi-label">Pending Critical</div>
-            <div class="kpi-value" style="color:#c0392b;">${pendingCritical}</div>
-          </div>
-          <div class="kpi" style="border-left:3px solid #27ae60;">
-            <div class="kpi-label">Completion Rate</div>
-            <div class="kpi-value" style="color:#27ae60;">${convRate}%</div>
-          </div>
-          ${kpi('Complete', complete)}
-        </div>
+    <!-- Page header + quick actions -->
+    <div class="dash-header-row">
+      <div>
+        <div class="dash-page-label">Dashboard</div>
+        <div class="muted" style="margin-top:2px;font-size:13px;">${todayLabel}</div>
+      </div>
+      <div class="dash-quick-actions">
+        <button class="btn small-btn" id="qa-create-job">+ Create Job</button>
+        <button class="btn secondary small-btn" id="qa-sched">+ Schedule Block</button>
+        <button class="btn secondary small-btn" id="qa-add-note">+ Add Note</button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="row" style="margin-bottom:12px;align-items:center;">
-        <span class="collapse-title">Recent Sales Orders</span>
-        <button class="btn secondary small-btn" data-link href="/ops/jobs">View All</button>
+    <!-- Today's Plan -->
+    <div class="dash-section-title">Today's Plan</div>
+    <div class="dash-kpi-row">
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">Scheduled Today</div>
+        <div class="dash-kpi-value">${todayJobs.length}</div>
       </div>
-      <table class="table">
-        <thead><tr>
-          <th>Order ID</th><th>Client</th><th>Dealer</th><th>Due Date</th><th>Status</th><th></th>
-        </tr></thead>
-        <tbody>
-          ${jobs.slice(0,15).map(j=>`
-            <tr>
-              <td><button class="btn-link" data-open-job="${j.job_id}">${escapeHtml(j.so_number||'#'+j.job_id)}</button></td>
-              <td>${escapeHtml(j.customer_name||'—')}</td>
-              <td>${escapeHtml(j.dealer_name||'—')}</td>
-              <td style="font-size:12px;">${escapeHtml(j.due_date||'—')}</td>
-              <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
-              <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button></td>
-            </tr>
-          `).join('') || `<tr><td colspan="6" class="muted" style="padding:10px;">No jobs found.</td></tr>`}
-        </tbody>
-      </table>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">Late / Blocked</div>
+        <div class="dash-kpi-value${lateBlocked>0?' dash-kpi-warn':''}">${lateBlocked}</div>
+      </div>
+      <div class="dash-kpi-card dash-kpi-capacity">
+        <div class="dash-kpi-label">Hours Loaded <span class="dash-kpi-sub">${todayH.toFixed(1)} / ${dailyCap.toFixed(1)} hrs</span></div>
+        <div class="cap-bar-wrap"><div class="cap-bar" style="width:${loadPct}%;background:${capColor};"></div></div>
+        <div class="dash-cap-pct">${loadPct}% capacity (${techCount} tech${techCount!==1?'s':''})</div>
+      </div>
+    </div>
+
+    <!-- Flow Health -->
+    <div class="dash-section-title">Flow Health</div>
+    <div class="dash-flow-grid">
+      ${stageData.map(s=>`
+        <div class="dash-flow-card${s.count===0?' dash-flow-empty':''}">
+          <div class="dash-flow-label">${s.label}</div>
+          <div class="dash-flow-count">${s.count}</div>
+          <div class="dash-flow-age">${s.count>0?'Oldest: '+s.oldest+'d':'—'}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    ${(partsHold+approvalHold+overHours)>0 ? `
+    <!-- Alerts -->
+    <div class="dash-section-title">Alerts</div>
+    <div class="dash-alerts-row">
+      ${partsHold>0    ?`<div class="dash-alert dash-alert-warn"><span class="material-symbols-outlined dash-alert-icon">inventory_2</span> Parts Hold: <strong>${partsHold}</strong> job${partsHold!==1?'s':''}</div>`:''}
+      ${approvalHold>0 ?`<div class="dash-alert dash-alert-warn"><span class="material-symbols-outlined dash-alert-icon">pending_actions</span> Approval Hold: <strong>${approvalHold}</strong> job${approvalHold!==1?'s':''}</div>`:''}
+      ${overHours>0    ?`<div class="dash-alert dash-alert-red"><span class="material-symbols-outlined dash-alert-icon">schedule</span> Over Hours: <strong>${overHours}</strong> job${overHours!==1?'s':''}</div>`:''}
+    </div>
+    `:''}
+
+    <!-- Recent Jobs -->
+    <div class="dash-section-title">Recent Activity</div>
+    <div class="card">
+      ${jobsTable(jobs.slice(0,20))}
+    </div>
+
+    <!-- Quick-add note modal (hidden until triggered) -->
+    <div id="qa-note-modal" class="modal-overlay" style="display:none;">
+      <div class="modal" style="max-width:440px;">
+        <div class="modal-header">
+          <h2>Add Note to Job</h2>
+          <button class="modal-close" id="qa-note-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="label" style="margin-bottom:6px;">Job ID</div>
+          <input class="input" id="qa-note-jobid" type="number" min="1" placeholder="Enter Job ID..." style="margin-bottom:12px;" />
+          <div class="label" style="margin-bottom:6px;">Note</div>
+          <textarea class="input" id="qa-note-text" rows="4" placeholder="Internal note..."></textarea>
+          <div class="field-error" id="qa-note-err" style="margin-top:6px;display:none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" id="qa-note-submit">Add Note</button>
+          <button class="btn secondary" id="qa-note-cancel">Cancel</button>
+        </div>
+      </div>
     </div>
   `);
 
   bindJobsTable();
+
+  // Quick actions
+  document.getElementById('qa-create-job').onclick = ()=>{ window.history.pushState({},'','/ops/new'); router(); };
+  document.getElementById('qa-sched').onclick      = ()=>{ window.history.pushState({},'','/ops/schedule'); router(); };
+
+  // Note modal
+  const noteModal  = document.getElementById('qa-note-modal');
+  const closeNote  = ()=>{ noteModal.style.display='none'; };
+  document.getElementById('qa-add-note').onclick    = ()=>{ noteModal.style.display='flex'; };
+  document.getElementById('qa-note-close').onclick  = closeNote;
+  document.getElementById('qa-note-cancel').onclick = closeNote;
+  noteModal.addEventListener('click', e=>{ if(e.target===noteModal) closeNote(); });
+  document.getElementById('qa-note-submit').onclick = async ()=>{
+    const jobId = parseInt(document.getElementById('qa-note-jobid').value||'0',10);
+    const note  = (document.getElementById('qa-note-text').value||'').trim();
+    const err   = document.getElementById('qa-note-err');
+    err.style.display='none'; err.textContent='';
+    if(!jobId){ err.textContent='Enter a valid job ID.'; err.style.display=''; return; }
+    if(!note) { err.textContent='Note cannot be empty.';  err.style.display=''; return; }
+    try{
+      await api.addNote(jobId, note);
+      toast('Note added.');
+      closeNote();
+      document.getElementById('qa-note-text').value='';
+      document.getElementById('qa-note-jobid').value='';
+    }catch(e){ err.textContent=e.message; err.style.display=''; }
+  };
 }
 
 async function loadQC(){
