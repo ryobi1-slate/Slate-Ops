@@ -3,6 +3,59 @@ if (!defined('ABSPATH')) exit;
 
 class Slate_Ops_REST {
 
+  private static function scheduler_debug_enabled() {
+    return defined('SLATE_OPS_DEBUG_SCHEDULER') && SLATE_OPS_DEBUG_SCHEDULER;
+  }
+
+  private static function scheduler_debug_log($message, $context = []) {
+    if (!self::scheduler_debug_enabled()) return;
+    $line = '[Slate_Ops Scheduler] ' . $message;
+    if (!empty($context)) {
+      $line .= ' ' . wp_json_encode($context);
+    }
+    error_log($line);
+  }
+
+  /**
+   * Build scheduler updates from canonical scheduler keys used by ops.js.
+   * Supported keys: work_center, scheduled_start, scheduled_finish, assigned_user_id.
+   */
+  private static function build_scheduler_update_fields($input, $now) {
+    $update = [
+      'status' => 'SCHEDULED',
+      'status_updated_at' => $now,
+      'updated_at' => $now,
+    ];
+
+    $changes = [];
+
+    if (array_key_exists('work_center', $input)) {
+      $v = sanitize_text_field($input['work_center'] ?? '');
+      $update['work_center'] = $v ?: null;
+      $changes['work_center'] = $v ?: null;
+    }
+
+    if (array_key_exists('scheduled_start', $input)) {
+      $v = sanitize_text_field($input['scheduled_start'] ?? '');
+      $update['scheduled_start'] = $v ?: null;
+      $changes['scheduled_start'] = $v ?: null;
+    }
+
+    if (array_key_exists('scheduled_finish', $input)) {
+      $v = sanitize_text_field($input['scheduled_finish'] ?? '');
+      $update['scheduled_finish'] = $v ?: null;
+      $changes['scheduled_finish'] = $v ?: null;
+    }
+
+    if (array_key_exists('assigned_user_id', $input)) {
+      $v = !empty($input['assigned_user_id']) ? (int) $input['assigned_user_id'] : null;
+      $update['assigned_user_id'] = $v;
+      $changes['assigned_user_id'] = $v;
+    }
+
+    return [$update, $changes];
+  }
+
   public static function register_routes() {
     register_rest_route('slate-ops/v1', '/me', [
       'methods' => 'GET',
@@ -819,46 +872,38 @@ foreach ($rows as &$r) {
   }
 
   public static function schedule_job($req) {
-global $wpdb;
-$body = $req->get_json_params();
-$t = $wpdb->prefix . 'slate_ops_jobs';
+	global $wpdb;
+	$body = $req->get_json_params() ?: [];
+	$t = $wpdb->prefix . 'slate_ops_jobs';
 
-$job_id = (int)($body['job_id'] ?? 0);
-if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status'=>400]);
+	$job_id = isset($req['id']) ? (int) $req['id'] : (int)($body['job_id'] ?? 0);
+	if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status'=>400]);
 
-$work_center = sanitize_text_field($body['work_center'] ?? '');
-$est = (int)($body['estimated_minutes'] ?? 0);
-if ($est < 0) $est = 0;
-$start = sanitize_text_field($body['scheduled_start'] ?? '');
-$finish = sanitize_text_field($body['scheduled_finish'] ?? '');
-$assigned = (int)($body['assigned_user_id'] ?? 0);
+	$job = self::job_by_id($job_id);
+	if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-$now = Slate_Ops_Utils::now_gmt();
+	$now = Slate_Ops_Utils::now_gmt();
+	list($update, $changes) = self::build_scheduler_update_fields($body, $now);
 
-$update = [
-  'work_center' => $work_center ?: null,
-  'estimated_minutes' => $est ?: null,
-  'scheduled_start' => $start ?: null,
-  'scheduled_finish' => $finish ?: null,
-  'assigned_user_id' => $assigned ?: null,
-  'status' => 'SCHEDULED',
-  'status_updated_at' => $now,
-  'updated_at' => $now,
-];
+	self::scheduler_debug_log('schedule_job payload', ['job_id' => $job_id, 'payload' => $body, 'columns' => array_keys($update)]);
+	$result = $wpdb->update($t, $update, ['job_id' => $job_id]);
+	self::scheduler_debug_log('schedule_job write result', ['job_id' => $job_id, 'affected_rows' => $result, 'db_error' => $wpdb->last_error]);
 
-$wpdb->update($t, $update, ['job_id' => $job_id]);
+	if ($result === false) {
+	  return new WP_Error('db_error', $wpdb->last_error ?: 'DB update failed', ['status' => 500]);
+	}
 
-self::audit('job', $job_id, 'update', 'schedule', null, wp_json_encode($update), 'Schedule updated');
+	self::audit('job', $job_id, 'update', 'schedule', null, wp_json_encode($changes), 'Schedule updated');
 
-// Keep ClickUp name fresh once SO# exists
-$job = self::job_by_id($job_id);
-self::maybe_update_clickup_name($job);
+	// Keep ClickUp name fresh once SO# exists
+	$job = self::job_by_id($job_id);
+	self::maybe_update_clickup_name($job);
 
-// Push simplified dealer status based on shop status
-self::maybe_push_dealer_portal_status($job);
+	// Push simplified dealer status based on shop status
+	self::maybe_push_dealer_portal_status($job);
 
-return self::get_job(['id' => $job_id]);
-	  }
+	return self::get_job(['id' => $job_id]);
+		  }
 
   /**
    * Release a job to the scheduler (TOC Rope).
@@ -1409,9 +1454,10 @@ self::maybe_push_dealer_portal_status($job);
       return new WP_Error('too_many', 'Maximum 200 updates per request.', ['status' => 400]);
     }
 
-    $t_jobs = $wpdb->prefix . 'slate_ops_jobs';
     $now    = Slate_Ops_Utils::now_gmt();
-    $uid    = get_current_user_id();
+    $t_jobs = $wpdb->prefix . 'slate_ops_jobs';
+
+    self::scheduler_debug_log('bulk_schedule payload', ['updates_count' => count($updates), 'updates' => $updates]);
 
     $saved  = [];
     $errors = [];
@@ -1430,46 +1476,23 @@ self::maybe_push_dealer_portal_status($job);
         continue;
       }
 
-      $update = ['updated_at' => $now];
-      $changes = [];
+      list($update, $changes) = self::build_scheduler_update_fields($item, $now);
 
-      if (isset($item['scheduled_start']) && $item['scheduled_start'] !== null) {
-        $v = sanitize_text_field($item['scheduled_start']);
-        $update['scheduled_start'] = $v ?: null;
-        $changes['scheduled_start'] = $v ?: null;
-      }
-      if (isset($item['scheduled_finish']) && $item['scheduled_finish'] !== null) {
-        $v = sanitize_text_field($item['scheduled_finish']);
-        $update['scheduled_finish'] = $v ?: null;
-        $changes['scheduled_finish'] = $v ?: null;
-      }
-      if (isset($item['assigned_user_id'])) {
-        $v = $item['assigned_user_id'] ? (int) $item['assigned_user_id'] : null;
-        $update['assigned_user_id'] = $v;
-        $changes['assigned_user_id'] = $v;
-      }
-      if (isset($item['work_center'])) {
-        $v = sanitize_text_field($item['work_center'] ?? '');
-        $update['work_center'] = $v ?: null;
-        $changes['work_center'] = $v ?: null;
-      }
-      if (isset($item['estimated_minutes'])) {
-        $v = max(0, (int) $item['estimated_minutes']);
-        $update['estimated_minutes'] = $v ?: null;
-        $changes['estimated_minutes'] = $v ?: null;
-      }
-
-      // If the job is unscheduled/ready and we are setting dates, promote status.
-      if (!empty($changes['scheduled_start'])) {
-        $cur_status = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM $t_jobs WHERE job_id=%d", $job_id ) );
-        if (in_array(strtoupper((string)$cur_status), ['UNSCHEDULED','READY_FOR_SCHEDULING'], true)) {
-          $update['status'] = 'SCHEDULED';
-          $update['status_updated_at'] = $now;
-          $changes['status'] = 'SCHEDULED';
+      $allowed = ['work_center', 'scheduled_start', 'scheduled_finish', 'assigned_user_id'];
+      $has_scheduler_key = false;
+      foreach ($allowed as $k) {
+        if (array_key_exists($k, $item)) {
+          $has_scheduler_key = true;
+          break;
         }
+      }
+      if (!$has_scheduler_key) {
+        $errors[] = ['job_id' => $job_id, 'message' => 'No scheduler fields to update'];
+        continue;
       }
 
       $result = $wpdb->update($t_jobs, $update, ['job_id' => $job_id]);
+      self::scheduler_debug_log('bulk_schedule write result', ['job_id' => $job_id, 'affected_rows' => $result, 'db_error' => $wpdb->last_error, 'columns' => array_keys($update)]);
 
       if ($result === false) {
         $errors[] = ['job_id' => $job_id, 'message' => $wpdb->last_error ?: 'DB error'];

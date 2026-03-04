@@ -122,13 +122,28 @@
 
     const updates = Array.from(pendingChanges.values());
     try {
-      await bulkSave(updates);
-      clearQueue();
-      showToast('Schedule saved (' + updates.length + ' job' + (updates.length !== 1 ? 's' : '') + ')', false);
+      const resp = await bulkSave(updates);
+      const saved = Array.isArray(resp && resp.saved) ? resp.saved : [];
+      const errors = Array.isArray(resp && resp.errors) ? resp.errors : [];
+
+      if (errors.length === 0) {
+        clearQueue();
+        showToast('Saved (' + saved.length + ' job' + (saved.length !== 1 ? 's' : '') + ').', false);
+      } else {
+        saved.forEach(function (id) { pendingChanges.delete(id); });
+        updateSaveButtonState();
+        const first = errors[0] || {};
+        const detail = first.message ? first.message : 'Unknown error';
+        showToast('Failed (' + errors.length + '): ' + detail, true);
+      }
     } catch (err) {
-      showToast('Save failed: ' + err.message, true);
+      const detail = (err && err.data && err.data.message) ? err.data.message : (err && err.message ? err.message : 'Request failed');
+      showToast('Failed: ' + detail, true);
       if (btn) { btn.disabled = false; updateSaveButtonState(); }
+      return;
     }
+
+    updateSaveButtonState();
   }
 
   /* ─────────────────────────────────────────────────────────────────
