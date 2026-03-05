@@ -1,5 +1,34 @@
 # Slate Ops Changelog
 
+## 0.8.0 — Phase 0 UI Map (Dashboard + Scheduler Inspector + Job Detail Tabs)
+
+### Dashboard (`/ops/exec`)
+- Replaced minimal KPI row with full Phase 0 dashboard layout
+- **Today's Plan** section: scheduled today count, hours loaded vs. capacity bar (shift hours × tech count), late/blocked count
+- **Flow Health** grid: WIP count + oldest job age for each workflow stage (Unscheduled → Ready → Scheduled → In Progress → Pending QC)
+- **Alerts** row: Parts Hold, Approval Hold, Over Hours — shown only when non-zero
+- **Quick Actions** toolbar: Create Job, Create Schedule Block, Add Note to Job (inline modal, no page nav required)
+
+### Scheduler (`/ops/schedule`)
+- New 3-column layout: Unscheduled Queue (left) + Calendar Grid (center) + Job Inspector (right)
+- **Left panel**: filterable queue with search input, blocker badges (Parts Hold, RUSH), promised date
+- **Right panel Inspector**: populates on card click (replaces modal); shows job header, schedule, assigned tech, est/actual hours, blocker alert, Start/Stop timer buttons, Open Full Detail link
+- Calendar job cards: blocked jobs highlighted amber; selected card outlined in orange accent
+- Drag and drop behavior unchanged; bulk save (scheduler-phase0.js) unchanged
+
+### Job Detail (`/ops/job/:id`)
+- Added tab navigation: **Summary** | **Time** | **Blockers** | **Activity**
+- Summary tab: job fields, schedule, notes, quick actions (Set SO#, QC Approve, Edit Job)
+- Time tab: Start/Stop/Fix buttons + tech time breakdown table
+- Blockers tab: Parts Hold / Approval Hold toggles + hold note — auto-activated if job is currently blocked
+- Activity tab: append-only audit log table (newest first)
+- Hold badge visible in job header when blocked
+
+### No schema changes
+All Phase 0 fields already existed. Zero destructive changes.
+
+---
+
 ## 0.7.0 — Phase 0 Manual Scheduling
 
 ### UI

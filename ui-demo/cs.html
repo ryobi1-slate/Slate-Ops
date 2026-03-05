@@ -13,165 +13,226 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        'app-bg': '#ddd9c1',
-        'sidebar-dark': '#2f4741',
-        'accent-orange': '#b9713a'
+        'app-bg':        '#f0f2f5',
+        'sidebar-dark':  '#1e2132',
+        'accent-orange': '#e07444',
       },
       fontFamily: { sans: ['Roboto Flex','sans-serif'] }
     }
   }
 }
 </script>
-<link rel="stylesheet" href="../assets/app.css">
-<style>
-  body { font-family: 'Roboto Flex', sans-serif; }
-  .shell-bg { background: #ddd9c1; }
-  .sidebar-shell {
-    background: radial-gradient(circle at -20% 120%, #415f56 0%, #2f4741 50%, #263a35 100%);
-    border-right: 1px solid rgba(255,255,255,.08);
-  }
-  .panel {
-    background: #efefef;
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.15);
-  }
-  .panel-title {
-    color: #40534a;
-    text-transform: uppercase;
-    letter-spacing: .01em;
-    font-weight: 800;
-  }
-  .nav-active {
-    background: rgba(255,255,255,.9);
-    color: #273731;
-    border-radius: 0;
-  }
-  .nav-inactive { color: rgba(255,255,255,.9); }
-  .nav-inactive:hover { background: rgba(255,255,255,.08); }
-</style>
+<link rel="stylesheet" href="assets/app.css">
+<style>body{font-family:'Roboto Flex',sans-serif;}</style>
 </head>
-<body class="shell-bg min-h-screen flex text-slate-900">
+<body class="bg-app-bg min-h-screen flex">
 
-<aside class="w-60 sidebar-shell flex-shrink-0 flex flex-col h-screen sticky top-0">
-  <div class="p-8 flex items-center gap-3">
-    <img src="../assets/slate-logo-white.svg" alt="Slate Ops" class="h-10 w-auto">
+<!-- Sidebar -->
+<aside class="w-64 bg-sidebar-dark flex-shrink-0 flex flex-col h-screen sticky top-0">
+  <div class="p-6 border-b border-white/10 flex items-center gap-3">
+    <img src="assets/slate-logo-white.svg" alt="Slate Ops" class="h-6 w-auto">
   </div>
 
-  <nav class="mt-2 flex-grow space-y-1 text-[33px] leading-none px-0">
-    <a class="nav-inactive flex items-center px-6 py-2.5 transition-colors" href="dashboard.html">
+  <nav class="mt-4 flex-grow px-3 space-y-1">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="dashboard.html">
       <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Dashboard
     </a>
-    <a class="nav-active flex items-center px-6 py-2.5 transition-colors" href="cs.html">
+    <a class="nav-active flex items-center px-3 py-2.5 rounded-lg transition-colors" href="cs.html">
       <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      CS
+      Customer Service
     </a>
-    <a class="nav-inactive flex items-center px-6 py-2.5 transition-colors" href="supervisor.html">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="supervisor.html">
       <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 4a2 2 0 100-4 2 2 0 000 4zM3 16a2 2 0 100-4 2 2 0 000 4z"/></svg>
       Supervisor
     </a>
-    <a class="nav-inactive flex items-center px-6 py-2.5 transition-colors" href="jobs.html">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="jobs.html">
       <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9-4h2a2 2 0 012 2v2H9V5a2 2 0 012-2z"/></svg>
       Jobs
     </a>
-    <a class="nav-inactive flex items-center px-6 py-2.5 transition-colors" href="qc.html">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="qc.html">
       <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
       QC
     </a>
-    <a class="nav-inactive flex items-center px-6 py-2.5 transition-colors" href="schedule.html">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="schedule.html">
       <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       Schedule
     </a>
-    <a class="nav-inactive flex items-center px-6 py-2.5 transition-colors" href="settings.html">
+    <a class="nav-inactive flex items-center px-3 py-2.5 rounded-lg transition-colors" href="settings.html">
       <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       Settings
     </a>
   </nav>
 
-  <div class="p-6 mt-auto text-white/80 text-3xl">
-    <div class="space-y-3">
-      <p>ⓘ info</p>
-      <p>⚙ Admin</p>
+  <div class="p-4 mt-auto border-t border-white/10">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-accent-orange/20 border border-accent-orange/30 flex items-center justify-center text-accent-orange text-sm font-bold flex-shrink-0">JD</div>
+      <div class="overflow-hidden">
+        <p class="text-white text-sm font-semibold truncate">John Doe</p>
+        <p class="text-white/50 text-xs truncate">Ops Manager</p>
+      </div>
     </div>
   </div>
 </aside>
 
+<!-- Main -->
 <main class="flex-grow p-8 overflow-y-auto">
-  <header class="mb-8 grid gap-4 lg:grid-cols-[1fr_auto_auto]">
-    <div class="panel px-6 py-5">
-      <h1 class="text-5xl panel-title">Customer Service</h1>
-      <p class="text-black text-[33px] mt-1">Create and update jobs manually during Phase 1.</p>
-    </div>
-    <div class="panel px-6 py-4 min-w-[150px] text-center">
-      <p class="text-[11px] font-bold uppercase">Pending Intake</p>
-      <p class="text-5xl font-extrabold mt-2">4</p>
-    </div>
-    <div class="panel px-6 py-4 min-w-[150px] text-center">
-      <p class="text-[11px] font-bold uppercase">Needs SO#</p>
-      <p class="text-5xl font-extrabold mt-2">0</p>
+
+  <header class="mb-8 flex items-start justify-between gap-6">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Customer Service</h1>
+      <p class="text-slate-500 text-sm mt-1">Create and update jobs manually during Phase 1.</p>
     </div>
   </header>
 
+  <!-- Stat Cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="panel p-5"><p class="kicker">Pending Intake</p><p class="mt-3 text-3xl font-bold text-slate-900">4</p><p class="text-xs text-slate-500 mt-1">Awaiting entry</p></div>
-    <div class="panel p-5"><p class="kicker">Active Jobs</p><p class="mt-3 text-3xl font-bold text-accent-orange">12</p><p class="text-xs text-slate-500 mt-1">Currently open</p></div>
-    <div class="panel p-5"><p class="kicker">Awaiting Parts</p><p class="mt-3 text-3xl font-bold text-amber-600">3</p><p class="text-xs text-slate-500 mt-1">Parts not ready</p></div>
-    <div class="panel p-5"><p class="kicker">Customer Holds</p><p class="mt-3 text-3xl font-bold text-red-600">1</p><p class="text-xs text-slate-500 mt-1">On hold by request</p></div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <p class="kicker">Pending Intake</p>
+      <p class="mt-3 text-3xl font-bold text-slate-900">4</p>
+      <p class="text-xs text-slate-500 mt-1">Awaiting entry</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <p class="kicker">Active Jobs</p>
+      <p class="mt-3 text-3xl font-bold text-accent-orange">12</p>
+      <p class="text-xs text-slate-500 mt-1">Currently open</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <p class="kicker">Awaiting Parts</p>
+      <p class="mt-3 text-3xl font-bold text-amber-600">3</p>
+      <p class="text-xs text-slate-500 mt-1">Parts not ready</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <p class="kicker">Customer Holds</p>
+      <p class="mt-3 text-3xl font-bold text-red-600">1</p>
+      <p class="text-xs text-slate-500 mt-1">On hold by request</p>
+    </div>
   </div>
 
-  <section class="panel overflow-hidden mb-8">
-    <div class="px-6 pt-5 pb-4 border-b border-black/20">
-      <h2 class="text-4xl panel-title">Create Manual Job</h2>
-      <p class="kicker mt-1">Manual entry – Phase 1</p>
+  <!-- Create Manual Job -->
+  <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <h2 class="text-base font-bold text-slate-900">Create Manual Job</h2>
+        <p class="kicker mt-0.5">Manual entry – Phase 1</p>
+      </div>
     </div>
     <div class="p-6">
       <form class="space-y-5">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">SO#</label><input class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" placeholder="S-ORD10456"/></div>
-          <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">Job Type</label><select class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"><option>UPFIT</option><option>RV_BUILD</option><option>PARTS_ONLY</option><option>SERVICE</option><option>WARRANTY</option></select></div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">SO#</label>
+            <input class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" placeholder="S-ORD10456"/>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Job Type</label>
+            <select class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm">
+              <option>UPFIT</option><option>RV_BUILD</option><option>PARTS_ONLY</option><option>SERVICE</option><option>WARRANTY</option>
+            </select>
+          </div>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">Dealer</label><select class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"><option>Mercedes-Benz of Wilsonville</option><option>Mercedes-Benz of Seattle</option><option>Mercedes-Benz of Anchorage</option></select></div>
-          <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">Parts Status</label><select class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"><option>NOT_READY</option><option>PARTIAL</option><option>READY</option><option>HOLD</option></select></div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Dealer</label>
+            <select class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm">
+              <option>Mercedes-Benz of Wilsonville</option>
+              <option>Mercedes-Benz of Seattle</option>
+              <option>Mercedes-Benz of Anchorage</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Parts Status</label>
+            <select class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm">
+              <option>NOT_READY</option><option>PARTIAL</option><option>READY</option><option>HOLD</option>
+            </select>
+          </div>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">Priority</label><select class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm"><option>3</option><option>1</option><option>2</option><option>4</option><option>5</option></select></div>
-          <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">Estimated Hours</label><input class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" placeholder="30"/></div>
-          <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">VIN</label><input class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" placeholder="Optional for Phase 1"/></div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Priority</label>
+            <select class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm">
+              <option>3</option><option>1</option><option>2</option><option>4</option><option>5</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">Estimated Hours</label>
+            <input class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" placeholder="30"/>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-slate-700">VIN</label>
+            <input class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" placeholder="Optional for Phase 1"/>
+          </div>
         </div>
-        <div class="space-y-1"><label class="block text-sm font-semibold text-slate-700">Notes</label><textarea class="w-full border-slate-400/60 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" rows="3" placeholder="Anything CS needs the shop to know..."></textarea></div>
+
+        <div class="space-y-1">
+          <label class="block text-sm font-semibold text-slate-700">Notes</label>
+          <textarea class="w-full border-slate-300 rounded-lg shadow-sm focus:border-accent-orange focus:ring-accent-orange text-sm" rows="3" placeholder="Anything CS needs the shop to know..."></textarea>
+        </div>
       </form>
     </div>
-    <div class="px-6 py-4 border-t border-black/20 flex justify-end gap-3 bg-black/5">
-      <button class="text-slate-700 border border-slate-500 hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Cancel</button>
-      <button class="bg-accent-orange text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-700 transition-colors shadow-sm text-sm">Create Job</button>
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+      <button class="text-slate-600 border border-slate-300 hover:bg-slate-100 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Cancel</button>
+      <button class="bg-accent-orange text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-sm text-sm">Create Job</button>
     </div>
   </section>
 
-  <section class="panel overflow-hidden">
-    <div class="px-6 py-4 border-b border-black/20 flex items-center justify-between gap-4">
+  <!-- Work Queue -->
+  <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4">
       <div>
-        <h2 class="text-4xl panel-title">Work Queue</h2>
+        <h2 class="text-base font-bold text-slate-900">Work Queue</h2>
         <p class="kicker mt-0.5">All open work orders</p>
       </div>
-      <input class="border-slate-400/70 rounded-lg text-sm focus:border-accent-orange focus:ring-accent-orange w-56" placeholder="Search jobs…"/>
+      <input class="border-slate-300 rounded-lg text-sm focus:border-accent-orange focus:ring-accent-orange w-56" placeholder="Search jobs…"/>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-left table-hover">
         <thead>
-          <tr class="text-slate-600 text-xs font-bold uppercase border-b border-black/20">
-            <th class="pb-3 pt-4 px-6">Job ID</th><th class="pb-3 pt-4 px-4">Customer</th><th class="pb-3 pt-4 px-4">Dealer</th><th class="pb-3 pt-4 px-4">VIN</th><th class="pb-3 pt-4 px-4">Job Type</th><th class="pb-3 pt-4 px-4">Status</th><th class="pb-3 pt-4 px-4">Created</th>
+          <tr class="text-slate-400 text-xs font-bold uppercase border-b border-slate-100">
+            <th class="pb-3 pt-4 px-6">Job ID</th>
+            <th class="pb-3 pt-4 px-4">Customer</th>
+            <th class="pb-3 pt-4 px-4">Dealer</th>
+            <th class="pb-3 pt-4 px-4">VIN</th>
+            <th class="pb-3 pt-4 px-4">Job Type</th>
+            <th class="pb-3 pt-4 px-4">Status</th>
+            <th class="pb-3 pt-4 px-4">Created</th>
           </tr>
         </thead>
         <tbody class="text-sm">
-          <tr class="border-b border-black/10"><td class="py-4 px-6 font-semibold text-slate-900">S-ORD10432</td><td class="py-4 px-4 text-slate-700">Acme Corp</td><td class="py-4 px-4 text-slate-700">MB Wilsonville</td><td class="py-4 px-4 text-slate-600 font-mono text-xs">FASTCAR1</td><td class="py-4 px-4 text-slate-700">UPFIT</td><td class="py-4 px-4"><span class="badge badge-orange">In Progress</span></td><td class="py-4 px-4 text-slate-500">Mon</td></tr>
-          <tr class="border-b border-black/10"><td class="py-4 px-6 font-semibold text-slate-900">S-ORD10408</td><td class="py-4 px-4 text-slate-700">Local PD</td><td class="py-4 px-4 text-slate-700">MB Seattle</td><td class="py-4 px-4 text-slate-600 font-mono text-xs">OLDTIMER</td><td class="py-4 px-4 text-slate-700">RV_BUILD</td><td class="py-4 px-4"><span class="badge badge-warn">QC Hold</span></td><td class="py-4 px-4 text-slate-500">Tue</td></tr>
-          <tr><td class="py-4 px-6 font-semibold text-slate-900">S-ORD10455</td><td class="py-4 px-4 text-slate-700">—</td><td class="py-4 px-4 text-slate-700">MB Anchorage</td><td class="py-4 px-4 text-slate-600 font-mono text-xs">WIN112233</td><td class="py-4 px-4 text-slate-700">SERVICE</td><td class="py-4 px-4"><span class="badge badge-neutral">Scheduled</span></td><td class="py-4 px-4 text-slate-500">Wed</td></tr>
+          <tr class="border-b border-slate-50">
+            <td class="py-4 px-6 font-semibold text-slate-900">S-ORD10432</td>
+            <td class="py-4 px-4 text-slate-600">Acme Corp</td>
+            <td class="py-4 px-4 text-slate-600">MB Wilsonville</td>
+            <td class="py-4 px-4 text-slate-500 font-mono text-xs">FASTCAR1</td>
+            <td class="py-4 px-4 text-slate-600">UPFIT</td>
+            <td class="py-4 px-4"><span class="badge badge-orange">In Progress</span></td>
+            <td class="py-4 px-4 text-slate-500">Mon</td>
+          </tr>
+          <tr class="border-b border-slate-50">
+            <td class="py-4 px-6 font-semibold text-slate-900">S-ORD10408</td>
+            <td class="py-4 px-4 text-slate-600">Local PD</td>
+            <td class="py-4 px-4 text-slate-600">MB Seattle</td>
+            <td class="py-4 px-4 text-slate-500 font-mono text-xs">OLDTIMER</td>
+            <td class="py-4 px-4 text-slate-600">RV_BUILD</td>
+            <td class="py-4 px-4"><span class="badge badge-warn">QC Hold</span></td>
+            <td class="py-4 px-4 text-slate-500">Tue</td>
+          </tr>
+          <tr>
+            <td class="py-4 px-6 font-semibold text-slate-900">S-ORD10455</td>
+            <td class="py-4 px-4 text-slate-600">—</td>
+            <td class="py-4 px-4 text-slate-600">MB Anchorage</td>
+            <td class="py-4 px-4 text-slate-500 font-mono text-xs">WIN112233</td>
+            <td class="py-4 px-4 text-slate-600">SERVICE</td>
+            <td class="py-4 px-4"><span class="badge badge-neutral">Scheduled</span></td>
+            <td class="py-4 px-4 text-slate-500">Wed</td>
+          </tr>
         </tbody>
       </table>
     </div>
   </section>
+
 </main>
 </body>
 </html>

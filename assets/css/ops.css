@@ -1,19 +1,9 @@
-:root{
-  --sage:#404f4b;
-  --sand:#e1dfc8;
-  --arches:#d86b19;
-  --redwood:#0f342a;
-  --black:#000;
-  --white:#fff;
-  --border:rgba(0,0,0,0.12);
-  --shadow:0 1px 4px rgba(0,0,0,0.06),0 2px 12px rgba(0,0,0,0.04);
-  --radius:10px;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-}
+/* ops.css — component styles. Shell tokens inherited from ops-shell.css */
+/* :root tokens are now canonical in ops-shell.css; these are kept for legacy compatibility */
 
 body.slate-ops{
   margin:0;
-  font-family:'Roboto Flex',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  font-family:var(--font-sans);
   color:var(--black);
   background:var(--sand);
 }
@@ -27,8 +17,8 @@ body.slate-ops{
 
 /* ─── Sidebar ────────────────────────────────────────────── */
 .ops-sidebar{
-  width:200px;
-  background:var(--sage);
+  width:var(--shell-sidebar-w);
+  background:var(--shell-sidebar-bg);
   color:#fff;
   display:flex;
   flex-direction:column;
@@ -339,53 +329,6 @@ textarea{min-height:90px;}
   font-size:11px;font-weight:700;
 }
 .count-badge.urgent{background:var(--arches);}
-
-/* ─── Customer Service page refresh ─────────────────────── */
-.cs-shell{display:flex;flex-direction:column;gap:12px;}
-.cs-hero{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:14px;
-  align-items:stretch;
-}
-.cs-hero-main,
-.cs-kpi,
-.cs-block,
-.cs-search{
-  background:#efefef;
-  border:1px solid rgba(0,0,0,.10);
-  border-radius:12px;
-  box-shadow:0 4px 10px rgba(0,0,0,.12);
-}
-.cs-hero-main{padding:18px 22px;}
-.cs-hero-main h2{
-  margin:0;
-  color:#40534a;
-  font-size:48px;
-  line-height:1;
-  text-transform:uppercase;
-  letter-spacing:.01em;
-}
-.cs-hero-main .muted{font-size:16px;color:rgba(0,0,0,.8);margin-top:6px;}
-.cs-hero-kpis{display:flex;gap:12px;}
-.cs-kpi{min-width:140px;padding:14px 18px;text-align:center;}
-.cs-kpi .kpi-label{color:rgba(0,0,0,.85);letter-spacing:.06em;font-size:12px;}
-.cs-kpi .kpi-value{font-size:54px;line-height:1;color:#000;margin-top:4px;}
-.cs-search.card,.cs-block.card{margin-bottom:0;padding:16px 18px;}
-.cs-block-title{
-  font-size:46px;
-  line-height:1;
-  text-transform:uppercase;
-  color:#40534a;
-  font-weight:800;
-  margin:2px 0 14px;
-}
-
-@media (max-width: 980px){
-  .cs-hero{grid-template-columns:1fr;}
-  .cs-kpi{flex:1;}
-  .cs-hero-main h2,.cs-block-title{font-size:34px;}
-}
 
 /* ─── Role helpers ───────────────────────────────────────── */
 .small-btn{padding:6px 11px;font-size:12px;border-radius:6px;}
@@ -1671,3 +1614,101 @@ body.slate-ops{ background: var(--p0-canvas); }
   color: #92400e;
   border: 1px solid #fde68a;
 }
+
+/* ─── CS + Supervisor layout refinements (v0.9.3) ───────────────────────── */
+.cs-top-grid{
+  display:grid;
+  grid-template-columns: 1.6fr 0.7fr;
+  gap:16px;
+}
+@media (max-width: 980px){
+  .cs-top-grid{ grid-template-columns: 1fr; }
+}
+.hero-card{ position:relative; padding:0; overflow:hidden; min-height:120px; }
+.hero-accent{ position:absolute; left:0; top:0; bottom:0; width:4px; background: var(--sage); }
+.hero-body{ padding:22px 22px 18px 26px; }
+.hero-title{ margin:0; font-size:26px; font-weight:900; color:var(--sage); letter-spacing:-0.02em; }
+.hero-sub{ margin-top:6px; color:rgba(0,0,0,0.55); font-size:13px; }
+
+.cs-kpis{ display:grid; grid-template-rows: repeat(3, 1fr); gap:12px; }
+.kpi-card{ padding:16px 16px 14px; }
+.kpi-card .kpi{ margin:0; }
+
+.card-topbar{ padding:14px 18px; background:rgba(0,0,0,0.02); border-bottom:1px solid rgba(0,0,0,0.08); }
+.card-topbar-title{ font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:800; color:rgba(0,0,0,0.55); }
+.card-body{ padding:18px; }
+
+.cs-manual-grid{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap:12px;
+}
+@media (max-width: 980px){
+  .cs-manual-grid{ grid-template-columns: 1fr; }
+  .cs-span-3, .cs-span-6{ grid-column: 1 / -1 !important; }
+}
+.cs-field{ display:flex; flex-direction:column; gap:6px; font-size:12px; color:rgba(0,0,0,0.55); }
+.cs-field input, .cs-field select{ font-size:13px; }
+.cs-span-3{ grid-column: span 3; }
+.cs-span-6{ grid-column: 1 / -1; }
+
+.cs-actions-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding-top:6px; }
+.cs-create-btn{ display:inline-flex; align-items:center; gap:10px; padding:10px 16px; border-radius:12px; }
+.cs-create-icon{ width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; background:rgba(255,255,255,0.2); font-weight:900; }
+
+.collapse-right{ display:flex; align-items:center; gap:8px; }
+
+.ops-list{ display:flex; flex-direction:column; gap:10px; padding:12px 2px 2px; }
+.ops-list-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 12px; border:1px solid rgba(0,0,0,0.06); border-radius:12px; background:#fff; }
+.ops-list-main{ min-width:0; }
+.ops-list-title{ display:flex; align-items:center; gap:8px; font-weight:800; color:rgba(0,0,0,0.82); }
+.ops-list-sub{ margin-top:4px; font-size:12px; color:rgba(0,0,0,0.52); display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.ops-dot{ color:rgba(0,0,0,0.25); }
+.ops-list-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+
+/* Supervisor: list styling */
+.sup-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+@media (max-width: 980px){ .sup-grid{ grid-template-columns: 1fr; } }
+
+.sup-correction-item{ border:1px solid rgba(0,0,0,0.06); border-radius:12px; padding:14px; background:#fff; display:flex; justify-content:space-between; gap:12px; }
+.sup-correction-left{ min-width:0; }
+.sup-so{ font-weight:900; color:rgba(0,0,0,0.8); }
+.sup-title{ margin-top:6px; font-weight:800; }
+.sup-meta{ margin-top:4px; font-size:12px; color:rgba(0,0,0,0.5); }
+
+.sup-time-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.sup-time-tile{ border:1px dashed rgba(0,0,0,0.2); border-radius:12px; padding:16px; background:transparent; }
+.sup-time-hrs{ font-size:28px; font-weight:900; color:var(--sage); }
+.sup-time-label{ margin-top:4px; font-size:11px; font-weight:800; color:rgba(0,0,0,0.5); letter-spacing:.12em; text-transform:uppercase; }
+.sup-time-btn{ margin-top:10px; width:100%; }
+
+/* CS refreshed layout */
+.cs-header{ display:flex; justify-content:space-between; align-items:flex-end; gap:14px; flex-wrap:wrap; }
+.cs-title{ font-size:20px; font-weight:900; letter-spacing:.02em; color:rgba(0,0,0,0.86); }
+.cs-sub{ margin-top:4px; font-size:12px; color:rgba(0,0,0,0.55); }
+.cs-header-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+
+.cs-kpi-pills{ display:flex; gap:8px; flex-wrap:wrap; }
+.cs-pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,0.08); background:#fff; }
+.cs-pill-label{ font-size:11px; font-weight:800; color:rgba(0,0,0,0.52); letter-spacing:.08em; text-transform:uppercase; }
+.cs-pill-val{ font-size:14px; font-weight:900; color:var(--sage); }
+
+.cs-layout{ display:grid; grid-template-columns: 1fr 420px; gap:14px; margin-top:14px; align-items:start; }
+@media (max-width: 1100px){ .cs-layout{ grid-template-columns: 1fr; } }
+
+.cs-right{ position:sticky; top:14px; }
+@media (max-width: 1100px){ .cs-right{ position:static; } }
+
+.cs-section-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:10px; }
+.cs-section-title{ margin:0; font-size:14px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+
+.cs-intake-card{ min-height: 260px; }
+.cs-intake-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; }
+.cs-intake-title{ font-size:14px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.cs-intake-body{ padding-top:4px; }
+
+.cs-intake-meta{ border:1px solid rgba(0,0,0,0.06); border-radius:12px; padding:10px 12px; background:rgba(0,0,0,0.02); }
+.cs-intake-meta-row{ display:flex; justify-content:space-between; gap:10px; font-size:12px; padding:4px 0; }
+
+.cs-intake-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px; }
+.cs-check{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:rgba(0,0,0,0.6); }

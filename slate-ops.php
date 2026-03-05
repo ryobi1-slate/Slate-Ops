@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.7.0
+ * Version: 0.11.4
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.7.0');
+define('SLATE_OPS_VERSION', '0.11.4');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -40,25 +40,20 @@ add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
 
-  // Tailwind (CDN) to support the newer dashboard layout.
-  // Loaded before ops.js so templates can rely on Tailwind utility classes.
-  wp_enqueue_script('slate-ops-tailwind', 'https://cdn.tailwindcss.com?plugins=forms,typography', [], SLATE_OPS_VERSION, false);
+    wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
 
-  // Minimal Tailwind config aligned to Slate palette.
-  wp_add_inline_script(
-    'slate-ops-tailwind',
-    "tailwind.config = { theme: { extend: { colors: { slateSage: '#40464b', slateSand: '#e1d8cb', slateArches: '#d68b19', slateRedwood: '#0f3a2a' } } } };",
-    'after'
-  );
+  $ver_shell = file_exists(SLATE_OPS_PATH . 'assets/css/ops-shell.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-shell.css') : SLATE_OPS_VERSION;
+  $ver_ops_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops.css') : SLATE_OPS_VERSION;
+  $ver_ops_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops.js') : SLATE_OPS_VERSION;
+  $ver_sched   = file_exists(SLATE_OPS_PATH . 'assets/js/scheduler-phase0.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/scheduler-phase0.js') : SLATE_OPS_VERSION;
 
-  wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
   // ops-shell.css: structural shell tokens (sidebar, topbar, version badge).
   // Must load before ops.css so ops.css overrides can win specificity races.
-  wp_enqueue_style('slate-ops-shell', SLATE_OPS_URL . 'assets/css/ops-shell.css', ['material-symbols'], SLATE_OPS_VERSION);
-  wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', ['slate-ops-shell'], SLATE_OPS_VERSION);
-  wp_enqueue_script('slate-ops', SLATE_OPS_URL . 'assets/js/ops.js', [], SLATE_OPS_VERSION, true);
+  wp_enqueue_style('slate-ops-shell', SLATE_OPS_URL . 'assets/css/ops-shell.css', ['material-symbols'], $ver_shell);
+  wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', ['slate-ops-shell'], $ver_ops_css);
+  wp_enqueue_script('slate-ops', SLATE_OPS_URL . 'assets/js/ops.js', [], $ver_ops_js, true);
   // Phase 0 scheduler helpers (bulk save, tech-assign in modal).
-  wp_enqueue_script('slate-ops-scheduler-p0', SLATE_OPS_URL . 'assets/js/scheduler-phase0.js', ['slate-ops'], SLATE_OPS_VERSION, true);
+  wp_enqueue_script('slate-ops-scheduler-p0', SLATE_OPS_URL . 'assets/js/scheduler-phase0.js', ['slate-ops'], $ver_sched, true);
 
   wp_localize_script('slate-ops', 'slateOpsSettings', [
     'restRoot' => esc_url_raw(rest_url('slate-ops/v1')),

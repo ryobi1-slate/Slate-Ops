@@ -10,12 +10,16 @@ if (!defined('ABSPATH')) exit;
  */
 if (!function_exists('slate_ops_get_version')) {
   function slate_ops_get_version() {
+    // Prefer the code-defined version so the UI always matches the plugin header.
+    if (defined('SLATE_OPS_VERSION') && SLATE_OPS_VERSION) return SLATE_OPS_VERSION;
+
+    // Fallback: legacy deploy flow writes VERSION.txt.
     $file = defined('SLATE_OPS_PATH') ? SLATE_OPS_PATH . 'VERSION.txt' : '';
     if ($file && file_exists($file)) {
-      $v = trim(file_get_contents($file));
+      $v = trim((string) file_get_contents($file));
       if ($v !== '') return $v;
     }
-    return defined('SLATE_OPS_VERSION') ? SLATE_OPS_VERSION : '0.0.0';
+    return '0.0.0';
   }
 }
 

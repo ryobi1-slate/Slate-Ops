@@ -195,10 +195,552 @@ class Slate_Ops_REST {
       'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
       'callback'            => [__CLASS__, 'bulk_schedule'],
     ]);
+  
+    // BOM Builder (Pricing Core shared tables)
+    register_rest_route('slate-ops/v1', '/boms', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'get_boms'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/boms/(?P<id>\d+)', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'get_bom'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/boms/save', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+      'callback' => [__CLASS__, 'save_bom'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/boms/(?P<id>\d+)/clone', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+      'callback' => [__CLASS__, 'clone_bom'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/boms/(?P<id>\d+)/revise', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+      'callback' => [__CLASS__, 'revise_bom'],
+    ]);
+    // Pricing Core helpers (shared pricing DB)
+    register_rest_route('slate-ops/v1', '/pricing/dealers', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'get_pricing_dealers'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/pricing/products/search', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'search_pricing_products'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/pricing/products/lookup', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'lookup_pricing_product'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/pricing/quotes/from-bom', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+      'callback' => [__CLASS__, 'create_quote_from_bom'],
+    ]);
+
+}
+
+
+  // ---- Pricing Core API (dealers/products/quotes) ----
+
+  static function get_pricing_dealers($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    global $wpdb;
+    $dealers = $wpdb->prefix . 'slate_dealers';
+    $rows = $wpdb->get_results("SELECT id, dealer_code, dealer_name, labor_rate_retail_published, labor_rate_wholesale_published, shop_supply_base_retail_published, shop_supply_base_wholesale_published, is_active, effective_date FROM $dealers ORDER BY dealer_code ASC", ARRAY_A);
+    return new WP_REST_Response(['ok' => true, 'dealers' => $rows], 200);
   }
 
+  static function search_pricing_products($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    global $wpdb;
+    $products = $wpdb->prefix . 'slate_products';
+
+    $q = sanitize_text_field($req->get_param('q') ?? '');
+    $limit = min(25, max(5, intval($req->get_param('limit') ?? 10)));
+
+    if ($q === '') {
+      $rows = $wpdb->get_results($wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published, product_type, is_active FROM $products WHERE is_active=1 ORDER BY sku ASC LIMIT %d", $limit), ARRAY_A);
+      return new WP_REST_Response(['ok' => true, 'products' => $rows], 200);
+    }
+
+    $like = '%' . $wpdb->esc_like($q) . '%';
+    $sql = $wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published, product_type, is_active
+                           FROM $products
+                           WHERE is_active=1 AND (sku LIKE %s OR product_name LIKE %s)
+                           ORDER BY (CASE WHEN sku = %s THEN 0 WHEN sku LIKE %s THEN 1 ELSE 2 END), sku ASC
+                           LIMIT %d", $like, $like, $q, $q . '%', $limit);
+    $rows = $wpdb->get_results($sql, ARRAY_A);
+    return new WP_REST_Response(['ok' => true, 'products' => $rows], 200);
+  }
+
+  static function lookup_pricing_product($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    global $wpdb;
+    $products = $wpdb->prefix . 'slate_products';
+
+    $sku = sanitize_text_field($req->get_param('sku') ?? '');
+    $id = intval($req->get_param('id') ?? 0);
+
+    if ($id > 0) {
+      $row = $wpdb->get_row($wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published, product_type, is_active FROM $products WHERE id=%d", $id), ARRAY_A);
+    } else if ($sku !== '') {
+      $row = $wpdb->get_row($wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published, product_type, is_active FROM $products WHERE sku=%s", $sku), ARRAY_A);
+    } else {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Provide sku or id'], 400);
+    }
+
+    if (!$row) return new WP_REST_Response(['ok' => false, 'error' => 'Not found'], 404);
+    return new WP_REST_Response(['ok' => true, 'product' => $row], 200);
+  }
+
+  static function create_quote_from_bom($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    global $wpdb;
+    $payload = json_decode($req->get_body(), true);
+    if (!is_array($payload)) $payload = $req->get_json_params();
+
+    $bom_id = intval($payload['bom_id'] ?? 0);
+    $dealer_id = intval($payload['dealer_id'] ?? 0);
+    $qty = max(1, intval($payload['qty'] ?? 1));
+
+    if ($bom_id <= 0 || $dealer_id <= 0) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'bom_id and dealer_id required'], 400);
+    }
+
+    $boms = $wpdb->prefix . 'slate_boms';
+    $lines = $wpdb->prefix . 'slate_bom_lines';
+    $products = $wpdb->prefix . 'slate_products';
+    $dealers = $wpdb->prefix . 'slate_dealers';
+    $quotes = $wpdb->prefix . 'slate_quotes';
+    $quote_lines = $wpdb->prefix . 'slate_quote_lines';
+
+    $bom = $wpdb->get_row($wpdb->prepare("SELECT * FROM $boms WHERE id=%d", $bom_id), ARRAY_A);
+    if (!$bom) return new WP_REST_Response(['ok' => false, 'error' => 'BOM not found'], 404);
+
+    $dealer = $wpdb->get_row($wpdb->prepare("SELECT * FROM $dealers WHERE id=%d", $dealer_id), ARRAY_A);
+    if (!$dealer) return new WP_REST_Response(['ok' => false, 'error' => 'Dealer not found'], 404);
+
+    $cols = $wpdb->get_col("DESCRIBE $lines", 0);
+    $has_product_id = in_array('product_id', $cols, true);
+
+    $bom_lines = $wpdb->get_results($wpdb->prepare("SELECT * FROM $lines WHERE bom_id=%d ORDER BY sort_order ASC, id ASC", $bom_id), ARRAY_A);
+
+    $parts_wh = 0.0; $parts_rt = 0.0;
+    foreach ($bom_lines as $ln) {
+      $line_type = strtoupper($ln['line_type'] ?? 'PART');
+      if ($line_type !== 'PART') continue;
+      $product_id = $has_product_id ? intval($ln['product_id'] ?? 0) : 0;
+      $sku = !$has_product_id ? ($ln['sku'] ?? '') : '';
+      $prod = null;
+      if ($product_id > 0) $prod = $wpdb->get_row($wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published FROM $products WHERE id=%d", $product_id), ARRAY_A);
+      else if ($sku !== '') $prod = $wpdb->get_row($wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published FROM $products WHERE sku=%s", $sku), ARRAY_A);
+      if (!$prod) continue;
+
+      $q = floatval($ln['qty'] ?? 1);
+      $parts_wh += floatval($prod['dealer_price_published'] ?? 0) * $q;
+      $parts_rt += floatval($prod['retail_price_published'] ?? 0) * $q;
+    }
+
+    $labor_hours = floatval($bom['install_hours'] ?? 0);
+    $shop_units  = floatval($bom['shop_supply_units'] ?? 0);
+
+    $labor_wh = $labor_hours * floatval($dealer['labor_rate_wholesale_published'] ?? 0);
+    $labor_rt = $labor_hours * floatval($dealer['labor_rate_retail_published'] ?? 0);
+    $shop_wh  = $shop_units  * floatval($dealer['shop_supply_base_wholesale_published'] ?? 0);
+    $shop_rt  = $shop_units  * floatval($dealer['shop_supply_base_retail_published'] ?? 0);
+
+    $installed_wh = ($parts_wh + $labor_wh + $shop_wh) * $qty;
+    $installed_rt = ($parts_rt + $labor_rt + $shop_rt) * $qty;
+
+    // basic quote_no
+    $quote_no = 'Q-' . strtoupper($dealer['dealer_code']) . '-' . gmdate('Ymd-His');
+
+    $wpdb->insert($quotes, [
+      'quote_no' => $quote_no,
+      'dealer_id' => $dealer_id,
+      'status' => 'DRAFT',
+      'created_by' => get_current_user_id(),
+      'created_at' => current_time('mysql', 1),
+      'updated_at' => current_time('mysql', 1),
+      'subtotal_retail' => $installed_rt,
+      'subtotal_wholesale' => $installed_wh,
+      'labor_hours' => $labor_hours,
+      'shop_supply_units' => $shop_units,
+      'notes' => 'Created from BOM ' . ($bom['bom_no'] ?? ''),
+    ]);
+
+    $quote_id = intval($wpdb->insert_id);
+    if ($quote_id <= 0) return new WP_REST_Response(['ok' => false, 'error' => 'Failed to create quote'], 500);
+
+    // snapshot parts lines as quote lines
+    foreach ($bom_lines as $ln) {
+      $line_type = strtoupper($ln['line_type'] ?? 'PART');
+      if ($line_type !== 'PART') continue;
+
+      $qline_qty = floatval($ln['qty'] ?? 1) * $qty;
+
+      $product_id = $has_product_id ? intval($ln['product_id'] ?? 0) : 0;
+      $sku = !$has_product_id ? ($ln['sku'] ?? '') : '';
+      $prod = null;
+      if ($product_id > 0) $prod = $wpdb->get_row($wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published FROM $products WHERE id=%d", $product_id), ARRAY_A);
+      else if ($sku !== '') $prod = $wpdb->get_row($wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published FROM $products WHERE sku=%s", $sku), ARRAY_A);
+      if (!$prod) continue;
+
+      $wpdb->insert($quote_lines, [
+        'quote_id' => $quote_id,
+        'product_id' => intval($prod['id']),
+        'sku_snapshot' => $prod['sku'],
+        'name_snapshot' => $prod['product_name'],
+        'qty' => $qline_qty,
+        'unit_retail' => floatval($prod['retail_price_published'] ?? 0),
+        'unit_wholesale' => floatval($prod['dealer_price_published'] ?? 0),
+        'line_retail' => floatval($prod['retail_price_published'] ?? 0) * $qline_qty,
+        'line_wholesale' => floatval($prod['dealer_price_published'] ?? 0) * $qline_qty,
+        'line_type' => 'PART',
+        'created_at' => current_time('mysql', 1),
+      ]);
+    }
+
+    // add labor + shop lines as service-type lines
+    if ($labor_hours > 0) {
+      $wpdb->insert($quote_lines, [
+        'quote_id' => $quote_id,
+        'product_id' => 0,
+        'sku_snapshot' => 'LABOR',
+        'name_snapshot' => 'Labor',
+        'qty' => $labor_hours * $qty,
+        'unit_retail' => floatval($dealer['labor_rate_retail_published'] ?? 0),
+        'unit_wholesale' => floatval($dealer['labor_rate_wholesale_published'] ?? 0),
+        'line_retail' => $labor_rt * $qty,
+        'line_wholesale' => $labor_wh * $qty,
+        'line_type' => 'LABOR',
+        'created_at' => current_time('mysql', 1),
+      ]);
+    }
+    if ($shop_units > 0) {
+      $wpdb->insert($quote_lines, [
+        'quote_id' => $quote_id,
+        'product_id' => 0,
+        'sku_snapshot' => 'SHOP',
+        'name_snapshot' => 'Shop Supplies',
+        'qty' => $shop_units * $qty,
+        'unit_retail' => floatval($dealer['shop_supply_base_retail_published'] ?? 0),
+        'unit_wholesale' => floatval($dealer['shop_supply_base_wholesale_published'] ?? 0),
+        'line_retail' => $shop_rt * $qty,
+        'line_wholesale' => $shop_wh * $qty,
+        'line_type' => 'SHOP',
+        'created_at' => current_time('mysql', 1),
+      ]);
+    }
+
+    return new WP_REST_Response(['ok' => true, 'quote_id' => $quote_id, 'quote_no' => $quote_no, 'subtotal_retail' => $installed_rt, 'subtotal_wholesale' => $installed_wh], 200);
+  }
+
+
   // Permissions
-  public static function perm_ops() {
+  
+  // ---- BOM Builder helpers ----
+  private static function pricing_tables_ready() {
+    global $wpdb;
+    $boms = $wpdb->prefix . 'slate_boms';
+    $lines = $wpdb->prefix . 'slate_bom_lines';
+    $products = $wpdb->prefix . 'slate_products';
+    // check boms table exists as the gate
+    $exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $boms));
+    if ($exists !== $boms) return false;
+    return true;
+  }
+
+  private static function table_columns($table) {
+    global $wpdb;
+    $cols = $wpdb->get_results("DESCRIBE {$table}");
+    $out = [];
+    foreach ($cols as $c) $out[] = $c->Field;
+    return $out;
+  }
+
+  private static function filter_to_columns($table, $data) {
+    $cols = self::table_columns($table);
+    $clean = [];
+    foreach ($data as $k => $v) {
+      if (in_array($k, $cols, true)) $clean[$k] = $v;
+    }
+    return $clean;
+  }
+
+  public static function get_boms($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    global $wpdb;
+    $boms = $wpdb->prefix . 'slate_boms';
+    $rows = $wpdb->get_results("SELECT * FROM {$boms} ORDER BY id DESC LIMIT 500", ARRAY_A);
+    return ['ok' => true, 'boms' => $rows];
+  }
+
+  public static function get_bom($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    global $wpdb;
+    $boms = $wpdb->prefix . 'slate_boms';
+    $lines = $wpdb->prefix . 'slate_bom_lines';
+    $products = $wpdb->prefix . 'slate_products';
+
+    $id = intval($req['id']);
+    $bom = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$boms} WHERE id=%d", $id), ARRAY_A);
+    if (!$bom) return new WP_REST_Response(['ok' => false, 'error' => 'BOM not found'], 404);
+
+    $line_rows = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$lines} WHERE bom_id=%d ORDER BY sort_order ASC, id ASC", $id), ARRAY_A);
+
+    // hydrate with product snapshot + pricing
+    $lcols = self::table_columns($lines);
+    $has_product_id = in_array('product_id', $lcols, true);
+
+    $product_map = [];
+    if ($has_product_id) {
+      $ids = [];
+      foreach ($line_rows as $lr) {
+        if (strtoupper($lr['line_type'] ?? 'PART') !== 'PART') continue;
+        $pid = intval($lr['product_id'] ?? 0);
+        if ($pid > 0) $ids[] = $pid;
+      }
+      $ids = array_values(array_unique($ids));
+      if (!empty($ids)) {
+        $in = implode(',', array_map('intval', $ids));
+        $prows = $wpdb->get_results("SELECT id, sku, product_name, dealer_price_published, retail_price_published, product_type FROM {$products} WHERE id IN ($in)", ARRAY_A);
+        foreach ($prows as $p) $product_map[intval($p['id'])] = $p;
+      }
+    } else {
+      $skus = [];
+      foreach ($line_rows as $lr) {
+        if (strtoupper($lr['line_type'] ?? 'PART') !== 'PART') continue;
+        $sku = $lr['sku'] ?? '';
+        if ($sku !== '') $skus[] = $sku;
+      }
+      $skus = array_values(array_unique($skus));
+      if (!empty($skus)) {
+        $place = implode(',', array_fill(0, count($skus), '%s'));
+        $sql = $wpdb->prepare("SELECT id, sku, product_name, dealer_price_published, retail_price_published, product_type FROM {$products} WHERE sku IN ($place)", ...$skus);
+        $prows = $wpdb->get_results($sql, ARRAY_A);
+        foreach ($prows as $p) $product_map[$p['sku']] = $p;
+      }
+    }
+
+    // attach
+    foreach ($line_rows as &$lr) {
+      $type = strtoupper($lr['line_type'] ?? 'PART');
+      if ($type !== 'PART') continue;
+      $p = null;
+      if ($has_product_id) {
+        $pid = intval($lr['product_id'] ?? 0);
+        if ($pid > 0 && isset($product_map[$pid])) $p = $product_map[$pid];
+      } else {
+        $sku = $lr['sku'] ?? '';
+        if ($sku !== '' && isset($product_map[$sku])) $p = $product_map[$sku];
+      }
+      if ($p) {
+        $lr['product_id'] = intval($p['id']);
+        $lr['sku'] = $p['sku'];
+        $lr['product_name'] = $p['product_name'];
+        $lr['unit_wholesale'] = floatval($p['dealer_price_published'] ?? 0);
+        $lr['unit_retail'] = floatval($p['retail_price_published'] ?? 0);
+      }
+    }
+    unset($lr);
+
+return ['ok' => true, 'bom' => $bom, 'lines' => $line_rows];
+  }
+
+  public static function save_bom($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    global $wpdb;
+    $boms = $wpdb->prefix . 'slate_boms';
+    $lines = $wpdb->prefix . 'slate_bom_lines';
+
+    $payload = json_decode($req->get_body(), true);
+    if (!is_array($payload)) $payload = $req->get_json_params();
+
+    $id = isset($payload['id']) ? intval($payload['id']) : 0;
+
+    $bom_data = [
+      'bom_no' => sanitize_text_field($payload['bom_no'] ?? ''),
+      'name' => sanitize_text_field($payload['name'] ?? ''),
+      'fitment' => sanitize_text_field($payload['fitment'] ?? ''),
+      'market' => sanitize_text_field($payload['market'] ?? ''),
+      'category' => sanitize_text_field($payload['category'] ?? ''),
+      'install_hours' => floatval($payload['install_hours'] ?? 0),
+      'shop_supply_units' => floatval($payload['shop_supply_units'] ?? 0),
+      'status' => sanitize_text_field($payload['status'] ?? 'active'),
+      'revision' => sanitize_text_field($payload['revision'] ?? ''),
+      'notes' => sanitize_textarea_field($payload['notes'] ?? ''),
+      'updated_at' => current_time('mysql'),
+    ];
+
+    $bom_data = self::filter_to_columns($boms, $bom_data);
+
+    if (!$bom_data['bom_no']) return new WP_REST_Response(['ok' => false, 'error' => 'BOM # is required'], 400);
+
+    if ($id > 0) {
+      $wpdb->update($boms, $bom_data, ['id' => $id]);
+    } else {
+      if (in_array('created_at', self::table_columns($boms), true) && !isset($bom_data['created_at'])) {
+        $bom_data['created_at'] = current_time('mysql');
+      }
+      $wpdb->insert($boms, $bom_data);
+      $id = intval($wpdb->insert_id);
+    }
+
+    // lines
+    $incoming = $payload['lines'] ?? [];
+    if (!is_array($incoming)) $incoming = [];
+
+    // wipe and reinsert (simple + safe for MVP)
+    $wpdb->delete($lines, ['bom_id' => $id]);
+
+    $cols = self::table_columns($lines);
+    $products = $wpdb->prefix . 'slate_products';
+    $has_notes = in_array('line_notes', $cols, true) || in_array('notes', $cols, true);
+    $has_product_id = in_array('product_id', $cols, true);
+    $has_sku = in_array('sku', $cols, true);
+
+    $sort = 1;
+    foreach ($incoming as $ln) {
+      $row = [
+        'bom_id' => $id,
+        'qty' => floatval($ln['qty'] ?? 1),
+        'sort_order' => intval($ln['sort_order'] ?? $sort),
+        'line_type' => sanitize_text_field($ln['line_type'] ?? 'PART'),
+      ];
+
+      // PART lines can be passed as product_id or sku. Persist based on table schema.
+      if (strtoupper($row['line_type']) === 'PART') {
+        $pid = intval($ln['product_id'] ?? 0);
+        $sku_in = sanitize_text_field($ln['sku'] ?? '');
+
+        if ($pid <= 0 && $sku_in !== '') {
+          $pid = intval($wpdb->get_var($wpdb->prepare("SELECT id FROM {$products} WHERE sku=%s", $sku_in)));
+        }
+
+        if ($has_product_id) {
+          $row['product_id'] = $pid;
+        }
+        if ($has_sku) {
+          $row['sku'] = $sku_in;
+        }
+
+        if ($has_product_id && intval($row['product_id'] ?? 0) <= 0) { $sort++; continue; }
+        if (!$has_product_id && $has_sku && empty($row['sku'])) { $sort++; continue; }
+      }
+
+      if ($has_notes) {
+        if (in_array('line_notes', $cols, true)) $row['line_notes'] = sanitize_text_field($ln['line_notes'] ?? '');
+        if (in_array('notes', $cols, true)) $row['notes'] = sanitize_text_field($ln['line_notes'] ?? '');
+      }
+
+      $row = self::filter_to_columns($lines, $row);
+      $wpdb->insert($lines, $row);
+      $sort++;
+    }
+
+return ['ok' => true, 'id' => $id];
+  }
+
+  private static function duplicate_bom_with_lines($source_id, $new_bom_no, $new_name, $mode='clone') {
+    global $wpdb;
+    $boms = $wpdb->prefix . 'slate_boms';
+    $lines = $wpdb->prefix . 'slate_bom_lines';
+
+    $src = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$boms} WHERE id=%d", intval($source_id)), ARRAY_A);
+    if (!$src) return new WP_REST_Response(['ok' => false, 'error' => 'Source BOM not found'], 404);
+
+    $now = current_time('mysql');
+
+    $data = $src;
+    unset($data['id']);
+    $data['bom_no'] = sanitize_text_field($new_bom_no);
+    if ($new_name) $data['name'] = sanitize_text_field($new_name);
+
+    // revision/notes convention without schema changes
+    $src_no = $src['bom_no'] ?? '';
+    $prefix = ($mode === 'revise') ? 'Revision of ' : 'Clone of ';
+    $note_append = $prefix . $src_no . ' (ID ' . intval($source_id) . ') on ' . $now;
+
+    if (isset($data['notes'])) {
+      $data['notes'] = trim(($data['notes'] ?? '') . "\n" . $note_append);
+    }
+    if (isset($data['revision']) && $mode === 'revise') {
+      // if existing revision is numeric, increment; else leave as is and rely on bom_no suffix
+      $data['revision'] = sanitize_text_field($data['revision']);
+    }
+
+    if (isset($data['created_at'])) $data['created_at'] = $now;
+    if (isset($data['updated_at'])) $data['updated_at'] = $now;
+
+    $data = self::filter_to_columns($boms, $data);
+    $wpdb->insert($boms, $data);
+    $new_id = intval($wpdb->insert_id);
+
+    $src_lines = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$lines} WHERE bom_id=%d ORDER BY sort_order ASC, id ASC", intval($source_id)), ARRAY_A);
+    foreach ($src_lines as $ln) {
+      unset($ln['id']);
+      $ln['bom_id'] = $new_id;
+      $ln = self::filter_to_columns($lines, $ln);
+      $wpdb->insert($lines, $ln);
+    }
+
+    return ['ok' => true, 'id' => $new_id];
+  }
+
+  public static function clone_bom($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    $payload = json_decode($req->get_body(), true);
+    if (!is_array($payload)) $payload = $req->get_json_params();
+    $new_bom_no = sanitize_text_field($payload['bom_no'] ?? '');
+    $new_name = sanitize_text_field($payload['name'] ?? '');
+    if (!$new_bom_no) return new WP_REST_Response(['ok' => false, 'error' => 'New BOM # required'], 400);
+    return self::duplicate_bom_with_lines(intval($req['id']), $new_bom_no, $new_name, 'clone');
+  }
+
+  public static function revise_bom($req) {
+    if (!self::pricing_tables_ready()) {
+      return new WP_REST_Response(['ok' => false, 'error' => 'Pricing Core tables not found. Activate Slate Pricing Core.'], 400);
+    }
+    $payload = json_decode($req->get_body(), true);
+    if (!is_array($payload)) $payload = $req->get_json_params();
+    $new_bom_no = sanitize_text_field($payload['bom_no'] ?? '');
+    $new_name = sanitize_text_field($payload['name'] ?? '');
+    if (!$new_bom_no) return new WP_REST_Response(['ok' => false, 'error' => 'New BOM # required'], 400);
+    return self::duplicate_bom_with_lines(intval($req['id']), $new_bom_no, $new_name, 'revise');
+  }
+
+public static function perm_ops() {
     return Slate_Ops_Utils::require_ops_access();
   }
   public static function perm_tech_or_supervisor_or_admin() {

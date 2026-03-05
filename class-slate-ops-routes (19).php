@@ -61,11 +61,6 @@ class Slate_Shop_Monitor {
                 return '<script type="module" src="' . esc_url( $src ) . '"></script>';
             }, 10, 3 );
         }
-
-        
-        // Tailwind CDN
-        wp_enqueue_script( 'tailwindcss', 'https://cdn.tailwindcss.com', array(), '3.0', false );
-
         // Retrieve Settings
         $options = get_option( 'slate_monitor_settings' );
         $interval = isset($options['refresh_interval']) && !empty($options['refresh_interval']) ? $options['refresh_interval'] : '60000';
