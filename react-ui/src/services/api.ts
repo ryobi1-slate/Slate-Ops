@@ -3,8 +3,8 @@ import { AppState, Bom, BomLine, BomSummary, Dealer, Job, QcInspection, Producti
 // --- CONFIGURATION ---
 
 const API_BASE_URL = typeof window !== 'undefined' && window.slateOpsSettings?.api?.root 
-  ? window.slateOpsSettings.api.root + 'slate-ops/v1' 
-  : '/wp-json/slate-ops/v1'; // Fallback for dev proxy or local
+  ? window.slateOpsSettings.api.root.replace(/\/$/, '') 
+  : '/wp-json/slate-ops/v1';
 
 const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.nonce 
   ? window.slateOpsSettings.api.nonce 
