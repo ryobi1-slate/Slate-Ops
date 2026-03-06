@@ -13,53 +13,36 @@ const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.non
 // Helper to handle API responses
 async function handleResponse<T>(response: Response): Promise<T> {
   const rawBody = await response.text();
-  const contentType = response.headers.get('content-type') || '';
-  const isJson = contentType.includes('application/json');
-
-  if (!response.ok) {
-    if (rawBody) {
-      if (isJson) {
-        try {
-          const errorPayload = JSON.parse(rawBody) as { message?: string };
-          throw new Error(errorPayload.message || `API Error: ${response.statusText}`);
-        } catch {
-          // Fall back to server text below if JSON parsing fails.
-        }
-      }
-      throw new Error(rawBody);
-    }
-
-    throw new Error(`API Error: ${response.statusText}`);
-  }
 
   // Some endpoints (ex: DELETE) may return 204 No Content or an empty body.
   // Treat those as a successful empty result.
-  if (response.status === 204 || !rawBody.trim()) {
+  if (response.ok && (response.status === 204 || !rawBody.trim())) {
     return undefined as T;
   }
 
-  if (isJson) {
+  // WordPress APIs are typically JSON, even when the content-type can be inconsistent.
+  // Parse JSON first and only fall back to raw text when parsing fails.
+  const tryParseJson = (): unknown => {
     try {
-      return JSON.parse(rawBody) as T;
+      return JSON.parse(rawBody);
     } catch {
-      throw new Error('API Error: Failed to parse JSON response body');
+      return null;
     }
+  };
+
+  if (!response.ok) {
+    const parsedError = rawBody ? (tryParseJson() as { message?: string } | null) : null;
+    const message = parsedError?.message || rawBody || `API Error: ${response.statusText}`;
+    throw new Error(message);
   }
 
-  // Some successful endpoints may return plain text.
+  const parsedData = tryParseJson();
+  if (parsedData !== null) {
+    return parsedData as T;
+  }
+
+  // Only use plain text as a success payload when it isn't JSON.
   return rawBody as T;
-  // Some endpoints (ex: DELETE) may return 204 No Content.
-  // Avoid parsing JSON when no payload is present.
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    return undefined as T;
-  }
-
-  return response.json();
 }
 
 // Helper for headers
