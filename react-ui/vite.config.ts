@@ -10,15 +10,17 @@ export default defineConfig(({mode}) => {
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
+    resolve: { alias: { '@': path.resolve(__dirname, '.') } },
+    server: { hmr: process.env.DISABLE_HMR !== 'true' },
+    build: {
+      outDir: '../assets/react',
+      emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          entryFileNames: 'app.js',
+          assetFileNames: 'app.[ext]',
+        },
       },
-    },
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
     },
   };
 });
