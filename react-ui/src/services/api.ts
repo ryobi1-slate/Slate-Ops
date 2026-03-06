@@ -4,7 +4,7 @@ import { AppState, Bom, BomLine, BomSummary, Dealer, Job, QcInspection, Producti
 
 const API_BASE_URL = typeof window !== 'undefined' && window.slateOpsSettings?.api?.root 
   ? window.slateOpsSettings.api.root.replace(/\/$/, '') 
-  : '/wp-json/slate-ops/v1';
+  : '/wp-json/slate-ops/v1'; // Fallback for dev proxy or local
 
 const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.nonce 
   ? window.slateOpsSettings.api.nonce 
@@ -40,37 +40,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
   } catch {
     return rawBody as T;
   }
-}
-
-  // Some endpoints (ex: DELETE) may return 204 No Content or an empty body.
-  // Treat those as a successful empty result.
-  if (response.ok && (response.status === 204 || !rawBody.trim())) {
-    return undefined as T;
-  }
-
-  // WordPress APIs are typically JSON, even when the content-type can be inconsistent.
-  // Parse JSON first and only fall back to raw text when parsing fails.
-  const tryParseJson = (): unknown => {
-    try {
-      return JSON.parse(rawBody);
-    } catch {
-      return null;
-    }
-  };
-
-  if (!response.ok) {
-    const parsedError = rawBody ? (tryParseJson() as { message?: string } | null) : null;
-    const message = parsedError?.message || rawBody || `API Error: ${response.statusText}`;
-    throw new Error(message);
-  }
-
-  const parsedData = tryParseJson();
-  if (parsedData !== null) {
-    return parsedData as T;
-  }
-
-  // Only use plain text as a success payload when it isn't JSON.
-  return rawBody as T;
 }
 
 // Helper for headers
