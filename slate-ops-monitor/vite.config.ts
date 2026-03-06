@@ -7,12 +7,12 @@ export default defineConfig(({ mode }) => {
   return {
     base: './',
     build: {
-      outDir: 'dist',
+      outDir: '../assets/react',
+      emptyOutDir: true,
       rollupOptions: {
         output: {
-          entryFileNames: 'assets/[name].js',
-          chunkFileNames: 'assets/[name].js',
-          assetFileNames: 'assets/[name].[ext]'
+          entryFileNames: 'app.js',
+          assetFileNames: 'app.[ext]'
         }
       }
     },
