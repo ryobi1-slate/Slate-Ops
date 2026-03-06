@@ -28,10 +28,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(errorPayload.message || `API Error: ${response.statusText}`);
   }
 
-  // Some endpoints (ex: DELETE) may return 204 No Content or an empty body.
-  // Treat those as a successful empty result.
-  if (!rawBody || response.status === 204) {
+  // Handle 204 No Content separately, as it's an explicit "no content" response.
+  if (response.status === 204) {
     return undefined as T;
+  }
+
+  // For other successful responses, an empty body is ambiguous and likely an error if content was expected.
+  if (!rawBody) {
+    throw new Error('API Error: Received successful response with empty body where content was expected.');
   }
 
   try {
