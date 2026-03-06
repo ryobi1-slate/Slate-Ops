@@ -48,6 +48,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
   // Some successful endpoints may return plain text.
   return rawBody as T;
+  // Some endpoints (ex: DELETE) may return 204 No Content.
+  // Avoid parsing JSON when no payload is present.
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return undefined as T;
+  }
+
+  return response.json();
 }
 
 // Helper for headers
