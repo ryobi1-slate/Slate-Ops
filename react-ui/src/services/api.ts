@@ -12,11 +12,37 @@ const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.non
 
 // Helper to handle API responses
 async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `API Error: ${response.statusText}`);
+  const rawBody = await response.text();
+
+  // Some endpoints (ex: DELETE) may return 204 No Content or an empty body.
+  // Treat those as a successful empty result.
+  if (response.ok && (response.status === 204 || !rawBody.trim())) {
+    return undefined as T;
   }
-  return response.json();
+
+  // WordPress APIs are typically JSON, even when the content-type can be inconsistent.
+  // Parse JSON first and only fall back to raw text when parsing fails.
+  const tryParseJson = (): unknown => {
+    try {
+      return JSON.parse(rawBody);
+    } catch {
+      return null;
+    }
+  };
+
+  if (!response.ok) {
+    const parsedError = rawBody ? (tryParseJson() as { message?: string } | null) : null;
+    const message = parsedError?.message || rawBody || `API Error: ${response.statusText}`;
+    throw new Error(message);
+  }
+
+  const parsedData = tryParseJson();
+  if (parsedData !== null) {
+    return parsedData as T;
+  }
+
+  // Only use plain text as a success payload when it isn't JSON.
+  return rawBody as T;
 }
 
 // Helper for headers
