@@ -12,11 +12,35 @@ const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.non
 
 // Helper to handle API responses
 async function handleResponse<T>(response: Response): Promise<T> {
+  const rawBody = await response.text();
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `API Error: ${response.statusText}`);
+    let errorPayload: { message?: string } = { message: 'Unknown error' };
+
+    if (rawBody) {
+      try {
+        errorPayload = JSON.parse(rawBody);
+      } catch {
+        errorPayload = { message: rawBody };
+      }
+    }
+
+    throw new Error(errorPayload.message || `API Error: ${response.statusText}`);
   }
-  return response.json();
+
+  // Some endpoints (ex: DELETE) may return 204 No Content or an empty body.
+  // Treat those as a successful empty result.
+  if (!rawBody || response.status === 204) {
+    return undefined as T;
+  }
+
+  try {
+    return JSON.parse(rawBody) as T;
+  } catch {
+    // Some upstreams respond with plain-text success payloads.
+    // Returning the raw body avoids blank pages caused by hard failures.
+    return rawBody as T;
+  }
 }
 
 // Helper for headers
