@@ -14,6 +14,34 @@ const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.non
 async function handleResponse<T>(response: Response): Promise<T> {
   const rawBody = await response.text();
 
+  if (!response.ok) {
+    let message = `API Error: ${response.statusText}`;
+    if (rawBody) {
+      try {
+        const parsedError = JSON.parse(rawBody);
+        message = parsedError?.message || rawBody;
+      } catch {
+        message = rawBody;
+      }
+    }
+    throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  if (!rawBody.trim()) {
+    throw new Error(`API returned status ${response.status} but the response body is empty.`);
+  }
+
+  try {
+    return JSON.parse(rawBody) as T;
+  } catch {
+    return rawBody as T;
+  }
+}
+
   // Some endpoints (ex: DELETE) may return 204 No Content or an empty body.
   // Treat those as a successful empty result.
   if (response.ok && (response.status === 204 || !rawBody.trim())) {
