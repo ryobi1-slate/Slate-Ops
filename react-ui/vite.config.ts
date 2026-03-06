@@ -30,3 +30,13 @@ export default defineConfig(({mode}) => {
     },
   };
 });
+build: {
+  outDir: '../assets/react',
+  emptyOutDir: true,
+  rollupOptions: {
+    output: {
+      entryFileNames: 'app.js',
+      assetFileNames: 'app.[ext]',
+    },
+  },
+},

@@ -4,7 +4,7 @@ import { AppState, Bom, BomLine, BomSummary, Dealer, Job, QcInspection, Producti
 
 const API_BASE_URL = typeof window !== 'undefined' && window.slateOpsSettings?.api?.root 
   ? window.slateOpsSettings.api.root.replace(/\/$/, '') 
-  : '/wp-json/slate-ops/v1'; // Fallback for dev proxy or local
+  : '/wp-json/slate-ops/v1';
 
 const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.nonce 
   ? window.slateOpsSettings.api.nonce 
@@ -41,7 +41,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return rawBody as T;
   }
 }
-
 // Helper for headers
 function getHeaders() {
   return {
