@@ -83,4 +83,222 @@ const MOCK_ITEMS: Item[] = [
   { id: 2, sku: 'EV-CTRL-02', name: 'Performance Controller', category: 'Part', vendor: 'ElectroDrive', cost: 600.00, retail: 850.00, stock: 5 },
   { id: 3, sku: 'L-INSTALL-01', name: 'Standard Installation Labor', category: 'Labor', vendor: 'Internal', cost: 85.00, retail: 150.00, stock: null },
   { id: 4, sku: 'SUSP-LIFT-01', name: '2-inch Lift Kit', category: 'Part', vendor: 'OffRoad Pro', cost: 800.00, retail: 1200.00, stock: 3 },
-  { id: 5, sku: 'WHL-OFF-17', name: '17-inch
+  { id: 5, sku: 'WHL-OFF-17', name: '17-inch Off-Road Wheels', category: 'Part', vendor: 'WheelMaster', cost: 220.00, retail: 350.00, stock: 24 },
+  { id: 6, sku: 'F-SHIP-01', name: 'Standard Shipping Fee', category: 'Fee', vendor: 'Internal', cost: 0.00, retail: 150.00, stock: null },
+];
+
+// --- API SERVICES ---
+
+export const itemsService = {
+  // GET /items
+  getAll: async (): Promise<Item[]> => {
+    if (!NONCE) return MOCK_ITEMS;
+    const response = await fetch(`${API_BASE_URL}/items`, { headers: getHeaders() });
+    return handleResponse<Item[]>(response);
+  },
+  // POST /items
+  create: async (itemData: Partial<Item>): Promise<Item> => {
+    if (!NONCE) {
+       return { id: Math.floor(Math.random() * 10000), ...itemData } as Item;
+    }
+    const response = await fetch(`${API_BASE_URL}/items`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(itemData),
+    });
+    return handleResponse<Item>(response);
+  }
+};
+
+export const bomService = {
+  // GET /boms
+  getAll: async (): Promise<BomSummary[]> => {
+    if (!NONCE) return MOCK_BOMS; // Return mocks if no nonce (dev mode)
+    const response = await fetch(`${API_BASE_URL}/boms`, { headers: getHeaders() });
+    return handleResponse<BomSummary[]>(response);
+  },
+
+  // GET /boms/:id
+  getById: async (id: number): Promise<Bom> => {
+    if (!NONCE) {
+      // Mock detail response
+      const summary = MOCK_BOMS.find(b => b.id === id);
+      return {
+        id,
+        bom_no: summary?.bom_no || 'UNK',
+        name: summary?.name || 'Unknown BOM',
+        revision: summary?.revision || 'R1',
+        status: summary?.status || 'draft',
+        install_hours: 10,
+        shop_supply_units: 5,
+        created_at: '2023-01-01',
+        updated_at: summary?.updated_at || '2023-01-01',
+        lines: [
+          { id: 1, bom_id: id, line_type: 'part', sku: 'PART-001', description: 'Mock Part 1', qty: 2, unit_retail: 50.00, sort_order: 1 },
+          { id: 2, bom_id: id, line_type: 'labor', sku: 'LAB-001', description: 'Install Labor', qty: 1, unit_retail: 100.00, sort_order: 2 }
+        ]
+      };
+    }
+    const response = await fetch(`${API_BASE_URL}/boms/${id}`, { headers: getHeaders() });
+    return handleResponse<Bom>(response);
+  },
+
+  // POST /boms
+  create: async (data: Partial<Bom>): Promise<Bom> => {
+    if (!NONCE) {
+      console.log('Mock Create BOM:', data);
+      return { 
+        id: Math.floor(Math.random() * 1000), 
+        bom_no: data.bom_no || 'NEW-BOM',
+        name: data.name || 'New BOM', 
+        revision: 'R1',
+        status: 'draft',
+        install_hours: 0,
+        shop_supply_units: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        lines: [] 
+      };
+    }
+    const response = await fetch(`${API_BASE_URL}/boms`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Bom>(response);
+  },
+
+  // PUT /boms/:id
+  update: async (id: number, data: Partial<Bom>): Promise<Bom> => {
+    if (!NONCE) {
+      console.log('Mock Update BOM:', id, data);
+      return { 
+        id, 
+        bom_no: data.bom_no || 'UPDATED-BOM',
+        name: data.name || 'Updated BOM', 
+        revision: 'R1',
+        status: 'draft',
+        install_hours: 0,
+        shop_supply_units: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        lines: [] 
+      };
+    }
+    const response = await fetch(`${API_BASE_URL}/boms/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Bom>(response);
+  },
+
+  // DELETE /boms/:id
+  delete: async (id: number): Promise<void> => {
+    if (!NONCE) {
+      console.log('Mock Delete BOM:', id);
+      return;
+    }
+    const response = await fetch(`${API_BASE_URL}/boms/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse<void>(response);
+  },
+
+  // POST /boms/:id/revise
+  revise: async (id: number): Promise<{ success: boolean; new_id: number }> => {
+    if (!NONCE) {
+       console.log('Mock Revise BOM:', id);
+       return { success: true, new_id: id + 1000 }; // Mock ID
+    }
+    const response = await fetch(`${API_BASE_URL}/boms/${id}/revise`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    return handleResponse<{ success: boolean; new_id: number }>(response);
+  },
+
+  // POST /boms/:id/clone
+  clone: async (id: number, newBomNo?: string): Promise<{ success: boolean; new_id: number }> => {
+    if (!NONCE) {
+       console.log('Mock Clone BOM:', id, newBomNo);
+       return { success: true, new_id: id + 2000 }; // Mock ID
+    }
+    const response = await fetch(`${API_BASE_URL}/boms/${id}/clone`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ bom_no: newBomNo }),
+    });
+    return handleResponse<{ success: boolean; new_id: number }>(response);
+  }
+};
+
+export const jobsService = {
+  // GET /jobs
+  getAll: async (): Promise<Job[]> => {
+    if (!NONCE) return MOCK_JOBS; 
+    const response = await fetch(`${API_BASE_URL}/jobs`, { headers: getHeaders() });
+    return handleResponse<Job[]>(response);
+  },
+
+  // POST /jobs
+  create: async (jobData: Partial<Job>): Promise<Job> => {
+    if (!NONCE) {
+      console.log('Mock Create Job:', jobData);
+      return { id: Math.floor(Math.random() * 10000), ...jobData } as Job;
+    }
+    const response = await fetch(`${API_BASE_URL}/jobs`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(jobData),
+    });
+    return handleResponse<Job>(response);
+  }
+};
+
+export const dealerService = {
+  // GET /dealers
+  getAll: async (): Promise<Dealer[]> => {
+    if (!NONCE) return [
+      { id: 1, name: 'Metro Ford', market_weight: 'A', labor_rate_retail: 150, labor_rate_wholesale: 120, shop_supply_rate_retail: 15, shop_supply_rate_wholesale: 10 },
+      { id: 2, name: 'City Dodge', market_weight: 'B', labor_rate_retail: 180, labor_rate_wholesale: 140, shop_supply_rate_retail: 20, shop_supply_rate_wholesale: 15 },
+    ];
+    const response = await fetch(`${API_BASE_URL}/dealers`, { headers: getHeaders() });
+    return handleResponse<Dealer[]>(response);
+  }
+};
+
+export const qcService = {
+  // GET /qc/inspections
+  getAll: async (): Promise<QcInspection[]> => {
+    if (!NONCE) return MOCK_QC_INSPECTIONS;
+    const response = await fetch(`${API_BASE_URL}/qc/inspections`, { headers: getHeaders() });
+    return handleResponse<QcInspection[]>(response);
+  },
+  
+  // POST /qc/inspections/:id/pass
+  passInspection: async (id: number): Promise<void> => {
+    if (!NONCE) {
+      console.log('Mock Pass Inspection:', id);
+      return;
+    }
+    await fetch(`${API_BASE_URL}/qc/inspections/${id}/pass`, { 
+      method: 'POST',
+      headers: getHeaders() 
+    });
+  },
+
+  // POST /qc/inspections/:id/fail
+  failInspection: async (id: number, reason: string): Promise<void> => {
+    if (!NONCE) {
+      console.log('Mock Fail Inspection:', id, reason);
+      return;
+    }
+    await fetch(`${API_BASE_URL}/qc/inspections/${id}/fail`, { 
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ reason })
+    });
+  }
+};
