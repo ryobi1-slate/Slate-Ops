@@ -12,11 +12,42 @@ const NONCE = typeof window !== 'undefined' && window.slateOpsSettings?.api?.non
 
 // Helper to handle API responses
 async function handleResponse<T>(response: Response): Promise<T> {
+  const rawBody = await response.text();
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `API Error: ${response.statusText}`);
+    if (rawBody) {
+      if (isJson) {
+        try {
+          const errorPayload = JSON.parse(rawBody) as { message?: string };
+          throw new Error(errorPayload.message || `API Error: ${response.statusText}`);
+        } catch {
+          // Fall back to server text below if JSON parsing fails.
+        }
+      }
+      throw new Error(rawBody);
+    }
+
+    throw new Error(`API Error: ${response.statusText}`);
   }
 
+  // Some endpoints (ex: DELETE) may return 204 No Content or an empty body.
+  // Treat those as a successful empty result.
+  if (response.status === 204 || !rawBody.trim()) {
+    return undefined as T;
+  }
+
+  if (isJson) {
+    try {
+      return JSON.parse(rawBody) as T;
+    } catch {
+      throw new Error('API Error: Failed to parse JSON response body');
+    }
+  }
+
+  // Some successful endpoints may return plain text.
+  return rawBody as T;
   // Some endpoints (ex: DELETE) may return 204 No Content.
   // Avoid parsing JSON when no payload is present.
   if (response.status === 204) {
