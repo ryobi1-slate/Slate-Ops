@@ -2,9 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
-const rootElement = document.getElementById('root');
+const rootElement = document.getElementById('ops-view');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  throw new Error("Could not find #ops-view element to mount to");
 }
 
 const root = ReactDOM.createRoot(rootElement);

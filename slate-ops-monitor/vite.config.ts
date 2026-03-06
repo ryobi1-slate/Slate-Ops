@@ -7,12 +7,12 @@ export default defineConfig(({ mode }) => {
   return {
     base: './',
     build: {
-      outDir: 'dist',
+      outDir: '../slate-ops/assets/react',
+      emptyOutDir: true,
       rollupOptions: {
         output: {
-          entryFileNames: 'assets/[name].js',
-          chunkFileNames: 'assets/[name].js',
-          assetFileNames: 'assets/[name].[ext]'
+          entryFileNames: 'app.js',
+          assetFileNames: 'app.[ext]'
         }
       }
     },

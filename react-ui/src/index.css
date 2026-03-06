@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2668ed;
+  --color-sage: #404f4b;
+  --color-sand: #e1dfc8;
+  --color-arches: #d86b19;
+  --color-background-light: #e1dfc8;
+  --color-background-dark: #101622;
+
+  --font-display: "Inter", sans-serif;
+  --font-technical: "Roboto Flex", sans-serif;
+}
+
+body {
+  font-family: var(--font-display);
+  @apply bg-background-light text-slate-900;
+}
+
+.font-technical {
+  font-family: var(--font-technical);
+}
