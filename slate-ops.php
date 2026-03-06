@@ -43,25 +43,26 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
 
   $ver_shell = file_exists(SLATE_OPS_PATH . 'assets/css/ops-shell.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-shell.css') : SLATE_OPS_VERSION;
-  $ver_ops_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops.css') : SLATE_OPS_VERSION;
-  $ver_ops_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops.js') : SLATE_OPS_VERSION;
-  $ver_sched   = file_exists(SLATE_OPS_PATH . 'assets/js/scheduler-phase0.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/scheduler-phase0.js') : SLATE_OPS_VERSION;
+  $ver_app_css = file_exists(SLATE_OPS_PATH . 'assets/react/app.css') ? filemtime(SLATE_OPS_PATH . 'assets/react/app.css') : SLATE_OPS_VERSION;
+  $ver_app_js  = file_exists(SLATE_OPS_PATH . 'assets/react/app.js') ? filemtime(SLATE_OPS_PATH . 'assets/react/app.js') : SLATE_OPS_VERSION;
 
   // ops-shell.css: structural shell tokens (sidebar, topbar, version badge).
-  // Must load before ops.css so ops.css overrides can win specificity races.
   wp_enqueue_style('slate-ops-shell', SLATE_OPS_URL . 'assets/css/ops-shell.css', ['material-symbols'], $ver_shell);
-  wp_enqueue_style('slate-ops', SLATE_OPS_URL . 'assets/css/ops.css', ['slate-ops-shell'], $ver_ops_css);
-  wp_enqueue_script('slate-ops', SLATE_OPS_URL . 'assets/js/ops.js', [], $ver_ops_js, true);
-  // Phase 0 scheduler helpers (bulk save, tech-assign in modal).
-  wp_enqueue_script('slate-ops-scheduler-p0', SLATE_OPS_URL . 'assets/js/scheduler-phase0.js', ['slate-ops'], $ver_sched, true);
+  wp_enqueue_style('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.css', ['slate-ops-shell'], $ver_app_css);
+  wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element'], $ver_app_js, true);
 
-  wp_localize_script('slate-ops', 'slateOpsSettings', [
-    'restRoot' => esc_url_raw(rest_url('slate-ops/v1')),
-    'nonce' => wp_create_nonce('wp_rest'),
+  $current_user = wp_get_current_user();
+
+  wp_localize_script('slate-ops-react', 'slateOpsSettings', [
+    'api' => [
+      'root' => esc_url_raw(rest_url('slate-ops/v1')),
+      'nonce' => wp_create_nonce('wp_rest'),
+    ],
     'user' => [
       'id' => get_current_user_id(),
-      'name' => wp_get_current_user()->display_name,
+      'name' => $current_user->display_name,
       'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+      'roles' => array_values((array) $current_user->roles),
     ],
     'colors' => [
       'sage' => '#404f4b',
