@@ -195,6 +195,97 @@ class Slate_Ops_REST {
       'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
       'callback'            => [__CLASS__, 'bulk_schedule'],
     ]);
+
+    // ── Work Centers ──────────────────────────────────────────────
+    register_rest_route('slate-ops/v1', '/work-centers', [
+      [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback'            => [__CLASS__, 'list_work_centers'],
+      ],
+      [
+        'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+        'callback'            => [__CLASS__, 'create_work_center'],
+      ],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/work-centers/(?P<id>\d+)', [
+      [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback'            => [__CLASS__, 'get_work_center'],
+      ],
+      [
+        'methods'             => 'PATCH',
+        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+        'callback'            => [__CLASS__, 'update_work_center'],
+      ],
+    ]);
+
+    // ── Capacity ──────────────────────────────────────────────────
+    register_rest_route('slate-ops/v1', '/scheduler/capacity', [
+      'methods'             => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback'            => [__CLASS__, 'get_capacity'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/scheduler/overloads', [
+      'methods'             => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback'            => [__CLASS__, 'get_overloads'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/scheduler/recalculate-flags', [
+      'methods'             => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback'            => [__CLASS__, 'recalculate_flags'],
+    ]);
+
+    // ── Buffer settings ───────────────────────────────────────────
+    register_rest_route('slate-ops/v1', '/scheduler/buffer-settings', [
+      [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback'            => [__CLASS__, 'get_buffer_settings'],
+      ],
+      [
+        'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+        'callback'            => [__CLASS__, 'update_buffer_settings'],
+      ],
+    ]);
+
+    // ── Job scheduler actions ─────────────────────────────────────
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/lock', [
+      'methods'             => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback'            => [__CLASS__, 'lock_job'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/unlock', [
+      'methods'             => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback'            => [__CLASS__, 'unlock_job'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/hold', [
+      'methods'             => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback'            => [__CLASS__, 'hold_job'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/unhold', [
+      'methods'             => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback'            => [__CLASS__, 'unhold_job'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/buffer', [
+      'methods'             => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback'            => [__CLASS__, 'get_job_buffer'],
+    ]);
   
     // BOM Builder (Pricing Core shared tables)
     register_rest_route('slate-ops/v1', '/boms', [
@@ -895,9 +986,24 @@ if ($q) {
   array_push($params, $like, $like, $like, $like);
 }
 
+// Date-range filter for scheduled jobs (for scheduler board)
+$scheduled_from = sanitize_text_field($req->get_param('scheduled_from') ?? '');
+$scheduled_to   = sanitize_text_field($req->get_param('scheduled_to') ?? '');
+if ($scheduled_from && $scheduled_to) {
+  $where .= " AND scheduled_start IS NOT NULL AND DATE(scheduled_start) <= %s AND DATE(COALESCE(scheduled_finish, scheduled_start)) >= %s";
+  $params[] = $scheduled_to;
+  $params[] = $scheduled_from;
+} elseif ($scheduled_from) {
+  $where .= " AND scheduled_start IS NOT NULL AND DATE(COALESCE(scheduled_finish, scheduled_start)) >= %s";
+  $params[] = $scheduled_from;
+}
+
 $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_number, customer_name, vin, dealer_name,
-               job_type, parts_status, status, status_detail, status_updated_at, delay_reason, priority,
-               assigned_user_id, work_center, estimated_minutes, scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes, scheduled_start, scheduled_finish, requested_date,
+               job_type, parts_status, status, status_detail, status_updated_at, delay_reason, priority, priority_score,
+               assigned_user_id, work_center, estimated_minutes, constraint_minutes_required,
+               scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes,
+               scheduler_locked, hold_reason, schedule_notes, scheduling_flag,
+               scheduled_start, scheduled_finish, requested_date, promised_date, target_ship_date,
                clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
         FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
 
@@ -1974,6 +2080,229 @@ self::maybe_push_dealer_portal_status($job);
     return rest_ensure_response(['activity' => $rows ?: []]);
   }
 
+  // ── Work Center handlers ─────────────────────────────────────────
+
+  public static function list_work_centers( WP_REST_Request $req ) {
+    $active_only = $req->get_param('active') !== '0';
+    $centers = Slate_Ops_Work_Centers::query($active_only);
+    return rest_ensure_response(['ok' => true, 'work_centers' => $centers]);
+  }
+
+  public static function get_work_center( WP_REST_Request $req ) {
+    $wc = Slate_Ops_Work_Centers::get( (int) $req['id'] );
+    if (!$wc) return new WP_Error('not_found', 'Work center not found', ['status' => 404]);
+    return rest_ensure_response(['ok' => true, 'work_center' => $wc]);
+  }
+
+  public static function create_work_center( WP_REST_Request $req ) {
+    $body = $req->get_json_params() ?: [];
+
+    if (empty($body['wc_code'])) {
+      return new WP_Error('bad_request', 'wc_code is required', ['status' => 400]);
+    }
+    if (empty($body['display_name'])) {
+      return new WP_Error('bad_request', 'display_name is required', ['status' => 400]);
+    }
+
+    $wc_id = Slate_Ops_Work_Centers::create($body);
+    if (!$wc_id) {
+      return new WP_Error('create_failed', 'Failed to create work center (code may already exist)', ['status' => 409]);
+    }
+
+    self::audit('work_center', $wc_id, 'create', null, null, wp_json_encode($body), 'Work center created');
+
+    return new WP_REST_Response(['ok' => true, 'wc_id' => $wc_id, 'work_center' => Slate_Ops_Work_Centers::get($wc_id)], 201);
+  }
+
+  public static function update_work_center( WP_REST_Request $req ) {
+    $wc_id = (int) $req['id'];
+    $wc = Slate_Ops_Work_Centers::get($wc_id);
+    if (!$wc) return new WP_Error('not_found', 'Work center not found', ['status' => 404]);
+
+    $body = $req->get_json_params() ?: [];
+    $ok   = Slate_Ops_Work_Centers::update($wc_id, $body);
+    if (!$ok) {
+      return new WP_Error('update_failed', 'Failed to update work center', ['status' => 500]);
+    }
+
+    self::audit('work_center', $wc_id, 'update', null, null, wp_json_encode($body), 'Work center updated');
+
+    return rest_ensure_response(['ok' => true, 'work_center' => Slate_Ops_Work_Centers::get($wc_id)]);
+  }
+
+  // ── Capacity handlers ────────────────────────────────────────────
+
+  public static function get_capacity( WP_REST_Request $req ) {
+    $today = wp_date('Y-m-d');
+    $from  = sanitize_text_field($req->get_param('from') ?: $today);
+    $to    = sanitize_text_field($req->get_param('to')   ?: date('Y-m-d', strtotime($today . ' +6 days')));
+
+    $summary = Slate_Capacity_Service::get_summary($from, $to);
+    return rest_ensure_response([
+      'ok'      => true,
+      'from'    => $from,
+      'to'      => $to,
+      'summary' => array_values($summary),
+    ]);
+  }
+
+  public static function get_overloads( WP_REST_Request $req ) {
+    $today = wp_date('Y-m-d');
+    $from  = sanitize_text_field($req->get_param('from') ?: $today);
+    $to    = sanitize_text_field($req->get_param('to')   ?: date('Y-m-d', strtotime($today . ' +6 days')));
+
+    $overloads = Slate_Capacity_Service::get_overloads($from, $to);
+    return rest_ensure_response([
+      'ok'       => true,
+      'from'     => $from,
+      'to'       => $to,
+      'overloads'=> $overloads,
+    ]);
+  }
+
+  public static function recalculate_flags( WP_REST_Request $req ) {
+    $body  = $req->get_json_params() ?: [];
+    $from  = sanitize_text_field($body['from'] ?? '');
+    $to    = sanitize_text_field($body['to']   ?? '');
+
+    $flags_updated   = Slate_Capacity_Service::refresh_flags($from ?: null, $to ?: null);
+    $scores_updated  = Slate_Priority_Service::refresh_scores();
+
+    self::audit('scheduler', 0, 'recalculate', 'flags', null, null,
+      "Flags: $flags_updated updated. Scores: $scores_updated updated.");
+
+    return rest_ensure_response([
+      'ok'             => true,
+      'flags_updated'  => $flags_updated,
+      'scores_updated' => $scores_updated,
+    ]);
+  }
+
+  // ── Buffer handlers ───────────────────────────────────────────────
+
+  public static function get_buffer_settings( WP_REST_Request $req ) {
+    return rest_ensure_response([
+      'ok'                   => true,
+      'shipping_buffer_days' => Slate_Buffer_Service::get_shipping_buffer_days(),
+      'qc_buffer_days'       => Slate_Buffer_Service::get_qc_buffer_days(),
+      'total_buffer_days'    => Slate_Buffer_Service::get_total_buffer_days(),
+    ]);
+  }
+
+  public static function update_buffer_settings( WP_REST_Request $req ) {
+    $body     = $req->get_json_params() ?: [];
+    $shipping = max(0, (int) ($body['shipping_buffer_days'] ?? Slate_Buffer_Service::get_shipping_buffer_days()));
+    $qc       = max(0, (int) ($body['qc_buffer_days'] ?? Slate_Buffer_Service::get_qc_buffer_days()));
+
+    Slate_Buffer_Service::set_buffer_defaults($shipping, $qc);
+    self::audit('scheduler', 0, 'update', 'buffer_settings', null,
+      wp_json_encode(['shipping' => $shipping, 'qc' => $qc]), 'Buffer settings updated');
+
+    return rest_ensure_response([
+      'ok'                   => true,
+      'shipping_buffer_days' => $shipping,
+      'qc_buffer_days'       => $qc,
+      'total_buffer_days'    => $shipping + $qc,
+    ]);
+  }
+
+  public static function get_job_buffer( WP_REST_Request $req ) {
+    $job_id = (int) $req['id'];
+    $job = Slate_Ops_Jobs::get($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $buffer = Slate_Buffer_Service::get_job_buffer($job);
+    return rest_ensure_response(['ok' => true, 'buffer' => $buffer]);
+  }
+
+  // ── Job scheduler-control handlers ───────────────────────────────
+
+  public static function lock_job( WP_REST_Request $req ) {
+    global $wpdb;
+    $job_id = (int) $req['id'];
+    $job = Slate_Ops_Jobs::get($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $now = Slate_Ops_Utils::now_gmt();
+    $t   = $wpdb->prefix . 'slate_ops_jobs';
+    $wpdb->update($t, ['scheduler_locked' => 1, 'updated_at' => $now], ['job_id' => $job_id]);
+    self::audit('job', $job_id, 'update', 'scheduler_locked', '0', '1', 'Job locked by scheduler');
+
+    return rest_ensure_response(['ok' => true, 'job_id' => $job_id, 'scheduler_locked' => true]);
+  }
+
+  public static function unlock_job( WP_REST_Request $req ) {
+    global $wpdb;
+    $job_id = (int) $req['id'];
+    $job = Slate_Ops_Jobs::get($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $now = Slate_Ops_Utils::now_gmt();
+    $t   = $wpdb->prefix . 'slate_ops_jobs';
+    $wpdb->update($t, ['scheduler_locked' => 0, 'updated_at' => $now], ['job_id' => $job_id]);
+    self::audit('job', $job_id, 'update', 'scheduler_locked', '1', '0', 'Job unlocked');
+
+    return rest_ensure_response(['ok' => true, 'job_id' => $job_id, 'scheduler_locked' => false]);
+  }
+
+  public static function hold_job( WP_REST_Request $req ) {
+    global $wpdb;
+    $job_id = (int) $req['id'];
+    $job = Slate_Ops_Jobs::get($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $body   = $req->get_json_params() ?: [];
+    $reason = sanitize_text_field($body['hold_reason'] ?? 'hold');
+    $note   = sanitize_text_field($body['note'] ?? '');
+
+    if (empty($reason)) {
+      return new WP_Error('bad_request', 'hold_reason is required', ['status' => 400]);
+    }
+
+    $now = Slate_Ops_Utils::now_gmt();
+    $t   = $wpdb->prefix . 'slate_ops_jobs';
+    $wpdb->update($t, [
+      'delay_reason'    => $reason,
+      'schedule_notes'  => $note ?: null,
+      'status'          => 'ON_HOLD',
+      'status_updated_at' => $now,
+      'updated_at'      => $now,
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'hold', null, $reason, $note ?: 'Job placed on hold');
+    Slate_Priority_Service::refresh_scores();
+
+    return rest_ensure_response(['ok' => true, 'job_id' => $job_id, 'status' => 'ON_HOLD', 'hold_reason' => $reason]);
+  }
+
+  public static function unhold_job( WP_REST_Request $req ) {
+    global $wpdb;
+    $job_id = (int) $req['id'];
+    $job = Slate_Ops_Jobs::get($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    $now  = Slate_Ops_Utils::now_gmt();
+    $t    = $wpdb->prefix . 'slate_ops_jobs';
+    $body = $req->get_json_params() ?: [];
+    $note = sanitize_text_field($body['note'] ?? '');
+
+    // Return to SCHEDULED if it had a scheduled_start, otherwise UNSCHEDULED.
+    $new_status = !empty($job['scheduled_start']) ? 'SCHEDULED' : 'UNSCHEDULED';
+
+    $wpdb->update($t, [
+      'delay_reason'    => null,
+      'schedule_notes'  => $note ?: null,
+      'status'          => $new_status,
+      'status_updated_at' => $now,
+      'updated_at'      => $now,
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'unhold', 'ON_HOLD', $new_status, $note ?: 'Hold cleared');
+    Slate_Priority_Service::refresh_scores();
+
+    return rest_ensure_response(['ok' => true, 'job_id' => $job_id, 'status' => $new_status]);
+  }
+
   /**
    * POST /slate-ops/v1/schedule/bulk
    *
@@ -2020,7 +2349,9 @@ self::maybe_push_dealer_portal_status($job);
 
       list($update, $changes) = self::build_scheduler_update_fields($item, $now);
 
-      $allowed = ['work_center', 'scheduled_start', 'scheduled_finish', 'assigned_user_id'];
+      $allowed = ['work_center', 'scheduled_start', 'scheduled_finish', 'assigned_user_id',
+                  'promised_date', 'target_ship_date', 'constraint_minutes_required',
+                  'estimated_minutes', 'schedule_notes'];
       $has_scheduler_key = false;
       foreach ($allowed as $k) {
         if (array_key_exists($k, $item)) {
@@ -2031,6 +2362,26 @@ self::maybe_push_dealer_portal_status($job);
       if (!$has_scheduler_key) {
         $errors[] = ['job_id' => $job_id, 'message' => 'No scheduler fields to update'];
         continue;
+      }
+
+      // Merge extended scheduler fields into the update array.
+      $extended_fields = ['promised_date', 'target_ship_date', 'schedule_notes'];
+      foreach ($extended_fields as $ef) {
+        if (array_key_exists($ef, $item)) {
+          $v = sanitize_text_field($item[$ef] ?? '');
+          $update[$ef] = $v ?: null;
+          $changes[$ef] = $v ?: null;
+        }
+      }
+      if (array_key_exists('constraint_minutes_required', $item)) {
+        $v = !empty($item['constraint_minutes_required']) ? (int) $item['constraint_minutes_required'] : null;
+        $update['constraint_minutes_required'] = $v;
+        $changes['constraint_minutes_required'] = $v;
+      }
+      if (array_key_exists('estimated_minutes', $item)) {
+        $v = !empty($item['estimated_minutes']) ? (int) $item['estimated_minutes'] : null;
+        $update['estimated_minutes'] = $v;
+        $changes['estimated_minutes'] = $v;
       }
 
       $result = $wpdb->update($t_jobs, $update, ['job_id' => $job_id]);
@@ -2053,6 +2404,12 @@ self::maybe_push_dealer_portal_status($job);
       );
 
       $saved[] = $job_id;
+    }
+
+    // Refresh scheduling flags and priority scores for affected jobs.
+    if (!empty($saved)) {
+      Slate_Capacity_Service::refresh_flags();
+      Slate_Priority_Service::refresh_scores();
     }
 
     return rest_ensure_response([

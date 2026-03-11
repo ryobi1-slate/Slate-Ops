@@ -66,24 +66,85 @@ export interface BomSummary {
   updated_at: string;
 }
 
-// Matches wp_slate_jobs (implied)
+// Matches wp_slate_ops_jobs
 export interface Job {
   id: number;
+  job_id?: number;
   customer_name: string;
   dealer_id: number;
+  dealer_name?: string;
   vin: string;
-  vehicle?: string; // e.g. "Ford Transit"
-  fleet?: string;   // e.g. "Amazon Logistics"
+  vehicle?: string;
+  fleet?: string;
   job_type: 'UPFIT' | 'REPAIR' | 'WARRANTY';
   parts_status: 'NOT_READY' | 'PARTIAL' | 'READY';
-  est_hours: number;
+  est_hours?: number;
+  estimated_minutes?: number;
+  constraint_minutes_required?: number;
   so_number?: string;
   due_date?: string;
-  // High level status
-  status: 'PENDING_INTAKE' | 'NEEDS_SO' | 'ACTIVE' | 'COMPLETED';
-  // Granular production stage
-  stage?: 'SCHEDULED' | 'INTERIOR UPFIT' | 'ELECTRICAL' | 'SUSPENSION' | 'PAINT & BODY' | 'FINAL QC';
+  promised_date?: string;
+  target_ship_date?: string;
+  requested_date?: string;
+  // Lifecycle status
+  status: 'UNSCHEDULED' | 'READY_FOR_SCHEDULING' | 'SCHEDULED' | 'IN_PROGRESS' | 'ON_HOLD' | 'PENDING_QC' | 'COMPLETE' | 'PENDING_INTAKE' | 'NEEDS_SO' | 'ACTIVE' | 'COMPLETED';
+  scheduling_status?: 'PENDING_RELEASE' | 'READY_FOR_SCHEDULING';
+  scope_status?: 'ESTIMATING' | 'LOCKED';
+  // Scheduling flags
+  scheduling_flag?: 'ON_TIME' | 'AT_RISK' | 'LATE' | 'OVERLOADED' | null;
+  scheduler_locked?: boolean | number;
+  hold_reason?: string | null;
+  delay_reason?: string | null;
+  schedule_notes?: string | null;
+  // Priority
+  priority?: number;
+  priority_score?: number;
+  // Scheduling dates
+  scheduled_start?: string | null;
+  scheduled_finish?: string | null;
+  work_center?: string | null;
+  assigned_user_id?: number | null;
+  assigned_name?: string | null;
+  // Stage (legacy)
+  stage?: string;
   created_at: string;
+  updated_at?: string;
+}
+
+// Matches wp_slate_ops_work_centers
+export interface WorkCenter {
+  wc_id: number;
+  wc_code: string;
+  display_name: string;
+  daily_capacity_minutes: number;
+  weekly_capacity_minutes: number;
+  is_constraint: boolean | number;
+  sequence_order: number;
+  color: string;
+  active: boolean | number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Capacity summary for one work center in a date range
+export interface CapacitySummary {
+  wc_id: number;
+  wc_code: string;
+  display_name: string;
+  is_constraint: boolean;
+  color: string;
+  capacity_minutes: number;
+  allocated_minutes: number;
+  available_minutes: number;
+  overload_minutes: number;
+  utilization_pct: number;
+  is_overloaded: boolean;
+}
+
+export interface BufferSettings {
+  shipping_buffer_days: number;
+  qc_buffer_days: number;
+  total_buffer_days: number;
 }
 
 export interface QcInspection {
