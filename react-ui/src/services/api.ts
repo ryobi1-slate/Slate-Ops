@@ -1,4 +1,4 @@
-import { AppState, Bom, BomLine, BomSummary, Dealer, Job, QcInspection, ProductionBay, Item } from '../types';
+import { AppState, Bom, BomLine, BomSummary, Dealer, Job, QcInspection, ProductionBay, Item, WorkCenter, CapacitySummary, BufferSettings } from '../types';
 
 // --- CONFIGURATION ---
 
@@ -254,6 +254,125 @@ export const jobsService = {
     });
     return handleResponse<Job>(response);
   }
+};
+
+export const workCenterService = {
+  getAll: async (activeOnly = true): Promise<WorkCenter[]> => {
+    if (!NONCE) return [];
+    const url = `${API_BASE_URL}/work-centers${activeOnly ? '' : '?active=0'}`;
+    const response = await fetch(url, { headers: getHeaders() });
+    const data = await handleResponse<{ ok: boolean; work_centers: WorkCenter[] }>(response);
+    return data.work_centers || [];
+  },
+
+  getById: async (id: number): Promise<WorkCenter> => {
+    const response = await fetch(`${API_BASE_URL}/work-centers/${id}`, { headers: getHeaders() });
+    const data = await handleResponse<{ ok: boolean; work_center: WorkCenter }>(response);
+    return data.work_center;
+  },
+
+  create: async (payload: Partial<WorkCenter>): Promise<WorkCenter> => {
+    const response = await fetch(`${API_BASE_URL}/work-centers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await handleResponse<{ ok: boolean; work_center: WorkCenter }>(response);
+    return data.work_center;
+  },
+
+  update: async (id: number, payload: Partial<WorkCenter>): Promise<WorkCenter> => {
+    const response = await fetch(`${API_BASE_URL}/work-centers/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await handleResponse<{ ok: boolean; work_center: WorkCenter }>(response);
+    return data.work_center;
+  },
+};
+
+export const schedulerService = {
+  getCapacity: async (from: string, to: string): Promise<{ from: string; to: string; summary: CapacitySummary[] }> => {
+    if (!NONCE) return { from, to, summary: [] };
+    const response = await fetch(`${API_BASE_URL}/scheduler/capacity?from=${from}&to=${to}`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
+
+  getOverloads: async (from: string, to: string): Promise<{ overloads: CapacitySummary[] }> => {
+    if (!NONCE) return { overloads: [] };
+    const response = await fetch(`${API_BASE_URL}/scheduler/overloads?from=${from}&to=${to}`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
+
+  recalculateFlags: async (from?: string, to?: string): Promise<{ flags_updated: number; scores_updated: number }> => {
+    const response = await fetch(`${API_BASE_URL}/scheduler/recalculate-flags`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ from, to }),
+    });
+    return handleResponse(response);
+  },
+
+  getBufferSettings: async (): Promise<BufferSettings> => {
+    if (!NONCE) return { shipping_buffer_days: 1, qc_buffer_days: 1, total_buffer_days: 2 };
+    const response = await fetch(`${API_BASE_URL}/scheduler/buffer-settings`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
+
+  updateBufferSettings: async (shipping: number, qc: number): Promise<BufferSettings> => {
+    const response = await fetch(`${API_BASE_URL}/scheduler/buffer-settings`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ shipping_buffer_days: shipping, qc_buffer_days: qc }),
+    });
+    return handleResponse(response);
+  },
+
+  lockJob: async (jobId: number): Promise<void> => {
+    await fetch(`${API_BASE_URL}/jobs/${jobId}/lock`, { method: 'POST', headers: getHeaders() });
+  },
+
+  unlockJob: async (jobId: number): Promise<void> => {
+    await fetch(`${API_BASE_URL}/jobs/${jobId}/unlock`, { method: 'POST', headers: getHeaders() });
+  },
+
+  holdJob: async (jobId: number, holdReason: string, note?: string): Promise<void> => {
+    await fetch(`${API_BASE_URL}/jobs/${jobId}/hold`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ hold_reason: holdReason, note }),
+    });
+  },
+
+  unholdJob: async (jobId: number, note?: string): Promise<void> => {
+    await fetch(`${API_BASE_URL}/jobs/${jobId}/unhold`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ note }),
+    });
+  },
+
+  getJobBuffer: async (jobId: number): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/buffer`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
+
+  bulkSchedule: async (updates: Array<Partial<Job> & { job_id: number }>): Promise<{ saved: number[]; errors: Array<{ job_id: number; message: string }> }> => {
+    const response = await fetch(`${API_BASE_URL}/schedule/bulk`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ updates }),
+    });
+    return handleResponse(response);
+  },
+
+  getScheduledJobs: async (from: string, to: string): Promise<Job[]> => {
+    if (!NONCE) return [];
+    const response = await fetch(`${API_BASE_URL}/jobs?scheduled_from=${from}&scheduled_to=${to}&limit=500`, { headers: getHeaders() });
+    const data = await handleResponse<{ jobs?: Job[] } | Job[]>(response);
+    return Array.isArray(data) ? data : (data as any).jobs || [];
+  },
 };
 
 export const dealerService = {

@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.11.4
+ * Version: 0.12.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.11.4');
+define('SLATE_OPS_VERSION', '0.12.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -25,6 +25,12 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-activitylog.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-timelogs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-jobs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-schedule.php';
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-work-centers.php';
+
+// Scheduler services (Phase 0)
+require_once SLATE_OPS_PATH . 'includes/class-capacity-service.php';
+require_once SLATE_OPS_PATH . 'includes/class-priority-service.php';
+require_once SLATE_OPS_PATH . 'includes/class-buffer-service.php';
 
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-rest.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-clickup.php';

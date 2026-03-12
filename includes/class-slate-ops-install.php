@@ -22,10 +22,13 @@ class Slate_Ops_Install {
 
     $charset_collate = $wpdb->get_charset_collate();
 
-    $jobs = $wpdb->prefix . 'slate_ops_jobs';
-    $segments = $wpdb->prefix . 'slate_ops_time_segments';
-    $audit = $wpdb->prefix . 'slate_ops_audit_log';
-    $settings = $wpdb->prefix . 'slate_ops_settings';
+    $jobs         = $wpdb->prefix . 'slate_ops_jobs';
+    $segments     = $wpdb->prefix . 'slate_ops_time_segments';
+    $audit        = $wpdb->prefix . 'slate_ops_audit_log';
+    $settings     = $wpdb->prefix . 'slate_ops_settings';
+    $work_centers = $wpdb->prefix . 'slate_ops_work_centers';
+    $sched_events = $wpdb->prefix . 'slate_ops_schedule_events';
+    $cap_snaps    = $wpdb->prefix . 'slate_ops_capacity_snapshots';
 
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -56,10 +59,12 @@ status_updated_at DATETIME NULL,
 
 delay_reason VARCHAR(30) NULL,
 priority TINYINT UNSIGNED NOT NULL DEFAULT 3,
+priority_score SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 
 assigned_user_id BIGINT UNSIGNED NULL,
 work_center VARCHAR(60) NULL,
 estimated_minutes INT UNSIGNED NULL,
+constraint_minutes_required INT UNSIGNED NULL,
         scope_status VARCHAR(30) NOT NULL DEFAULT 'ESTIMATING',
         scheduling_status VARCHAR(30) NOT NULL DEFAULT 'PENDING_RELEASE',
         target_week_id VARCHAR(50) NULL,
@@ -68,9 +73,17 @@ estimated_minutes INT UNSIGNED NULL,
         override_reason VARCHAR(255) NULL,
         override_notes TEXT NULL,
 
+-- Scheduler control
+scheduler_locked TINYINT(1) NOT NULL DEFAULT 0,
+hold_reason VARCHAR(255) NULL,
+schedule_notes TEXT NULL,
+scheduling_flag VARCHAR(20) NULL,
+
 scheduled_start DATETIME NULL,
 scheduled_finish DATETIME NULL,
 requested_date DATE NULL,
+promised_date DATE NULL,
+target_ship_date DATE NULL,
 
 sales_person VARCHAR(255) NULL,
 stock_number VARCHAR(64) NULL,
@@ -100,7 +113,9 @@ KEY assigned_idx (assigned_user_id),
 KEY quote_idx (portal_quote_id),
 KEY clickup_idx (clickup_task_id),
 KEY priority_idx (priority),
-KEY created_from_idx (created_from)
+KEY created_from_idx (created_from),
+KEY scheduling_flag_idx (scheduling_flag),
+KEY scheduler_locked_idx (scheduler_locked)
 
     ) $charset_collate;";
 
@@ -161,10 +176,60 @@ KEY created_from_idx (created_from)
       PRIMARY KEY (id)
     ) $charset_collate;";
 
+    $sql_work_centers = "CREATE TABLE $work_centers (
+      wc_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      wc_code VARCHAR(30) NOT NULL,
+      display_name VARCHAR(100) NOT NULL,
+      daily_capacity_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 840,
+      weekly_capacity_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 4200,
+      is_constraint TINYINT(1) NOT NULL DEFAULT 0,
+      sequence_order TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      color VARCHAR(7) NOT NULL DEFAULT '#5A6B65',
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (wc_id),
+      UNIQUE KEY wc_code_idx (wc_code)
+    ) $charset_collate;";
+
+    $sql_schedule_events = "CREATE TABLE $sched_events (
+      event_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      job_id BIGINT UNSIGNED NOT NULL,
+      work_center_id BIGINT UNSIGNED NOT NULL,
+      start_datetime DATETIME NOT NULL,
+      end_datetime DATETIME NOT NULL,
+      allocated_minutes INT UNSIGNED NOT NULL DEFAULT 0,
+      event_type VARCHAR(20) NOT NULL DEFAULT 'planned',
+      created_by BIGINT UNSIGNED NULL,
+      updated_by BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (event_id),
+      KEY job_idx (job_id),
+      KEY wc_idx (work_center_id),
+      KEY range_idx (start_datetime, end_datetime)
+    ) $charset_collate;";
+
+    $sql_capacity_snapshots = "CREATE TABLE $cap_snaps (
+      snapshot_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      snapshot_date DATE NOT NULL,
+      work_center_id BIGINT UNSIGNED NOT NULL,
+      capacity_minutes INT NOT NULL DEFAULT 0,
+      allocated_minutes INT NOT NULL DEFAULT 0,
+      available_minutes INT NOT NULL DEFAULT 0,
+      overload_minutes INT NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (snapshot_id),
+      UNIQUE KEY date_wc_idx (snapshot_date, work_center_id)
+    ) $charset_collate;";
+
     dbDelta($sql_jobs);
     dbDelta($sql_segments);
     dbDelta($sql_audit);
     dbDelta($sql_settings);
+    dbDelta($sql_work_centers);
+    dbDelta($sql_schedule_events);
+    dbDelta($sql_capacity_snapshots);
 
     $exists = $wpdb->get_var("SELECT COUNT(*) FROM $settings WHERE id=1");
     if (!$exists) {
