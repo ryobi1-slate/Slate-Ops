@@ -31,7 +31,6 @@ export function SettingsDashboard() {
     lunchMinutes: 30,
     breakMinutes: 10,
     breakCount: 2,
-    otThresholdMinutes: 480,
   });
 
   const [notifications, setNotifications] = useState({
@@ -66,8 +65,7 @@ export function SettingsDashboard() {
         if (d.shift_end)      setShift(s => ({ ...s, shiftEnd: (d.shift_end as string).slice(0,5) }));
         if (d.lunch_minutes)  setShift(s => ({ ...s, lunchMinutes: Number(d.lunch_minutes) }));
         if (d.break_minutes)  setShift(s => ({ ...s, breakMinutes: Number(d.break_minutes) }));
-        if (d.break_count)             setShift(s => ({ ...s, breakCount: Number(d.break_count) }));
-        if (d.ot_threshold_minutes)    setShift(s => ({ ...s, otThresholdMinutes: Number(d.ot_threshold_minutes) }));
+        if (d.break_count)    setShift(s => ({ ...s, breakCount: Number(d.break_count) }));
       })
       .catch(() => {});
   }, []);
@@ -80,10 +78,9 @@ export function SettingsDashboard() {
         body: JSON.stringify({
           shift_start:    shift.shiftStart + ':00',
           shift_end:      shift.shiftEnd + ':00',
-          lunch_minutes:        shift.lunchMinutes,
-          break_minutes:        shift.breakMinutes,
-          break_count:          shift.breakCount,
-          ot_threshold_minutes: shift.otThresholdMinutes,
+          lunch_minutes: shift.lunchMinutes,
+          break_minutes: shift.breakMinutes,
+          break_count:   shift.breakCount,
         }),
       });
       setShiftFlash(res.ok ? 'ok' : 'err');
@@ -327,19 +324,6 @@ export function SettingsDashboard() {
               onChange={(e) => setShift({ ...shift, breakMinutes: Number(e.target.value) })}
               className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">OT After (hours/day)</label>
-            <input
-              type="number"
-              min={1}
-              max={12}
-              step={0.5}
-              value={+(shift.otThresholdMinutes / 60).toFixed(1)}
-              onChange={(e) => setShift({ ...shift, otThresholdMinutes: Math.round(Number(e.target.value) * 60) })}
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
-            />
-            <p className="text-[10px] text-slate-400 mt-1">Flagged for supervisor review — no rate change in app.</p>
           </div>
           <div className="flex flex-col justify-end">
             <div className="bg-[#EAE8DC] rounded-lg px-4 py-3 text-center">
