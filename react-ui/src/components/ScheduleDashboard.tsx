@@ -545,7 +545,7 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
                     setSelectedJobId(null);
                     await loadData();
                   }}
-                  className="w-full text-xs font-medium py-1.5 px-3 bg-orange-50 border border-orange-200 text-orange-700 rounded hover:bg-orange-100 flex items-center gap-1.5"
+                  className="w-full text-xs font-medium py-1.5 px-3 bg-amber-50 border border-amber-200 text-amber-800 rounded hover:bg-amber-100 flex items-center gap-1.5 transition-colors"
                 >
                   <span className="material-symbols-outlined text-sm">pause_circle</span>
                   Place on Hold

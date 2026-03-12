@@ -891,10 +891,12 @@ public static function perm_ops() {
       'newJob' => true, 'qcFailure' => true, 'completionSms' => true,
       'marketingEmails' => false, 'dailySummary' => true, 'weeklyReport' => false,
     ]);
-    // break_count added in 0.13.0 — dbDelta adds it; fall back for older DB rows
+    // break_count added in 0.13.0; ot_threshold_minutes added in 0.14.0 — dbDelta adds each non-destructively
     if (!isset($row['break_count'])) $row['break_count'] = 2;
     $row['break_count'] = (int)$row['break_count'];
     $row['daily_deduction_minutes'] = (int)($row['lunch_minutes'] ?? 30) + ((int)($row['break_count']) * (int)($row['break_minutes'] ?? 10));
+    if (!isset($row['ot_threshold_minutes'])) $row['ot_threshold_minutes'] = 480;
+    $row['ot_threshold_minutes'] = (int)$row['ot_threshold_minutes'];
     return $row;
   }
 
@@ -908,6 +910,7 @@ public static function perm_ops() {
     $lunch        = isset($body['lunch_minutes']) ? max(0, intval($body['lunch_minutes']))     : 30;
     $breaks       = isset($body['break_minutes']) ? max(0, intval($body['break_minutes']))     : 10;
     $break_count  = isset($body['break_count'])   ? max(0, min(4, intval($body['break_count']))) : 2;
+    $ot_threshold = isset($body['ot_threshold_minutes']) ? max(60, min(720, intval($body['ot_threshold_minutes']))) : 480;
     $dealers_payload = $body['dealers'] ?? [];
     if (is_string($dealers_payload)) {
       $dealers_payload = preg_split('/\r\n|\r|\n/', $dealers_payload);
@@ -953,9 +956,10 @@ public static function perm_ops() {
       'shift_end'     => $shift_end,
       'lunch_minutes' => $lunch,
       'break_minutes' => $breaks,
-      'break_count'   => $break_count,
-      'updated_by'    => get_current_user_id(),
-      'updated_at'    => Slate_Ops_Utils::now_gmt(),
+      'break_count'          => $break_count,
+      'ot_threshold_minutes' => $ot_threshold,
+      'updated_by'           => get_current_user_id(),
+      'updated_at'           => Slate_Ops_Utils::now_gmt(),
     ], ['id' => 1]);
 
     self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks,'dealers'=>$dealers,'sales_people'=>$sales_people]), 'Settings updated');
@@ -1906,28 +1910,35 @@ return self::get_job(['id' => $job_id]);
       $segments_out[] = $r;
     }
 
-    // Load break/lunch config
-    $cfg = $wpdb->get_row("SELECT lunch_minutes, break_minutes, break_count FROM $settings WHERE id=1", ARRAY_A);
-    $lunch_min  = (int)($cfg['lunch_minutes'] ?? 30);
-    $break_min  = (int)($cfg['break_minutes'] ?? 10);
-    $break_cnt  = (int)($cfg['break_count']   ?? 2);
-    $deduction  = $lunch_min + ($break_min * $break_cnt);
+    // Load break/lunch/OT config
+    $cfg = $wpdb->get_row("SELECT lunch_minutes, break_minutes, break_count, ot_threshold_minutes FROM $settings WHERE id=1", ARRAY_A);
+    $lunch_min    = (int)($cfg['lunch_minutes']        ?? 30);
+    $break_min    = (int)($cfg['break_minutes']        ?? 10);
+    $break_cnt    = (int)($cfg['break_count']          ?? 2);
+    $ot_threshold = (int)($cfg['ot_threshold_minutes'] ?? 480);
+    $deduction    = $lunch_min + ($break_min * $break_cnt);
 
-    // Only apply deduction if tech worked more than half a standard shift (e.g. > 3h)
+    // Only apply deduction if tech worked more than half a standard shift (> 3h)
     $apply_deduction = $raw_minutes >= 180;
-    $net_minutes = $apply_deduction ? max(0, $raw_minutes - $deduction) : $raw_minutes;
+    $net_minutes     = $apply_deduction ? max(0, $raw_minutes - $deduction) : $raw_minutes;
+
+    // Overtime: net minutes beyond the configured daily threshold
+    $ot_minutes = max(0, $net_minutes - $ot_threshold);
 
     return [
-      'date'                => $date,
-      'user_id'             => $user_id,
-      'raw_minutes'         => $raw_minutes,
-      'deduction_minutes'   => $apply_deduction ? $deduction : 0,
-      'net_minutes'         => $net_minutes,
-      'lunch_minutes'       => $lunch_min,
-      'break_minutes'       => $break_min,
-      'break_count'         => $break_cnt,
-      'deduction_applied'   => $apply_deduction,
-      'segments'            => $segments_out,
+      'date'                 => $date,
+      'user_id'              => $user_id,
+      'raw_minutes'          => $raw_minutes,
+      'deduction_minutes'    => $apply_deduction ? $deduction : 0,
+      'net_minutes'          => $net_minutes,
+      'overtime_minutes'     => $ot_minutes,
+      'is_overtime'          => $ot_minutes > 0,
+      'ot_threshold_minutes' => $ot_threshold,
+      'lunch_minutes'        => $lunch_min,
+      'break_minutes'        => $break_min,
+      'break_count'          => $break_cnt,
+      'deduction_applied'    => $apply_deduction,
+      'segments'             => $segments_out,
     ];
   }
 

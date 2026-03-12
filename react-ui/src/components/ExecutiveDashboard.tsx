@@ -46,7 +46,7 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
             placeholder="Search orders, clients..."
             className="border border-slate-200 rounded-md px-4 py-2 text-sm w-64 bg-white focus:ring-primary focus:border-primary"
           />
-          <button className="border border-red-300 rounded p-2 text-red-400 hover:text-red-600">
+          <button className="border border-slate-200 rounded p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors">
             <span className="material-symbols-outlined text-lg">notifications</span>
           </button>
           <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
               <div className="text-sm font-bold text-slate-900">{userName}</div>
               <div className="text-xs text-slate-500">Executive Admin</div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-orange-200 flex items-center justify-center text-orange-700 font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-sm">
               {initials}
             </div>
           </div>
@@ -64,7 +64,7 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
       {/* Stats Cards */}
       <div className="grid grid-cols-6 gap-4 mb-8">
         {[
-          { label: 'NEEDS SO#',    value: stats.needs_so,    icon: 'error',         iconBg: 'bg-orange-100 text-orange-600', badge: '', badgeBg: 'bg-slate-800 text-white' },
+          { label: 'NEEDS SO#',    value: stats.needs_so,    icon: 'error',         iconBg: 'bg-amber-100 text-amber-700',   badge: '', badgeBg: 'bg-slate-800 text-white' },
           { label: 'UNSCHEDULED',  value: stats.unscheduled, icon: 'schedule',       iconBg: 'bg-blue-100 text-blue-600',    badge: '', badgeBg: 'bg-slate-800 text-white' },
           { label: 'SCHEDULED',    value: stats.scheduled,   icon: 'calendar_today', iconBg: 'bg-slate-100 text-slate-600',  badge: '', badgeBg: 'bg-slate-800 text-white' },
           { label: 'IN PROGRESS',  value: stats.in_progress, icon: 'autorenew',      iconBg: 'bg-indigo-100 text-indigo-600',badge: '', badgeBg: 'bg-slate-800 text-white' },
@@ -90,7 +90,7 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
           <h2 className="font-bold text-lg text-slate-800">Recent Activity</h2>
-          <button className="text-sm font-bold text-red-500 border border-red-300 rounded px-3 py-1 hover:bg-red-50">
+          <button className="text-sm font-bold text-slate-600 border border-slate-200 rounded px-3 py-1 hover:bg-slate-50 transition-colors">
             View All Activities
           </button>
         </div>
@@ -98,11 +98,11 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
             <tr>
-              <th className="px-6 py-4">SO#</th>
-              <th className="px-6 py-4">Customer</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Updated</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-6 py-3">SO#</th>
+              <th className="px-6 py-3">Customer</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3">Updated</th>
+              <th className="px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -111,23 +111,25 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
             )}
             {recentActivity.map((item) => (
               <tr key={item.id ?? item.job_id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-bold text-slate-900">{item.so_number || '—'}</td>
-                <td className="px-6 py-4 font-medium text-slate-600 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-slate-400 text-[14px]">business</span>
-                  </span>
-                  {item.customer_name || '—'}
+                <td className="px-6 py-3 font-bold text-slate-900 align-middle">{item.so_number || '—'}</td>
+                <td className="px-6 py-3 font-medium text-slate-600 align-middle">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <span className="material-symbols-outlined text-slate-400 text-[14px]">business</span>
+                    </span>
+                    {item.customer_name || '—'}
+                  </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-3 align-middle">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${STATUS_COLOR[item.status] || 'bg-slate-200 text-slate-700'}`}>
                     {item.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-slate-500">
+                <td className="px-6 py-3 text-slate-500 align-middle">
                   {item.updated_at ? new Date(item.updated_at).toLocaleDateString() : '—'}
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="border border-red-300 rounded p-1 text-red-400 hover:text-red-600 hover:bg-red-50">
+                <td className="px-6 py-3 text-right align-middle">
+                  <button className="border border-slate-200 rounded p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
                     <span className="material-symbols-outlined text-sm">more_horiz</span>
                   </button>
                 </td>

@@ -50,6 +50,9 @@ interface DailySummary {
   raw_minutes: number;
   deduction_minutes: number;
   net_minutes: number;
+  overtime_minutes: number;
+  is_overtime: boolean;
+  ot_threshold_minutes: number;
   lunch_minutes: number;
   break_minutes: number;
   break_count: number;
@@ -281,7 +284,7 @@ export function TechDashboard() {
                       <button
                         onClick={pauseTimer}
                         disabled={busy}
-                        className="flex-1 flex flex-col items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-bold py-5 rounded-2xl shadow-md shadow-red-200 disabled:opacity-60 transition-all"
+                        className="flex-1 flex flex-col items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-md shadow-slate-200 disabled:opacity-60 transition-all"
                       >
                         <span className="material-symbols-outlined text-3xl">pause_circle</span>
                         <span className="text-sm">PAUSE</span>
@@ -344,8 +347,16 @@ export function TechDashboard() {
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Net</div>
                       </div>
                     </div>
+                    {dailySummary.is_overtime && (
+                      <div className="border-t border-slate-100 pt-3 flex items-center justify-center gap-2">
+                        <span className="bg-amber-100 text-amber-700 text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">schedule</span>
+                          OT: +{Math.floor(dailySummary.overtime_minutes / 60) > 0 ? `${Math.floor(dailySummary.overtime_minutes / 60)}h ` : ''}{dailySummary.overtime_minutes % 60}m over {Math.floor(dailySummary.ot_threshold_minutes / 60)}h threshold
+                        </span>
+                      </div>
+                    )}
                     {dailySummary.deduction_applied && (
-                      <div className="border-t border-slate-100 pt-3 text-[11px] text-slate-400 text-center">
+                      <div className={`${dailySummary.is_overtime ? '' : 'border-t border-slate-100 '}pt-3 text-[11px] text-slate-400 text-center`}>
                         {dailySummary.break_count}× {dailySummary.break_minutes}m break + {dailySummary.lunch_minutes}m lunch auto-deducted
                       </div>
                     )}
