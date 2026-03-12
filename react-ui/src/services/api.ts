@@ -236,9 +236,12 @@ export const bomService = {
 export const jobsService = {
   // GET /jobs
   getAll: async (): Promise<Job[]> => {
-    if (!NONCE) return MOCK_JOBS; 
-    const response = await fetch(`${API_BASE_URL}/jobs`, { headers: getHeaders() });
-    return handleResponse<Job[]>(response);
+    if (!NONCE) return MOCK_JOBS;
+    const response = await fetch(`${API_BASE_URL}/jobs?limit=500`, { headers: getHeaders() });
+    const data = await handleResponse<{ jobs: Job[] } | Job[]>(response);
+    const rows = Array.isArray(data) ? data : (data as any).jobs || [];
+    // Normalize job_id → id for components that key on id
+    return rows.map((j: any) => ({ ...j, id: j.id ?? j.job_id }));
   },
 
   // POST /jobs
@@ -420,7 +423,8 @@ export const dealerService = {
       { id: 2, name: 'City Dodge', market_weight: 'B', labor_rate_retail: 180, labor_rate_wholesale: 140, shop_supply_rate_retail: 20, shop_supply_rate_wholesale: 15 },
     ];
     const response = await fetch(`${API_BASE_URL}/dealers`, { headers: getHeaders() });
-    return handleResponse<Dealer[]>(response);
+    const data = await handleResponse<{ dealers: Dealer[] } | Dealer[]>(response);
+    return Array.isArray(data) ? data : (data as any).dealers || [];
   }
 };
 
@@ -428,8 +432,13 @@ export const qcService = {
   // GET /qc/inspections
   getAll: async (): Promise<QcInspection[]> => {
     if (!NONCE) return MOCK_QC_INSPECTIONS;
-    const response = await fetch(`${API_BASE_URL}/qc/inspections`, { headers: getHeaders() });
-    return handleResponse<QcInspection[]>(response);
+    try {
+      const response = await fetch(`${API_BASE_URL}/qc/inspections`, { headers: getHeaders() });
+      if (!response.ok) return [];
+      return handleResponse<QcInspection[]>(response);
+    } catch {
+      return [];
+    }
   },
   
   // POST /qc/inspections/:id/pass

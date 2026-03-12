@@ -82,6 +82,12 @@ class Slate_Ops_REST {
       'callback' => [__CLASS__, 'users'],
     ]);
 
+    register_rest_route('slate-ops/v1', '/dealers', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback' => [__CLASS__, 'list_dealers'],
+    ]);
+
     register_rest_route('slate-ops/v1', '/jobs', [
       [
         'methods' => 'GET',
@@ -1837,6 +1843,15 @@ return self::get_job(['id' => $job_id]);
       $out[] = ['id' => (int)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email, 'ops_role' => $ops_role];
     }
     return ['users' => $out];
+  }
+
+  public static function list_dealers($req) {
+    $names = Slate_Ops_Utils::dealer_list();
+    $dealers = [];
+    foreach (array_values($names) as $i => $name) {
+      $dealers[] = ['id' => $i + 1, 'name' => (string)$name];
+    }
+    return ['dealers' => $dealers];
   }
 
   public static function update_user_role($req) {
