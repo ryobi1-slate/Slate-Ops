@@ -284,7 +284,7 @@ export function TechDashboard() {
                       <button
                         onClick={pauseTimer}
                         disabled={busy}
-                        className="flex-1 flex flex-col items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-bold py-5 rounded-2xl shadow-md shadow-red-200 disabled:opacity-60 transition-all"
+                        className="flex-1 flex flex-col items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-md shadow-slate-200 disabled:opacity-60 transition-all"
                       >
                         <span className="material-symbols-outlined text-3xl">pause_circle</span>
                         <span className="text-sm">PAUSE</span>
