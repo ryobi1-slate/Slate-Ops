@@ -98,11 +98,11 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
             <tr>
-              <th className="px-6 py-4">SO#</th>
-              <th className="px-6 py-4">Customer</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Updated</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-6 py-3">SO#</th>
+              <th className="px-6 py-3">Customer</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3">Updated</th>
+              <th className="px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -111,22 +111,24 @@ export function ExecutiveDashboard({ jobs }: ExecutiveDashboardProps) {
             )}
             {recentActivity.map((item) => (
               <tr key={item.id ?? item.job_id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-bold text-slate-900">{item.so_number || '—'}</td>
-                <td className="px-6 py-4 font-medium text-slate-600 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-slate-400 text-[14px]">business</span>
-                  </span>
-                  {item.customer_name || '—'}
+                <td className="px-6 py-3 font-bold text-slate-900 align-middle">{item.so_number || '—'}</td>
+                <td className="px-6 py-3 font-medium text-slate-600 align-middle">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <span className="material-symbols-outlined text-slate-400 text-[14px]">business</span>
+                    </span>
+                    {item.customer_name || '—'}
+                  </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-3 align-middle">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${STATUS_COLOR[item.status] || 'bg-slate-200 text-slate-700'}`}>
                     {item.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-slate-500">
+                <td className="px-6 py-3 text-slate-500 align-middle">
                   {item.updated_at ? new Date(item.updated_at).toLocaleDateString() : '—'}
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-3 text-right align-middle">
                   <button className="border border-slate-200 rounded p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
                     <span className="material-symbols-outlined text-sm">more_horiz</span>
                   </button>
