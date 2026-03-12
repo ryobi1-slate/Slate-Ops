@@ -171,6 +171,7 @@ KEY scheduler_locked_idx (scheduler_locked)
       lunch_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 30,
       break_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 10,
       break_count TINYINT UNSIGNED NOT NULL DEFAULT 2,
+      ot_threshold_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 480,
       timezone VARCHAR(64) NOT NULL DEFAULT 'America/Los_Angeles',
       updated_by BIGINT UNSIGNED NULL,
       updated_at DATETIME NOT NULL,
