@@ -13,7 +13,7 @@ export function QcDashboard({ inspections }: QcDashboardProps) {
           <h1 className="text-2xl font-bold text-slate-900">QC Queue</h1>
           <p className="text-slate-500 text-sm mt-0.5">Automotive UpFit Quality Control Station</p>
         </div>
-        <button className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 font-bold py-2 px-4 rounded text-sm transition-colors">
+        <button className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 font-bold py-2 px-4 rounded text-sm transition-colors">
           New Inspection
         </button>
       </div>
@@ -101,7 +101,7 @@ export function QcDashboard({ inspections }: QcDashboardProps) {
         <div className="px-6 py-4 border-t border-slate-100 flex justify-between items-center">
           <span className="text-xs text-slate-500">Showing {inspections.length} of 12 pending jobs</span>
           <div className="flex gap-2">
-            <button className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 text-xs font-bold px-4 py-1.5 rounded transition-colors">Prev</button>
+            <button className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 text-xs font-bold px-4 py-1.5 rounded transition-colors">Prev</button>
             <button className="border border-slate-800 text-slate-800 hover:bg-slate-50 text-xs font-bold px-4 py-1.5 rounded transition-colors">Next</button>
           </div>
         </div>

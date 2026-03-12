@@ -54,7 +54,7 @@ export function JobsDashboard({ jobs, dealers }: JobsDashboardProps) {
           <button className="text-slate-500 hover:text-slate-700 p-2">
             <span className="material-symbols-outlined text-xl">settings</span>
           </button>
-          <button className="bg-[#d86b19] hover:bg-[#c05e14] text-white font-bold py-2 px-4 rounded flex items-center gap-1.5 text-sm transition-colors">
+          <button className="bg-[#d86b19] hover:bg-[#c05e14] text-white ops-btn-arches-solid font-bold py-2 px-4 rounded flex items-center gap-1.5 text-sm transition-colors">
             <span className="material-symbols-outlined text-sm">add</span>
             New Job
           </button>
@@ -137,7 +137,7 @@ export function JobsDashboard({ jobs, dealers }: JobsDashboardProps) {
           <div className="px-6 py-4 border-t border-slate-100 flex justify-between items-center">
             <span className="text-xs text-slate-500">Showing {filteredJobs.length} results</span>
             <div className="flex gap-2">
-              <button className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 text-xs font-bold px-4 py-1.5 rounded transition-colors">Previous</button>
+              <button className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 text-xs font-bold px-4 py-1.5 rounded transition-colors">Previous</button>
               <button className="border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold px-4 py-1.5 rounded transition-colors">Next</button>
             </div>
           </div>
@@ -152,7 +152,7 @@ export function JobsDashboard({ jobs, dealers }: JobsDashboardProps) {
               <div className="text-xs text-slate-500 mt-0.5">Switch to the workshop floor map or list layout to view jobs by bays.</div>
             </div>
           </div>
-          <button className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 font-bold text-sm px-4 py-2 rounded transition-colors flex-shrink-0 ml-4">
+          <button className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 font-bold text-sm px-4 py-2 rounded transition-colors flex-shrink-0 ml-4">
             Switch to Bay View
           </button>
         </div>

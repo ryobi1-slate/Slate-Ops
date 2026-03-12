@@ -176,7 +176,7 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={handleRecalc}
-            className="flex items-center gap-1.5 border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
           >
             <span className="material-symbols-outlined text-base">event</span>
             Reschedule

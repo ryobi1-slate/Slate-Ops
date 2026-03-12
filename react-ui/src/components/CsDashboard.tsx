@@ -265,7 +265,7 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
           <div className="flex justify-end mt-4">
             <button
               type="submit" disabled={submitting}
-              className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 font-bold py-2 px-6 rounded text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 font-bold py-2 px-6 rounded text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               {submitting ? 'Creating...' : 'Create Job'}
             </button>

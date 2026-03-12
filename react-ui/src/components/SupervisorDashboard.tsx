@@ -39,7 +39,7 @@ export function SupervisorDashboard({ jobs }: SupervisorDashboardProps) {
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
             <h2 className="font-bold text-sm text-slate-900 uppercase tracking-wide">Pending Corrections</h2>
-            <button className="bg-[#d86b19] hover:bg-[#c05e14] text-white text-xs font-bold px-4 py-1.5 rounded transition-colors">
+            <button className="bg-[#d86b19] hover:bg-[#c05e14] text-white ops-btn-arches-solid text-xs font-bold px-4 py-1.5 rounded transition-colors">
               SCHEDULE
             </button>
           </div>
@@ -51,7 +51,7 @@ export function SupervisorDashboard({ jobs }: SupervisorDashboardProps) {
                   <div className="font-bold text-slate-900 text-sm mb-0.5">{item.title}</div>
                   <div className="text-xs text-slate-400">Reported by {item.reporter}</div>
                 </div>
-                <button className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 text-xs font-bold px-3 py-1.5 rounded transition-colors flex-shrink-0 ml-4">
+                <button className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 text-xs font-bold px-3 py-1.5 rounded transition-colors flex-shrink-0 ml-4">
                   Re-assign
                 </button>
               </div>
@@ -73,7 +73,7 @@ export function SupervisorDashboard({ jobs }: SupervisorDashboardProps) {
                 <div className="text-xs font-bold text-slate-700">{p.name}</div>
                 <div className="text-3xl font-bold text-slate-900">{p.hours}</div>
                 {p.label && <div className="text-[10px] text-slate-400">{p.label}</div>}
-                <button className="w-full border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 text-xs font-bold py-1.5 rounded transition-colors mt-1">
+                <button className="w-full border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 text-xs font-bold py-1.5 rounded transition-colors mt-1">
                   View Block
                 </button>
               </div>
@@ -87,8 +87,8 @@ export function SupervisorDashboard({ jobs }: SupervisorDashboardProps) {
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
           <h2 className="font-bold text-sm text-slate-900 uppercase tracking-wide">Today's Production Schedule</h2>
           <div className="flex gap-2">
-            <button className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 rounded text-xs font-bold px-3 py-1.5 transition-colors">Export CSV</button>
-            <button className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 rounded text-xs font-bold px-3 py-1.5 transition-colors">Add Job</button>
+            <button className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 rounded text-xs font-bold px-3 py-1.5 transition-colors">Export CSV</button>
+            <button className="border border-[#d86b19] text-[#d86b19] ops-btn-arches hover:bg-orange-50 rounded text-xs font-bold px-3 py-1.5 transition-colors">Add Job</button>
           </div>
         </div>
 
