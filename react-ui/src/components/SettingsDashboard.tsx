@@ -131,11 +131,6 @@ export function SettingsDashboard() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#EAE8DC] p-8 font-sans">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">System Settings</h1>
-        <p className="text-slate-600">Configure global parameters and production environment preferences.</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* General Settings */}
         <div className="bg-white rounded-xl shadow-sm p-6">
@@ -220,45 +215,31 @@ export function SettingsDashboard() {
               <h2 className="font-bold text-lg text-slate-800 mb-1">Production Bay Configuration</h2>
               <p className="text-xs text-slate-400 uppercase tracking-wider">WORKSHOP CAPACITY</p>
             </div>
-            <button className="px-3 py-1 border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+            <button className="bg-[#d86b19] hover:bg-[#c05e14] text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 transition-colors">
               <span className="material-symbols-outlined text-sm">add</span>
-              Add Bay
+              + Add Bay
             </button>
           </div>
 
-          <table className="w-full text-sm text-left mb-4">
-            <thead className="text-slate-400 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
-              <tr>
-                <th className="py-2">BAY ID</th>
-                <th className="py-2">EQUIPMENT LEVEL</th>
-                <th className="py-2">STATUS</th>
-                <th className="py-2 text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {MOCK_BAYS.map((bay) => (
-                <tr key={bay.id}>
-                  <td className="py-3 font-bold text-slate-900">{bay.id}</td>
-                  <td className="py-3">
-                    <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded">
-                      {bay.equipment_level}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <span className={`text-xs font-bold ${bay.status === 'Active' ? 'text-green-600' : 'text-orange-500'}`}>
-                      {bay.status}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right">
-                    <button className="text-slate-400 hover:text-slate-600 text-xs font-bold uppercase">Edit</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-slate-100">
+            {MOCK_BAYS.map(bay => (
+              <div key={bay.id} className="py-3 flex justify-between items-center">
+                <div>
+                  <div className="font-bold text-slate-900 text-sm">{bay.id}</div>
+                  <div className="text-xs text-slate-500">{bay.equipment_level}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${bay.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                    {bay.status}
+                  </span>
+                  <button className="border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold px-3 py-1 rounded transition-colors">Edit</button>
+                </div>
+              </div>
+            ))}
+          </div>
 
-          <p className="text-xs text-slate-400 italic">
-            Note: Changing bay configuration might affect the master production schedule.
+          <p className="text-xs text-slate-400 mt-4">
+            Note: Changing bay configuration might affect the current production schedule.
           </p>
         </div>
       </div>
@@ -270,14 +251,15 @@ export function SettingsDashboard() {
           <p className="text-xs text-slate-400 uppercase tracking-wider">DAILY HOURS &amp; DEDUCTIONS</p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        {/* Row 1: 4 cols */}
+        <div className="grid grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">Shift Start</label>
             <input
               type="time"
               value={shift.shiftStart}
               onChange={(e) => setShift({ ...shift, shiftStart: e.target.value })}
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19]"
             />
           </div>
           <div>
@@ -286,18 +268,7 @@ export function SettingsDashboard() {
               type="time"
               value={shift.shiftEnd}
               onChange={(e) => setShift({ ...shift, shiftEnd: e.target.value })}
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Lunch (minutes)</label>
-            <input
-              type="number"
-              min={0}
-              max={120}
-              value={shift.lunchMinutes}
-              onChange={(e) => setShift({ ...shift, lunchMinutes: Number(e.target.value) })}
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19]"
             />
           </div>
           <div>
@@ -305,53 +276,63 @@ export function SettingsDashboard() {
             <select
               value={shift.breakCount}
               onChange={(e) => setShift({ ...shift, breakCount: Number(e.target.value) })}
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19]"
             >
-              <option value={0}>0</option>
-              <option value={1}>1</option>
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
+              {[0,1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">Break Duration (min each)</label>
             <input
-              type="number"
-              min={0}
-              max={60}
+              type="number" min={0} max={60}
               value={shift.breakMinutes}
               onChange={(e) => setShift({ ...shift, breakMinutes: Number(e.target.value) })}
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19]"
             />
-          </div>
-          <div className="flex flex-col justify-end">
-            <div className="bg-[#EAE8DC] rounded-lg px-4 py-3 text-center">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Daily Deduction</div>
-              <div className="text-2xl font-bold text-slate-800">
-                {shift.lunchMinutes + shift.breakCount * shift.breakMinutes}
-                <span className="text-sm font-normal text-slate-500 ml-1">min</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-1">
-                {shift.lunchMinutes}m lunch + {shift.breakCount}×{shift.breakMinutes}m break
-              </div>
-            </div>
           </div>
         </div>
 
-        <p className="text-xs text-slate-400 mt-4">
-          Deduction applies automatically to any tech who logs 3+ hours in a day.
-        </p>
+        {/* Row 2: 2 cols */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Lunch (minutes)</label>
+            <input
+              type="number" min={0} max={120}
+              value={shift.lunchMinutes}
+              onChange={(e) => setShift({ ...shift, lunchMinutes: Number(e.target.value) })}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">OT After (hours/day)</label>
+            <input
+              type="number" min={1} max={24} step={0.5} defaultValue={8}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19]"
+            />
+          </div>
+        </div>
 
-        <div className="pt-6 flex justify-end items-center gap-3">
+        {/* Daily Deduction preview */}
+        <div className="bg-[#EAE8DC] rounded-lg p-4 mb-4">
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Daily Deduction</div>
+          <div className="text-4xl font-bold text-slate-900">
+            {shift.lunchMinutes + shift.breakCount * shift.breakMinutes}
+            <span className="text-base font-normal text-slate-500 ml-1">min</span>
+          </div>
+          <div className="text-xs text-slate-500 mt-1">
+            Breaks ({shift.breakCount} × {shift.breakMinutes}) + Lunch ({shift.lunchMinutes} min) = {shift.lunchMinutes + shift.breakCount * shift.breakMinutes} minutes/day
+          </div>
+        </div>
+
+        <div className="flex justify-end items-center gap-3">
           {shiftFlash === 'ok' && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">check_circle</span>Saved</span>}
           {shiftFlash === 'err' && <span className="text-red-500 text-xs font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">error</span>Failed</span>}
           <button
             onClick={saveShift}
             disabled={shiftSaving}
-            className="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-6 rounded shadow-sm text-sm disabled:opacity-50"
+            className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-6 rounded shadow-sm text-sm disabled:opacity-50"
           >
-            {shiftSaving ? 'Saving...' : 'Save Shift'}
+            {shiftSaving ? 'Saving...' : 'Update Shift Settings'}
           </button>
         </div>
       </div>

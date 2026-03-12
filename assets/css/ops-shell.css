@@ -36,7 +36,7 @@
 
   /* Shell tokens (used by shell partials) */
   --shell-sidebar-bg:   var(--sage);
-  --shell-sidebar-w:    220px;
+  --shell-sidebar-w:    260px;
   --shell-header-h:     52px;
   --shell-header-bg:    var(--white);
   --shell-canvas:       var(--sand);
@@ -97,108 +97,69 @@ body.slate-ops {
 }
 
 .ops-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 18px 16px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.10);
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Brand icon block — renders when no SVG logo is present */
-.ops-brand-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--arches);
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 13px;
-  color: var(--white);
-  flex-shrink: 0;
-  letter-spacing: 0.02em;
+.ops-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 44px;
 }
 
-/* SVG/img logo sizing */
-.ops-brand svg,
-.ops-brand img {
-  height: 26px !important;
-  width: auto !important;
-  display: block !important;
-}
-
-.ops-brand-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.ops-brand-name {
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--white);
-  line-height: 1.1;
-}
-
-.ops-brand-sub {
-  font-size: 10px;
-  color: rgba(255,255,255,0.42);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
+/* Legacy icon — hidden when SVG logo is used */
+.ops-brand-icon { display: none; }
+.ops-brand-text { display: none; }
 
 /* Nav */
 .ops-nav {
   flex: 1;
-  padding: 10px 0;
+  padding: 10px 10px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 2px;
 }
 
 .ops-nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 13px;
+  padding: 12px 14px;
   border: none;
-  border-left: 3px solid transparent;
+  border-radius: 10px;
   color: rgba(255,255,255,0.60);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 16px;
   font-family: var(--font-sans);
   transition: background 0.12s, color 0.12s;
   cursor: pointer;
   background: none;
   width: 100%;
   text-align: left;
+  box-sizing: border-box;
 }
 
 .ops-nav-link:hover {
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.90);
 }
 
 .ops-nav-link.active {
-  background: var(--shell-nav-active-bg);
-  border-left-color: var(--arches);
+  background: rgba(255,255,255,0.15);
   color: var(--white);
-  font-weight: 700;
 }
 
 /* Material icon sizing */
 .ops-nav-icon,
 .ops-nav-link .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
-  width: 20px;
+  width: 24px;
   flex-shrink: 0;
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
 
 /* Sidebar footer */
@@ -308,8 +269,7 @@ body.slate-ops {
     color: rgba(255,255,255,0.62);
   }
   .ops-nav-link.active {
-    background: rgba(255,255,255,0.14);
-    border-left: none;
+    background: rgba(255,255,255,0.15);
     color: var(--white);
   }
   .ops-nav-icon,

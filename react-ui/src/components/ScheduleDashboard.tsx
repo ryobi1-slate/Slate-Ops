@@ -176,10 +176,10 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={handleRecalc}
-            className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-md px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="flex items-center gap-1.5 border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
           >
-            <span className="material-symbols-outlined text-base">refresh</span>
-            Recalculate
+            <span className="material-symbols-outlined text-base">event</span>
+            Reschedule
           </button>
           {/* Week navigation */}
           <button
@@ -199,7 +199,7 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
           </button>
           <button
             onClick={() => setWeekAnchor(new Date())}
-            className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-50"
+            className="text-xs px-3 py-1.5 bg-slate-800 text-white rounded font-bold hover:bg-slate-900"
           >
             Today
           </button>
@@ -211,12 +211,10 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
       )}
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         {/* Constraint utilization */}
         <div className="bg-white p-4 rounded-xl shadow-sm">
-          <div className="text-xs font-bold text-slate-500 uppercase mb-1">
-            {constraint ? constraint.display_name : 'Constraint'} Utilization
-          </div>
+          <div className="text-xs font-bold text-slate-500 uppercase mb-1">Constraint Utilization</div>
           {constraint ? (
             <>
               <div className={`text-3xl font-bold mb-2 ${constraint.is_overloaded ? 'text-red-600' : 'text-slate-900'}`}>
@@ -228,43 +226,23 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
                   style={{ width: `${Math.min(constraint.utilization_pct, 100)}%` }}
                 />
               </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {minutesToHours(constraint.allocated_minutes)} / {minutesToHours(constraint.capacity_minutes)}
-              </div>
             </>
           ) : (
-            <div className="text-2xl font-bold text-slate-400">—</div>
+            <div className="text-3xl font-bold text-slate-900">0</div>
           )}
         </div>
 
         {/* Due this week */}
         <div className="bg-white p-4 rounded-xl shadow-sm">
-          <div className="text-xs font-bold text-slate-500 uppercase mb-1">Due This Week</div>
+          <div className="text-xs font-bold text-slate-500 uppercase mb-1">One This Week</div>
           <div className="text-3xl font-bold text-slate-900">{dueThisWeek}</div>
-          <div className="text-xs text-slate-400 mt-1">jobs</div>
+          <div className="text-xs text-slate-400 mt-1">Unassigned jobs</div>
         </div>
 
         {/* Late jobs */}
         <div className="bg-white p-4 rounded-xl shadow-sm">
           <div className="text-xs font-bold text-slate-500 uppercase mb-1">Late Jobs</div>
           <div className={`text-3xl font-bold ${lateJobs > 0 ? 'text-red-600' : 'text-slate-900'}`}>{lateJobs}</div>
-          <div className="text-xs text-slate-400 mt-1">past promised date</div>
-        </div>
-
-        {/* Overloads */}
-        <div className="bg-white p-4 rounded-xl shadow-sm">
-          <div className="text-xs font-bold text-slate-500 uppercase mb-1">Overloaded Centers</div>
-          <div className={`text-3xl font-bold ${overloadedWcs.length > 0 ? 'text-orange-600' : 'text-slate-900'}`}>
-            {overloadedWcs.length}
-          </div>
-          {overloadedWcs.length > 0 && (
-            <div className="text-xs text-orange-600 mt-1">
-              {overloadedWcs.map(w => w.display_name).join(', ')}
-            </div>
-          )}
-          {overloadedWcs.length === 0 && (
-            <div className="text-xs text-slate-400 mt-1">all clear</div>
-          )}
         </div>
       </div>
 
@@ -298,24 +276,26 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
         </div>
       )}
 
+      {/* Work Center filter */}
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-4 flex items-center gap-4">
+        <span className="text-sm font-bold text-slate-700 uppercase tracking-wide whitespace-nowrap">Work Center:</span>
+        <select
+          value={filterWc}
+          onChange={e => setFilterWc(e.target.value)}
+          className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19]"
+        >
+          <option value="all">All</option>
+          {workCenters.map(wc => (
+            <option key={wc.wc_id} value={wc.wc_code}>{wc.display_name}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Main layout: calendar + detail panel */}
       <div className="flex gap-4">
         {/* Calendar */}
         <div className="flex-1 bg-white rounded-xl shadow-sm overflow-hidden">
-          {/* Filter bar */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-            <span className="text-xs font-bold text-slate-500 uppercase">Work Center</span>
-            <select
-              value={filterWc}
-              onChange={e => setFilterWc(e.target.value)}
-              className="text-sm border border-slate-200 rounded px-2 py-1 text-slate-700"
-            >
-              <option value="all">All</option>
-              {workCenters.map(wc => (
-                <option key={wc.wc_id} value={wc.wc_code}>{wc.display_name}</option>
-              ))}
-            </select>
-          </div>
+          {/* Old filter bar hidden — moved above */}
 
           {loading ? (
             <div className="flex items-center justify-center h-48 text-slate-400">
@@ -323,10 +303,10 @@ export function ScheduleDashboard({ jobs: propJobs }: ScheduleDashboardProps) {
               Loading schedule…
             </div>
           ) : workCenters.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-slate-400 gap-2">
-              <span className="material-symbols-outlined text-3xl">dashboard</span>
-              <p className="text-sm">No work centers yet.</p>
-              <p className="text-xs">Add work centers in Settings to start scheduling.</p>
+            <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
+              <span className="text-5xl">📅</span>
+              <p className="font-bold text-slate-800">No work centers yet.</p>
+              <p className="text-sm text-slate-400">Add work centers in Settings to start scheduling.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
