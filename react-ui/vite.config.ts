@@ -22,6 +22,7 @@ export default defineConfig(({mode}) => {
       outDir: '../assets/react',
       emptyOutDir: true,
       rollupOptions: {
+        input: path.resolve(__dirname, 'src/main.tsx'),
         output: {
           entryFileNames: 'app.js',
           assetFileNames: 'app.[ext]',
@@ -30,13 +31,3 @@ export default defineConfig(({mode}) => {
     },
   };
 });
-build: {
-  outDir: '../assets/react',
-  emptyOutDir: true,
-  rollupOptions: {
-    output: {
-      entryFileNames: 'app.js',
-      assetFileNames: 'app.[ext]',
-    },
-  },
-},
