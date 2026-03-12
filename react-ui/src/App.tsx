@@ -48,33 +48,29 @@ export default function App() {
       };
     }
 
-    // Load Initial Data
+    // Load Initial Data — use allSettled so one failing service doesn't block others
     const loadData = async () => {
-      try {
-        const [boms, dealers, jobs, qcInspections, items] = await Promise.all([
-          bomService.getAll(),
-          dealerService.getAll(),
-          jobsService.getAll(),
-          qcService.getAll(),
-          itemsService.getAll()
-        ]);
-        
-        setState(prev => ({
-          ...prev,
-          boms,
-          dealers,
-          jobs,
-          qcInspections,
-          items,
-          ui: { ...prev.ui, isLoading: false }
-        }));
-      } catch (error) {
-        console.error("Failed to load data:", error);
-        setState(prev => ({
-          ...prev,
-          ui: { ...prev.ui, isLoading: false, error: 'Failed to load data' }
-        }));
-      }
+      const [bomsR, dealersR, jobsR, qcR, itemsR] = await Promise.allSettled([
+        bomService.getAll(),
+        dealerService.getAll(),
+        jobsService.getAll(),
+        qcService.getAll(),
+        itemsService.getAll(),
+      ]);
+
+      if (bomsR.status === 'rejected') console.error('BOMs fetch failed:', bomsR.reason);
+      if (dealersR.status === 'rejected') console.error('Dealers fetch failed:', dealersR.reason);
+      if (jobsR.status === 'rejected') console.error('Jobs fetch failed:', jobsR.reason);
+
+      setState(prev => ({
+        ...prev,
+        boms:          bomsR.status    === 'fulfilled' ? bomsR.value    : prev.boms,
+        dealers:       dealersR.status === 'fulfilled' ? dealersR.value : prev.dealers,
+        jobs:          jobsR.status    === 'fulfilled' ? jobsR.value    : prev.jobs,
+        qcInspections: qcR.status      === 'fulfilled' ? qcR.value      : prev.qcInspections,
+        items:         itemsR.status   === 'fulfilled' ? itemsR.value   : prev.items,
+        ui: { ...prev.ui, isLoading: false },
+      }));
     };
 
     loadData();
@@ -106,9 +102,10 @@ export default function App() {
     } else if (path.includes('/ops/dealers')) {
       setCurrentView('dealers');
     } else if (path.includes('/ops/new')) {
-      setCurrentView('cs'); 
+      setCurrentView('cs');
+    } else if (path.includes('/ops/admin')) {
+      setCurrentView('settings');
     } else {
-      // Default to BOM for now if no match, or handle other routes
       setCurrentView('bom');
     }
   }, []);
