@@ -25,6 +25,14 @@ export function SettingsDashboard() {
     holidaySync: true,
   });
 
+  const [shift, setShift] = useState({
+    shiftStart: '07:00',
+    shiftEnd: '15:30',
+    lunchMinutes: 30,
+    breakMinutes: 10,
+    breakCount: 2,
+  });
+
   const [notifications, setNotifications] = useState({
     newJob: true,
     qcFailure: true,
@@ -36,6 +44,8 @@ export function SettingsDashboard() {
 
   const [generalSaving, setGeneralSaving]   = useState(false);
   const [generalFlash,  setGeneralFlash]    = useState<'ok' | 'err' | null>(null);
+  const [shiftSaving,   setShiftSaving]     = useState(false);
+  const [shiftFlash,    setShiftFlash]      = useState<'ok' | 'err' | null>(null);
   const [notifSaving,   setNotifSaving]     = useState(false);
   const [notifFlash,    setNotifFlash]      = useState<'ok' | 'err' | null>(null);
 
@@ -44,16 +54,43 @@ export function SettingsDashboard() {
     apiFetch('/settings')
       .then(r => r.json())
       .then(d => {
-        if (d.company_name)    setGeneral(g => ({ ...g, companyName: d.company_name }));
-        if (d.timezone)        setGeneral(g => ({ ...g, timezone: d.timezone }));
+        if (d.company_name)     setGeneral(g => ({ ...g, companyName: d.company_name }));
+        if (d.timezone)         setGeneral(g => ({ ...g, timezone: d.timezone }));
         if (d.currency_display) setGeneral(g => ({ ...g, currency: d.currency_display }));
         if (d.holiday_sync !== undefined) setGeneral(g => ({ ...g, holidaySync: !!d.holiday_sync }));
         if (d.notifications && typeof d.notifications === 'object') {
           setNotifications(n => ({ ...n, ...d.notifications }));
         }
+        if (d.shift_start)    setShift(s => ({ ...s, shiftStart: (d.shift_start as string).slice(0,5) }));
+        if (d.shift_end)      setShift(s => ({ ...s, shiftEnd: (d.shift_end as string).slice(0,5) }));
+        if (d.lunch_minutes)  setShift(s => ({ ...s, lunchMinutes: Number(d.lunch_minutes) }));
+        if (d.break_minutes)  setShift(s => ({ ...s, breakMinutes: Number(d.break_minutes) }));
+        if (d.break_count)    setShift(s => ({ ...s, breakCount: Number(d.break_count) }));
       })
       .catch(() => {});
   }, []);
+
+  async function saveShift() {
+    setShiftSaving(true);
+    try {
+      const res = await apiFetch('/settings', {
+        method: 'POST',
+        body: JSON.stringify({
+          shift_start:    shift.shiftStart + ':00',
+          shift_end:      shift.shiftEnd + ':00',
+          lunch_minutes:  shift.lunchMinutes,
+          break_minutes:  shift.breakMinutes,
+          break_count:    shift.breakCount,
+        }),
+      });
+      setShiftFlash(res.ok ? 'ok' : 'err');
+    } catch {
+      setShiftFlash('err');
+    } finally {
+      setShiftSaving(false);
+      setTimeout(() => setShiftFlash(null), 2500);
+    }
+  }
 
   async function saveGeneral() {
     setGeneralSaving(true);
@@ -223,6 +260,99 @@ export function SettingsDashboard() {
           <p className="text-xs text-slate-400 italic">
             Note: Changing bay configuration might affect the master production schedule.
           </p>
+        </div>
+      </div>
+
+      {/* Shift & Break Configuration */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+        <div className="mb-6">
+          <h2 className="font-bold text-lg text-slate-800 mb-1">Shift &amp; Break Configuration</h2>
+          <p className="text-xs text-slate-400 uppercase tracking-wider">DAILY HOURS &amp; DEDUCTIONS</p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Shift Start</label>
+            <input
+              type="time"
+              value={shift.shiftStart}
+              onChange={(e) => setShift({ ...shift, shiftStart: e.target.value })}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Shift End</label>
+            <input
+              type="time"
+              value={shift.shiftEnd}
+              onChange={(e) => setShift({ ...shift, shiftEnd: e.target.value })}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Lunch (minutes)</label>
+            <input
+              type="number"
+              min={0}
+              max={120}
+              value={shift.lunchMinutes}
+              onChange={(e) => setShift({ ...shift, lunchMinutes: Number(e.target.value) })}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Breaks per Day</label>
+            <select
+              value={shift.breakCount}
+              onChange={(e) => setShift({ ...shift, breakCount: Number(e.target.value) })}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+            >
+              <option value={0}>0</option>
+              <option value={1}>1</option>
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+              <option value={4}>4</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Break Duration (min each)</label>
+            <input
+              type="number"
+              min={0}
+              max={60}
+              value={shift.breakMinutes}
+              onChange={(e) => setShift({ ...shift, breakMinutes: Number(e.target.value) })}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div className="flex flex-col justify-end">
+            <div className="bg-[#EAE8DC] rounded-lg px-4 py-3 text-center">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Daily Deduction</div>
+              <div className="text-2xl font-bold text-slate-800">
+                {shift.lunchMinutes + shift.breakCount * shift.breakMinutes}
+                <span className="text-sm font-normal text-slate-500 ml-1">min</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-1">
+                {shift.lunchMinutes}m lunch + {shift.breakCount}×{shift.breakMinutes}m break
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400 mt-4">
+          Deduction applies automatically to any tech who logs 3+ hours in a day.
+        </p>
+
+        <div className="pt-6 flex justify-end items-center gap-3">
+          {shiftFlash === 'ok' && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">check_circle</span>Saved</span>}
+          {shiftFlash === 'err' && <span className="text-red-500 text-xs font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">error</span>Failed</span>}
+          <button
+            onClick={saveShift}
+            disabled={shiftSaving}
+            className="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-6 rounded shadow-sm text-sm disabled:opacity-50"
+          >
+            {shiftSaving ? 'Saving...' : 'Save Shift'}
+          </button>
         </div>
       </div>
 

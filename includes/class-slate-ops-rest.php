@@ -174,6 +174,12 @@ class Slate_Ops_REST {
       'callback' => [__CLASS__, 'time_stop'],
     ]);
 
+    register_rest_route('slate-ops/v1', '/time/daily-summary', [
+      'methods' => 'GET',
+      'permission_callback' => [__CLASS__, 'perm_ops'],
+      'callback' => [__CLASS__, 'time_daily_summary'],
+    ]);
+
     register_rest_route('slate-ops/v1', '/time/correction', [
       'methods' => 'POST',
       'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
@@ -885,6 +891,10 @@ public static function perm_ops() {
       'newJob' => true, 'qcFailure' => true, 'completionSms' => true,
       'marketingEmails' => false, 'dailySummary' => true, 'weeklyReport' => false,
     ]);
+    // break_count added in 0.13.0 — dbDelta adds it; fall back for older DB rows
+    if (!isset($row['break_count'])) $row['break_count'] = 2;
+    $row['break_count'] = (int)$row['break_count'];
+    $row['daily_deduction_minutes'] = (int)($row['lunch_minutes'] ?? 30) + ((int)($row['break_count']) * (int)($row['break_minutes'] ?? 10));
     return $row;
   }
 
@@ -893,10 +903,11 @@ public static function perm_ops() {
     $t = $wpdb->prefix . 'slate_ops_settings';
     $body = $req->get_json_params();
 
-    $shift_start = isset($body['shift_start']) ? sanitize_text_field($body['shift_start']) : '07:00:00';
-    $shift_end = isset($body['shift_end']) ? sanitize_text_field($body['shift_end']) : '15:30:00';
-    $lunch = isset($body['lunch_minutes']) ? max(0, intval($body['lunch_minutes'])) : 30;
-    $breaks = isset($body['break_minutes']) ? max(0, intval($body['break_minutes'])) : 20;
+    $shift_start  = isset($body['shift_start'])   ? sanitize_text_field($body['shift_start'])  : '07:00:00';
+    $shift_end    = isset($body['shift_end'])     ? sanitize_text_field($body['shift_end'])    : '15:30:00';
+    $lunch        = isset($body['lunch_minutes']) ? max(0, intval($body['lunch_minutes']))     : 30;
+    $breaks       = isset($body['break_minutes']) ? max(0, intval($body['break_minutes']))     : 10;
+    $break_count  = isset($body['break_count'])   ? max(0, min(4, intval($body['break_count']))) : 2;
     $dealers_payload = $body['dealers'] ?? [];
     if (is_string($dealers_payload)) {
       $dealers_payload = preg_split('/\r\n|\r|\n/', $dealers_payload);
@@ -938,12 +949,13 @@ public static function perm_ops() {
     }
 
     $wpdb->update($t, [
-      'shift_start' => $shift_start,
-      'shift_end' => $shift_end,
+      'shift_start'   => $shift_start,
+      'shift_end'     => $shift_end,
       'lunch_minutes' => $lunch,
       'break_minutes' => $breaks,
-      'updated_by' => get_current_user_id(),
-      'updated_at' => Slate_Ops_Utils::now_gmt(),
+      'break_count'   => $break_count,
+      'updated_by'    => get_current_user_id(),
+      'updated_at'    => Slate_Ops_Utils::now_gmt(),
     ], ['id' => 1]);
 
     self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks,'dealers'=>$dealers,'sales_people'=>$sales_people]), 'Settings updated');
@@ -1836,6 +1848,87 @@ return self::get_job(['id' => $job_id]);
       get_current_user_id()
     ), ARRAY_A);
     return ['active' => $row ?: null];
+  }
+
+  /**
+   * GET /time/daily-summary
+   * Returns today's raw minutes, break/lunch deduction, and net billable minutes
+   * for the requesting user (or ?user_id=N for admin/supervisor).
+   */
+  public static function time_daily_summary($req) {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $jobs_t   = $wpdb->prefix . 'slate_ops_jobs';
+    $settings = $wpdb->prefix . 'slate_ops_settings';
+
+    $me = get_current_user_id();
+    $user_id = $me;
+    if (current_user_can(Slate_Ops_Utils::CAP_ADMIN) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)) {
+      $req_uid = intval($req->get_param('user_id') ?? 0);
+      if ($req_uid > 0) $user_id = $req_uid;
+    }
+
+    // Date: default today in site timezone
+    $date = sanitize_text_field($req->get_param('date') ?? '');
+    if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+      $date = wp_date('Y-m-d');
+    }
+
+    // Pull all closed segments for this user on this date
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT s.segment_id, s.job_id, s.start_ts, s.end_ts, s.reason, s.approval_status,
+              j.so_number, j.customer_name
+       FROM $segments s
+       LEFT JOIN $jobs_t j ON j.job_id = s.job_id
+       WHERE s.user_id = %d
+         AND s.state = 'active'
+         AND DATE(s.start_ts) = %s
+       ORDER BY s.start_ts ASC",
+      $user_id, $date
+    ), ARRAY_A);
+
+    $raw_minutes = 0;
+    $segments_out = [];
+    foreach ($rows as $r) {
+      if ($r['end_ts']) {
+        $mins = (int) ceil(
+          (strtotime($r['end_ts']) - strtotime($r['start_ts'])) / 60
+        );
+        $raw_minutes += $mins;
+        $r['duration_minutes'] = $mins;
+      } else {
+        // Open segment — count up to now
+        $mins = (int) ceil((time() - strtotime($r['start_ts'])) / 60);
+        $raw_minutes += $mins;
+        $r['duration_minutes'] = $mins;
+        $r['is_open'] = true;
+      }
+      $segments_out[] = $r;
+    }
+
+    // Load break/lunch config
+    $cfg = $wpdb->get_row("SELECT lunch_minutes, break_minutes, break_count FROM $settings WHERE id=1", ARRAY_A);
+    $lunch_min  = (int)($cfg['lunch_minutes'] ?? 30);
+    $break_min  = (int)($cfg['break_minutes'] ?? 10);
+    $break_cnt  = (int)($cfg['break_count']   ?? 2);
+    $deduction  = $lunch_min + ($break_min * $break_cnt);
+
+    // Only apply deduction if tech worked more than half a standard shift (e.g. > 3h)
+    $apply_deduction = $raw_minutes >= 180;
+    $net_minutes = $apply_deduction ? max(0, $raw_minutes - $deduction) : $raw_minutes;
+
+    return [
+      'date'                => $date,
+      'user_id'             => $user_id,
+      'raw_minutes'         => $raw_minutes,
+      'deduction_minutes'   => $apply_deduction ? $deduction : 0,
+      'net_minutes'         => $net_minutes,
+      'lunch_minutes'       => $lunch_min,
+      'break_minutes'       => $break_min,
+      'break_count'         => $break_cnt,
+      'deduction_applied'   => $apply_deduction,
+      'segments'            => $segments_out,
+    ];
   }
 
   public static function users($req) {

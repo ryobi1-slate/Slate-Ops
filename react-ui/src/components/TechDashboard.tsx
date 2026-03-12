@@ -46,6 +46,16 @@ type Tab = 'myjobs' | 'alerts' | 'inspection' | 'settings';
 
 // ── Component ──────────────────────────────────────────────────────
 
+interface DailySummary {
+  raw_minutes: number;
+  deduction_minutes: number;
+  net_minutes: number;
+  lunch_minutes: number;
+  break_minutes: number;
+  break_count: number;
+  deduction_applied: boolean;
+}
+
 export function TechDashboard() {
   const [active, setActive]               = useState<ActiveSegment | null>(null);
   const [elapsed, setElapsed]             = useState(0);
@@ -56,6 +66,7 @@ export function TechDashboard() {
   const [loading, setLoading]             = useState(true);
   const [busy, setBusy]                   = useState(false);
   const [error, setError]                 = useState<string | null>(null);
+  const [dailySummary, setDailySummary]   = useState<DailySummary | null>(null);
   const timerRef                          = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Fetch helpers ─────────────────────────────────────────────────
@@ -84,9 +95,17 @@ export function TechDashboard() {
 
   const loadAllJobs = useCallback(async () => {
     try {
-      const data = await apiFetch('/jobs?status_in=SCHEDULED,READY_FOR_SCHEDULING&limit=100');
+      // IN_PROGRESS included so techs can help on jobs already being worked
+      const data = await apiFetch('/jobs?status_in=IN_PROGRESS,SCHEDULED,READY_FOR_SCHEDULING&limit=100');
       setAllJobs(data.jobs || []);
     } catch { setAllJobs([]); }
+  }, [apiFetch]);
+
+  const loadDailySummary = useCallback(async () => {
+    try {
+      const data = await apiFetch('/time/daily-summary');
+      setDailySummary(data);
+    } catch { /* non-critical */ }
   }, [apiFetch]);
 
   // ── Init ──────────────────────────────────────────────────────────
@@ -94,10 +113,10 @@ export function TechDashboard() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await Promise.all([loadActive(), loadMyJobs()]);
+      await Promise.all([loadActive(), loadMyJobs(), loadDailySummary()]);
       setLoading(false);
     })();
-  }, [loadActive, loadMyJobs]);
+  }, [loadActive, loadMyJobs, loadDailySummary]);
 
   useEffect(() => {
     if (showHelp && allJobs.length === 0) loadAllJobs();
@@ -137,7 +156,7 @@ export function TechDashboard() {
       await timeService.stop();
       setActive(null);
       setElapsed(0);
-      await loadMyJobs();
+      await Promise.all([loadMyJobs(), loadDailySummary()]);
     } catch (e: any) {
       setError(e?.message || 'Failed to pause');
     } finally { setBusy(false); }
@@ -299,6 +318,40 @@ export function TechDashboard() {
                   </div>
                 )}
               </section>
+
+              {/* ── TODAY'S TIME ─────────────────────────────── */}
+              {dailySummary && dailySummary.raw_minutes > 0 && (
+                <section>
+                  <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Today's Time</div>
+                  <div className="bg-white rounded-3xl shadow-sm px-5 py-4">
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold font-mono text-slate-900">
+                          {Math.floor(dailySummary.raw_minutes / 60)}h {dailySummary.raw_minutes % 60}m
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Raw</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold font-mono text-red-400">
+                          -{dailySummary.deduction_minutes}m
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Breaks/Lunch</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold font-mono text-emerald-600">
+                          {Math.floor(dailySummary.net_minutes / 60)}h {dailySummary.net_minutes % 60}m
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Net</div>
+                      </div>
+                    </div>
+                    {dailySummary.deduction_applied && (
+                      <div className="border-t border-slate-100 pt-3 text-[11px] text-slate-400 text-center">
+                        {dailySummary.break_count}× {dailySummary.break_minutes}m break + {dailySummary.lunch_minutes}m lunch auto-deducted
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
 
               {/* ── JOBS QUEUE ───────────────────────────────── */}
               <section>
