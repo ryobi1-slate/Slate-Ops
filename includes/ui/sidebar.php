@@ -64,8 +64,7 @@ if (!function_exists('ops_nav_link')) {
       <?php ops_nav_link('/ops/jobs',       '/jobs',       'construction',   'Jobs'); ?>
       <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',     'QC'); ?>
       <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_today', 'Schedule'); ?>
-      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',   'BOM'); ?>
-            <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',   'BOM'); ?>
+      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',    'BOM'); ?>
       <?php ops_nav_link('/ops/settings',   '/settings',   'settings',       'Settings'); ?>
     <?php endif; ?>
 
@@ -80,7 +79,8 @@ if (!function_exists('ops_nav_link')) {
       <?php ops_nav_link('/ops/jobs',       '/jobs',       'construction',   'Jobs'); ?>
       <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',     'QC'); ?>
       <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_today', 'Schedule'); ?>
-      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',   'BOM'); ?>
+      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',    'BOM'); ?>
+      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',       'Settings'); ?>
     <?php endif; ?>
 
     <?php

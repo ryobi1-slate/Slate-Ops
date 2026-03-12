@@ -12,6 +12,7 @@ import { ScheduleDashboard } from './components/ScheduleDashboard';
 import { ItemsDashboard } from './components/ItemsDashboard';
 import { ExternalPortalRedirect } from './components/ExternalPortalRedirect';
 import { TechDashboard } from './components/TechDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
 import { AppState, Bom, BomLine, BomSummary, Dealer, Job } from './types';
 import { bomService, dealerService, jobsService, qcService, itemsService } from './services/api';
 
@@ -104,7 +105,7 @@ export default function App() {
     } else if (path.includes('/ops/new')) {
       setCurrentView('cs');
     } else if (path.includes('/ops/admin')) {
-      setCurrentView('settings');
+      setCurrentView('admin');
     } else {
       setCurrentView('bom');
     }
@@ -331,6 +332,8 @@ export default function App() {
         return <SupervisorDashboard jobs={state.jobs} />;
       case 'settings':
         return <SettingsDashboard />;
+      case 'admin':
+        return <AdminDashboard jobs={state.jobs} />;
       case 'schedule':
         return <ScheduleDashboard jobs={state.jobs} />;
       case 'tech':
