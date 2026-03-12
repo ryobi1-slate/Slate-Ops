@@ -30,7 +30,8 @@ export function Sidebar() {
     switch (userRole) {
       case 'tech':
         return [
-          { label: 'Jobs', href: '/ops/jobs', icon: 'work', active: isActive('/ops/jobs') },
+          { label: 'My Jobs', href: '/ops/tech', icon: 'engineering', active: isActive('/ops/tech') },
+          { label: 'All Jobs', href: '/ops/jobs', icon: 'work', active: isActive('/ops/jobs') },
         ];
       case 'cs':
         return [
@@ -43,6 +44,7 @@ export function Sidebar() {
       case 'supervisor':
         return [
           { label: 'Supervisor Dash', href: '/ops/supervisor', icon: 'dashboard', active: isActive('/ops/supervisor') },
+          { label: 'Tech View', href: '/ops/tech', icon: 'engineering', active: isActive('/ops/tech') },
           { label: 'Jobs', href: '/ops/jobs', icon: 'work', active: isActive('/ops/jobs') },
           { label: 'Schedule', href: '/ops/schedule', icon: 'calendar_month', active: isActive('/ops/schedule') },
           { label: 'QC', href: '/ops/qc', icon: 'fact_check', active: isActive('/ops/qc') },
