@@ -12,8 +12,10 @@ const MOCK_CORRECTIONS = [
 ];
 
 export function SupervisorDashboard({ jobs }: SupervisorDashboardProps) {
-  // Filter for active jobs for the schedule
-  const schedule = jobs.filter(j => j.status === 'ACTIVE').slice(0, 10); // Limit to 10 for display
+  // Active = any job that is in production but not yet complete
+  const schedule = jobs
+    .filter(j => ['IN_PROGRESS', 'SCHEDULED', 'READY_FOR_SCHEDULING'].includes(j.status))
+    .slice(0, 10);
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#EAE8DC] p-8 font-sans">
@@ -30,7 +32,7 @@ export function SupervisorDashboard({ jobs }: SupervisorDashboardProps) {
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <h2 className="font-bold text-sm text-slate-700 uppercase tracking-wide">PENDING CORRECTIONS</h2>
-            <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">4 Critical</span>
+            <span className="bg-slate-700 text-white text-xs font-bold px-2 py-1 rounded">{MOCK_CORRECTIONS.length} Critical</span>
           </div>
           <div className="divide-y divide-slate-100">
             {MOCK_CORRECTIONS.map((item) => (
@@ -88,46 +90,47 @@ export function SupervisorDashboard({ jobs }: SupervisorDashboardProps) {
           </div>
         </div>
         
+        {schedule.length === 0 ? (
+          <div className="px-6 py-10 text-center text-slate-400 text-sm italic">No jobs currently in production</div>
+        ) : (
         <table className="w-full text-sm text-left">
-          <thead className="bg-white text-slate-400 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
+          <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
             <tr>
-              <th className="px-6 py-4">SO NUMBER</th>
-              <th className="px-6 py-4">VEHICLE TYPE</th>
-              <th className="px-6 py-4">STATION</th>
-              <th className="px-6 py-4">TECHNICIAN</th>
-              <th className="px-6 py-4">ETA COMPLETION</th>
-              <th className="px-6 py-4 text-right">STATUS</th>
+              <th className="px-6 py-3">SO NUMBER</th>
+              <th className="px-6 py-3">CUSTOMER</th>
+              <th className="px-6 py-3">WORK CENTER</th>
+              <th className="px-6 py-3">ETA COMPLETION</th>
+              <th className="px-6 py-3 text-right">STATUS</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {schedule.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-bold text-slate-900">{item.so_number || '-'}</td>
-                <td className="px-6 py-4 text-slate-700">{item.vehicle}</td>
-                <td className="px-6 py-4">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide
-                    ${(item.stage || '').includes('QC') ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
-                    {item.stage || 'PENDING'}
+              <tr key={item.id ?? item.job_id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-3 font-bold text-slate-900 align-middle">{item.so_number || '—'}</td>
+                <td className="px-6 py-3 text-slate-700 align-middle">{item.customer_name || '—'}</td>
+                <td className="px-6 py-3 align-middle">
+                  <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide bg-slate-100 text-slate-600">
+                    {item.work_center || 'Unassigned'}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-slate-700">Unassigned</td>
-                <td className="px-6 py-4 font-mono text-slate-600">{item.due_date || 'TBD'}</td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-3 font-mono text-slate-600 align-middle">{item.scheduled_finish ? new Date(item.scheduled_finish).toLocaleDateString() : (item.due_date || 'TBD')}</td>
+                <td className="px-6 py-3 text-right align-middle">
                   <span className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide
-                    ${item.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
-                      item.stage === 'FINAL QC' ? 'bg-blue-100 text-blue-800' : 
+                    ${item.status === 'IN_PROGRESS' ? 'bg-green-100 text-green-800' :
+                      item.status === 'SCHEDULED'   ? 'bg-blue-100 text-blue-700' :
                       'bg-slate-100 text-slate-600'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 
-                      ${item.status === 'ACTIVE' ? 'bg-green-500' : 
-                        item.stage === 'FINAL QC' ? 'bg-blue-500' : 
-                        'bg-slate-500'}`}></span>
-                    {item.stage || item.status}
+                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5
+                      ${item.status === 'IN_PROGRESS' ? 'bg-green-500' :
+                        item.status === 'SCHEDULED'   ? 'bg-blue-400' :
+                        'bg-slate-400'}`} />
+                    {item.status.replace(/_/g, ' ')}
                   </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </div>
   );

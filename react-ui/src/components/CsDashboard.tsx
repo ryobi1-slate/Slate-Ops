@@ -63,7 +63,7 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
         est_hours: Number(form.est_hours),
         so_number: form.so_number || undefined,
         due_date: form.due_date || undefined,
-        status: form.so_number ? 'ACTIVE' : 'PENDING_INTAKE',
+        status: form.so_number ? 'UNSCHEDULED' : 'PENDING_INTAKE',
         created_at: new Date().toISOString(),
       });
       setJobs(prev => [created, ...prev]);
