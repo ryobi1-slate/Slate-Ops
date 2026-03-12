@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Job } from '../types';
-import { timeService, ActiveSegment, jobsService } from '../services/api';
+import { timeService, ActiveSegment } from '../services/api';
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -9,7 +9,6 @@ function pad(n: number) {
 }
 
 function elapsedSeconds(startTsGmt: string): number {
-  // start_ts comes from MySQL without timezone. Treat as UTC by appending Z.
   const adjusted = startTsGmt.endsWith('Z') ? startTsGmt : startTsGmt.replace(' ', 'T') + 'Z';
   return Math.max(0, Math.floor((Date.now() - new Date(adjusted).getTime()) / 1000));
 }
@@ -21,126 +20,105 @@ function formatElapsed(seconds: number) {
   return { h: pad(h), m: pad(m), s: pad(s) };
 }
 
-type JobStatusBadge = { label: string; color: string };
-
-function getStatusBadge(job: Job): JobStatusBadge {
+function getStatusBadge(job: Job): { label: string; color: string } {
   if (job.delay_reason || job.status === 'ON_HOLD') {
     return { label: 'BLOCKED', color: 'bg-slate-100 text-slate-500 border border-slate-300' };
   }
   if (job.parts_status === 'NOT_READY' || job.parts_status === 'PARTIAL') {
     return { label: 'PARTS PENDING', color: 'bg-orange-100 text-orange-700 border border-orange-300' };
   }
-  return { label: 'READY', color: 'bg-green-100 text-green-700 border border-green-300' };
+  return { label: 'READY', color: 'bg-emerald-100 text-emerald-700 border border-emerald-300' };
 }
 
 function canStart(job: Job): boolean {
   return job.status !== 'ON_HOLD' && job.status !== 'COMPLETE' && job.status !== 'COMPLETED';
 }
 
-const userName = typeof window !== 'undefined'
-  ? (window.slateOpsSettings?.user?.name || 'Tech')
-  : 'Tech';
-
-// ── Component ──────────────────────────────────────────────────────
+const API = () =>
+  (typeof window !== 'undefined' ? window.slateOpsSettings?.api?.root || '/wp-json/slate-ops/v1' : '/wp-json/slate-ops/v1')
+    .replace(/\/$/, '');
+const NONCE = () =>
+  typeof window !== 'undefined' ? window.slateOpsSettings?.api?.nonce || '' : '';
+const USER_NAME = () =>
+  typeof window !== 'undefined' ? window.slateOpsSettings?.user?.name || 'Tech' : 'Tech';
 
 type Tab = 'myjobs' | 'alerts' | 'inspection' | 'settings';
 
-export function TechDashboard() {
-  const [active, setActive] = useState<ActiveSegment | null>(null);
-  const [elapsed, setElapsed] = useState(0);
-  const [myJobs, setMyJobs] = useState<Job[]>([]);
-  const [allJobs, setAllJobs] = useState<Job[]>([]);
-  const [tab, setTab] = useState<Tab>('myjobs');
-  const [showHelp, setShowHelp] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [actionInFlight, setActionInFlight] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+// ── Component ──────────────────────────────────────────────────────
 
-  // ── Data loading ─────────────────────────────────────────────────
+export function TechDashboard() {
+  const [active, setActive]               = useState<ActiveSegment | null>(null);
+  const [elapsed, setElapsed]             = useState(0);
+  const [myJobs, setMyJobs]               = useState<Job[]>([]);
+  const [allJobs, setAllJobs]             = useState<Job[]>([]);
+  const [tab, setTab]                     = useState<Tab>('myjobs');
+  const [showHelp, setShowHelp]           = useState(false);
+  const [loading, setLoading]             = useState(true);
+  const [busy, setBusy]                   = useState(false);
+  const [error, setError]                 = useState<string | null>(null);
+  const timerRef                          = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Fetch helpers ─────────────────────────────────────────────────
+
+  const apiFetch = useCallback(async (path: string) => {
+    const r = await fetch(`${API()}${path}`, {
+      headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': NONCE() },
+    });
+    return r.json();
+  }, []);
 
   const loadActive = useCallback(async () => {
     try {
       const seg = await timeService.getActive();
       setActive(seg);
-      if (seg) {
-        setElapsed(elapsedSeconds(seg.start_ts));
-      }
-    } catch {
-      // silently fail on polling errors
-    }
+      if (seg) setElapsed(elapsedSeconds(seg.start_ts));
+    } catch { /* polling — ignore transient errors */ }
   }, []);
 
   const loadMyJobs = useCallback(async () => {
     try {
-      const resp = await fetch(
-        `${(window.slateOpsSettings?.api?.root || '/wp-json/slate-ops/v1').replace(/\/$/, '')}/jobs?assigned_me=1&limit=50&status_in=SCHEDULED,IN_PROGRESS,READY_FOR_SCHEDULING,UNSCHEDULED`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-WP-Nonce': window.slateOpsSettings?.api?.nonce || '',
-          },
-        }
-      );
-      const data = await resp.json();
-      setMyJobs(Array.isArray(data) ? data : data.jobs || []);
-    } catch {
-      setMyJobs([]);
-    }
-  }, []);
+      const data = await apiFetch('/jobs?assigned_me=1&limit=50&status_in=SCHEDULED,IN_PROGRESS,READY_FOR_SCHEDULING,UNSCHEDULED,ON_HOLD');
+      setMyJobs(data.jobs || []);
+    } catch { setMyJobs([]); }
+  }, [apiFetch]);
 
   const loadAllJobs = useCallback(async () => {
     try {
-      const resp = await fetch(
-        `${(window.slateOpsSettings?.api?.root || '/wp-json/slate-ops/v1').replace(/\/$/, '')}/jobs?status_in=SCHEDULED,READY_FOR_SCHEDULING&limit=100`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-WP-Nonce': window.slateOpsSettings?.api?.nonce || '',
-          },
-        }
-      );
-      const data = await resp.json();
-      setAllJobs(Array.isArray(data) ? data : data.jobs || []);
-    } catch {
-      setAllJobs([]);
-    }
-  }, []);
+      const data = await apiFetch('/jobs?status_in=SCHEDULED,READY_FOR_SCHEDULING&limit=100');
+      setAllJobs(data.jobs || []);
+    } catch { setAllJobs([]); }
+  }, [apiFetch]);
 
-  // Initial load
+  // ── Init ──────────────────────────────────────────────────────────
+
   useEffect(() => {
-    const init = async () => {
+    (async () => {
       setLoading(true);
       await Promise.all([loadActive(), loadMyJobs()]);
       setLoading(false);
-    };
-    init();
+    })();
   }, [loadActive, loadMyJobs]);
 
-  // Load all jobs when help panel opens
   useEffect(() => {
     if (showHelp && allJobs.length === 0) loadAllJobs();
   }, [showHelp, allJobs.length, loadAllJobs]);
 
-  // Ticker
+  // ── Live ticker ───────────────────────────────────────────────────
+
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (active?.start_ts) {
-      timerRef.current = setInterval(() => {
-        setElapsed(elapsedSeconds(active.start_ts));
-      }, 1000);
+      timerRef.current = setInterval(() => setElapsed(elapsedSeconds(active.start_ts)), 1000);
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [active?.start_ts]);
 
   // ── Actions ───────────────────────────────────────────────────────
 
   const startTimer = async (job: Job, reason = 'assigned') => {
-    if (actionInFlight) return;
+    if (busy) return;
     setError(null);
-    setActionInFlight(true);
+    setBusy(true);
     try {
       await timeService.start(job.job_id || job.id, reason);
       await loadActive();
@@ -148,219 +126,229 @@ export function TechDashboard() {
       setShowHelp(false);
     } catch (e: any) {
       setError(e?.message || 'Failed to start timer');
-    } finally {
-      setActionInFlight(false);
-    }
+    } finally { setBusy(false); }
   };
 
   const pauseTimer = async () => {
-    if (!active || actionInFlight) return;
+    if (!active || busy) return;
     setError(null);
-    setActionInFlight(true);
+    setBusy(true);
     try {
       await timeService.stop();
       setActive(null);
       setElapsed(0);
       await loadMyJobs();
     } catch (e: any) {
-      setError(e?.message || 'Failed to pause timer');
-    } finally {
-      setActionInFlight(false);
-    }
+      setError(e?.message || 'Failed to pause');
+    } finally { setBusy(false); }
   };
 
   const completeJob = async () => {
-    if (!active || actionInFlight) return;
-    const confirmed = window.confirm('Mark this job as complete and stop the timer?');
-    if (!confirmed) return;
+    if (!active || busy) return;
+    if (!window.confirm('Mark job complete and send to QC?')) return;
     setError(null);
-    setActionInFlight(true);
+    setBusy(true);
     try {
       await timeService.stop();
-      // Advance status to PENDING_QC
-      await fetch(
-        `${(window.slateOpsSettings?.api?.root || '/wp-json/slate-ops/v1').replace(/\/$/, '')}/jobs/${active.job_id}/status`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-WP-Nonce': window.slateOpsSettings?.api?.nonce || '',
-          },
-          body: JSON.stringify({ status: 'PENDING_QC' }),
-        }
-      );
+      await fetch(`${API()}/jobs/${active.job_id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': NONCE() },
+        body: JSON.stringify({ status: 'PENDING_QC' }),
+      });
       setActive(null);
       setElapsed(0);
       await loadMyJobs();
     } catch (e: any) {
       setError(e?.message || 'Failed to complete job');
-    } finally {
-      setActionInFlight(false);
-    }
+    } finally { setBusy(false); }
   };
+
+  // ── Derived state ─────────────────────────────────────────────────
+
+  const { h, m, s } = formatElapsed(elapsed);
+  const activeJobId  = active?.job_id;
+  const queueJobs    = myJobs.filter(j => (j.job_id || j.id) !== activeJobId);
+  const userName     = USER_NAME();
 
   // ── Render ────────────────────────────────────────────────────────
 
-  const { h, m, s } = formatElapsed(elapsed);
-  const activeJobId = active?.job_id;
-  const queueJobs = myJobs.filter(j => (j.job_id || j.id) !== activeJobId);
-
   return (
     <div className="flex-1 flex flex-col bg-[#EAE8DC] overflow-hidden">
-      {/* Mobile-centered layout */}
-      <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
+      {/* Max-width mobile shell */}
+      <div className="flex-1 flex flex-col max-w-[480px] mx-auto w-full shadow-2xl">
 
-        {/* Top bar */}
-        <div className="bg-[#2d3e39] text-white px-5 py-3 flex items-center justify-between flex-shrink-0">
+        {/* ── Top bar ──────────────────────────────────────── */}
+        <div className="bg-[#1f2d29] text-white px-5 py-3.5 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-sm overflow-hidden bg-white/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-lg">precision_manufacturing</span>
+            <div className="w-9 h-9 rounded-lg bg-[#d86b19] flex items-center justify-center font-bold text-base">
+              S
             </div>
-            <span className="font-bold text-lg">{userName}</span>
+            <div>
+              <div className="text-[10px] text-white/50 uppercase tracking-widest leading-none">Slate Upfit</div>
+              <div className="font-bold text-base leading-tight">{userName}</div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative text-white/80 hover:text-white">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#d86b19] rounded-full" />
+            <button className="relative text-white/70 hover:text-white">
+              <span className="material-symbols-outlined text-2xl">notifications</span>
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#d86b19] rounded-full border-2 border-[#1f2d29]" />
             </button>
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-sm">
-              {userName.charAt(0)}
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-bold">
+              {userName.charAt(0).toUpperCase()}
             </div>
           </div>
         </div>
 
-        {/* Error banner */}
+        {/* ── Error ─────────────────────────────────────────── */}
         {error && (
-          <div className="bg-red-50 border-b border-red-200 px-5 py-2 text-sm text-red-700 flex items-center justify-between">
-            {error}
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <div className="bg-red-50 border-b border-red-200 px-4 py-2.5 flex items-center justify-between text-sm text-red-700">
+            <span>{error}</span>
+            <button onClick={() => setError(null)}>
               <span className="material-symbols-outlined text-sm">close</span>
             </button>
           </div>
         )}
 
-        {/* Scroll area */}
-        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-5">
-
+        {/* ── Scrollable body ────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto bg-[#e8e5d6] px-4 py-5 space-y-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-48 text-slate-400 gap-3">
-              <span className="material-symbols-outlined animate-spin text-3xl">refresh</span>
-              <span className="text-sm">Loading your jobs…</span>
+            <div className="flex flex-col items-center justify-center h-60 text-slate-400 gap-3">
+              <span className="material-symbols-outlined text-4xl animate-spin">refresh</span>
+              <span className="text-base">Loading your jobs…</span>
             </div>
           ) : (
             <>
-              {/* ── Active Labor ─────────────────────────────────── */}
+              {/* ── ACTIVE LABOR ─────────────────────────────── */}
               <section>
-                <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Active Labor</div>
+                <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Active Labor</div>
 
                 {active ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                    <div className="flex items-start justify-between mb-1">
-                      <div>
-                        <div className="text-xs font-bold text-slate-500 mb-0.5">SO# {active.so_number || active.job_id}</div>
-                        <div className="text-xl font-bold text-slate-900 leading-tight">{active.customer_name || 'Job in progress'}</div>
-                        {active.work_center && (
-                          <div className="text-xs font-bold text-slate-400 uppercase mt-0.5 tracking-wide">
-                            PHASE: {active.work_center}
+                  <div className="bg-white rounded-3xl shadow-md overflow-hidden">
+                    {/* Job info */}
+                    <div className="px-5 pt-5 pb-4 border-b border-slate-100">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-slate-400 mb-0.5 tracking-wide">
+                            SO# {active.so_number || active.job_id}
                           </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-bold bg-[#2d3e39] text-white px-2 py-0.5 rounded uppercase tracking-wide">
-                        ACTIVE
-                      </span>
-                    </div>
-
-                    {/* Timer display */}
-                    <div className="flex gap-2 my-4">
-                      {[{ val: h, label: 'HOURS' }, { val: m, label: 'MINUTES' }, { val: s, label: 'SECONDS' }].map(({ val, label }) => (
-                        <div key={label} className="flex-1 bg-slate-50 rounded-xl py-3 text-center border border-slate-100">
-                          <div className="text-3xl font-bold text-slate-900 font-mono">{val}</div>
-                          <div className="text-[9px] font-bold text-slate-400 tracking-widest mt-0.5">{label}</div>
+                          <div className="text-xl font-bold text-slate-900 leading-tight">
+                            {active.customer_name || 'Job in progress'}
+                          </div>
+                          {active.work_center && (
+                            <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-1">
+                              Phase: {active.work_center}
+                            </div>
+                          )}
                         </div>
-                      ))}
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full uppercase tracking-wide border border-emerald-200">
+                          ● ACTIVE
+                        </span>
+                      </div>
+
+                      {/* Big timer */}
+                      <div className="flex gap-3 mt-4">
+                        {[{ val: h, label: 'HRS' }, { val: m, label: 'MIN' }, { val: s, label: 'SEC' }].map(({ val, label }) => (
+                          <div key={label} className="flex-1 bg-[#1f2d29] rounded-2xl py-4 text-center">
+                            <div className="text-4xl font-bold text-white font-mono tracking-tighter leading-none">{val}</div>
+                            <div className="text-[10px] font-bold text-white/40 tracking-widest mt-1.5">{label}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex gap-2">
+                    {/* Traffic-light action buttons */}
+                    <div className="p-4 flex gap-3">
+                      {/* RED — Stop/Pause */}
                       <button
                         onClick={pauseTimer}
-                        disabled={actionInFlight}
-                        className="flex-1 flex items-center justify-center gap-2 bg-[#2d3e39] text-white font-bold py-3 rounded-xl hover:bg-[#1f2d29] disabled:opacity-60 transition-colors"
+                        disabled={busy}
+                        className="flex-1 flex flex-col items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-bold py-5 rounded-2xl shadow-md shadow-red-200 disabled:opacity-60 transition-all"
                       >
-                        <span className="material-symbols-outlined text-lg">pause_circle</span>
-                        Pause Labor
+                        <span className="material-symbols-outlined text-3xl">pause_circle</span>
+                        <span className="text-sm">PAUSE</span>
                       </button>
+
+                      {/* GREEN — Complete */}
                       <button
                         onClick={completeJob}
-                        disabled={actionInFlight}
-                        className="flex-1 font-bold py-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60 transition-colors"
+                        disabled={busy}
+                        className="flex-1 flex flex-col items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-bold py-5 rounded-2xl shadow-md shadow-emerald-200 disabled:opacity-60 transition-all"
                       >
-                        Complete
+                        <span className="material-symbols-outlined text-3xl">check_circle</span>
+                        <span className="text-sm">COMPLETE</span>
                       </button>
+
+                      {/* NOTES */}
                       <button
-                        className="px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+                        className="w-16 flex flex-col items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-5 rounded-2xl transition-all"
                         onClick={() => alert('Notes coming soon')}
                       >
-                        <span className="material-symbols-outlined text-lg">edit_note</span>
+                        <span className="material-symbols-outlined text-2xl">edit_note</span>
+                        <span className="text-xs">NOTES</span>
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl shadow-sm border border-dashed border-slate-200 p-6 text-center">
-                    <span className="material-symbols-outlined text-3xl text-slate-300 mb-2 block">timer_off</span>
-                    <p className="text-sm text-slate-400">No active timer — tap ▶ on a job to start</p>
+                  /* No active job — show idle state */
+                  <div className="bg-white rounded-3xl shadow-sm border-2 border-dashed border-slate-200 p-8 text-center">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                      <span className="material-symbols-outlined text-3xl text-slate-300">timer_off</span>
+                    </div>
+                    <p className="font-bold text-slate-500">No active timer</p>
+                    <p className="text-sm text-slate-400 mt-1">Tap ▶ on a job below to start</p>
                   </div>
                 )}
               </section>
 
-              {/* ── Jobs Queue ────────────────────────────────────── */}
+              {/* ── JOBS QUEUE ───────────────────────────────── */}
               <section>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-bold uppercase tracking-widest text-slate-500">Jobs Queue</div>
-                  <span className="text-xs font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold bg-[#1f2d29] text-white px-2.5 py-1 rounded-full">
                     {queueJobs.length} Assigned
                   </span>
                 </div>
 
                 {queueJobs.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-6 text-center">
+                  <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-6 text-center">
                     <p className="text-sm text-slate-400">No other jobs assigned to you</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {queueJobs.map(job => {
-                      const badge = getStatusBadge(job);
-                      const jid = job.job_id || job.id;
+                      const badge    = getStatusBadge(job);
+                      const jid      = job.job_id || job.id;
                       const startable = canStart(job);
                       return (
-                        <div key={jid} className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 py-3.5 flex items-center gap-3">
+                        <div key={jid} className="bg-white rounded-3xl shadow-sm px-4 py-4 flex items-center gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
                               <span className="text-sm font-bold text-slate-800">
                                 SO #{job.so_number || jid}
                               </span>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}`}>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.color}`}>
                                 {badge.label}
                               </span>
                             </div>
-                            <div className="text-sm font-bold text-slate-900 truncate">
+                            <div className="text-base font-bold text-slate-900 truncate leading-tight">
                               {job.customer_name || job.dealer_name || 'Job'}
                             </div>
                             {job.vin && (
-                              <div className="text-xs text-slate-400 mt-0.5">
+                              <div className="text-xs text-slate-400 mt-0.5 font-mono">
                                 VIN: …{job.vin.slice(-8)}
                               </div>
                             )}
                           </div>
+                          {/* GREEN play button */}
                           <button
                             onClick={() => startable ? startTimer(job) : undefined}
-                            disabled={!startable || actionInFlight}
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
+                            disabled={!startable || busy}
+                            className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm transition-all
                               ${startable
-                                ? 'bg-slate-100 hover:bg-[#2d3e39] hover:text-white text-slate-600'
-                                : 'bg-slate-50 text-slate-300 cursor-not-allowed'}`}
+                                ? 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 shadow-emerald-200 text-white'
+                                : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}
                           >
-                            <span className="material-symbols-outlined text-lg">play_arrow</span>
+                            <span className="material-symbols-outlined text-3xl">play_arrow</span>
                           </button>
                         </div>
                       );
@@ -369,14 +357,14 @@ export function TechDashboard() {
                 )}
               </section>
 
-              {/* ── Help someone else ─────────────────────────────── */}
+              {/* ── HELP SOMEONE ─────────────────────────────── */}
               <section>
                 <button
-                  onClick={() => setShowHelp(prev => !prev)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  onClick={() => setShowHelp(p => !p)}
+                  className="w-full flex items-center justify-between px-5 py-4 bg-white rounded-3xl shadow-sm text-slate-600 hover:bg-slate-50 transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-lg text-slate-400">group</span>
+                  <span className="flex items-center gap-3 font-bold">
+                    <span className="material-symbols-outlined text-xl text-slate-400">group_add</span>
                     Help on another job
                   </span>
                   <span className="material-symbols-outlined text-slate-400">
@@ -385,9 +373,9 @@ export function TechDashboard() {
                 </button>
 
                 {showHelp && (
-                  <div className="mt-2 space-y-2">
+                  <div className="mt-3 space-y-3">
                     {allJobs.length === 0 ? (
-                      <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-400">
+                      <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-5 text-center text-sm text-slate-400">
                         No available jobs
                       </div>
                     ) : (
@@ -395,17 +383,17 @@ export function TechDashboard() {
                         .filter(j => (j.job_id || j.id) !== activeJobId)
                         .map(job => {
                           const badge = getStatusBadge(job);
-                          const jid = job.job_id || job.id;
+                          const jid   = job.job_id || job.id;
                           return (
-                            <div key={jid} className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 py-3.5 flex items-center gap-3">
+                            <div key={jid} className="bg-white rounded-3xl shadow-sm px-4 py-4 flex items-center gap-3">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-0.5">
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
                                   <span className="text-sm font-bold text-slate-800">SO #{job.so_number || jid}</span>
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.color}`}>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.color}`}>
                                     {badge.label}
                                   </span>
                                 </div>
-                                <div className="text-sm font-bold text-slate-900 truncate">
+                                <div className="text-base font-bold text-slate-900 truncate leading-tight">
                                   {job.customer_name || job.dealer_name || 'Job'}
                                 </div>
                                 {job.work_center && (
@@ -414,10 +402,10 @@ export function TechDashboard() {
                               </div>
                               <button
                                 onClick={() => startTimer(job, 'helping')}
-                                disabled={actionInFlight}
-                                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-100 hover:bg-[#2d3e39] hover:text-white text-slate-600 transition-colors"
+                                disabled={busy}
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-200 transition-all"
                               >
-                                <span className="material-symbols-outlined text-lg">play_arrow</span>
+                                <span className="material-symbols-outlined text-3xl">play_arrow</span>
                               </button>
                             </div>
                           );
@@ -430,8 +418,8 @@ export function TechDashboard() {
           )}
         </div>
 
-        {/* ── Bottom tab bar ────────────────────────────────────── */}
-        <div className="bg-white border-t border-slate-100 px-4 py-2 flex justify-around flex-shrink-0">
+        {/* ── Bottom tab bar ─────────────────────────────────── */}
+        <div className="bg-white border-t border-slate-100 px-2 py-2 flex justify-around flex-shrink-0">
           {[
             { key: 'myjobs',     icon: 'engineering',   label: 'MY JOBS' },
             { key: 'alerts',     icon: 'notifications', label: 'ALERTS' },
@@ -441,13 +429,11 @@ export function TechDashboard() {
             <button
               key={key}
               onClick={() => setTab(key as Tab)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors
-                ${tab === key ? 'text-[#2d3e39]' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-colors
+                ${tab === key ? 'text-[#1f2d29]' : 'text-slate-400 hover:text-slate-600'}`}
             >
-              <span className={`material-symbols-outlined text-2xl ${tab === key ? 'fill-1' : ''}`}>
-                {icon}
-              </span>
-              <span className="text-[9px] font-bold tracking-wide">{label}</span>
+              <span className={`material-symbols-outlined text-2xl ${tab === key ? 'fill-1' : ''}`}>{icon}</span>
+              <span className="text-[9px] font-bold tracking-widest">{label}</span>
             </button>
           ))}
         </div>

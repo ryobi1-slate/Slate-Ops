@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Job, WorkCenter, CapacitySummary } from '../types';
-import { workCenterService, schedulerService, jobsService } from '../services/api';
+import { workCenterService, schedulerService } from '../services/api';
 
 interface ScheduleDashboardProps {
   jobs: Job[];
@@ -25,11 +25,6 @@ function getWeekDates(anchor: Date): { iso: string; label: string; shortDay: str
   });
 }
 
-function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
