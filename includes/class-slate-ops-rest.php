@@ -875,8 +875,16 @@ public static function perm_ops() {
     $t = $wpdb->prefix . 'slate_ops_settings';
     $row = $wpdb->get_row("SELECT * FROM $t WHERE id=1", ARRAY_A);
     $row = $row ?: [];
-    $row['dealers'] = array_values(Slate_Ops_Utils::dealer_list());
-    $row['sales_people'] = array_values(Slate_Ops_Utils::sales_person_list());
+    $row['dealers']          = array_values(Slate_Ops_Utils::dealer_list());
+    $row['sales_people']     = array_values(Slate_Ops_Utils::sales_person_list());
+    $row['company_name']     = get_option('slate_ops_company_name', 'Slate Automotive Upfitting Solutions Inc.');
+    $row['timezone']         = get_option('slate_ops_timezone', 'Mountain Standard Time');
+    $row['currency_display'] = get_option('slate_ops_currency_display', 'USD ($)');
+    $row['holiday_sync']     = (bool)get_option('slate_ops_holiday_sync', true);
+    $row['notifications']    = get_option('slate_ops_notifications', [
+      'newJob' => true, 'qcFailure' => true, 'completionSms' => true,
+      'marketingEmails' => false, 'dailySummary' => true, 'weeklyReport' => false,
+    ]);
     return $row;
   }
 
@@ -918,6 +926,16 @@ public static function perm_ops() {
       }
     }
     update_option('slate_ops_sales_people', array_values(array_unique($sales_people)));
+
+    // General settings (stored as WP options)
+    if (isset($body['company_name']))     update_option('slate_ops_company_name',     sanitize_text_field($body['company_name']));
+    if (isset($body['timezone']))         update_option('slate_ops_timezone',         sanitize_text_field($body['timezone']));
+    if (isset($body['currency_display'])) update_option('slate_ops_currency_display', sanitize_text_field($body['currency_display']));
+    if (isset($body['holiday_sync']))     update_option('slate_ops_holiday_sync',     !empty($body['holiday_sync']) ? 1 : 0);
+    if (isset($body['notifications']) && is_array($body['notifications'])) {
+      $notif = array_map('rest_sanitize_boolean', $body['notifications']);
+      update_option('slate_ops_notifications', $notif);
+    }
 
     $wpdb->update($t, [
       'shift_start' => $shift_start,
