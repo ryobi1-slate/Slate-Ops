@@ -23,11 +23,17 @@ if (!function_exists('ops_nav_link')) {
 ?>
 <aside class="ops-sidebar">
   <div class="ops-brand">
-    <div class="ops-brand-icon">S</div>
-    <div class="ops-brand-text">
-      <div class="ops-brand-name">Slate Upfit</div>
-      <div class="ops-brand-sub">Ops Suite</div>
-    </div>
+    <svg class="ops-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 44" aria-label="Slate">
+      <!-- blade mark -->
+      <polygon points="5,40 14,4 21,4 12,40" fill="white"/>
+      <!-- wordmark -->
+      <text x="28" y="36"
+        font-family="'IBM Plex Sans',system-ui,-apple-system,sans-serif"
+        font-weight="900"
+        font-size="32"
+        letter-spacing="2"
+        fill="white">SLATE</text>
+    </svg>
   </div>
 
   <nav class="ops-nav">
@@ -38,8 +44,8 @@ if (!function_exists('ops_nav_link')) {
       && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
       && !current_user_can(Slate_Ops_Utils::CAP_CS)) :
     ?>
-      <?php ops_nav_link('/ops/tech',  '/tech',  'build',        'Tech'); ?>
-      <?php ops_nav_link('/ops/jobs',  '/jobs',  'construction', 'Jobs'); ?>
+      <?php ops_nav_link('/ops/tech', '/tech', 'build', 'Tech'); ?>
+      <?php ops_nav_link('/ops/jobs', '/jobs', 'work',  'Jobs'); ?>
     <?php endif; ?>
 
     <?php
@@ -48,10 +54,10 @@ if (!function_exists('ops_nav_link')) {
       && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)
       && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)) :
     ?>
-      <?php ops_nav_link('/ops/cs',       '/cs',       'headset_mic',    'CS'); ?>
-      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_today', 'Schedule'); ?>
-      <?php ops_nav_link('/ops/jobs',     '/jobs',     'construction',   'Jobs'); ?>
-      <?php ops_nav_link('/ops/new',      '/new',      'add_circle',     'Create Job'); ?>
+      <?php ops_nav_link('/ops/cs',       '/cs',       'person',          'CS'); ?>
+      <?php ops_nav_link('/ops/jobs',     '/jobs',     'work',            'Jobs'); ?>
+      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month',  'Schedule'); ?>
+      <?php ops_nav_link('/ops/new',      '/new',      'add_circle',      'Create Job'); ?>
     <?php endif; ?>
 
     <?php
@@ -59,30 +65,29 @@ if (!function_exists('ops_nav_link')) {
     if (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
       && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)) :
     ?>
-      <?php ops_nav_link('/ops/supervisor', '/supervisor', 'engineering',    'Supervisor'); ?>
-      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',      'Dashboard'); ?>
-      <?php ops_nav_link('/ops/tech',       '/tech',       'build',          'Tech View'); ?>
-      <?php ops_nav_link('/ops/jobs',       '/jobs',       'construction',   'Jobs'); ?>
-      <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',     'QC'); ?>
-      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_today', 'Schedule'); ?>
-      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',    'BOM'); ?>
-      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',       'Settings'); ?>
+      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',       'Dashboard'); ?>
+      <?php ops_nav_link('/ops/supervisor', '/supervisor', 'group',           'Supervisor'); ?>
+      <?php ops_nav_link('/ops/tech',       '/tech',       'build',           'Tech View'); ?>
+      <?php ops_nav_link('/ops/jobs',       '/jobs',       'work',            'Jobs'); ?>
+      <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',      'QC'); ?>
+      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_month',  'Schedule'); ?>
+      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',     'BOM'); ?>
+      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',        'Settings'); ?>
     <?php endif; ?>
 
     <?php
     // Admin
     if (current_user_can(Slate_Ops_Utils::CAP_ADMIN)) :
     ?>
-      <?php ops_nav_link('/ops/admin',      '/admin',      'shield_person',  'Admin'); ?>
-      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',      'Dashboard'); ?>
-      <?php ops_nav_link('/ops/cs',         '/cs',         'headset_mic',    'CS'); ?>
-      <?php ops_nav_link('/ops/supervisor', '/supervisor', 'engineering',    'Supervisor'); ?>
-      <?php ops_nav_link('/ops/tech',       '/tech',       'build',          'Tech View'); ?>
-      <?php ops_nav_link('/ops/jobs',       '/jobs',       'construction',   'Jobs'); ?>
-      <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',     'QC'); ?>
-      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_today', 'Schedule'); ?>
-      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',    'BOM'); ?>
-      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',       'Settings'); ?>
+      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',       'Dashboard'); ?>
+      <?php ops_nav_link('/ops/cs',         '/cs',         'person',          'CS'); ?>
+      <?php ops_nav_link('/ops/supervisor', '/supervisor', 'group',           'Supervisor'); ?>
+      <?php ops_nav_link('/ops/tech',       '/tech',       'build',           'Tech View'); ?>
+      <?php ops_nav_link('/ops/jobs',       '/jobs',       'work',            'Jobs'); ?>
+      <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',      'QC'); ?>
+      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_month',  'Schedule'); ?>
+      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',        'Settings'); ?>
+      <?php ops_nav_link('/ops/admin',      '/admin',      'shield',          'Admin'); ?>
     <?php endif; ?>
 
     <?php
@@ -92,8 +97,8 @@ if (!function_exists('ops_nav_link')) {
       && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
       && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)) :
     ?>
-      <?php ops_nav_link('/ops/exec', '/exec', 'dashboard',    'Dashboard'); ?>
-      <?php ops_nav_link('/ops/jobs', '/jobs', 'construction', 'Jobs'); ?>
+      <?php ops_nav_link('/ops/exec', '/exec', 'dashboard', 'Dashboard'); ?>
+      <?php ops_nav_link('/ops/jobs', '/jobs', 'work',      'Jobs'); ?>
     <?php endif; ?>
   </nav>
 

@@ -63,7 +63,7 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
         est_hours: Number(form.est_hours),
         so_number: form.so_number || undefined,
         due_date: form.due_date || undefined,
-        status: form.so_number ? 'ACTIVE' : 'PENDING_INTAKE',
+        status: form.so_number ? 'UNSCHEDULED' : 'PENDING_INTAKE',
         created_at: new Date().toISOString(),
       });
       setJobs(prev => [created, ...prev]);
@@ -85,16 +85,16 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
           className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">{label}</span>
-            <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold flex items-center justify-center">{rows.length}</span>
+            <span className="text-sm font-bold text-slate-900 uppercase tracking-widest">{label}</span>
+            <span className="w-6 h-6 rounded bg-[#d86b19] text-white text-[11px] font-bold flex items-center justify-center">{rows.length}</span>
           </div>
-          <span className={`material-symbols-outlined text-slate-400 text-xl transition-transform ${open ? 'rotate-180' : ''}`}>expand_more</span>
+          <span className="text-slate-400 text-base font-bold">{open ? '▼' : '▶'}</span>
         </button>
 
         {open && (
           <div className="border-t border-slate-100">
             {rows.length === 0 ? (
-              <p className="px-6 py-5 text-sm text-slate-400 italic text-center">No jobs found</p>
+              <p className="px-6 py-5 text-sm text-slate-400 text-center">No active jobs to display</p>
             ) : (
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
@@ -144,28 +144,26 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
   return (
     <div className="flex-1 overflow-y-auto bg-[#EAE8DC] p-6 font-sans">
 
-      {/* Top section: header card + stat boxes */}
-      <div className="flex gap-4 mb-4">
-        {/* Title card */}
-        <div className="flex-1 bg-white rounded-xl shadow-sm p-6 flex flex-col justify-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-1">Customer Service</h1>
-          <p className="text-slate-500 text-sm">Complete intake and assign SO#s for incoming jobs.</p>
+      {/* Top section: header + stat boxes */}
+      <div className="flex gap-4 mb-4 items-start">
+        {/* Title */}
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-slate-900">Customer Service</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Complete intake and setup SOPs to streamline jobs.</p>
         </div>
 
-        {/* Stat boxes */}
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-3">
-            <div className="bg-[#EAE8DC] rounded-xl px-6 py-4 text-center min-w-[110px]">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pending<br/>Intake</div>
-              <div className="text-3xl font-bold text-slate-900">{pendingJobs.length}</div>
-            </div>
-            <div className="bg-[#EAE8DC] rounded-xl px-6 py-4 text-center min-w-[110px]">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Needs<br/>SO#</div>
-              <div className="text-3xl font-bold text-slate-900">{needsSoJobs.length}</div>
-            </div>
+        {/* Stat card — 3 columns in one white box */}
+        <div className="bg-white rounded-xl shadow-sm flex divide-x divide-slate-100">
+          <div className="px-6 py-4 text-center min-w-[120px]">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pending<br/>Intake</div>
+            <div className="text-3xl font-bold text-slate-900">{pendingJobs.length}</div>
           </div>
-          <div className="bg-[#EAE8DC] rounded-xl px-6 py-4 text-center">
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Active Jobs</div>
+          <div className="px-6 py-4 text-center min-w-[120px]">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Needs<br/>Ops</div>
+            <div className="text-3xl font-bold text-slate-900">{needsSoJobs.length}</div>
+          </div>
+          <div className="px-6 py-4 text-center min-w-[120px]">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Active<br/>Jobs</div>
             <div className="text-3xl font-bold text-slate-900">{activeJobs.length}</div>
           </div>
         </div>
@@ -174,21 +172,21 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
       {/* Create Job Form */}
       <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xs font-bold text-slate-700 uppercase tracking-widest">Create Manual Job</h2>
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Create Manual Job</h2>
           <button className="text-slate-400 hover:text-slate-600">
             <span className="material-symbols-outlined text-base">more_horiz</span>
           </button>
         </div>
         <form onSubmit={handleCreate}>
-          {/* Row 1: all six fields */}
-          <div className="grid grid-cols-6 gap-3 mb-3">
+          {/* Row 1: 4 fields */}
+          <div className="grid grid-cols-4 gap-3 mb-3">
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Customer</label>
               <input
-                type="text" placeholder="Enter customer name" required
+                type="text" placeholder="Enter customer name..." required
                 value={form.customer_name}
                 onChange={e => setForm({ ...form, customer_name: e.target.value })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
               />
             </div>
             <div>
@@ -196,7 +194,7 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
               <select
                 value={form.dealer_id}
                 onChange={e => setForm({ ...form, dealer_id: e.target.value })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
               >
                 <option value="">Select...</option>
                 {dealers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -204,31 +202,50 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">VIN</label>
-              <input
-                type="text" placeholder="VIN (required unless Portal Job)"
-                value={form.vin}
-                onChange={e => setForm({ ...form, vin: e.target.value })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Job Type</label>
               <select
                 value={form.job_type}
                 onChange={e => setForm({ ...form, job_type: e.target.value })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
               >
-                <option value="UPFIT">UPFIT</option>
+                <option value="UPFIT">UPFIT (required unless Portal Job)</option>
                 <option value="REPAIR">REPAIR</option>
                 <option value="WARRANTY">WARRANTY</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Job Type</label>
+              <input
+                type="text" placeholder="e.g. Fleet, Retail"
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
+              />
+            </div>
+          </div>
+          {/* Row 2: 4 fields */}
+          <div className="grid grid-cols-4 gap-3 items-end">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">SO# (Optional)</label>
+              <input
+                type="text" placeholder="S-ORD######"
+                value={form.so_number}
+                onChange={e => setForm({ ...form, so_number: e.target.value })}
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Due Date (Optional)</label>
+              <input
+                type="date"
+                value={form.due_date}
+                onChange={e => setForm({ ...form, due_date: e.target.value })}
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
+              />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Parts Status</label>
               <select
                 value={form.parts_status}
                 onChange={e => setForm({ ...form, parts_status: e.target.value })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
               >
                 <option value="NOT_READY">NOT_READY</option>
                 <option value="PARTIAL">PARTIAL</option>
@@ -241,47 +258,25 @@ export function CsDashboard({ dealers, jobs: initialJobs, onJobCreated }: CsDash
                 type="number" min="0.5" step="0.5"
                 value={form.est_hours}
                 onChange={e => setForm({ ...form, est_hours: Number(e.target.value) })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
+                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-1 focus:ring-[#d86b19] focus:border-[#d86b19] outline-none"
               />
             </div>
           </div>
-          {/* Row 2 */}
-          <div className="grid grid-cols-6 gap-3 items-end">
-            <div className="col-span-2">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">SO# (Optional)</label>
-              <input
-                type="text" placeholder="S-ORD######"
-                value={form.so_number}
-                onChange={e => setForm({ ...form, so_number: e.target.value })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Due Date (Optional)</label>
-              <input
-                type="date"
-                value={form.due_date}
-                onChange={e => setForm({ ...form, due_date: e.target.value })}
-                className="w-full border border-slate-200 rounded px-2.5 py-2 text-sm focus:ring-primary focus:border-primary"
-              />
-            </div>
-            <div className="col-span-2 flex justify-end">
-              <button
-                type="submit" disabled={submitting}
-                className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-5 rounded text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-sm">add_circle</span>
-                {submitting ? 'Creating...' : 'Create Job'}
-              </button>
-            </div>
+          <div className="flex justify-end mt-4">
+            <button
+              type="submit" disabled={submitting}
+              className="border border-[#d86b19] text-[#d86b19] hover:bg-orange-50 font-bold py-2 px-6 rounded text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+            >
+              {submitting ? 'Creating...' : 'Create Job'}
+            </button>
           </div>
         </form>
       </div>
 
       {/* Collapsible job sections */}
       <Section id="PENDING_INTAKE" label="Pending Intake — Portal Jobs" rows={pendingJobs} />
-      <Section id="NEEDS_SO"       label="Needs SO# — Manual Jobs"       rows={needsSoJobs} />
-      <Section id="ACTIVE"         label="Active Jobs"                   rows={activeJobs} />
+      <Section id="NEEDS_SO"       label="Needs SOs — Manual Jobs"      rows={needsSoJobs} />
+      <Section id="ACTIVE"         label="Active Jobs"                  rows={activeJobs} />
     </div>
   );
 }
