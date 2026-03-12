@@ -256,6 +256,43 @@ export const jobsService = {
   }
 };
 
+export interface ActiveSegment {
+  segment_id: number;
+  job_id: number;
+  user_id: number;
+  start_ts: string;      // GMT datetime from DB
+  so_number?: string;
+  customer_name?: string;
+  work_center?: string;
+  reason?: string;
+}
+
+export const timeService = {
+  /** GET /time/active — returns the current open timer segment, or null */
+  getActive: async (): Promise<ActiveSegment | null> => {
+    if (!NONCE) return null;
+    const response = await fetch(`${API_BASE_URL}/time/active`, { headers: getHeaders() });
+    if (response.status === 204 || response.status === 404) return null;
+    const data = await handleResponse<{ active: ActiveSegment | null }>(response);
+    return data?.active ?? null;
+  },
+
+  /** POST /time/start — start timer on a job (auto-stops any open timer) */
+  start: async (jobId: number, reason = 'assigned', note = ''): Promise<{ segment_id: number; job_id: number; started_at: string }> => {
+    const response = await fetch(`${API_BASE_URL}/time/start`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ job_id: jobId, reason, note }),
+    });
+    return handleResponse(response);
+  },
+
+  /** POST /time/stop — stop the current open timer */
+  stop: async (): Promise<void> => {
+    await fetch(`${API_BASE_URL}/time/stop`, { method: 'POST', headers: getHeaders() });
+  },
+};
+
 export const workCenterService = {
   getAll: async (activeOnly = true): Promise<WorkCenter[]> => {
     if (!NONCE) return [];

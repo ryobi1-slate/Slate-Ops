@@ -11,6 +11,7 @@ import { SettingsDashboard } from './components/SettingsDashboard';
 import { ScheduleDashboard } from './components/ScheduleDashboard';
 import { ItemsDashboard } from './components/ItemsDashboard';
 import { ExternalPortalRedirect } from './components/ExternalPortalRedirect';
+import { TechDashboard } from './components/TechDashboard';
 import { AppState, Bom, BomLine, BomSummary, Dealer, Job } from './types';
 import { bomService, dealerService, jobsService, qcService, itemsService } from './services/api';
 
@@ -96,6 +97,8 @@ export default function App() {
       setCurrentView('settings');
     } else if (path.includes('/ops/schedule')) {
       setCurrentView('schedule');
+    } else if (path.includes('/ops/tech')) {
+      setCurrentView('tech');
     } else if (path.includes('/ops/items')) {
       setCurrentView('items');
     } else if (path.includes('/ops/quotes')) {
@@ -333,6 +336,8 @@ export default function App() {
         return <SettingsDashboard />;
       case 'schedule':
         return <ScheduleDashboard jobs={state.jobs} />;
+      case 'tech':
+        return <TechDashboard />;
       case 'items':
         return <ItemsDashboard items={state.items} />;
       case 'quotes':
