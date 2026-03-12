@@ -61,6 +61,7 @@ if (!function_exists('ops_nav_link')) {
     ?>
       <?php ops_nav_link('/ops/supervisor', '/supervisor', 'engineering',    'Supervisor'); ?>
       <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',      'Dashboard'); ?>
+      <?php ops_nav_link('/ops/tech',       '/tech',       'build',          'Tech View'); ?>
       <?php ops_nav_link('/ops/jobs',       '/jobs',       'construction',   'Jobs'); ?>
       <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',     'QC'); ?>
       <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_today', 'Schedule'); ?>
@@ -76,6 +77,7 @@ if (!function_exists('ops_nav_link')) {
       <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',      'Dashboard'); ?>
       <?php ops_nav_link('/ops/cs',         '/cs',         'headset_mic',    'CS'); ?>
       <?php ops_nav_link('/ops/supervisor', '/supervisor', 'engineering',    'Supervisor'); ?>
+      <?php ops_nav_link('/ops/tech',       '/tech',       'build',          'Tech View'); ?>
       <?php ops_nav_link('/ops/jobs',       '/jobs',       'construction',   'Jobs'); ?>
       <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',     'QC'); ?>
       <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_today', 'Schedule'); ?>
