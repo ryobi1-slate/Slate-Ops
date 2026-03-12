@@ -280,3 +280,26 @@ body.slate-ops {
 @media (max-width: 700px) {
   .ops-content { padding: 0; }
 }
+
+/* ─── 7. Ops action button colors ───────────────────────────────────
+ * These are NOT in a Tailwind @layer so they beat any WordPress theme
+ * CSS (unlayered styles always win over @layer utilities rules).
+ * Use .ops-btn-arches for outlined orange and
+ *     .ops-btn-arches-solid for filled orange buttons.
+ */
+.ops-btn-arches {
+  color: #d86b19 !important;
+  border-color: #d86b19 !important;
+}
+.ops-btn-arches:hover {
+  background-color: rgba(216,107,25,0.07) !important;
+}
+.ops-btn-arches-solid {
+  background-color: #d86b19 !important;
+  border-color: #d86b19 !important;
+  color: #ffffff !important;
+}
+.ops-btn-arches-solid:hover {
+  background-color: #c05e14 !important;
+  border-color: #c05e14 !important;
+}

@@ -215,7 +215,7 @@ export function SettingsDashboard() {
               <h2 className="font-bold text-lg text-slate-800 mb-1">Production Bay Configuration</h2>
               <p className="text-xs text-slate-400 uppercase tracking-wider">WORKSHOP CAPACITY</p>
             </div>
-            <button className="bg-[#d86b19] hover:bg-[#c05e14] text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 transition-colors">
+            <button className="bg-[#d86b19] hover:bg-[#c05e14] text-white ops-btn-arches-solid text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 transition-colors">
               <span className="material-symbols-outlined text-sm">add</span>
               + Add Bay
             </button>
