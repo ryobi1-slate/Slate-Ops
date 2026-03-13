@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 26" role="img" aria-label="Slate">
-  <title>Slate</title>
-  <!-- Orange left accent bar -->
-  <rect x="0" y="1" width="4" height="24" rx="2" fill="#d86b19"/>
-  <!-- SLATE wordmark -->
-  <text x="11" y="20" font-family="'Arial Black','Arial Bold',Arial,sans-serif" font-size="19" font-weight="900" fill="#ffffff" letter-spacing="2">SLATE</text>
-</svg>

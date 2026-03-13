@@ -1,2 +1,0 @@
-Slate SaaS Portal UI
-Version: 0.10.4
