@@ -22,13 +22,20 @@ class Slate_Ops_Install {
 
     $charset_collate = $wpdb->get_charset_collate();
 
-    $jobs         = $wpdb->prefix . 'slate_ops_jobs';
-    $segments     = $wpdb->prefix . 'slate_ops_time_segments';
-    $audit        = $wpdb->prefix . 'slate_ops_audit_log';
-    $settings     = $wpdb->prefix . 'slate_ops_settings';
-    $work_centers = $wpdb->prefix . 'slate_ops_work_centers';
-    $sched_events = $wpdb->prefix . 'slate_ops_schedule_events';
-    $cap_snaps    = $wpdb->prefix . 'slate_ops_capacity_snapshots';
+    $jobs             = $wpdb->prefix . 'slate_ops_jobs';
+    $segments         = $wpdb->prefix . 'slate_ops_time_segments';
+    $audit            = $wpdb->prefix . 'slate_ops_audit_log';
+    $settings         = $wpdb->prefix . 'slate_ops_settings';
+    $work_centers     = $wpdb->prefix . 'slate_ops_work_centers';
+    $sched_events     = $wpdb->prefix . 'slate_ops_schedule_events';
+    $cap_snaps        = $wpdb->prefix . 'slate_ops_capacity_snapshots';
+    $job_reviews      = $wpdb->prefix . 'slate_ops_job_reviews';
+    $job_assignments  = $wpdb->prefix . 'slate_ops_job_assignments';
+    $blockers         = $wpdb->prefix . 'slate_ops_blockers';
+    $schedule_slots   = $wpdb->prefix . 'slate_ops_schedule_slots';
+    $eod_reports      = $wpdb->prefix . 'slate_ops_eod_reports';
+    $eod_report_lines = $wpdb->prefix . 'slate_ops_eod_report_lines';
+    $qc_records       = $wpdb->prefix . 'slate_ops_qc_records';
 
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -53,7 +60,7 @@ job_type VARCHAR(30) NOT NULL DEFAULT 'UPFIT',
 parts_status VARCHAR(20) NOT NULL DEFAULT 'NOT_READY',
 
 -- Status + scheduling
-status VARCHAR(30) NOT NULL DEFAULT 'UNSCHEDULED',
+status VARCHAR(30) NOT NULL DEFAULT 'PENDING_INTAKE',
 status_detail VARCHAR(100) NULL,
 status_updated_at DATETIME NULL,
 
@@ -62,16 +69,17 @@ priority TINYINT UNSIGNED NOT NULL DEFAULT 3,
 priority_score SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 
 assigned_user_id BIGINT UNSIGNED NULL,
+primary_owner_id BIGINT UNSIGNED NULL,
 work_center VARCHAR(60) NULL,
 estimated_minutes INT UNSIGNED NULL,
 constraint_minutes_required INT UNSIGNED NULL,
-        scope_status VARCHAR(30) NOT NULL DEFAULT 'ESTIMATING',
-        scheduling_status VARCHAR(30) NOT NULL DEFAULT 'PENDING_RELEASE',
-        target_week_id VARCHAR(50) NULL,
-        ready_queue_entered_at DATETIME NULL,
-        override_flag TINYINT(1) NOT NULL DEFAULT 0,
-        override_reason VARCHAR(255) NULL,
-        override_notes TEXT NULL,
+scope_status VARCHAR(30) NOT NULL DEFAULT 'ESTIMATING',
+scheduling_status VARCHAR(30) NOT NULL DEFAULT 'PENDING_RELEASE',
+target_week_id VARCHAR(50) NULL,
+ready_queue_entered_at DATETIME NULL,
+override_flag TINYINT(1) NOT NULL DEFAULT 0,
+override_reason VARCHAR(255) NULL,
+override_notes TEXT NULL,
 
 -- Scheduler control
 scheduler_locked TINYINT(1) NOT NULL DEFAULT 0,
@@ -85,6 +93,20 @@ requested_date DATE NULL,
 promised_date DATE NULL,
 target_ship_date DATE NULL,
 
+-- Intake fields
+customer_expectations TEXT NULL,
+scope_summary TEXT NULL,
+documents_complete TINYINT(1) NOT NULL DEFAULT 0,
+
+-- Execution flags
+awaiting_direction TINYINT(1) NOT NULL DEFAULT 0,
+percent_complete TINYINT UNSIGNED NOT NULL DEFAULT 0,
+
+-- Cached rollups (updated by server-side hooks)
+actual_minutes_approved INT UNSIGNED NOT NULL DEFAULT 0,
+actual_minutes_pending INT UNSIGNED NOT NULL DEFAULT 0,
+current_task_summary VARCHAR(500) NULL,
+
 sales_person VARCHAR(255) NULL,
 stock_number VARCHAR(64) NULL,
 notes TEXT NULL,
@@ -95,6 +117,9 @@ clickup_estimate_ms BIGINT UNSIGNED NULL,
 
 -- Dealer-facing simplified status
 dealer_status VARCHAR(20) NOT NULL DEFAULT 'waiting',
+
+-- Multi-location
+location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
 
 -- Audit fields
 created_by BIGINT UNSIGNED NULL,
@@ -110,12 +135,15 @@ KEY so_idx (so_number),
 KEY status_idx (status),
 KEY status_updated_idx (status_updated_at),
 KEY assigned_idx (assigned_user_id),
+KEY primary_owner_idx (primary_owner_id),
 KEY quote_idx (portal_quote_id),
 KEY clickup_idx (clickup_task_id),
 KEY priority_idx (priority),
 KEY created_from_idx (created_from),
 KEY scheduling_flag_idx (scheduling_flag),
-KEY scheduler_locked_idx (scheduler_locked)
+KEY scheduler_locked_idx (scheduler_locked),
+KEY location_idx (location_id),
+KEY awaiting_idx (awaiting_direction)
 
     ) $charset_collate;";
 
@@ -125,6 +153,7 @@ KEY scheduler_locked_idx (scheduler_locked)
       user_id BIGINT UNSIGNED NOT NULL,
       start_ts DATETIME NOT NULL,
       end_ts DATETIME NULL,
+      task VARCHAR(100) NULL,
       reason VARCHAR(30) NULL,
       note TEXT NULL,
       source VARCHAR(20) NOT NULL DEFAULT 'timer',
@@ -135,6 +164,7 @@ KEY scheduler_locked_idx (scheduler_locked)
       voided_by BIGINT UNSIGNED NULL,
       voided_at DATETIME NULL,
       void_reason VARCHAR(255) NULL,
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
       created_by BIGINT UNSIGNED NULL,
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL,
@@ -155,13 +185,15 @@ KEY scheduler_locked_idx (scheduler_locked)
       old_value LONGTEXT NULL,
       new_value LONGTEXT NULL,
       note TEXT NULL,
+      note_type VARCHAR(30) NULL,
       user_id BIGINT UNSIGNED NULL,
       ip_address VARCHAR(64) NULL,
       user_agent VARCHAR(255) NULL,
       created_at DATETIME NOT NULL,
       PRIMARY KEY (audit_id),
       KEY ent_idx (entity_type, entity_id),
-      KEY user_idx (user_id)
+      KEY user_idx (user_id),
+      KEY action_idx (action)
     ) $charset_collate;";
 
     $sql_settings = "CREATE TABLE $settings (
@@ -188,6 +220,7 @@ KEY scheduler_locked_idx (scheduler_locked)
       sequence_order TINYINT UNSIGNED NOT NULL DEFAULT 0,
       color VARCHAR(7) NOT NULL DEFAULT '#5A6B65',
       active TINYINT(1) NOT NULL DEFAULT 1,
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL,
       PRIMARY KEY (wc_id),
@@ -225,6 +258,138 @@ KEY scheduler_locked_idx (scheduler_locked)
       UNIQUE KEY date_wc_idx (snapshot_date, work_center_id)
     ) $charset_collate;";
 
+    // ── New tables (Phase 0 backbone) ─────────────────
+
+    $sql_job_reviews = "CREATE TABLE $job_reviews (
+      review_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      job_id BIGINT UNSIGNED NOT NULL,
+      reviewer_id BIGINT UNSIGNED NOT NULL,
+      decision VARCHAR(20) NOT NULL,
+      review_notes TEXT NULL,
+      hold_reason VARCHAR(100) NULL,
+      return_reason TEXT NULL,
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (review_id),
+      KEY job_idx (job_id),
+      KEY reviewer_idx (reviewer_id),
+      KEY decision_idx (decision)
+    ) $charset_collate;";
+
+    $sql_job_assignments = "CREATE TABLE $job_assignments (
+      assignment_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      job_id BIGINT UNSIGNED NOT NULL,
+      user_id BIGINT UNSIGNED NOT NULL,
+      role VARCHAR(20) NOT NULL,
+      assigned_by BIGINT UNSIGNED NOT NULL,
+      assigned_task TEXT NULL,
+      planned_start_point VARCHAR(255) NULL,
+      planned_stop_point VARCHAR(255) NULL,
+      effective_date DATE NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      ended_at DATETIME NULL,
+      PRIMARY KEY (assignment_id),
+      KEY job_idx (job_id),
+      KEY user_idx (user_id),
+      KEY job_user_idx (job_id, user_id, status),
+      KEY effective_idx (effective_date, status),
+      KEY role_idx (role)
+    ) $charset_collate;";
+
+    $sql_blockers = "CREATE TABLE $blockers (
+      blocker_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      job_id BIGINT UNSIGNED NOT NULL,
+      reported_by BIGINT UNSIGNED NOT NULL,
+      blocker_type VARCHAR(30) NOT NULL,
+      description TEXT NOT NULL,
+      severity VARCHAR(10) NOT NULL DEFAULT 'BLOCKING',
+      status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+      acknowledged_by BIGINT UNSIGNED NULL,
+      acknowledged_at DATETIME NULL,
+      resolved_by BIGINT UNSIGNED NULL,
+      resolution_notes TEXT NULL,
+      resolved_at DATETIME NULL,
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (blocker_id),
+      KEY job_idx (job_id),
+      KEY status_idx (status),
+      KEY severity_status_idx (severity, status),
+      KEY reporter_idx (reported_by)
+    ) $charset_collate;";
+
+    $sql_schedule_slots = "CREATE TABLE $schedule_slots (
+      slot_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      job_id BIGINT UNSIGNED NOT NULL,
+      work_center_id BIGINT UNSIGNED NULL,
+      assigned_user_id BIGINT UNSIGNED NULL,
+      slot_date DATE NOT NULL,
+      start_time TIME NULL,
+      end_time TIME NULL,
+      allocated_minutes INT UNSIGNED NOT NULL DEFAULT 0,
+      slot_type VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
+      status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED',
+      created_by BIGINT UNSIGNED NULL,
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (slot_id),
+      KEY job_idx (job_id),
+      KEY date_idx (slot_date),
+      KEY wc_date_idx (work_center_id, slot_date),
+      KEY user_date_idx (assigned_user_id, slot_date),
+      KEY status_idx (status)
+    ) $charset_collate;";
+
+    $sql_eod_reports = "CREATE TABLE $eod_reports (
+      eod_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id BIGINT UNSIGNED NOT NULL,
+      report_date DATE NOT NULL,
+      general_notes TEXT NULL,
+      submitted_at DATETIME NOT NULL,
+      reviewed_by BIGINT UNSIGNED NULL,
+      reviewed_at DATETIME NULL,
+      review_notes TEXT NULL,
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (eod_id),
+      UNIQUE KEY user_date_idx (user_id, report_date),
+      KEY date_idx (report_date),
+      KEY reviewed_idx (reviewed_by)
+    ) $charset_collate;";
+
+    $sql_eod_report_lines = "CREATE TABLE $eod_report_lines (
+      line_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      eod_id BIGINT UNSIGNED NOT NULL,
+      job_id BIGINT UNSIGNED NOT NULL,
+      status_note TEXT NULL,
+      work_completed VARCHAR(500) NULL,
+      work_remaining VARCHAR(500) NULL,
+      issues TEXT NULL,
+      percent_complete TINYINT UNSIGNED NULL,
+      PRIMARY KEY (line_id),
+      KEY eod_idx (eod_id),
+      KEY job_idx (job_id)
+    ) $charset_collate;";
+
+    $sql_qc_records = "CREATE TABLE $qc_records (
+      qc_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      job_id BIGINT UNSIGNED NOT NULL,
+      checkpoint VARCHAR(50) NOT NULL,
+      result VARCHAR(20) NOT NULL,
+      checked_by BIGINT UNSIGNED NOT NULL,
+      notes TEXT NULL,
+      location_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (qc_id),
+      KEY job_idx (job_id),
+      KEY checkpoint_idx (checkpoint)
+    ) $charset_collate;";
+
+    // ── Run all dbDelta ─────────────────────────────────
+
     dbDelta($sql_jobs);
     dbDelta($sql_segments);
     dbDelta($sql_audit);
@@ -232,6 +397,25 @@ KEY scheduler_locked_idx (scheduler_locked)
     dbDelta($sql_work_centers);
     dbDelta($sql_schedule_events);
     dbDelta($sql_capacity_snapshots);
+    dbDelta($sql_job_reviews);
+    dbDelta($sql_job_assignments);
+    dbDelta($sql_blockers);
+    dbDelta($sql_schedule_slots);
+    dbDelta($sql_eod_reports);
+    dbDelta($sql_eod_report_lines);
+    dbDelta($sql_qc_records);
+
+    // ── Data migrations ─────────────────────────────────
+
+    // Backfill primary_owner_id from assigned_user_id for existing jobs.
+    $wpdb->query("UPDATE $jobs SET primary_owner_id = assigned_user_id WHERE primary_owner_id IS NULL AND assigned_user_id IS NOT NULL");
+
+    // Migrate existing status values to the new workflow status set.
+    // UNSCHEDULED → PENDING_INTAKE (jobs not yet processed by CS).
+    // READY_FOR_SCHEDULING → APPROVED_FOR_SCHEDULING (no supervisor gate existed before;
+    //   treat previously "ready" jobs as approved so they remain schedulable).
+    $wpdb->query("UPDATE $jobs SET status = 'PENDING_INTAKE' WHERE status = 'UNSCHEDULED'");
+    $wpdb->query("UPDATE $jobs SET status = 'APPROVED_FOR_SCHEDULING' WHERE status = 'READY_FOR_SCHEDULING'");
 
     $exists = $wpdb->get_var("SELECT COUNT(*) FROM $settings WHERE id=1");
     if (!$exists) {
