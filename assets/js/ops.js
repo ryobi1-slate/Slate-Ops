@@ -56,7 +56,9 @@
     editJob(id, payload){ return this.req('/jobs/' + id, {method:'PATCH', body: JSON.stringify(payload)}); },
     addNote(id, note){ return this.req('/jobs/' + id + '/notes', {method:'POST', body: JSON.stringify({note})}); },
     updateUserRole(id, role){ return this.req('/users/' + id + '/role', {method:'POST', body: JSON.stringify({role})}); },
-    getActivity(id){ return this.req('/jobs/' + id + '/activity'); }
+    getActivity(id){ return this.req('/jobs/' + id + '/activity'); },
+    submitQC(id, notes){ return this.req('/jobs/' + id + '/qc/submit', {method:'POST', body: JSON.stringify({notes})}); },
+    reviewQC(id, decision, notes){ return this.req('/jobs/' + id + '/qc/review', {method:'POST', body: JSON.stringify({decision, notes})}); }
   };
 
   const state = {
@@ -66,6 +68,24 @@
     active: null,
     timerInterval: null,
   };
+
+  // View mode helpers (phone / desktop toggle, persisted in localStorage)
+  function getViewMode() { return localStorage.getItem('slateOpsViewMode') || 'desktop'; }
+  function setViewMode(mode) { localStorage.setItem('slateOpsViewMode', mode); router(); }
+  function viewModeToggle() {
+    const isPhone = getViewMode() === 'phone';
+    return `<div style="display:flex;align-items:center;gap:8px;">
+      <span class="muted" style="font-size:12px;font-weight:600;">Desktop</span>
+      <label class="toggle"><input type="checkbox" id="view-mode-toggle" ${isPhone ? 'checked' : ''} />
+        <span class="toggle-track"><span class="toggle-off"></span><span class="toggle-on"></span><span class="toggle-thumb"></span></span>
+      </label>
+      <span class="muted" style="font-size:12px;font-weight:600;">Phone</span>
+    </div>`;
+  }
+  function bindViewModeToggle() {
+    const el = document.getElementById('view-mode-toggle');
+    if (el) el.onchange = () => setViewMode(el.checked ? 'phone' : 'desktop');
+  }
 
   // Role helpers (from wp_localize_script)
   const caps = (window.slateOpsSettings && window.slateOpsSettings.user && window.slateOpsSettings.user.caps) ? window.slateOpsSettings.user.caps : {};
@@ -312,7 +332,8 @@
           ${job.notes ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);"><div class="label" style="margin-bottom:4px;">Notes</div><div style="white-space:pre-wrap;">${escapeHtml(job.notes)}</div></div>` : ''}
           <div class="row" style="margin-top:16px;flex-wrap:wrap;gap:8px;">
             ${isCS ? `<button class="btn secondary" id="so-btn">Set SO#</button>` : ``}
-            ${isSupervisor ? `<button class="btn secondary" id="qc-btn">QC Approve</button>` : ``}
+            ${job.status === 'IN_PROGRESS' ? `<button class="btn" id="submit-qc-btn">Submit for QC</button>` : ''}
+            ${job.status === 'PENDING_QC' && isSupervisor ? `<button class="btn" id="qc-pass-btn">QC Pass</button><button class="btn secondary" id="qc-fail-btn">QC Fail</button>` : ''}
             ${canEdit ? `<button class="btn secondary" id="edit-btn">Edit Job</button>` : ``}
           </div>
         </div>
@@ -422,10 +443,30 @@
       try{ await api.setSO(job.job_id, so); router(); }catch(e){ alert(e.message); }
     };
 
-    const qcBtn = document.getElementById('qc-btn');
-    if(qcBtn) qcBtn.onclick = async ()=>{
-      if(!confirm('QC Approve and mark Complete?')) return;
-      try{ await api.setStatus(job.job_id, 'COMPLETE', 'QC approved'); router(); }catch(e){ alert(e.message); }
+    const submitQcBtn = document.getElementById('submit-qc-btn');
+    if(submitQcBtn) submitQcBtn.onclick = async ()=>{
+      const notes = prompt('Describe work completed (required):');
+      if(!notes || !notes.trim()) return;
+      submitQcBtn.disabled = true; submitQcBtn.textContent = 'Submitting…';
+      try{ await api.submitQC(job.job_id, notes.trim()); toast('Submitted for QC'); router(); }
+      catch(e){ alert(e.message); submitQcBtn.disabled = false; submitQcBtn.textContent = 'Submit for QC'; }
+    };
+
+    const qcPassBtn = document.getElementById('qc-pass-btn');
+    if(qcPassBtn) qcPassBtn.onclick = async ()=>{
+      if(!confirm('QC Pass — mark job Complete?')) return;
+      qcPassBtn.disabled = true; qcPassBtn.textContent = '…';
+      try{ await api.reviewQC(job.job_id, 'PASS', ''); toast('QC Passed'); router(); }
+      catch(e){ alert(e.message); qcPassBtn.disabled = false; qcPassBtn.textContent = 'QC Pass'; }
+    };
+
+    const qcFailBtn = document.getElementById('qc-fail-btn');
+    if(qcFailBtn) qcFailBtn.onclick = async ()=>{
+      const notes = prompt('QC failure reason (required):');
+      if(!notes || !notes.trim()) return;
+      qcFailBtn.disabled = true; qcFailBtn.textContent = '…';
+      try{ await api.reviewQC(job.job_id, 'FAIL', notes.trim()); toast('QC Failed — returned to tech'); router(); }
+      catch(e){ alert(e.message); qcFailBtn.disabled = false; qcFailBtn.textContent = 'QC Fail'; }
     };
 
     const editBtn = document.getElementById('edit-btn');
@@ -2192,10 +2233,22 @@ async function loadTech() {
   const myJobs  = allMyJobs.filter(j => ['SCHEDULED','IN_PROGRESS','PENDING_QC'].includes(j.status));
 
   const activeJobId = active ? parseInt(active.job_id, 10) : 0;
+  const isPhone = getViewMode() === 'phone';
 
   function techJobCard(job) {
     const isActive = job.job_id === activeJobId;
     const estHrs   = job.estimated_minutes ? (job.estimated_minutes / 60).toFixed(1) : null;
+
+    // Action buttons depend on state
+    let actionHtml;
+    if (isActive) {
+      actionHtml = `<div style="flex:1;font-size:13px;font-weight:700;color:var(--arches);">▲ Active — see timer above</div>`;
+    } else if (job.status === 'IN_PROGRESS') {
+      actionHtml = `<button class="btn btn-xl" data-submit-qc="${job.job_id}" style="flex:1;">Submit for QC</button>`;
+    } else {
+      actionHtml = `<button class="btn btn-xl" data-start-job="${job.job_id}" style="flex:1;">Start</button>`;
+    }
+
     return `
       <div class="tech-job-card${isActive ? ' is-active' : ''}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
@@ -2210,10 +2263,7 @@ async function loadTech() {
         ${job.work_center ? `<div style="font-size:13px;font-weight:700;color:var(--sage);margin-bottom:4px;">${escapeHtml(job.work_center)}</div>` : ''}
         ${estHrs ? `<div class="muted" style="font-size:12px;margin-bottom:10px;">Est ${estHrs} hrs</div>` : ''}
         <div style="display:flex;gap:8px;align-items:center;">
-          ${isActive
-            ? `<div style="flex:1;font-size:13px;font-weight:700;color:var(--arches);">▲ Active — see timer above</div>`
-            : `<button class="btn btn-xl" data-start-job="${job.job_id}" style="flex:1;">Start</button>`
-          }
+          ${actionHtml}
           <button class="btn secondary btn-xl" data-open-job="${job.job_id}">View</button>
         </div>
       </div>
@@ -2221,6 +2271,12 @@ async function loadTech() {
   }
 
   view(`
+    <div${isPhone ? ' class="phone-mode"' : ''}>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+      ${viewModeToggle()}
+    </div>
+
     ${active ? `
       <div class="active-job-card">
         <div class="label-sm">Active Job</div>
@@ -2229,7 +2285,15 @@ async function loadTech() {
         <div class="timer-display" id="live-timer">00:00:00</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn danger btn-xl" id="stop-active" style="flex:1;">Stop Job</button>
+          <button class="btn btn-xl" id="submit-qc-active" style="flex:1;">Submit for QC</button>
           <button class="btn secondary btn-xl" id="note-toggle" style="flex:1;">+ Note</button>
+        </div>
+        <div id="qc-submit-panel" style="display:none;margin-top:14px;">
+          <textarea class="input" id="qc-submit-notes" rows="3" placeholder="Describe work completed…"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button class="btn" id="qc-submit-confirm" style="flex:1;">Confirm Submit for QC</button>
+            <button class="btn secondary" id="qc-submit-cancel">Cancel</button>
+          </div>
         </div>
         <div id="note-panel" style="display:none;margin-top:14px;">
           <textarea class="input" id="note-input" rows="3" placeholder="Add a note to this job…"></textarea>
@@ -2252,6 +2316,7 @@ async function loadTech() {
       </div>
     `}
 
+    ${isPhone ? '' : `
     <div class="card">
       <button class="section-header" data-collapse="alljobs-tech">
         <span class="collapse-title">All Jobs</span>
@@ -2277,7 +2342,12 @@ async function loadTech() {
         </table>
       </div>
     </div>
+    `}
+
+    </div>
   `);
+
+  bindViewModeToggle();
 
   // Live timer
   if (active && active.start_ts) {
@@ -2303,6 +2373,51 @@ async function loadTech() {
       } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop Job'; }
     };
   }
+
+  // Submit for QC from active job card
+  const submitQcActive = document.getElementById('submit-qc-active');
+  if (submitQcActive) {
+    submitQcActive.onclick = () => {
+      const panel = document.getElementById('qc-submit-panel');
+      panel.style.display = panel.style.display === 'none' ? '' : 'none';
+      if (panel.style.display !== 'none') document.getElementById('qc-submit-notes').focus();
+    };
+  }
+  const qcSubmitConfirm = document.getElementById('qc-submit-confirm');
+  if (qcSubmitConfirm) {
+    qcSubmitConfirm.onclick = async () => {
+      const notes = (document.getElementById('qc-submit-notes').value || '').trim();
+      if (!notes) { toast('Describe work completed', true); return; }
+      qcSubmitConfirm.disabled = true;
+      qcSubmitConfirm.textContent = 'Submitting…';
+      try {
+        clearInterval(state.timerInterval);
+        await api.submitQC(activeJobId, notes);
+        toast('Submitted for QC');
+        router();
+      } catch(e) { alert(e.message); qcSubmitConfirm.disabled = false; qcSubmitConfirm.textContent = 'Confirm Submit for QC'; }
+    };
+  }
+  const qcSubmitCancel = document.getElementById('qc-submit-cancel');
+  if (qcSubmitCancel) {
+    qcSubmitCancel.onclick = () => { document.getElementById('qc-submit-panel').style.display = 'none'; };
+  }
+
+  // Submit for QC from job cards (non-active IN_PROGRESS jobs)
+  $$('[data-submit-qc]').forEach(btn => {
+    btn.onclick = async () => {
+      const jobId = parseInt(btn.getAttribute('data-submit-qc'), 10);
+      const notes = prompt('Describe work completed (required):');
+      if (!notes || !notes.trim()) return;
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
+      try {
+        await api.submitQC(jobId, notes.trim());
+        toast('Submitted for QC');
+        router();
+      } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Submit for QC'; }
+    };
+  });
 
   const noteToggle = document.getElementById('note-toggle');
   if (noteToggle) {
@@ -2537,6 +2652,7 @@ async function loadQC(){
   const today     = new Date().toISOString().slice(0, 10);
   const passedToday = allJobs.filter(j => j.status === 'COMPLETE' && (j.updated_at||'').startsWith(today)).length;
   const failedQC    = allJobs.filter(j => j.status === 'QC_FAILED' || (j.qc_failed_count > 0 && j.status !== 'COMPLETE')).length;
+  const isPhone = getViewMode() === 'phone';
 
   const PAGE_SIZE = 10;
   let page = 0;
@@ -2556,6 +2672,21 @@ async function loadQC(){
     return 'background:rgba(64,79,75,0.1);color:var(--sage);';
   }
 
+  function qcPhoneCard(j) {
+    return `
+      <div class="card qc-card">
+        <div class="qc-card-so">${escapeHtml(j.so_number || '#'+j.job_id)}</div>
+        <div class="qc-card-meta">
+          ${escapeHtml(j.customer_name||'—')} · ${escapeHtml(j.assigned_name||'—')} · <span style="padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;${queueBadgeStyle(j.updated_at)}">${timeInQueue(j.updated_at)}</span>
+        </div>
+        <div class="qc-card-actions">
+          <button class="btn" data-qc-pass="${j.job_id}">Pass</button>
+          <button class="btn secondary" data-qc-fail="${j.job_id}">Fail</button>
+          <button class="btn secondary" data-open-job="${j.job_id}">Inspect</button>
+        </div>
+      </div>`;
+  }
+
   function renderTable(filtered) {
     const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
     const total = filtered.length;
@@ -2568,7 +2699,11 @@ async function loadQC(){
             <td class="mono">${escapeHtml((j.vin||'').slice(-8)||'—')}</td>
             <td><span style="padding:3px 8px;border-radius:4px;font-size:12px;font-weight:600;${queueBadgeStyle(j.updated_at)}">${timeInQueue(j.updated_at)}</span></td>
             <td>${escapeHtml(j.assigned_name||'—')}</td>
-            <td><button class="btn small-btn" data-open-job="${j.job_id}">Inspect</button></td>
+            <td style="white-space:nowrap;">
+              <button class="btn small-btn" data-qc-pass="${j.job_id}">Pass</button>
+              <button class="btn secondary small-btn" data-qc-fail="${j.job_id}">Fail</button>
+              <button class="btn secondary small-btn" data-open-job="${j.job_id}">Inspect</button>
+            </td>
           </tr>
         `).join('') || `<tr><td colspan="6" class="muted" style="padding:12px;">No jobs pending QC.</td></tr>`}
       </tbody>
@@ -2588,14 +2723,16 @@ async function loadQC(){
   }
 
   view(`
+    <div${isPhone ? ' class="phone-mode"' : ''}>
+
     <div class="card">
       <div class="row" style="align-items:flex-start;">
         <div style="flex:1 1 280px;">
           <h2 style="margin:0;">QC Queue</h2>
-          <div class="muted" style="margin-top:4px;">Automotive Upfit Quality Control Station</div>
+          <div class="muted" style="margin-top:4px;">Quality Control Station</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          ${kpi('Pending Inspection', jobs.length)}
+          ${kpi('Pending', jobs.length)}
           <div class="kpi" style="border-left:3px solid #c0392b;">
             <div class="kpi-label">Failed QC</div>
             <div class="kpi-value" style="color:#c0392b;">${failedQC}</div>
@@ -2604,28 +2741,61 @@ async function loadQC(){
             <div class="kpi-label">Passed Today</div>
             <div class="kpi-value" style="color:#27ae60;">${passedToday}</div>
           </div>
-          <button class="btn" data-open-create style="margin-left:8px;">+ New Inspection</button>
+          ${viewModeToggle()}
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="row" style="margin-bottom:12px;align-items:center;">
-        <span class="collapse-title">Jobs Pending QC</span>
-        <input class="input" id="qc-search" placeholder="Search SO# or VIN…" style="max-width:220px;" />
-      </div>
-      <table class="table" id="qc-table">
-        <thead><tr>
-          <th>SO Number</th><th>Customer</th><th>VIN (Last 8)</th><th>Time in Queue</th><th>Technician</th><th>Actions</th>
-        </tr></thead>
-        ${renderTable(jobs)}
-      </table>
+    <div>
+      <input class="input" id="qc-search" placeholder="Search SO# or VIN…" style="margin-bottom:10px;max-width:300px;" />
+
+      ${isPhone ? `
+        <div id="qc-phone-list">
+          ${jobs.length ? jobs.map(qcPhoneCard).join('') : '<div class="card muted" style="text-align:center;padding:20px;">No jobs pending QC.</div>'}
+        </div>
+      ` : `
+        <div class="card">
+          <table class="table" id="qc-table">
+            <thead><tr>
+              <th>SO Number</th><th>Customer</th><th>VIN (Last 8)</th><th>Time in Queue</th><th>Technician</th><th>Actions</th>
+            </tr></thead>
+            ${renderTable(jobs)}
+          </table>
+        </div>
+      `}
+    </div>
+
     </div>
   `);
 
+  bindViewModeToggle();
   bindJobsTable();
 
   let filtered = [...jobs];
+
+  function rebindQcActions() {
+    $$('[data-qc-pass]').forEach(btn => {
+      btn.onclick = async () => {
+        if (!confirm('QC Pass — mark job Complete?')) return;
+        const id = parseInt(btn.getAttribute('data-qc-pass'), 10);
+        btn.disabled = true; btn.textContent = '…';
+        try { await api.reviewQC(id, 'PASS', ''); toast('QC Passed'); router(); }
+        catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Pass'; }
+      };
+    });
+    $$('[data-qc-fail]').forEach(btn => {
+      btn.onclick = async () => {
+        const id = parseInt(btn.getAttribute('data-qc-fail'), 10);
+        const notes = prompt('QC failure reason (required):');
+        if (!notes || !notes.trim()) return;
+        btn.disabled = true; btn.textContent = '…';
+        try { await api.reviewQC(id, 'FAIL', notes.trim()); toast('QC Failed — returned to tech'); router(); }
+        catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Fail'; }
+      };
+    });
+  }
+
+  rebindQcActions();
 
   function rebind() {
     const prev = $('#qc-prev'), next = $('#qc-next');
@@ -2634,18 +2804,28 @@ async function loadQC(){
   }
 
   function refresh() {
-    const t = $('#qc-table');
-    if (!t) return;
-    const old = t.querySelector('tbody');
-    const foot = t.querySelector('tfoot');
-    const tmp = document.createElement('table');
-    tmp.innerHTML = renderTable(filtered);
-    if (old) t.replaceChild(tmp.querySelector('tbody'), old);
-    const newFoot = tmp.querySelector('tfoot');
-    if (foot && newFoot) t.replaceChild(newFoot, foot);
-    else if (newFoot) t.appendChild(newFoot);
-    rebind();
-    bindJobsTable();
+    if (isPhone) {
+      const list = document.getElementById('qc-phone-list');
+      if (list) {
+        list.innerHTML = filtered.length ? filtered.map(qcPhoneCard).join('') : '<div class="card muted" style="text-align:center;padding:20px;">No matches.</div>';
+        bindJobsTable();
+        rebindQcActions();
+      }
+    } else {
+      const t = $('#qc-table');
+      if (!t) return;
+      const old = t.querySelector('tbody');
+      const foot = t.querySelector('tfoot');
+      const tmp = document.createElement('table');
+      tmp.innerHTML = renderTable(filtered);
+      if (old) t.replaceChild(tmp.querySelector('tbody'), old);
+      const newFoot = tmp.querySelector('tfoot');
+      if (foot && newFoot) t.replaceChild(newFoot, foot);
+      else if (newFoot) t.appendChild(newFoot);
+      rebind();
+      bindJobsTable();
+      rebindQcActions();
+    }
   }
 
   rebind();
@@ -2657,7 +2837,8 @@ async function loadQC(){
       page = 0;
       filtered = q ? jobs.filter(j =>
         (j.so_number||'').toLowerCase().includes(q) ||
-        (j.vin||'').toLowerCase().includes(q)
+        (j.vin||'').toLowerCase().includes(q) ||
+        (j.customer_name||'').toLowerCase().includes(q)
       ) : [...jobs];
       refresh();
     });
