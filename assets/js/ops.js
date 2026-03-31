@@ -166,7 +166,7 @@
     const data = await api.jobs('?limit=50');
     state.jobs = data.jobs || [];
     const counts = {
-      unscheduled: state.jobs.filter(j => j.status === 'UNSCHEDULED').length,
+      pendingIntake: state.jobs.filter(j => j.status === 'PENDING_INTAKE').length,
       needsSo: state.jobs.filter(j => !j.so_number).length,
       inProgress: state.jobs.filter(j => j.status === 'IN_PROGRESS').length,
       pendingQc: state.jobs.filter(j => j.status === 'PENDING_QC').length,
@@ -176,7 +176,7 @@
       <div class="card">
         <h2>Dashboard</h2>
         <div class="row">
-          <div class="kpi"><div class="label">Unscheduled</div><div class="value">${counts.unscheduled}</div></div>
+          <div class="kpi"><div class="label">Pending Intake</div><div class="value">${counts.pendingIntake}</div></div>
           <div class="kpi"><div class="label">Needs SO#</div><div class="value">${counts.needsSo}</div></div>
           <div class="kpi"><div class="label">In Progress</div><div class="value">${counts.inProgress}</div></div>
           <div class="kpi"><div class="label">Pending QC</div><div class="value">${counts.pendingQc}</div></div>
@@ -279,8 +279,8 @@
     const varHrs = actHrs - estHrs;
     const notesLog = job.notes_log || [];
     const actLog = activityResp.activity || [];
-    const partsHold    = job.status === 'BLOCKED' && job.delay_reason === 'parts';
-    const approvalHold = job.status === 'BLOCKED' && job.delay_reason === 'approval';
+    const partsHold    = job.status === 'ON_HOLD' && job.delay_reason === 'parts';
+    const approvalHold = job.status === 'ON_HOLD' && job.delay_reason === 'approval';
     const hasHold      = partsHold || approvalHold;
 
     const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','HOLD':'Hold'};
@@ -491,13 +491,13 @@
     const partsHoldBtn = document.getElementById('parts-hold-btn');
     if(partsHoldBtn) partsHoldBtn.onclick = async ()=>{
       if(partsHold){ document.getElementById('blocker-note-area').style.display=''; return; }
-      try{ await api.editJob(job.job_id,{status:'BLOCKED',delay_reason:'parts'}); router(); }catch(e){ alert(e.message); }
+      try{ await api.editJob(job.job_id,{status:'ON_HOLD',delay_reason:'parts'}); router(); }catch(e){ alert(e.message); }
     };
 
     const apprHoldBtn = document.getElementById('approval-hold-btn');
     if(apprHoldBtn) apprHoldBtn.onclick = async ()=>{
       if(approvalHold){ document.getElementById('blocker-note-area').style.display=''; return; }
-      try{ await api.editJob(job.job_id,{status:'BLOCKED',delay_reason:'approval'}); router(); }catch(e){ alert(e.message); }
+      try{ await api.editJob(job.job_id,{status:'ON_HOLD',delay_reason:'approval'}); router(); }catch(e){ alert(e.message); }
     };
 
     const clearHoldBtn = document.getElementById('clear-hold-btn');
@@ -539,7 +539,7 @@
 
     const estHours = job.estimated_minutes ? (job.estimated_minutes / 60).toFixed(1) : '';
 
-    const statusOpts = ['UNSCHEDULED','READY_FOR_SCHEDULING','SCHEDULED','IN_PROGRESS','PENDING_QC','COMPLETE','DELAYED','BLOCKED','ON_HOLD'].map(s =>
+    const statusOpts = ['PENDING_INTAKE','READY_FOR_SUPERVISOR_REVIEW','RETURNED_TO_CS','APPROVED_FOR_SCHEDULING','SCHEDULED','IN_PROGRESS','PENDING_QC','COMPLETE','ON_HOLD'].map(s =>
       `<option value="${s}"${job.status===s?' selected':''}>${fmtStatus(s)}</option>`
     ).join('');
 
@@ -1246,11 +1246,11 @@ async function loadCS() {
 
   const portalNeeds = allJobs.filter(j => {
     const s = (j.status||'').toUpperCase();
-    return (s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING') && j.created_from === 'portal';
+    return (s === 'PENDING_INTAKE') && j.created_from === 'portal';
   });
   const manualNeeds = allJobs.filter(j => {
     const s = (j.status||'').toUpperCase();
-    return (s === 'UNSCHEDULED' || s === 'READY_FOR_SCHEDULING') && j.created_from !== 'portal' && !j.so_number;
+    return (s === 'PENDING_INTAKE') && j.created_from !== 'portal' && !j.so_number;
   });
   const activeJobs = allJobs.filter(j => {
     const s = (j.status||'').toUpperCase();
@@ -1723,7 +1723,7 @@ async function openIntake(jobId, dealerList, salesList) {
     };
 
     const ready = document.getElementById('cs-ready');
-    if (ready && ready.checked) payload.status = 'READY_FOR_SCHEDULING';
+    if (ready && ready.checked) payload.status = 'READY_FOR_SUPERVISOR_REVIEW';
 
     const statusEl = document.getElementById('cs-intake-status');
     if (statusEl) statusEl.textContent = 'Saving…';
@@ -1789,11 +1789,11 @@ async function loadSchedule(){
     // unscheduled / ready-for-scheduling
     const unscheduled = allJobs.filter(j=>{
       const s=(j.status||'').toUpperCase();
-      return s==='UNSCHEDULED'||s==='READY_FOR_SCHEDULING';
+      return s==='APPROVED_FOR_SCHEDULING';
     });
 
     // KPIs
-    const delayed = allJobs.filter(j=>j.status==='DELAYED'||j.status==='BLOCKED').length;
+    const delayed = allJobs.filter(j=>j.status==='ON_HOLD').length;
 
     // day headers
     const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1816,7 +1816,7 @@ async function loadSchedule(){
         });
         const cards = dayJobs.map(j=>{
           const pri = j.priority && j.priority <= 2;
-          const blocked = j.status==='BLOCKED';
+          const blocked = j.status==='ON_HOLD';
           return `<div class="sched-card${pri?' sched-card-priority':''}${blocked?' sched-card-blocked':''}" draggable="true" data-job-id="${j.job_id}" data-bay="${escapeHtml(bay.name)}">
             <div class="sched-card-title">${escapeHtml(j.customer_name||j.so_number||'#'+j.job_id)}</div>
             <div class="sched-card-so">${escapeHtml(j.so_number||'')}</div>
@@ -1833,7 +1833,7 @@ async function loadSchedule(){
 
     // unscheduled queue items
     const unsRows = unscheduled.map(j=>{
-      const blocked = j.status==='BLOCKED';
+      const blocked = j.status==='ON_HOLD';
       const partsHold = j.delay_reason==='parts';
       return `
         <div class="sched-queue-item" draggable="true" data-job-id="${j.job_id}">
@@ -1972,7 +1972,7 @@ async function loadSchedule(){
           job.work_center = bay;
           job.scheduled_start = date;
           job.scheduled_finish = ds(nf);
-          if(job.status==='UNSCHEDULED'||job.status==='READY_FOR_SCHEDULING') job.status='SCHEDULED';
+          if(job.status==='APPROVED_FOR_SCHEDULING') job.status='SCHEDULED';
           renderBoard();
         } catch(err){ alert(err.message); }
       });
@@ -2004,8 +2004,8 @@ async function loadSchedule(){
 
     const estH       = job.estimated_minutes ? (job.estimated_minutes/60).toFixed(1) : '—';
     const actH       = job.actual_minutes    ? (job.actual_minutes/60).toFixed(1)    : '0.0';
-    const partsHold  = job.status==='BLOCKED' && job.delay_reason==='parts';
-    const apprHold   = job.status==='BLOCKED' && job.delay_reason==='approval';
+    const partsHold  = job.status==='ON_HOLD' && job.delay_reason==='parts';
+    const apprHold   = job.status==='ON_HOLD' && job.delay_reason==='approval';
     const t = job.time || {approved_minutes_total:0};
 
     contentEl.innerHTML = `
@@ -2121,7 +2121,7 @@ async function loadSchedule(){
     // jobs eligible to schedule
     const eligible = allJobs.filter(j=>{
       const s=(j.status||'').toUpperCase();
-      return s==='UNSCHEDULED'||s==='READY_FOR_SCHEDULING'||s==='SCHEDULED';
+      return s==='APPROVED_FOR_SCHEDULING'||s==='SCHEDULED';
     });
     const jobSelectOpts = eligible.map(j=>{
       const label = (j.so_number||'#'+j.job_id)+' — '+(j.customer_name||j.dealer_name||'');
@@ -2209,7 +2209,7 @@ async function loadSchedule(){
           if(start) job.scheduled_start = start;
           if(fin) job.scheduled_finish = fin;
           if(tech){ job.assigned_user_id = tech; const u=users.find(x=>x.id===tech); if(u) job.assigned_name=u.name; }
-          if(job.status==='UNSCHEDULED'||job.status==='READY_FOR_SCHEDULING') job.status='SCHEDULED';
+          if(job.status==='APPROVED_FOR_SCHEDULING') job.status='SCHEDULED';
         }
         closeModal();
         renderBoard();
@@ -2502,17 +2502,18 @@ async function loadExecutive(){
   const todayStr  = new Date().toISOString().split('T')[0];
   const todayJobs = jobs.filter(j=>(j.scheduled_start||'').startsWith(todayStr));
   const todayH    = todayJobs.reduce((s,j)=>s+((parseInt(j.estimated_minutes||0,10))/60),0);
-  const lateBlocked = jobs.filter(j=>{ const s=(j.status||'').toUpperCase(); return s==='DELAYED'||s==='BLOCKED'; }).length;
+  const lateBlocked = jobs.filter(j=>{ const s=(j.status||'').toUpperCase(); return s==='ON_HOLD'; }).length;
   const loadPct   = dailyCap>0 ? Math.min(100,Math.round((todayH/dailyCap)*100)) : 0;
   const capColor  = loadPct>90 ? '#dc2626' : loadPct>75 ? '#d97706' : '#16a34a';
 
   // ── Flow health ─────────────────────────────────────
   const stages = [
-    {key:'UNSCHEDULED',       label:'Unscheduled'},
-    {key:'READY_FOR_SCHEDULING',label:'Ready to Schedule'},
-    {key:'SCHEDULED',         label:'Scheduled'},
-    {key:'IN_PROGRESS',       label:'In Progress'},
-    {key:'PENDING_QC',        label:'Pending QC'},
+    {key:'PENDING_INTAKE',              label:'Pending Intake'},
+    {key:'READY_FOR_SUPERVISOR_REVIEW', label:'Supervisor Review'},
+    {key:'APPROVED_FOR_SCHEDULING',     label:'Approved'},
+    {key:'SCHEDULED',                   label:'Scheduled'},
+    {key:'IN_PROGRESS',                 label:'In Progress'},
+    {key:'PENDING_QC',                  label:'Pending QC'},
   ];
   const now = Date.now();
   const stageData = stages.map(({key,label})=>{
@@ -2651,7 +2652,7 @@ async function loadQC(){
   const allJobs   = allResp.jobs || [];
   const today     = new Date().toISOString().slice(0, 10);
   const passedToday = allJobs.filter(j => j.status === 'COMPLETE' && (j.updated_at||'').startsWith(today)).length;
-  const failedQC    = allJobs.filter(j => j.status === 'QC_FAILED' || (j.qc_failed_count > 0 && j.status !== 'COMPLETE')).length;
+  const failedQC    = allJobs.filter(j => (j.qc_failed_count > 0 && j.status !== 'COMPLETE')).length;
   const isPhone = getViewMode() === 'phone';
 
   const PAGE_SIZE = 10;
@@ -2921,8 +2922,8 @@ async function loadAdmin() {
         <div class="value">${byS('PENDING_QC')}${deltaChip(2, false)}</div>
       </div>
       <div class="stat-tile">
-        <div class="label">Unscheduled</div>
-        <div class="value">${byS('UNSCHEDULED')}${deltaChip(1, true)}</div>
+        <div class="label">Pending Intake</div>
+        <div class="value">${byS('PENDING_INTAKE')}${deltaChip(1, true)}</div>
       </div>
       <div class="stat-tile">
         <div class="label">Users</div>

@@ -92,7 +92,7 @@ class Slate_Ops_Utils {
 
   public static function dealer_status_from_internal($status) {
     $status = strtoupper((string)$status);
-    $waiting = ['UNSCHEDULED','READY_FOR_SCHEDULING','SCHEDULED','DELAYED','BLOCKED'];
+    $waiting = ['PENDING_INTAKE','READY_FOR_SUPERVISOR_REVIEW','RETURNED_TO_CS','APPROVED_FOR_SCHEDULING','SCHEDULED','ON_HOLD'];
     if (in_array($status, $waiting, true)) return 'waiting';
     if (in_array($status, ['IN_PROGRESS','PENDING_QC'], true)) return 'in_process';
     if ($status === 'COMPLETE') return 'complete';
