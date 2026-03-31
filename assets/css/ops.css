@@ -483,6 +483,23 @@ textarea{min-height:90px;}
   transform:translateX(34px);
 }
 
+/* ─── Phone view mode (manual toggle) ─────────────── */
+.phone-mode .tech-job-card  { border-radius:0; margin-bottom:8px; }
+.phone-mode .tech-job-so    { font-size:20px; }
+.phone-mode .timer-display  { font-size:36px; }
+.phone-mode .btn-xl         { padding:18px; font-size:17px; }
+.phone-mode .active-job-card{ border-radius:0; }
+
+.qc-card{
+  padding:14px; margin-bottom:10px;
+  border:1px solid var(--border,#e0e0e0);
+  border-radius:8px; background:#fff;
+}
+.qc-card-so{ font-size:18px; font-weight:700; }
+.qc-card-meta{ font-size:13px; color:rgba(0,0,0,.5); margin:4px 0 10px; }
+.qc-card-actions{ display:flex; gap:8px; }
+.qc-card-actions .btn{ flex:1; padding:14px; font-size:15px; }
+
 /* ─── Notification rows ────────────────────────────── */
 .notify-group-label{
   font-size:10px;

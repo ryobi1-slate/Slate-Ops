@@ -156,6 +156,18 @@ class Slate_Ops_REST {
       'callback' => [__CLASS__, 'set_status'],
     ]);
 
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/qc/submit', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'submit_qc'],
+    ]);
+
+    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/qc/review', [
+      'methods' => 'POST',
+      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+      'callback' => [__CLASS__, 'review_qc'],
+    ]);
+
     register_rest_route('slate-ops/v1', '/time/active', [
       'methods' => 'GET',
       'permission_callback' => [__CLASS__, 'perm_ops'],
@@ -1695,6 +1707,152 @@ self::maybe_push_dealer_portal_status($job);
 
 return self::get_job(['id' => $job_id]);
 	  }
+
+  // ── QC Workflow ───────────────────────────────────────
+
+  /**
+   * Auto-stop any active timer for a user on a specific job.
+   * Returns the closed segment row or null.
+   */
+  private static function stop_active_timer_for_job($user_id, $job_id) {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $now = Slate_Ops_Utils::now_gmt();
+    $open = $wpdb->get_row($wpdb->prepare(
+      "SELECT * FROM $segments WHERE user_id=%d AND job_id=%d AND end_ts IS NULL AND state='active' LIMIT 1",
+      $user_id, $job_id
+    ), ARRAY_A);
+    if ($open) {
+      $wpdb->update($segments, ['end_ts' => $now, 'updated_at' => $now], ['segment_id' => (int)$open['segment_id']]);
+      self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $now, 'Auto-stopped by QC submit');
+    }
+    return $open;
+  }
+
+  /**
+   * Tech submits job for QC review.
+   * POST /jobs/{id}/qc/submit  { notes }
+   */
+  public static function submit_qc($req) {
+    global $wpdb;
+    $job_id = intval($req['id']);
+    $body   = $req->get_json_params() ?: [];
+    $notes  = sanitize_textarea_field($body['notes'] ?? '');
+
+    if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
+    if (!trim($notes)) return new WP_Error('bad_request', 'Notes are required when submitting for QC', ['status' => 400]);
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    if ($job['status'] !== 'IN_PROGRESS') {
+      return new WP_Error('invalid_state', 'Job must be In Progress to submit for QC', ['status' => 422]);
+    }
+
+    $user_id = get_current_user_id();
+    $now     = Slate_Ops_Utils::now_gmt();
+    $t       = $wpdb->prefix . 'slate_ops_jobs';
+    $qc      = $wpdb->prefix . 'slate_ops_qc_records';
+
+    // Auto-stop any active timer for this user on this job.
+    self::stop_active_timer_for_job($user_id, $job_id);
+
+    // Create QC record.
+    $wpdb->insert($qc, [
+      'job_id'      => $job_id,
+      'checkpoint'  => 'TECH_QC',
+      'result'      => 'SUBMITTED',
+      'checked_by'  => $user_id,
+      'notes'       => $notes,
+      'location_id' => (int)($job['location_id'] ?? 1),
+      'created_at'  => $now,
+    ]);
+
+    // Transition job to PENDING_QC.
+    $wpdb->update($t, [
+      'status'            => 'PENDING_QC',
+      'status_updated_at' => $now,
+      'updated_at'        => $now,
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'status', $job['status'], 'PENDING_QC', 'QC submitted: ' . $notes);
+
+    $updated = self::job_by_id($job_id);
+    self::maybe_push_dealer_portal_status($updated);
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  /**
+   * Supervisor reviews QC submission (pass or fail).
+   * POST /jobs/{id}/qc/review  { decision: PASS|FAIL, notes }
+   */
+  public static function review_qc($req) {
+    global $wpdb;
+    $job_id   = intval($req['id']);
+    $body     = $req->get_json_params() ?: [];
+    $decision = strtoupper(sanitize_text_field($body['decision'] ?? ''));
+    $notes    = sanitize_textarea_field($body['notes'] ?? '');
+
+    if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
+    if (!in_array($decision, ['PASS', 'FAIL'], true)) {
+      return new WP_Error('bad_request', 'Decision must be PASS or FAIL', ['status' => 400]);
+    }
+    if ($decision === 'FAIL' && !trim($notes)) {
+      return new WP_Error('bad_request', 'Notes are required when failing QC', ['status' => 400]);
+    }
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    if ($job['status'] !== 'PENDING_QC') {
+      return new WP_Error('invalid_state', 'Job must be Pending QC to review', ['status' => 422]);
+    }
+
+    $user_id = get_current_user_id();
+    $now     = Slate_Ops_Utils::now_gmt();
+    $t       = $wpdb->prefix . 'slate_ops_jobs';
+    $qc      = $wpdb->prefix . 'slate_ops_qc_records';
+
+    // Update the most recent SUBMITTED qc_record for this job.
+    $qc_row = $wpdb->get_row($wpdb->prepare(
+      "SELECT * FROM $qc WHERE job_id=%d AND result='SUBMITTED' ORDER BY created_at DESC LIMIT 1",
+      $job_id
+    ), ARRAY_A);
+
+    if ($qc_row) {
+      $qc_update = ['result' => $decision];
+      if (trim($notes)) $qc_update['notes'] = $qc_row['notes'] . "\n--- Reviewer ---\n" . $notes;
+      $wpdb->update($qc, $qc_update, ['qc_id' => (int)$qc_row['qc_id']]);
+    }
+
+    if ($decision === 'PASS') {
+      $new_status = 'COMPLETE';
+      $audit_note = 'QC passed';
+    } else {
+      $new_status = 'IN_PROGRESS';
+      $audit_note = 'QC failed: ' . $notes;
+    }
+
+    $wpdb->update($t, [
+      'status'            => $new_status,
+      'status_updated_at' => $now,
+      'updated_at'        => $now,
+    ], ['job_id' => $job_id]);
+
+    $action = $decision === 'PASS' ? 'qc_approved' : 'qc_failed';
+    self::audit('job', $job_id, $action, 'status', 'PENDING_QC', $new_status, $audit_note);
+
+    // If failed, also add a note so the tech can see the reason.
+    if ($decision === 'FAIL' && trim($notes)) {
+      self::audit('job', $job_id, 'note', null, null, null, 'QC Failed: ' . $notes);
+    }
+
+    $updated = self::job_by_id($job_id);
+    self::maybe_push_dealer_portal_status($updated);
+
+    return self::get_job(['id' => $job_id]);
+  }
 
   public static function time_start($req) {
     global $wpdb;
