@@ -74,11 +74,14 @@ class Slate_Capacity_Service {
     }
 
     $result = [];
+    $threshold = (int) $wpdb->get_var("SELECT capacity_threshold_pct FROM {$wpdb->prefix}slate_ops_settings WHERE id=1") ?: 70;
+
     foreach ($work_centers as $wc) {
       $capacity  = (int) $wc['weekly_capacity_minutes'];
+      $effective_capacity = round($capacity * ($threshold / 100));
       $allocated = (int) ($alloc_map[ $wc['wc_code'] ] ?? 0);
-      $available = $capacity - $allocated;
-      $overload  = max(0, $allocated - $capacity);
+      $available = $effective_capacity - $allocated;
+      $overload  = max(0, $allocated - $effective_capacity);
       $util_pct  = $capacity > 0 ? round(($allocated / $capacity) * 100, 1) : 0.0;
 
       $result[ (int) $wc['wc_id'] ] = [
@@ -88,6 +91,7 @@ class Slate_Capacity_Service {
         'is_constraint'    => (bool) $wc['is_constraint'],
         'color'            => $wc['color'],
         'capacity_minutes' => $capacity,
+        'effective_capacity_minutes' => $effective_capacity,
         'allocated_minutes'=> $allocated,
         'available_minutes'=> $available,
         'overload_minutes' => $overload,
@@ -257,11 +261,14 @@ class Slate_Capacity_Service {
         $alloc_map[ $row['work_center'] ] = (int) $row['allocated'];
       }
 
+      $threshold = (int) $wpdb->get_var("SELECT capacity_threshold_pct FROM {$wpdb->prefix}slate_ops_settings WHERE id=1") ?: 70;
+
       foreach ($work_centers as $wc) {
         $capacity  = (int) $wc['daily_capacity_minutes'];
+        $effective_capacity = round($capacity * ($threshold / 100));
         $allocated = (int) ($alloc_map[ $wc['wc_code'] ] ?? 0);
-        $available = $capacity - $allocated;
-        $overload  = max(0, $allocated - $capacity);
+        $available = $effective_capacity - $allocated;
+        $overload  = max(0, $allocated - $effective_capacity);
 
         // Upsert snapshot row.
         $wpdb->query(
