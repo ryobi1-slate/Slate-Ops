@@ -57,316 +57,319 @@ class Slate_Ops_REST {
   }
 
   public static function register_routes() {
-    register_rest_route('slate-ops/v1', '/me', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'me'],
-    ]);
+    $namespaces = ['slate-ops/v1', 'upfitops/v1'];
 
-    register_rest_route('slate-ops/v1', '/settings', [
-      [
+    foreach ($namespaces as $ns) {
+      register_rest_route($ns, '/me', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
-        'callback' => [__CLASS__, 'get_settings'],
-      ],
-      [
+        'callback' => [__CLASS__, 'me'],
+      ]);
+
+      register_rest_route($ns, '/settings', [
+        [
+          'methods' => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_ops'],
+          'callback' => [__CLASS__, 'get_settings'],
+        ],
+        [
+          'methods' => 'POST',
+          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'callback' => [__CLASS__, 'update_settings'],
+        ],
+      ]);
+
+      register_rest_route($ns, '/users', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'users'],
+      ]);
+
+      register_rest_route($ns, '/dealers', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback' => [__CLASS__, 'list_dealers'],
+      ]);
+
+      register_rest_route($ns, '/jobs', [
+        [
+          'methods' => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_ops'],
+          'callback' => [__CLASS__, 'list_jobs'],
+        ],
+        [
+          'methods' => 'POST',
+          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'callback' => [__CLASS__, 'create_job_manual'],
+        ],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)', [
+        [
+          'methods' => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_ops'],
+          'callback' => [__CLASS__, 'get_job'],
+        ],
+        [
+          'methods' => 'PATCH',
+          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'callback' => [__CLASS__, 'edit_job'],
+        ],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/notes', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-        'callback' => [__CLASS__, 'update_settings'],
-      ],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/users', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'users'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/dealers', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'list_dealers'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs', [
-      [
-        'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
-        'callback' => [__CLASS__, 'list_jobs'],
-      ],
-      [
+        'callback' => [__CLASS__, 'add_note'],
+      ]);
+
+      register_rest_route($ns, '/users/(?P<id>\d+)/role', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'callback' => [__CLASS__, 'update_user_role'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/so', [
         'methods' => 'POST',
         'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
-        'callback' => [__CLASS__, 'create_job_manual'],
-      ],
-    ]);
+        'callback' => [__CLASS__, 'set_so'],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)', [
-      [
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/assign', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'assign_job'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/schedule', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'schedule_job'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/release', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'release_job'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/status', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback' => [__CLASS__, 'set_status'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/submit', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'submit_qc'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/review', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'review_qc'],
+      ]);
+
+      register_rest_route($ns, '/time/active', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
-        'callback' => [__CLASS__, 'get_job'],
-      ],
-      [
-        'methods' => 'PATCH',
+        'callback' => [__CLASS__, 'time_active'],
+      ]);
+
+      register_rest_route($ns, '/time/start', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'time_start'],
+      ]);
+
+      register_rest_route($ns, '/time/stop', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'time_stop'],
+      ]);
+
+      register_rest_route($ns, '/time/daily-summary', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback' => [__CLASS__, 'time_daily_summary'],
+      ]);
+
+      register_rest_route($ns, '/time/correction', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'time_correction_request'],
+      ]);
+
+      register_rest_route($ns, '/supervisor/queues', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'supervisor_queues'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/activity', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback'            => [__CLASS__, 'get_job_activity'],
+        'args'                => [
+          'id' => ['validate_callback' => function($v){ return is_numeric($v); }],
+        ],
+      ]);
+
+      // Phase 0: bulk schedule update — saves [{job_id, scheduled_start, scheduled_finish, assigned_user_id, work_center}]
+      register_rest_route($ns, '/schedule/bulk', [
+        'methods'             => 'POST',
         'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-        'callback' => [__CLASS__, 'edit_job'],
-      ],
-    ]);
+        'callback'            => [__CLASS__, 'bulk_schedule'],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/notes', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'add_note'],
-    ]);
+      // ── Work Centers ──────────────────────────────────────────────
+      register_rest_route($ns, '/work-centers', [
+        [
+          'methods'             => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_ops'],
+          'callback'            => [__CLASS__, 'list_work_centers'],
+        ],
+        [
+          'methods'             => 'POST',
+          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'callback'            => [__CLASS__, 'create_work_center'],
+        ],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/users/(?P<id>\d+)/role', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_admin'],
-      'callback' => [__CLASS__, 'update_user_role'],
-    ]);
+      register_rest_route($ns, '/work-centers/(?P<id>\d+)', [
+        [
+          'methods'             => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_ops'],
+          'callback'            => [__CLASS__, 'get_work_center'],
+        ],
+        [
+          'methods'             => 'PATCH',
+          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'callback'            => [__CLASS__, 'update_work_center'],
+        ],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/so', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
-      'callback' => [__CLASS__, 'set_so'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/assign', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'assign_job'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/schedule', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'schedule_job'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/release', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'release_job'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/status', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'set_status'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/qc/submit', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'submit_qc'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/qc/review', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'review_qc'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/time/active', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'time_active'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/time/start', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'time_start'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/time/stop', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'time_stop'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/time/daily-summary', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback' => [__CLASS__, 'time_daily_summary'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/time/correction', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'time_correction_request'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/supervisor/queues', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'supervisor_queues'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/activity', [
-      'methods'             => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback'            => [__CLASS__, 'get_job_activity'],
-      'args'                => [
-        'id' => ['validate_callback' => function($v){ return is_numeric($v); }],
-      ],
-    ]);
-
-    // Phase 0: bulk schedule update — saves [{job_id, scheduled_start, scheduled_finish, assigned_user_id, work_center}]
-    register_rest_route('slate-ops/v1', '/schedule/bulk', [
-      'methods'             => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback'            => [__CLASS__, 'bulk_schedule'],
-    ]);
-
-    // ── Work Centers ──────────────────────────────────────────────
-    register_rest_route('slate-ops/v1', '/work-centers', [
-      [
+      // ── Capacity ──────────────────────────────────────────────────
+      register_rest_route($ns, '/scheduler/capacity', [
         'methods'             => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
-        'callback'            => [__CLASS__, 'list_work_centers'],
-      ],
-      [
+        'callback'            => [__CLASS__, 'get_capacity'],
+      ]);
+
+      register_rest_route($ns, '/scheduler/overloads', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback'            => [__CLASS__, 'get_overloads'],
+      ]);
+
+      register_rest_route($ns, '/scheduler/recalculate-flags', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-        'callback'            => [__CLASS__, 'create_work_center'],
-      ],
-    ]);
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback'            => [__CLASS__, 'recalculate_flags'],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/work-centers/(?P<id>\d+)', [
-      [
-        'methods'             => 'GET',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
-        'callback'            => [__CLASS__, 'get_work_center'],
-      ],
-      [
-        'methods'             => 'PATCH',
-        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-        'callback'            => [__CLASS__, 'update_work_center'],
-      ],
-    ]);
+      // ── Buffer settings ───────────────────────────────────────────
+      register_rest_route($ns, '/scheduler/buffer-settings', [
+        [
+          'methods'             => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_ops'],
+          'callback'            => [__CLASS__, 'get_buffer_settings'],
+        ],
+        [
+          'methods'             => 'POST',
+          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'callback'            => [__CLASS__, 'update_buffer_settings'],
+        ],
+      ]);
 
-    // ── Capacity ──────────────────────────────────────────────────
-    register_rest_route('slate-ops/v1', '/scheduler/capacity', [
-      'methods'             => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback'            => [__CLASS__, 'get_capacity'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/scheduler/overloads', [
-      'methods'             => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback'            => [__CLASS__, 'get_overloads'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/scheduler/recalculate-flags', [
-      'methods'             => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback'            => [__CLASS__, 'recalculate_flags'],
-    ]);
-
-    // ── Buffer settings ───────────────────────────────────────────
-    register_rest_route('slate-ops/v1', '/scheduler/buffer-settings', [
-      [
-        'methods'             => 'GET',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
-        'callback'            => [__CLASS__, 'get_buffer_settings'],
-      ],
-      [
+      // ── Job scheduler actions ─────────────────────────────────────
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/lock', [
         'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback'            => [__CLASS__, 'lock_job'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/unlock', [
+        'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback'            => [__CLASS__, 'unlock_job'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/hold', [
+        'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback'            => [__CLASS__, 'hold_job'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/unhold', [
+        'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback'            => [__CLASS__, 'unhold_job'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/buffer', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'callback'            => [__CLASS__, 'get_job_buffer'],
+      ]);
+
+      // BOM Builder (Pricing Core shared tables)
+      register_rest_route($ns, '/boms', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'get_boms'],
+      ]);
+
+      register_rest_route($ns, '/boms/(?P<id>\d+)', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'get_bom'],
+      ]);
+
+      register_rest_route($ns, '/boms/save', [
+        'methods' => 'POST',
         'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-        'callback'            => [__CLASS__, 'update_buffer_settings'],
-      ],
-    ]);
+        'callback' => [__CLASS__, 'save_bom'],
+      ]);
 
-    // ── Job scheduler actions ─────────────────────────────────────
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/lock', [
-      'methods'             => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback'            => [__CLASS__, 'lock_job'],
-    ]);
+      register_rest_route($ns, '/boms/(?P<id>\d+)/clone', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+        'callback' => [__CLASS__, 'clone_bom'],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/unlock', [
-      'methods'             => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback'            => [__CLASS__, 'unlock_job'],
-    ]);
+      register_rest_route($ns, '/boms/(?P<id>\d+)/revise', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+        'callback' => [__CLASS__, 'revise_bom'],
+      ]);
+      // Pricing Core helpers (shared pricing DB)
+      register_rest_route($ns, '/pricing/dealers', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'get_pricing_dealers'],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/hold', [
-      'methods'             => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback'            => [__CLASS__, 'hold_job'],
-    ]);
+      register_rest_route($ns, '/pricing/products/search', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'search_pricing_products'],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/unhold', [
-      'methods'             => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-      'callback'            => [__CLASS__, 'unhold_job'],
-    ]);
+      register_rest_route($ns, '/pricing/products/lookup', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'lookup_pricing_product'],
+      ]);
 
-    register_rest_route('slate-ops/v1', '/jobs/(?P<id>\d+)/buffer', [
-      'methods'             => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_ops'],
-      'callback'            => [__CLASS__, 'get_job_buffer'],
-    ]);
-  
-    // BOM Builder (Pricing Core shared tables)
-    register_rest_route('slate-ops/v1', '/boms', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'get_boms'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/boms/(?P<id>\d+)', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'get_bom'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/boms/save', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-      'callback' => [__CLASS__, 'save_bom'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/boms/(?P<id>\d+)/clone', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-      'callback' => [__CLASS__, 'clone_bom'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/boms/(?P<id>\d+)/revise', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-      'callback' => [__CLASS__, 'revise_bom'],
-    ]);
-    // Pricing Core helpers (shared pricing DB)
-    register_rest_route('slate-ops/v1', '/pricing/dealers', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'get_pricing_dealers'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/pricing/products/search', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'search_pricing_products'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/pricing/products/lookup', [
-      'methods' => 'GET',
-      'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
-      'callback' => [__CLASS__, 'lookup_pricing_product'],
-    ]);
-
-    register_rest_route('slate-ops/v1', '/pricing/quotes/from-bom', [
-      'methods' => 'POST',
-      'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
-      'callback' => [__CLASS__, 'create_quote_from_bom'],
-    ]);
-
-}
+      register_rest_route($ns, '/pricing/quotes/from-bom', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+        'callback' => [__CLASS__, 'create_quote_from_bom'],
+      ]);
+    }
+  }
 
 
   // ---- Pricing Core API (dealers/products/quotes) ----
@@ -1627,14 +1630,14 @@ foreach ($rows as &$r) {
 
     $failures = [];
 
-    if (empty($job->so_number)) $failures[] = 'missing_so_number';
-    if (empty($job->estimated_minutes) || intval($job->estimated_minutes) <= 0) $failures[] = 'missing_estimated_minutes';
+    if (empty($job['so_number'])) $failures[] = 'missing_so_number';
+    if (empty($job['estimated_minutes']) || intval($job['estimated_minutes']) <= 0) $failures[] = 'missing_estimated_minutes';
 
     // Scope must be locked before release (unless overridden)
-    if (!empty($job->scope_status) && $job->scope_status !== 'LOCKED') $failures[] = 'scope_not_locked';
+    if (!empty($job['scope_status']) && $job['scope_status'] !== 'LOCKED') $failures[] = 'scope_not_locked';
 
     // Parts must be READY before release (unless overridden)
-    if (!empty($job->parts_status) && $job->parts_status !== 'READY') $failures[] = 'parts_not_ready';
+    if (!empty($job['parts_status']) && $job['parts_status'] !== 'READY') $failures[] = 'parts_not_ready';
 
     if (!$override && !empty($failures)) {
       return new WP_Error('release_blocked', 'Job is not eligible for scheduling release', [
@@ -2319,6 +2322,25 @@ if (!$quote_id) return;
 $existing = $wpdb->get_var($wpdb->prepare("SELECT job_id FROM $t WHERE portal_quote_id=%d AND archived_at IS NULL", $quote_id));
 if ($existing) return;
 
+// Attempt to pull basic info if B2BKing or similar is active
+$customer_name = null;
+$dealer_name = null;
+$vin = null;
+$quote_number = null;
+
+if (class_exists('B2BKing')) {
+    // This is a placeholder for actual B2BKing lookups if we had the API
+    // For now we rely on the action being passed enough info or being able to find the post
+    $quote_post = get_post($quote_id);
+    if ($quote_post) {
+        $quote_number = get_post_meta($quote_id, 'b2bking_quote_number', true);
+        $user_id = $quote_post->post_author;
+        $customer_name = get_user_meta($user_id, 'billing_first_name', true) . ' ' . get_user_meta($user_id, 'billing_last_name', true);
+        $dealer_name = get_user_meta($user_id, 'b2bking_company_name', true);
+        $vin = get_post_meta($quote_id, 'vin', true);
+    }
+}
+
 $wpdb->insert($t, [
   'source' => 'portal',
   'created_from' => 'portal',
@@ -2617,6 +2639,21 @@ self::maybe_push_dealer_portal_status($job);
     $saved  = [];
     $errors = [];
 
+    // Check for capacity overloads if scheduling.
+    $has_scheduling = false;
+    foreach ($updates as $item) {
+      if (!empty($item['scheduled_start']) || !empty($item['work_center'])) {
+        $has_scheduling = true;
+        break;
+      }
+    }
+
+    $overloaded_wc_before = [];
+    if ($has_scheduling) {
+      // Get current overloads to compare after dry-run or just check post-facto.
+      // For now, we will check if any updated work center becomes overloaded beyond threshold.
+    }
+
     foreach ($updates as $item) {
       $job_id = isset($item['job_id']) ? (int) $item['job_id'] : 0;
       if ($job_id <= 0) {
@@ -2666,6 +2703,25 @@ self::maybe_push_dealer_portal_status($job);
         $v = !empty($item['estimated_minutes']) ? (int) $item['estimated_minutes'] : null;
         $update['estimated_minutes'] = $v;
         $changes['estimated_minutes'] = $v;
+      }
+
+      // Capacity enforcement: if scheduled_start or work_center changed, check if we need an override reason.
+      if (!empty($item['scheduled_start']) || !empty($item['work_center'])) {
+        $wc_code = $item['work_center'] ?? $wpdb->get_var($wpdb->prepare("SELECT work_center FROM $t_jobs WHERE job_id=%d", $job_id));
+        $start_date = !empty($item['scheduled_start']) ? substr($item['scheduled_start'], 0, 10) : $wpdb->get_var($wpdb->prepare("SELECT DATE(scheduled_start) FROM $t_jobs WHERE job_id=%d", $job_id));
+
+        if ($wc_code && $start_date) {
+          $summary = Slate_Capacity_Service::get_summary($start_date, $start_date);
+          $wc_id = $wpdb->get_var($wpdb->prepare("SELECT wc_id FROM {$wpdb->prefix}slate_ops_work_centers WHERE wc_code=%s", $wc_code));
+          if ($wc_id && isset($summary[$wc_id]) && $summary[$wc_id]['is_overloaded']) {
+            if (empty($item['override_reason'])) {
+              $errors[] = ['job_id' => $job_id, 'message' => 'Capacity threshold exceeded for ' . $wc_code . '. Override reason required.', 'code' => 'capacity_exceeded'];
+              continue;
+            }
+            $update['override_flag'] = 1;
+            $update['override_reason'] = sanitize_text_field($item['override_reason']);
+          }
+        }
       }
 
       $result = $wpdb->update($t_jobs, $update, ['job_id' => $job_id]);

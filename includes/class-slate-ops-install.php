@@ -37,6 +37,13 @@ class Slate_Ops_Install {
     $eod_report_lines = $wpdb->prefix . 'slate_ops_eod_report_lines';
     $qc_records       = $wpdb->prefix . 'slate_ops_qc_records';
 
+    $boms             = $wpdb->prefix . 'slate_boms';
+    $bom_lines       = $wpdb->prefix . 'slate_bom_lines';
+    $products         = $wpdb->prefix . 'slate_products';
+    $dealers_ext      = $wpdb->prefix . 'slate_dealers';
+    $quotes           = $wpdb->prefix . 'slate_quotes';
+    $quote_lines      = $wpdb->prefix . 'slate_quote_lines';
+
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 
@@ -203,6 +210,7 @@ KEY awaiting_idx (awaiting_direction)
       lunch_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 30,
       break_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 10,
       break_count TINYINT UNSIGNED NOT NULL DEFAULT 2,
+      capacity_threshold_pct TINYINT UNSIGNED NOT NULL DEFAULT 70,
       ot_threshold_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 480,
       timezone VARCHAR(64) NOT NULL DEFAULT 'America/Los_Angeles',
       updated_by BIGINT UNSIGNED NULL,
@@ -388,6 +396,101 @@ KEY awaiting_idx (awaiting_direction)
       KEY checkpoint_idx (checkpoint)
     ) $charset_collate;";
 
+    // ── Pricing Core tables ───────────────────────────
+
+    $sql_products = "CREATE TABLE $products (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      sku VARCHAR(64) NOT NULL,
+      product_name VARCHAR(255) NOT NULL,
+      product_type VARCHAR(30) NOT NULL DEFAULT 'PART',
+      dealer_price_published DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      retail_price_published DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY sku_idx (sku)
+    ) $charset_collate;";
+
+    $sql_boms = "CREATE TABLE $boms (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      bom_no VARCHAR(64) NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      fitment VARCHAR(100) NULL,
+      market VARCHAR(50) NULL,
+      category VARCHAR(50) NULL,
+      install_hours DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      shop_supply_units DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      status VARCHAR(20) NOT NULL DEFAULT 'active',
+      revision VARCHAR(20) NULL,
+      notes TEXT NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY bom_no_idx (bom_no)
+    ) $charset_collate;";
+
+    $sql_bom_lines = "CREATE TABLE $bom_lines (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      bom_id BIGINT UNSIGNED NOT NULL,
+      product_id BIGINT UNSIGNED NULL,
+      sku VARCHAR(64) NULL,
+      qty DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+      line_type VARCHAR(20) NOT NULL DEFAULT 'PART',
+      line_notes TEXT NULL,
+      sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+      PRIMARY KEY (id),
+      KEY bom_idx (bom_id)
+    ) $charset_collate;";
+
+    $sql_dealers_ext = "CREATE TABLE $dealers_ext (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      dealer_code VARCHAR(32) NOT NULL,
+      dealer_name VARCHAR(255) NOT NULL,
+      labor_rate_retail_published DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      labor_rate_wholesale_published DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      shop_supply_base_retail_published DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      shop_supply_base_wholesale_published DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      effective_date DATE NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY code_idx (dealer_code)
+    ) $charset_collate;";
+
+    $sql_quotes = "CREATE TABLE $quotes (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      quote_no VARCHAR(64) NOT NULL,
+      dealer_id BIGINT UNSIGNED NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+      subtotal_retail DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      subtotal_wholesale DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      labor_hours DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      shop_supply_units DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      notes TEXT NULL,
+      created_by BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY quote_no_idx (quote_no)
+    ) $charset_collate;";
+
+    $sql_quote_lines = "CREATE TABLE $quote_lines (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      quote_id BIGINT UNSIGNED NOT NULL,
+      product_id BIGINT UNSIGNED NULL,
+      sku_snapshot VARCHAR(64) NULL,
+      name_snapshot VARCHAR(255) NULL,
+      qty DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+      unit_retail DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      unit_wholesale DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      line_retail DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      line_wholesale DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      line_type VARCHAR(20) NOT NULL DEFAULT 'PART',
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      KEY quote_idx (quote_id)
+    ) $charset_collate;";
+
     // ── Run all dbDelta ─────────────────────────────────
 
     dbDelta($sql_jobs);
@@ -404,6 +507,13 @@ KEY awaiting_idx (awaiting_direction)
     dbDelta($sql_eod_reports);
     dbDelta($sql_eod_report_lines);
     dbDelta($sql_qc_records);
+
+    dbDelta($sql_products);
+    dbDelta($sql_boms);
+    dbDelta($sql_bom_lines);
+    dbDelta($sql_dealers_ext);
+    dbDelta($sql_quotes);
+    dbDelta($sql_quote_lines);
 
     // ── Data migrations ─────────────────────────────────
 
@@ -425,6 +535,7 @@ KEY awaiting_idx (awaiting_direction)
         'shift_end' => '15:30:00',
         'lunch_minutes' => 30,
         'break_minutes' => 20,
+        'capacity_threshold_pct' => 70,
         'timezone' => 'America/Los_Angeles',
         'updated_at' => gmdate('Y-m-d H:i:s'),
       ]);
