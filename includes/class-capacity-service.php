@@ -153,7 +153,7 @@ class Slate_Capacity_Service {
                 promised_date, target_ship_date, status, scheduling_flag
          FROM $jobs_table
          WHERE archived_at IS NULL
-           AND status IN ('SCHEDULED','IN_PROGRESS','UNSCHEDULED','READY_FOR_SCHEDULING')
+           AND status IN ('SCHEDULED','IN_PROGRESS','APPROVED_FOR_SCHEDULING')
            AND (scheduled_start IS NULL OR DATE(scheduled_start) <= %s)
          LIMIT 1000",
         $to

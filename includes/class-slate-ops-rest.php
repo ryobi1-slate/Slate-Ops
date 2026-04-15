@@ -1014,8 +1014,8 @@ if ($status_in) {
 // Optional TOC gate for "unscheduled" lists
 if ($ready_only === 1) {
   $where .= " AND (scheduling_status = %s OR status = %s)";
-  $params[] = 'READY_FOR_SCHEDULING';
-  $params[] = 'READY_FOR_SCHEDULING';
+  $params[] = 'APPROVED_FOR_SCHEDULING';
+  $params[] = 'APPROVED_FOR_SCHEDULING';
 }
 
 if ($so_missing === 1) {
@@ -1428,7 +1428,7 @@ foreach ($rows as &$r) {
       'vin_last8' => $vin_last8 ?: null,
       'job_type' => $job_type,
       'parts_status' => $parts_status,
-      'status' => $so_number !== '' ? 'READY_FOR_SCHEDULING' : 'UNSCHEDULED',
+      'status' => $so_number !== '' ? 'APPROVED_FOR_SCHEDULING' : 'PENDING_INTAKE',
       'status_updated_at' => $now,
       'delay_reason' => null,
       'priority' => $priority,
@@ -1477,7 +1477,7 @@ foreach ($rows as &$r) {
     $now = Slate_Ops_Utils::now_gmt();
     $update = [
       'so_number'         => $so,
-      'status'            => 'READY_FOR_SCHEDULING',
+      'status'            => 'APPROVED_FOR_SCHEDULING',
       'status_updated_at' => $now,
       'dealer_status'     => 'waiting',
       'updated_at'        => $now,
@@ -1539,7 +1539,7 @@ foreach ($rows as &$r) {
     $wpdb->update($t, $update, ['job_id' => $job_id]);
 
     self::audit('job', $job_id, 'update', 'so_number', $old_so, $so, 'SO# set');
-    self::audit('job', $job_id, 'update', 'status', $job['status'], 'READY_FOR_SCHEDULING', 'Moved to Ready for Scheduling');
+    self::audit('job', $job_id, 'update', 'status', $job['status'], 'APPROVED_FOR_SCHEDULING', 'Moved to Approved for Scheduling');
 
     $job2 = self::job_by_id($job_id);
     self::maybe_update_clickup_name($job2);
@@ -1607,7 +1607,7 @@ foreach ($rows as &$r) {
   /**
    * Release a job to the scheduler (TOC Rope).
    * Phase 0: you can skip this and schedule manually.
-   * Phase 1+: scheduler can be configured to only show jobs with scheduling_status=READY_FOR_SCHEDULING.
+   * Phase 1+: scheduler can be configured to only show jobs with scheduling_status=APPROVED_FOR_SCHEDULING.
    */
   public static function release_job($req) {
     global $wpdb;
@@ -1649,7 +1649,7 @@ foreach ($rows as &$r) {
     $now = Slate_Ops_Utils::now_gmt();
 
     $update = [
-      'scheduling_status' => 'READY_FOR_SCHEDULING',
+      'scheduling_status' => 'APPROVED_FOR_SCHEDULING',
       'ready_queue_entered_at' => $now,
       'override_flag' => $override ? 1 : 0,
       'override_reason' => $override ? ($override_reason ?: null) : null,
@@ -2274,14 +2274,14 @@ if ($row) {
   private static function maybe_create_clickup_task($job) {
     if (!$job || !empty($job['clickup_task_id'])) return;
 
-    $name = 'UNSCHEDULED - ' . ($job['customer_name'] ?: 'Job ' . $job['job_id']);
+    $name = 'PENDING INTAKE - ' . ($job['customer_name'] ?: 'Job ' . $job['job_id']);
     $desc = "Slate Ops Job\n\n"
       . "Job ID: {$job['job_id']}\n"
       . ($job['portal_quote_id'] ? "Portal Quote ID: {$job['portal_quote_id']}\n" : "")
       . ($job['quote_number'] ? "Quote #: {$job['quote_number']}\n" : "")
       . ($job['vin'] ? "VIN: {$job['vin']}\n" : "")
       . ($job['dealer_name'] ? "Dealer: {$job['dealer_name']}\n" : "")
-      . "Status: UNSCHEDULED\n";
+      . "Status: PENDING_INTAKE\n";
 
     $resp = Slate_Ops_ClickUp::create_unscheduled_task($name, $desc);
     if (is_wp_error($resp)) return;
@@ -2345,12 +2345,7 @@ $wpdb->insert($t, [
   'source' => 'portal',
   'created_from' => 'portal',
   'portal_quote_id' => $quote_id,
-  'quote_number' => $quote_number,
-  'customer_name' => $customer_name,
-  'dealer_name' => $dealer_name,
-  'vin' => $vin,
-  'vin_last8' => $vin ? substr($vin, -8) : null,
-  'status' => 'UNSCHEDULED',
+  'status' => 'PENDING_INTAKE',
   'status_updated_at' => $now,
   'delay_reason' => null,
   'priority' => 3,
@@ -2597,8 +2592,8 @@ self::maybe_push_dealer_portal_status($job);
     $body = $req->get_json_params() ?: [];
     $note = sanitize_text_field($body['note'] ?? '');
 
-    // Return to SCHEDULED if it had a scheduled_start, otherwise UNSCHEDULED.
-    $new_status = !empty($job['scheduled_start']) ? 'SCHEDULED' : 'UNSCHEDULED';
+    // Return to SCHEDULED if it had a scheduled_start, otherwise APPROVED_FOR_SCHEDULING.
+    $new_status = !empty($job['scheduled_start']) ? 'SCHEDULED' : 'APPROVED_FOR_SCHEDULING';
 
     $wpdb->update($t, [
       'delay_reason'    => null,

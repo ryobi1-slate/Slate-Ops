@@ -54,7 +54,7 @@ class Slate_Ops_ClickUp {
     $body = [
       'name' => $name,
       'description' => $description,
-      'status' => 'UNSCHEDULED',
+      'status' => 'PENDING_INTAKE',
     ];
 
     return self::request('POST', $url, $body);
