@@ -1224,8 +1224,8 @@ foreach ($rows as &$r) {
       }
     }
 
-    // Supervisor-only fields
-    if ($is_supervisor) {
+    // CS + supervisor: Job Status and Lead Tech (per CS MVP rules).
+    if ($is_cs || $is_supervisor) {
       if (array_key_exists('status', $body)) {
         $ns = strtoupper(sanitize_text_field((string)($body['status'] ?? '')));
         if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
@@ -1235,21 +1235,24 @@ foreach ($rows as &$r) {
         }
       }
 
-      if (array_key_exists('status_detail', $body)) {
-        $sd    = sanitize_text_field((string)($body['status_detail'] ?? ''));
-        $store = $sd ?: null;
-        if ($store !== $job['status_detail']) {
-          $audits[] = ['status_detail', $job['status_detail'], $store];
-          $update['status_detail'] = $store;
-        }
-      }
-
       if (array_key_exists('assigned_user_id', $body)) {
         $uid   = (int)($body['assigned_user_id'] ?? 0);
         $store = $uid ?: null;
         if ($store !== (int)($job['assigned_user_id'] ?? 0)) {
           $audits[] = ['assigned_user_id', $job['assigned_user_id'], $store];
           $update['assigned_user_id'] = $store;
+        }
+      }
+    }
+
+    // Supervisor-only fields
+    if ($is_supervisor) {
+      if (array_key_exists('status_detail', $body)) {
+        $sd    = sanitize_text_field((string)($body['status_detail'] ?? ''));
+        $store = $sd ?: null;
+        if ($store !== $job['status_detail']) {
+          $audits[] = ['status_detail', $job['status_detail'], $store];
+          $update['status_detail'] = $store;
         }
       }
 
