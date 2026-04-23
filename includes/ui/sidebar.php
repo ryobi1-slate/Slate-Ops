@@ -38,67 +38,27 @@ if (!function_exists('ops_nav_link')) {
 
   <nav class="ops-nav">
     <?php
-    // Tech-only (no supervisor / CS / admin)
-    if (current_user_can(Slate_Ops_Utils::CAP_TECH)
-      && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)
-      && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
-      && !current_user_can(Slate_Ops_Utils::CAP_CS)) :
+    $is_admin = current_user_can(Slate_Ops_Utils::CAP_ADMIN);
+    $is_exec  = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR);
+    $is_cs    = current_user_can(Slate_Ops_Utils::CAP_CS);
+    $is_tech  = current_user_can(Slate_Ops_Utils::CAP_TECH);
     ?>
-      <?php ops_nav_link('/ops/tech', '/tech', 'build', 'Tech'); ?>
-      <?php ops_nav_link('/ops/jobs', '/jobs', 'work',  'Jobs'); ?>
-    <?php endif; ?>
 
-    <?php
-    // CS (no admin / supervisor)
-    if (current_user_can(Slate_Ops_Utils::CAP_CS)
-      && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)
-      && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)) :
-    ?>
-      <?php ops_nav_link('/ops/cs',       '/cs',       'person',          'CS'); ?>
-      <?php ops_nav_link('/ops/jobs',     '/jobs',     'work',            'Jobs'); ?>
-      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month',  'Schedule'); ?>
-      <?php ops_nav_link('/ops/new',      '/new',      'add_circle',      'Create Job'); ?>
-    <?php endif; ?>
-
-    <?php
-    // Supervisor (no admin)
-    if (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
-      && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)) :
-    ?>
-      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',       'Dashboard'); ?>
-      <?php ops_nav_link('/ops/supervisor', '/supervisor', 'group',           'Supervisor'); ?>
-      <?php ops_nav_link('/ops/tech',       '/tech',       'build',           'Tech View'); ?>
-      <?php ops_nav_link('/ops/jobs',       '/jobs',       'work',            'Jobs'); ?>
-      <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',      'QC'); ?>
-      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_month',  'Schedule'); ?>
-      <?php ops_nav_link('/ops/bom',        '/bom',        'inventory_2',     'BOM'); ?>
-      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',        'Settings'); ?>
-    <?php endif; ?>
-
-    <?php
-    // Admin
-    if (current_user_can(Slate_Ops_Utils::CAP_ADMIN)) :
-    ?>
-      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',       'Dashboard'); ?>
-      <?php ops_nav_link('/ops/cs',         '/cs',         'person',          'CS'); ?>
-      <?php ops_nav_link('/ops/supervisor', '/supervisor', 'group',           'Supervisor'); ?>
-      <?php ops_nav_link('/ops/tech',       '/tech',       'build',           'Tech View'); ?>
-      <?php ops_nav_link('/ops/jobs',       '/jobs',       'work',            'Jobs'); ?>
-      <?php ops_nav_link('/ops/qc',         '/qc',         'fact_check',      'QC'); ?>
-      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_month',  'Schedule'); ?>
-      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',        'Settings'); ?>
-      <?php ops_nav_link('/ops/admin',      '/admin',      'shield',          'Admin'); ?>
-    <?php endif; ?>
-
-    <?php
-    // Fallback: no recognized role
-    if (!current_user_can(Slate_Ops_Utils::CAP_TECH)
-      && !current_user_can(Slate_Ops_Utils::CAP_CS)
-      && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
-      && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)) :
-    ?>
-      <?php ops_nav_link('/ops/exec', '/exec', 'dashboard', 'Dashboard'); ?>
-      <?php ops_nav_link('/ops/jobs', '/jobs', 'work',      'Jobs'); ?>
+    <?php if ($is_admin || $is_exec) : ?>
+      <?php ops_nav_link('/ops/exec',     '/exec',     'dashboard',      'Executive'); ?>
+      <?php ops_nav_link('/ops/cs',       '/cs',       'person',         'CS'); ?>
+      <?php ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech'); ?>
+      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule'); ?>
+      <?php ops_nav_link('/ops/admin',    '/admin',    'shield',         'Admin'); ?>
+      <?php ops_nav_link('/ops/settings', '/settings', 'settings',       'Settings'); ?>
+    <?php elseif ($is_cs) : ?>
+      <?php ops_nav_link('/ops/cs',       '/cs',       'person',         'CS'); ?>
+      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule'); ?>
+    <?php elseif ($is_tech) : ?>
+      <?php ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech'); ?>
+      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule'); ?>
+    <?php else : ?>
+      <?php ops_nav_link('/ops/exec', '/exec', 'dashboard', 'Executive'); ?>
     <?php endif; ?>
   </nav>
 
