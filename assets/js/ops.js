@@ -1280,106 +1280,135 @@ async function loadCS() {
   }
 
   view(`
-    <div class="cs-header">
-      <div>
-        <div class="cs-title">Customer Service</div>
-        <div class="cs-sub">Complete intake, assign SO#s, and create jobs.</div>
-      </div>
-      <div class="cs-header-actions">
-        <div class="cs-kpi-pills">
-          <span class="cs-pill"><span class="cs-pill-label">Pending Intake</span><span class="cs-pill-val">${portalNeeds.length}</span></span>
-          <span class="cs-pill"><span class="cs-pill-label">Needs SO#</span><span class="cs-pill-val">${manualNeeds.length}</span></span>
+    <div class="card cs-header-card">
+      <div class="cs-header">
+        <div>
+          <div class="cs-title">Customer Service</div>
+          <div class="cs-sub">Complete intake, assign SO numbers, and move jobs cleanly into scheduling.</div>
         </div>
-        <input class="input" id="cs-search" placeholder="Search SO#, VIN, customer…" style="max-width:260px;" />
-        <button class="btn" id="start-new-intake" type="button">Start Intake</button>
+        <div class="cs-header-actions">
+          <input class="input cs-search" id="cs-search" placeholder="Search SO#, VIN, customer…" />
+          
+        </div>
+      </div>
+      <div class="cs-kpi-row">
+        <div class="cs-kpi-card">
+          <div class="cs-kpi-label">Pending Intake</div>
+          <div class="cs-kpi-value">${portalNeeds.length}</div>
+        </div>
+        <div class="cs-kpi-card">
+          <div class="cs-kpi-label">Needs SO</div>
+          <div class="cs-kpi-value">${manualNeeds.length}</div>
+        </div>
+        <div class="cs-kpi-card">
+          <div class="cs-kpi-label">Active Jobs</div>
+          <div class="cs-kpi-value">${activeJobs.length}</div>
+        </div>
       </div>
     </div>
 
     <div class="cs-layout">
       <div class="cs-left">
-        <div class="card">
-          <div class="cs-section-head">
-            <h2 class="cs-section-title">PENDING INTAKE - PORTAL JOBS</h2>
-            <div class="muted">${portalNeeds.length} item(s)</div>
-          </div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>CUSTOMER</th>
-                <th>VIN</th>
-                <th>DEALER</th>
-                <th style="text-align:right;">&nbsp;</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${portalNeeds.length ? portalNeeds.map(j => {
-                const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
-                const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
-                return `
-                  <tr data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
-                    <td>${escapeHtml(j.customer_name||'—')}</td>
-                    <td class="mono">${escapeHtml(vin6)}</td>
-                    <td>${escapeHtml(j.dealer_name||'—')}</td>
-                    <td style="text-align:right; white-space:nowrap;">
-                      <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
-                      <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `
-                <tr><td colspan="4" class="muted">No portal jobs pending intake.</td></tr>
-              `}
-            </tbody>
-          </table>
-        </div>
+        <div class="cs-queue-grid">
+          <section class="card cs-queue-card">
+            <div class="cs-section-head">
+              <h2 class="cs-section-title">Pending Intake</h2>
+              <div class="muted">${portalNeeds.length} item(s)</div>
+            </div>
+            ${portalNeeds.length ? `
+              <div class="cs-queue-list">
+                ${portalNeeds.map(j => {
+                  const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
+                  const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
+                  return `
+                    <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
+                      <div class="cs-queue-main">
+                        <div class="cs-queue-title">${escapeHtml(j.customer_name||'—')}</div>
+                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • ${escapeHtml(j.dealer_name||'—')}</div>
+                      </div>
+                      <div class="cs-queue-actions">
+                        <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
+                        <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            ` : `<div class="cs-empty-state">No portal intake jobs right now.</div>`}
+          </section>
 
-        <div class="card" style="margin-top:14px;">
-          <div class="cs-section-head">
-            <h2 class="cs-section-title">NEEDS SO# - MANUAL JOBS</h2>
-            <div class="muted">${manualNeeds.length} item(s)</div>
-          </div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>CUSTOMER</th>
-                <th>VIN</th>
-                <th>DEALER</th>
-                <th>SO#</th>
-                <th style="text-align:right;">&nbsp;</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${manualNeeds.length ? manualNeeds.map(j => {
-                const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
-                const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
-                return `
-                  <tr data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
-                    <td>${escapeHtml(j.customer_name||'—')}</td>
-                    <td class="mono">${escapeHtml(vin6)}</td>
-                    <td>${escapeHtml(j.dealer_name||'—')}</td>
-                    <td style="min-width:180px;">
-                      <input class="input so mono" placeholder="S-ORD######" style="height:36px;" />
-                    </td>
-                    <td style="text-align:right; white-space:nowrap;">
-                      <button class="btn small-btn save-so">Save</button>
-                      <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `
-                <tr><td colspan="5" class="muted">No manual jobs need SO#.</td></tr>
-              `}
-            </tbody>
-          </table>
+          <section class="card cs-queue-card">
+            <div class="cs-section-head">
+              <h2 class="cs-section-title">Needs SO</h2>
+              <div class="muted">${manualNeeds.length} item(s)</div>
+            </div>
+            ${manualNeeds.length ? `
+              <div class="cs-queue-list">
+                ${manualNeeds.map(j => {
+                  const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
+                  const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
+                  return `
+                    <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
+                      <div class="cs-queue-main">
+                        <div class="cs-queue-title">${escapeHtml(j.customer_name||'—')}</div>
+                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • ${escapeHtml(j.dealer_name||'—')}</div>
+                      </div>
+                      <div class="cs-queue-so-wrap">
+                        <input class="input so mono" placeholder="S-ORD######" />
+                      </div>
+                      <div class="cs-queue-actions">
+                        <button class="btn small-btn save-so">Save</button>
+                        <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            ` : `<div class="cs-empty-state">No manual jobs waiting on an SO number.</div>`}
+          </section>
+
+          <section class="card cs-queue-card cs-queue-full">
+            <div class="cs-section-head">
+              <h2 class="cs-section-title">Active Jobs</h2>
+              <div class="muted">${activeJobs.length} item(s)</div>
+            </div>
+            ${activeJobs.length ? `
+              <div class="cs-queue-list">
+                ${activeJobs.map(j => {
+                  const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
+                  return `
+                    <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
+                      <div class="cs-queue-main">
+                        <div class="cs-queue-title"><span class="mono">${escapeHtml(j.so_number||'—')}</span> • ${escapeHtml(j.customer_name||'—')}</div>
+                        <div class="cs-queue-meta">${escapeHtml(j.dealer_name||'—')}</div>
+                      </div>
+                      <div class="cs-queue-status"><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></div>
+                      <div class="cs-queue-actions">
+                        <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            ` : `<div class="cs-empty-state">No active jobs in queue.</div>`}
+          </section>
         </div>
       </div>
 
       <aside class="cs-right">
+        <div class="card cs-create-panel">
+          <div class="cs-create-head">
+            <h3 class="cs-create-title">Create Manual Job</h3>
+            <p class="cs-create-sub">Use manual intake when the job did not come from the portal.</p>
+          </div>
+          <button class="btn" id="start-new-intake" type="button">Start Manual Intake</button>
+        </div>
+
         <div class="card cs-intake-card">
           <div class="cs-intake-head">
             <div>
-              <div class="cs-intake-title">Intake</div>
-              <div class="muted" id="cs-intake-hint">Pick a portal job or start a manual intake.</div>
+              <div class="cs-intake-title">Intake Details</div>
+              <div class="muted" id="cs-intake-hint">Pick a queue item or start a manual intake.</div>
             </div>
           </div>
           <div id="intake-form-content" class="cs-intake-body">
@@ -1398,7 +1427,7 @@ async function loadCS() {
     const host  = document.getElementById('intake-form-content');
     if (!host) return;
     host.innerHTML = `
-      <h3 style="margin:0 0 10px;">Create Manual Job</h3>
+      <div class="cs-create-head"><h3 class="cs-create-title">Create Manual Job</h3><p class="cs-create-sub">Quick intake form. Add only what you know now.</p></div>
       <form id="manual-create">
         <div class="cs-manual-grid">
           <div class="cs-field">
@@ -1544,8 +1573,8 @@ async function loadCS() {
   // Save SO# for manual jobs
   document.querySelectorAll('.save-so').forEach(btn => {
     btn.addEventListener('click', async () => {
-      let id = btn.closest('tr')?.getAttribute('data-job-id');
-      const row = btn.closest('tr');
+      let id = btn.closest('[data-job-id]')?.getAttribute('data-job-id');
+      const row = btn.closest('[data-job-id]');
       const input = row?.querySelector('input.so');
       const so = (input?.value || '').trim().toUpperCase();
       if (!id || !so) {
@@ -1568,9 +1597,9 @@ async function loadCS() {
   if (csSearch) {
     csSearch.addEventListener('input', () => {
       const q = (csSearch.value || '').trim().toLowerCase();
-      document.querySelectorAll('tr[data-search]').forEach(tr => {
-        const hay = (tr.getAttribute('data-search') || '');
-        tr.style.display = (!q || hay.includes(q)) ? '' : 'none';
+      document.querySelectorAll('[data-search]').forEach(row => {
+        const hay = (row.getAttribute('data-search') || '');
+        row.style.display = (!q || hay.includes(q)) ? '' : 'none';
       });
     });
   }
@@ -1850,6 +1879,11 @@ async function loadSchedule(){
     }).join('');
 
     view(`
+      <div class="card sched-page-header">
+        <div class="dash-page-label">Schedule</div>
+        <div class="muted">Plan bay capacity, drag jobs into slots, and inspect constraints in one view.</div>
+      </div>
+
       <!-- Toolbar strip -->
       <div class="sched-topbar">
         <div class="sched-topbar-kpis">
@@ -2271,7 +2305,19 @@ async function loadTech() {
   }
 
   view(`
-    <div${isPhone ? ' class="phone-mode"' : ''}>
+    <div class="tech-page${isPhone ? ' phone-mode' : ''}">
+
+    <div class="card tech-page-header">
+      <div class="tech-page-title-wrap">
+        <div class="dash-page-label">Tech</div>
+        <div class="muted">Track active labor, update job progress, and hand off to QC.</div>
+      </div>
+      <div class="tech-page-kpis">
+        ${kpi('Assigned', allMyJobs.length)}
+        ${kpi('In Queue', myJobs.length)}
+        ${kpi('Active', active ? 1 : 0)}
+      </div>
+    </div>
 
     <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
       ${viewModeToggle()}
@@ -2483,164 +2529,133 @@ async function loadTech() {
 }
 
 async function loadExecutive(){
-  const [jobsResp, settingsResp, usersResp] = await Promise.all([
-    api.jobs('?limit=500'),
-    api.settings(),
-    api.users().catch(()=>({users:[]})),
-  ]);
-  const jobs     = jobsResp.jobs || [];
-  const settings = settingsResp || {};
-  const users    = usersResp.users || [];
-
-  // ── Capacity math ──────────────────────────────────
-  function timeToH(t){ const p=(t||'0:0').split(':'); return parseInt(p[0]||0)+parseInt(p[1]||0)/60; }
-  const shiftH   = Math.max(1, timeToH(settings.shift_end||'15:30') - timeToH(settings.shift_start||'07:00') - ((parseInt(settings.lunch_minutes||30,10))/60));
-  const techCount= Math.max(1, users.filter(u=>u.ops_role==='tech'||u.ops_role==='supervisor').length);
-  const dailyCap = shiftH * techCount;
-
-  // ── Today's plan ────────────────────────────────────
-  const todayStr  = new Date().toISOString().split('T')[0];
-  const todayJobs = jobs.filter(j=>(j.scheduled_start||'').startsWith(todayStr));
-  const todayH    = todayJobs.reduce((s,j)=>s+((parseInt(j.estimated_minutes||0,10))/60),0);
-  const lateBlocked = jobs.filter(j=>{ const s=(j.status||'').toUpperCase(); return s==='ON_HOLD'; }).length;
-  const loadPct   = dailyCap>0 ? Math.min(100,Math.round((todayH/dailyCap)*100)) : 0;
-  const capColor  = loadPct>90 ? '#dc2626' : loadPct>75 ? '#d97706' : '#16a34a';
-
-  // ── Flow health ─────────────────────────────────────
-  const stages = [
-    {key:'PENDING_INTAKE',              label:'Pending Intake'},
-    {key:'READY_FOR_SUPERVISOR_REVIEW', label:'Supervisor Review'},
-    {key:'APPROVED_FOR_SCHEDULING',     label:'Approved'},
-    {key:'SCHEDULED',                   label:'Scheduled'},
-    {key:'IN_PROGRESS',                 label:'In Progress'},
-    {key:'PENDING_QC',                  label:'Pending QC'},
-  ];
+  const jobsResp = await api.jobs('?limit=500');
+  const jobs = jobsResp.jobs || [];
   const now = Date.now();
-  const stageData = stages.map(({key,label})=>{
-    const group = jobs.filter(j=>(j.status||'').toUpperCase()===key);
-    const oldest = group.length
-      ? Math.max(...group.map(j=>Math.round((now-new Date(j.created_at||j.updated_at||now))/(1000*3600*24))))
-      : 0;
-    return {label, count:group.length, oldest};
-  });
 
-  // ── Alerts ──────────────────────────────────────────
-  const partsHold    = jobs.filter(j=>j.delay_reason==='parts').length;
-  const approvalHold = jobs.filter(j=>j.delay_reason==='approval').length;
-  const overHours    = jobs.filter(j=>{ const e=parseInt(j.estimated_minutes||0,10); const a=parseInt(j.actual_minutes||0,10); return e>0&&a>e*1.15; }).length;
+  const countByStatus = (statuses) => jobs.filter(j => statuses.includes((j.status || '').toUpperCase())).length;
+  const activeJobs = jobs.filter(j => !['COMPLETE', 'COMPLETED'].includes((j.status || '').toUpperCase()));
+  const needsSo = activeJobs.filter(j => !(j.so_number || '').trim()).length;
 
-  const todayLabel = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const kpi = [
+    { label: 'Needs SO', value: needsSo },
+    { label: 'Ready to Schedule', value: countByStatus(['APPROVED_FOR_SCHEDULING', 'READY_FOR_SCHEDULING']) },
+    { label: 'Scheduled', value: countByStatus(['SCHEDULED']) },
+    { label: 'In Progress', value: countByStatus(['IN_PROGRESS']) },
+    { label: 'Pending QC', value: countByStatus(['PENDING_QC']) },
+    { label: 'Complete', value: countByStatus(['COMPLETE', 'COMPLETED']) },
+  ];
+
+  const flowHealth = [
+    { label: 'Intake waiting', value: countByStatus(['PENDING_INTAKE', 'READY_FOR_SUPERVISOR_REVIEW']) },
+    { label: 'Ready queue', value: countByStatus(['APPROVED_FOR_SCHEDULING', 'READY_FOR_SCHEDULING']) },
+    { label: 'Active load', value: countByStatus(['IN_PROGRESS', 'SCHEDULED']) },
+    { label: 'QC waiting', value: countByStatus(['PENDING_QC']) },
+  ];
+
+  const exceptions = [
+    { label: 'Jobs on hold', value: countByStatus(['ON_HOLD']) },
+    { label: 'Missing SO', value: needsSo },
+    { label: 'Blocked items', value: jobs.filter(j => ['parts', 'approval'].includes((j.delay_reason || '').toLowerCase())).length },
+    { label: 'Aged 7d+', value: activeJobs.filter(j => {
+      const ts = j.updated_at || j.created_at;
+      if (!ts) return false;
+      const parsed = new Date(ts).getTime();
+      return !Number.isNaN(parsed) && ((now - parsed) / 86400000) > 7;
+    }).length },
+  ];
+
+  const recentJobs = [...jobs]
+    .sort((a, b) => {
+      const aTs = new Date(a.updated_at || a.created_at || 0).getTime();
+      const bTs = new Date(b.updated_at || b.created_at || 0).getTime();
+      return (Number.isNaN(bTs) ? 0 : bTs) - (Number.isNaN(aTs) ? 0 : aTs);
+    })
+    .slice(0, 10);
+
+  const fmtWhen = (ts) => {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '—';
+    const hours = Math.floor((now - d.getTime()) / 3600000);
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  };
 
   view(`
-    <!-- Page header + quick actions -->
-    <div class="dash-header-row">
-      <div>
-        <div class="dash-page-label">Dashboard</div>
-        <div class="muted" style="margin-top:2px;font-size:13px;">${todayLabel}</div>
-      </div>
-      <div class="dash-quick-actions">
-        <button class="btn small-btn" id="qa-create-job">+ Create Job</button>
-        <button class="btn secondary small-btn" id="qa-sched">+ Schedule Block</button>
-        <button class="btn secondary small-btn" id="qa-add-note">+ Add Note</button>
-      </div>
-    </div>
-
-    <!-- Today's Plan -->
-    <div class="dash-section-title">Today's Plan</div>
-    <div class="dash-kpi-row">
-      <div class="dash-kpi-card">
-        <div class="dash-kpi-label">Scheduled Today</div>
-        <div class="dash-kpi-value">${todayJobs.length}</div>
-      </div>
-      <div class="dash-kpi-card">
-        <div class="dash-kpi-label">Late / Blocked</div>
-        <div class="dash-kpi-value${lateBlocked>0?' dash-kpi-warn':''}">${lateBlocked}</div>
-      </div>
-      <div class="dash-kpi-card dash-kpi-capacity">
-        <div class="dash-kpi-label">Hours Loaded <span class="dash-kpi-sub">${todayH.toFixed(1)} / ${dailyCap.toFixed(1)} hrs</span></div>
-        <div class="cap-bar-wrap"><div class="cap-bar" style="width:${loadPct}%;background:${capColor};"></div></div>
-        <div class="dash-cap-pct">${loadPct}% capacity (${techCount} tech${techCount!==1?'s':''})</div>
-      </div>
-    </div>
-
-    <!-- Flow Health -->
-    <div class="dash-section-title">Flow Health</div>
-    <div class="dash-flow-grid">
-      ${stageData.map(s=>`
-        <div class="dash-flow-card${s.count===0?' dash-flow-empty':''}">
-          <div class="dash-flow-label">${s.label}</div>
-          <div class="dash-flow-count">${s.count}</div>
-          <div class="dash-flow-age">${s.count>0?'Oldest: '+s.oldest+'d':'—'}</div>
+    <section class="card exec-header-card">
+      <div class="exec-header-grid">
+        <div>
+          <div class="exec-eyebrow">Executive Summary</div>
+          <h1 class="exec-title">Operations Overview</h1>
+          <p class="exec-subtitle">Live view of intake, scheduling, active production, and QC.</p>
         </div>
+      </div>
+    </section>
+
+    <section class="exec-kpi-grid">
+      ${kpi.map(item => `
+        <article class="card exec-kpi-card">
+          <div class="exec-kpi-label">${item.label}</div>
+          <div class="exec-kpi-value">${item.value}</div>
+        </article>
       `).join('')}
-    </div>
+    </section>
 
-    ${(partsHold+approvalHold+overHours)>0 ? `
-    <!-- Alerts -->
-    <div class="dash-section-title">Alerts</div>
-    <div class="dash-alerts-row">
-      ${partsHold>0    ?`<div class="dash-alert dash-alert-warn"><span class="material-symbols-outlined dash-alert-icon">inventory_2</span> Parts Hold: <strong>${partsHold}</strong> job${partsHold!==1?'s':''}</div>`:''}
-      ${approvalHold>0 ?`<div class="dash-alert dash-alert-warn"><span class="material-symbols-outlined dash-alert-icon">pending_actions</span> Approval Hold: <strong>${approvalHold}</strong> job${approvalHold!==1?'s':''}</div>`:''}
-      ${overHours>0    ?`<div class="dash-alert dash-alert-red"><span class="material-symbols-outlined dash-alert-icon">schedule</span> Over Hours: <strong>${overHours}</strong> job${overHours!==1?'s':''}</div>`:''}
-    </div>
-    `:''}
+    <section class="exec-summary-grid">
+      <article class="card exec-summary-card">
+        <h2 class="exec-section-title">Flow Health</h2>
+        <div class="exec-metric-list">
+          ${flowHealth.map(item => `<div class="exec-metric-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join('')}
+        </div>
+      </article>
+      <article class="card exec-summary-card exec-summary-alert">
+        <h2 class="exec-section-title">Exceptions</h2>
+        <div class="exec-metric-list">
+          ${exceptions.map(item => `<div class="exec-metric-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join('')}
+        </div>
+      </article>
+    </section>
 
-    <!-- Recent Jobs -->
-    <div class="dash-section-title">Recent Activity</div>
-    <div class="card">
-      ${jobsTable(jobs.slice(0,20))}
-    </div>
-
-    <!-- Quick-add note modal (hidden until triggered) -->
-    <div id="qa-note-modal" class="modal-overlay" style="display:none;">
-      <div class="modal" style="max-width:440px;">
-        <div class="modal-header">
-          <h2>Add Note to Job</h2>
-          <button class="modal-close" id="qa-note-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="label" style="margin-bottom:6px;">Job ID</div>
-          <input class="input" id="qa-note-jobid" type="number" min="1" placeholder="Enter Job ID..." style="margin-bottom:12px;" />
-          <div class="label" style="margin-bottom:6px;">Note</div>
-          <textarea class="input" id="qa-note-text" rows="4" placeholder="Internal note..."></textarea>
-          <div class="field-error" id="qa-note-err" style="margin-top:6px;display:none;"></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn" id="qa-note-submit">Add Note</button>
-          <button class="btn secondary" id="qa-note-cancel">Cancel</button>
-        </div>
+    <section class="card exec-activity-card">
+      <div class="exec-activity-head">
+        <h2 class="exec-section-title">Recent Job Movement</h2>
+        <input class="input exec-activity-search" id="exec-search" aria-label="Search recent job movement" placeholder="Search SO, customer, dealer" />
       </div>
-    </div>
+      <table class="table exec-activity-table">
+        <thead>
+          <tr><th>SO</th><th>Customer</th><th>Status</th><th>Updated</th><th></th></tr>
+        </thead>
+        <tbody id="exec-rows">
+          ${recentJobs.length ? recentJobs.map(j => {
+            const so = j.so_number || `#${j.job_id}`;
+            const who = j.customer_name || j.dealer_name || '—';
+            const search = `${so} ${who} ${j.dealer_name || ''}`.toLowerCase();
+            return `<tr data-search="${escapeHtml(search)}"><td class="mono">${escapeHtml(so)}</td><td>${escapeHtml(who)}</td><td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td><td>${fmtWhen(j.updated_at || j.created_at)}</td><td><button class="btn secondary small-btn" data-open-job="${j.job_id}" aria-label="View job ${escapeHtml(so)}">View</button></td></tr>`;
+          }).join('') : `<tr><td colspan="5"><div class="cs-empty-state">No recent movement to show.</div></td></tr>`}
+          <tr id="exec-search-empty" class="hide"><td colspan="5"><div class="cs-empty-state">No jobs match your search.</div></td></tr>
+        </tbody>
+      </table>
+    </section>
   `);
 
   bindJobsTable();
 
-  // Quick actions
-  document.getElementById('qa-create-job').onclick = ()=>{ window.history.pushState({},'','/ops/new'); router(); };
-  document.getElementById('qa-sched').onclick      = ()=>{ window.history.pushState({},'','/ops/schedule'); router(); };
-
-  // Note modal
-  const noteModal  = document.getElementById('qa-note-modal');
-  const closeNote  = ()=>{ noteModal.style.display='none'; };
-  document.getElementById('qa-add-note').onclick    = ()=>{ noteModal.style.display='flex'; };
-  document.getElementById('qa-note-close').onclick  = closeNote;
-  document.getElementById('qa-note-cancel').onclick = closeNote;
-  noteModal.addEventListener('click', e=>{ if(e.target===noteModal) closeNote(); });
-  document.getElementById('qa-note-submit').onclick = async ()=>{
-    const jobId = parseInt(document.getElementById('qa-note-jobid').value||'0',10);
-    const note  = (document.getElementById('qa-note-text').value||'').trim();
-    const err   = document.getElementById('qa-note-err');
-    err.style.display='none'; err.textContent='';
-    if(!jobId){ err.textContent='Enter a valid job ID.'; err.style.display=''; return; }
-    if(!note) { err.textContent='Note cannot be empty.';  err.style.display=''; return; }
-    try{
-      await api.addNote(jobId, note);
-      toast('Note added.');
-      closeNote();
-      document.getElementById('qa-note-text').value='';
-      document.getElementById('qa-note-jobid').value='';
-    }catch(e){ err.textContent=e.message; err.style.display=''; }
-  };
+  const search = document.getElementById('exec-search');
+  const empty = document.getElementById('exec-search-empty');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = (search.value || '').trim().toLowerCase();
+      let shown = 0;
+      document.querySelectorAll('#exec-rows tr[data-search]').forEach(row => {
+        const matches = !q || (row.getAttribute('data-search') || '').includes(q);
+        row.style.display = matches ? '' : 'none';
+        if (matches) shown += 1;
+      });
+      if (empty) empty.classList.toggle('hide', shown > 0 || !q);
+    });
+  }
 }
 
 async function loadQC(){
@@ -2890,11 +2905,11 @@ async function loadAdmin() {
   const activeCount = jobs.filter(j=>j.status!=='COMPLETE').length;
 
   view(`
-    <div class="card">
+    <div class="card admin-hub-hero">
       <div class="row" style="align-items:center;flex-wrap:wrap;gap:10px;">
         <div style="flex:1 1 200px;">
-          <h2 style="margin:0;">Admin Management</h2>
-          <div class="muted" style="margin-top:4px;">Role management, system overview, and configuration.</div>
+          <h2 style="margin:0;">Admin Hub</h2>
+          <div class="muted" style="margin-top:4px;">Manage users, scheduling controls, notifications, and operational tools.</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <div style="display:flex;background:rgba(0,0,0,0.06);border-radius:8px;padding:3px;gap:2px;">
@@ -3093,12 +3108,18 @@ async function loadAdmin() {
       <button class="btn" id="save-notify" style="margin-top:16px;">Save Notification Preferences</button>
     </div>
 
-    <div class="card">
-      <div class="collapse-title" style="margin-bottom:10px;">Quick Links</div>
-      <div class="row">
+    <div class="card admin-tools-hub">
+      <div class="collapse-title" style="margin-bottom:12px;">Admin Tools</div>
+      <div class="admin-tools-grid">
+        <a class="btn secondary" href="/ops/supervisor" data-link>Supervisor Queues</a>
+        <a class="btn secondary" href="/ops/schedule" data-link>Schedule Board</a>
+        <a class="btn secondary" href="/ops/jobs" data-link>Jobs</a>
+        <a class="btn secondary" href="/ops/qc" data-link>QC Queue</a>
+        <a class="btn secondary" href="/ops/bom" data-link>BOMs</a>
+        <a class="btn secondary" href="/ops/settings" data-link>Settings</a>
+        <a class="btn secondary" href="/ops/admin#work-centers" data-link>Work Centers</a>
+        <a class="btn secondary" href="/ops/quotes" data-link>Pricing</a>
         <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
-        <a class="btn secondary" href="/ops/exec" data-link>Exec Dashboard</a>
-        <a class="btn secondary" href="/ops/jobs" data-link>All Jobs</a>
       </div>
     </div>
   `);
@@ -3791,23 +3812,26 @@ function suggestCloneBomNo(bomNo){
 async function render(){
     if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
     const r = state.route;
+    const c = slateOpsSettings.user.caps || {};
+    const canExecutive = !!c.admin || !!c.supervisor;
+    const canAdminTools = canExecutive;
     setActiveNav(
-      r.startsWith('/job/') ? '/jobs' :
-      r.startsWith('/jobs') ? '/jobs' :
-      r.startsWith('/new') ? '/new' :
+      r.startsWith('/job/') ? '/admin' :
+      r.startsWith('/jobs') ? '/admin' :
+      r.startsWith('/new') ? '/admin' :
       r.startsWith('/settings') ? '/settings' :
-      r.startsWith('/supervisor') ? '/supervisor' :
+      r.startsWith('/supervisor') ? '/admin' :
       r.startsWith('/cs') ? '/cs' :
       r.startsWith('/tech') ? '/tech' :
       r.startsWith('/admin') ? '/admin' :
       r.startsWith('/exec') ? '/exec' :
-      r.startsWith('/qc') ? '/qc' :
+      r.startsWith('/qc') ? '/admin' :
       r.startsWith('/schedule') ? '/schedule' :
-      r.startsWith('/bom') ? '/bom' :
+      r.startsWith('/bom') ? '/admin' :
       '/'
     );
     setPageTitle(
-      r.startsWith('/exec')       ? 'Dashboard'        :
+      r.startsWith('/exec')       ? 'Executive'        :
       r.startsWith('/cs')         ? 'Customer Service' :
       r.startsWith('/tech')       ? 'Tech'             :
       r.startsWith('/qc')         ? 'QC Queue'         :
@@ -3819,24 +3843,40 @@ async function render(){
       r.startsWith('/schedule')   ? 'Schedule'         :
       r.startsWith('/bom')        ? 'BOM Builder'      :
       r.startsWith('/settings')   ? 'Settings'         :
-      'Dashboard'
+      'Executive'
     );
 
     try{
       if (r === '/' || r === '') {
-        const c = slateOpsSettings.user.caps || {};
-        if (c.admin) { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
-        else if (c.supervisor) { window.history.replaceState({}, '', '/ops/supervisor'); state.route='/supervisor'; }
+        if (canExecutive) { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
         else if (c.cs) { window.history.replaceState({}, '', '/ops/cs'); state.route='/cs'; }
         else if (c.tech) { window.history.replaceState({}, '', '/ops/tech'); state.route='/tech'; }
         else { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
         return await render();
       }
-      if (r.startsWith('/exec')) return await loadExecutive();
+      if (r.startsWith('/exec')) {
+        if (!canExecutive) {
+          const fallback = c.cs ? '/ops/cs' : '/ops/tech';
+          const fallbackRoute = c.cs ? '/cs' : '/tech';
+          window.history.replaceState({}, '', fallback);
+          state.route = fallbackRoute;
+          return await render();
+        }
+        return await loadExecutive();
+      }
       if (r.startsWith('/cs')) return await loadCS();
       if (r.startsWith('/tech')) return await loadTech();
       if (r.startsWith('/qc')) return await loadQC();
-      if (r.startsWith('/admin')) return await loadAdmin();
+      if (r.startsWith('/admin')) {
+        if (!canAdminTools) {
+          const fallback = c.cs ? '/ops/cs' : '/ops/tech';
+          const fallbackRoute = c.cs ? '/cs' : '/tech';
+          window.history.replaceState({}, '', fallback);
+          state.route = fallbackRoute;
+          return await render();
+        }
+        return await loadAdmin();
+      }
       if (r === '/' || r === '') return await loadDashboard();
       if (r.startsWith('/jobs')) return await loadJobsList();
       if (r.startsWith('/job/')) {
@@ -3848,9 +3888,13 @@ async function render(){
       if (r.startsWith('/schedule')) return await loadSchedule();
       if (r.startsWith('/bom')) return await loadBOM();
       if (r.startsWith('/settings')) {
-        // Admins manage settings inside the Admin view
-        const c = slateOpsSettings.user.caps || {};
-        if (c.admin) { window.history.replaceState({}, '', '/ops/admin'); state.route = '/admin'; return await render(); }
+        if (!canAdminTools) {
+          const fallback = c.cs ? '/ops/cs' : '/ops/tech';
+          const fallbackRoute = c.cs ? '/cs' : '/tech';
+          window.history.replaceState({}, '', fallback);
+          state.route = fallbackRoute;
+          return await render();
+        }
         return await loadSettings();
       }
 
