@@ -1288,7 +1288,7 @@ async function loadCS() {
         </div>
         <div class="cs-header-actions">
           <input class="input cs-search" id="cs-search" placeholder="Search SO#, VIN, customer…" />
-          <button class="btn" id="start-new-intake" type="button">Create Manual Job</button>
+          
         </div>
       </div>
       <div class="cs-kpi-row">
@@ -1309,125 +1309,106 @@ async function loadCS() {
 
     <div class="cs-layout">
       <div class="cs-left">
-        <div class="card cs-queue-card">
-          <div class="cs-section-head">
-            <h2 class="cs-section-title">Pending Intake</h2>
-            <div class="muted">${portalNeeds.length} item(s)</div>
-          </div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>CUSTOMER</th>
-                <th>VIN</th>
-                <th>DEALER</th>
-                <th style="text-align:right;">&nbsp;</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${portalNeeds.length ? portalNeeds.map(j => {
-                const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
-                const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
-                return `
-                  <tr data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
-                    <td>${escapeHtml(j.customer_name||'—')}</td>
-                    <td class="mono">${escapeHtml(vin6)}</td>
-                    <td>${escapeHtml(j.dealer_name||'—')}</td>
-                    <td style="text-align:right; white-space:nowrap;">
-                      <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
-                      <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `
-                <tr><td colspan="4"><div class="cs-empty-state">No portal intake jobs right now.</div></td></tr>
-              `}
-            </tbody>
-          </table>
-        </div>
+        <div class="cs-queue-grid">
+          <section class="card cs-queue-card">
+            <div class="cs-section-head">
+              <h2 class="cs-section-title">Pending Intake</h2>
+              <div class="muted">${portalNeeds.length} item(s)</div>
+            </div>
+            ${portalNeeds.length ? `
+              <div class="cs-queue-list">
+                ${portalNeeds.map(j => {
+                  const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
+                  const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
+                  return `
+                    <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
+                      <div class="cs-queue-main">
+                        <div class="cs-queue-title">${escapeHtml(j.customer_name||'—')}</div>
+                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • ${escapeHtml(j.dealer_name||'—')}</div>
+                      </div>
+                      <div class="cs-queue-actions">
+                        <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
+                        <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            ` : `<div class="cs-empty-state">No portal intake jobs right now.</div>`}
+          </section>
 
-        <div class="card cs-queue-card">
-          <div class="cs-section-head">
-            <h2 class="cs-section-title">Needs SO</h2>
-            <div class="muted">${manualNeeds.length} item(s)</div>
-          </div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>CUSTOMER</th>
-                <th>VIN</th>
-                <th>DEALER</th>
-                <th>SO#</th>
-                <th style="text-align:right;">&nbsp;</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${manualNeeds.length ? manualNeeds.map(j => {
-                const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
-                const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
-                return `
-                  <tr data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
-                    <td>${escapeHtml(j.customer_name||'—')}</td>
-                    <td class="mono">${escapeHtml(vin6)}</td>
-                    <td>${escapeHtml(j.dealer_name||'—')}</td>
-                    <td style="min-width:180px;">
-                      <input class="input so mono" placeholder="S-ORD######" style="height:36px;" />
-                    </td>
-                    <td style="text-align:right; white-space:nowrap;">
-                      <button class="btn small-btn save-so">Save</button>
-                      <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `
-                <tr><td colspan="5"><div class="cs-empty-state">No manual jobs waiting on an SO number.</div></td></tr>
-              `}
-            </tbody>
-          </table>
-        </div>
+          <section class="card cs-queue-card">
+            <div class="cs-section-head">
+              <h2 class="cs-section-title">Needs SO</h2>
+              <div class="muted">${manualNeeds.length} item(s)</div>
+            </div>
+            ${manualNeeds.length ? `
+              <div class="cs-queue-list">
+                ${manualNeeds.map(j => {
+                  const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
+                  const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
+                  return `
+                    <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
+                      <div class="cs-queue-main">
+                        <div class="cs-queue-title">${escapeHtml(j.customer_name||'—')}</div>
+                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • ${escapeHtml(j.dealer_name||'—')}</div>
+                      </div>
+                      <div class="cs-queue-so-wrap">
+                        <input class="input so mono" placeholder="S-ORD######" />
+                      </div>
+                      <div class="cs-queue-actions">
+                        <button class="btn small-btn save-so">Save</button>
+                        <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            ` : `<div class="cs-empty-state">No manual jobs waiting on an SO number.</div>`}
+          </section>
 
-        <div class="card cs-queue-card">
-          <div class="cs-section-head">
-            <h2 class="cs-section-title">Active Jobs</h2>
-            <div class="muted">${activeJobs.length} item(s)</div>
-          </div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>SO</th>
-                <th>CUSTOMER</th>
-                <th>STATUS</th>
-                <th>DEALER</th>
-                <th style="text-align:right;">&nbsp;</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${activeJobs.length ? activeJobs.map(j => {
-                const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
-                return `
-                  <tr data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
-                    <td class="mono">${escapeHtml(j.so_number||'—')}</td>
-                    <td>${escapeHtml(j.customer_name||'—')}</td>
-                    <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
-                    <td>${escapeHtml(j.dealer_name||'—')}</td>
-                    <td style="text-align:right; white-space:nowrap;">
-                      <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `
-                <tr><td colspan="5"><div class="cs-empty-state">No active jobs in queue.</div></td></tr>
-              `}
-            </tbody>
-          </table>
+          <section class="card cs-queue-card cs-queue-full">
+            <div class="cs-section-head">
+              <h2 class="cs-section-title">Active Jobs</h2>
+              <div class="muted">${activeJobs.length} item(s)</div>
+            </div>
+            ${activeJobs.length ? `
+              <div class="cs-queue-list">
+                ${activeJobs.map(j => {
+                  const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
+                  return `
+                    <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
+                      <div class="cs-queue-main">
+                        <div class="cs-queue-title"><span class="mono">${escapeHtml(j.so_number||'—')}</span> • ${escapeHtml(j.customer_name||'—')}</div>
+                        <div class="cs-queue-meta">${escapeHtml(j.dealer_name||'—')}</div>
+                      </div>
+                      <div class="cs-queue-status"><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></div>
+                      <div class="cs-queue-actions">
+                        <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+                      </div>
+                    </article>
+                  `;
+                }).join('')}
+              </div>
+            ` : `<div class="cs-empty-state">No active jobs in queue.</div>`}
+          </section>
         </div>
       </div>
 
       <aside class="cs-right">
+        <div class="card cs-create-panel">
+          <div class="cs-create-head">
+            <h3 class="cs-create-title">Create Manual Job</h3>
+            <p class="cs-create-sub">Use manual intake when the job did not come from the portal.</p>
+          </div>
+          <button class="btn" id="start-new-intake" type="button">Start Manual Intake</button>
+        </div>
+
         <div class="card cs-intake-card">
           <div class="cs-intake-head">
             <div>
-              <div class="cs-intake-title">Intake</div>
-              <div class="muted" id="cs-intake-hint">Pick a portal job or start a manual intake.</div>
+              <div class="cs-intake-title">Intake Details</div>
+              <div class="muted" id="cs-intake-hint">Pick a queue item or start a manual intake.</div>
             </div>
           </div>
           <div id="intake-form-content" class="cs-intake-body">
@@ -1592,8 +1573,8 @@ async function loadCS() {
   // Save SO# for manual jobs
   document.querySelectorAll('.save-so').forEach(btn => {
     btn.addEventListener('click', async () => {
-      let id = btn.closest('tr')?.getAttribute('data-job-id');
-      const row = btn.closest('tr');
+      let id = btn.closest('[data-job-id]')?.getAttribute('data-job-id');
+      const row = btn.closest('[data-job-id]');
       const input = row?.querySelector('input.so');
       const so = (input?.value || '').trim().toUpperCase();
       if (!id || !so) {
@@ -1616,9 +1597,9 @@ async function loadCS() {
   if (csSearch) {
     csSearch.addEventListener('input', () => {
       const q = (csSearch.value || '').trim().toLowerCase();
-      document.querySelectorAll('tr[data-search]').forEach(tr => {
-        const hay = (tr.getAttribute('data-search') || '');
-        tr.style.display = (!q || hay.includes(q)) ? '' : 'none';
+      document.querySelectorAll('[data-search]').forEach(row => {
+        const hay = (row.getAttribute('data-search') || '');
+        row.style.display = (!q || hay.includes(q)) ? '' : 'none';
       });
     });
   }
@@ -1898,6 +1879,11 @@ async function loadSchedule(){
     }).join('');
 
     view(`
+      <div class="card sched-page-header">
+        <div class="dash-page-label">Schedule</div>
+        <div class="muted">Plan bay capacity, drag jobs into slots, and inspect constraints in one view.</div>
+      </div>
+
       <!-- Toolbar strip -->
       <div class="sched-topbar">
         <div class="sched-topbar-kpis">
@@ -2278,119 +2264,254 @@ async function loadTech() {
   ]);
   const active  = activeResp.active;
   const allMyJobs = myJobsResp.jobs || [];
-  const myJobs  = allMyJobs.filter(j => ['SCHEDULED','IN_PROGRESS','PENDING_QC'].includes(j.status));
+  const myJobs  = allMyJobs.filter(j => ['SCHEDULED','IN_PROGRESS','PENDING_QC','ON_HOLD'].includes(j.status));
 
   const activeJobId = active ? parseInt(active.job_id, 10) : 0;
+  // Full job record for the active segment (so we can read blocker/notes fields)
+  const activeJob = activeJobId
+    ? (myJobs.find(j => j.job_id === activeJobId) || allMyJobs.find(j => j.job_id === activeJobId))
+    : null;
+
+  // Everything that is NOT the active job, ordered for "Up Next"
+  const queue = myJobs
+    .filter(j => j.job_id !== activeJobId)
+    .sort((a, b) => {
+      const pri = s => ({ IN_PROGRESS: 0, SCHEDULED: 1, ON_HOLD: 2, PENDING_QC: 3 })[s] ?? 9;
+      const dp = pri(a.status) - pri(b.status);
+      if (dp !== 0) return dp;
+      const as = a.scheduled_start || '9999';
+      const bs = b.scheduled_start || '9999';
+      return as.localeCompare(bs);
+    });
+
+  // When idle, we promote the first queued job as the obvious "next action".
+  const nextJob   = !active && queue.length ? queue[0] : null;
+  const upNext    = !active ? queue.slice(1) : queue;
+
   const isPhone = getViewMode() === 'phone';
 
-  function techJobCard(job) {
-    const isActive = job.job_id === activeJobId;
-    const estHrs   = job.estimated_minutes ? (job.estimated_minutes / 60).toFixed(1) : null;
+  const delayLabels = { parts:'Parts', approval:'Approval', customer:'Customer', vendor:'Vendor', other:'Other' };
+  function blockerText(job) {
+    if (!job) return '';
+    const parts = [];
+    const detail = (job.status_detail || '').trim();
+    const hold   = (job.hold_reason   || '').trim();
+    const reason = (job.delay_reason  || '').trim();
+    if (detail) parts.push(detail);
+    if (hold && hold !== detail) parts.push(hold);
+    if (!parts.length && reason) parts.push(delayLabels[reason] || reason);
+    return parts.join(' — ');
+  }
+  function hasBlocker(job) {
+    if (!job) return false;
+    if ((job.status || '') === 'ON_HOLD') return true;
+    return !!(job.hold_reason || job.delay_reason || job.status_detail);
+  }
 
-    // Action buttons depend on state
-    let actionHtml;
-    if (isActive) {
-      actionHtml = `<div style="flex:1;font-size:13px;font-weight:700;color:var(--arches);">▲ Active — see timer above</div>`;
-    } else if (job.status === 'IN_PROGRESS') {
-      actionHtml = `<button class="btn btn-xl" data-submit-qc="${job.job_id}" style="flex:1;">Submit for QC</button>`;
-    } else {
-      actionHtml = `<button class="btn btn-xl" data-start-job="${job.job_id}" style="flex:1;">Start</button>`;
-    }
+  function jobLabel(job) {
+    if (!job) return '';
+    if (job.work_center) return job.work_center;
+    if (job.job_type)    return String(job.job_type).replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+    return 'Job ' + (job.so_number || '#' + job.job_id);
+  }
+  function jobMeta(job) {
+    if (!job) return '';
+    const bits = [];
+    if (job.customer_name) bits.push(job.customer_name);
+    if (job.dealer_name)   bits.push(job.dealer_name);
+    if (job.vin)           bits.push('VIN …' + job.vin.slice(-6));
+    return bits.join(' · ');
+  }
+  function estHoursStr(job) {
+    const m = parseInt(job && job.estimated_minutes || 0, 10);
+    if (!m) return '';
+    const h = Math.floor(m/60), mm = m % 60;
+    return mm ? `${h}h ${mm}m` : `${h}h`;
+  }
 
+  // Up Next card — simple, touch-friendly, one primary action.
+  function upNextCard(job) {
+    const est = estHoursStr(job);
+    const blocked = hasBlocker(job);
+    const statusLabel = blocked ? 'Blocked'
+      : (job.status === 'IN_PROGRESS' ? 'In progress'
+      : (job.status === 'PENDING_QC'  ? 'Pending QC'
+      : (job.scheduled_start ? 'Scheduled' : 'Queued')));
+    const primary = job.status === 'IN_PROGRESS'
+      ? `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Resume</button>`
+      : (job.status === 'PENDING_QC'
+          ? `<button class="btn secondary btn-xl tech-card-cta" data-open-job="${job.job_id}">Open</button>`
+          : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start</button>`);
     return `
-      <div class="tech-job-card${isActive ? ' is-active' : ''}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
-          <div>
-            <div class="tech-job-so">${escapeHtml(job.so_number || '#' + job.job_id)}</div>
-            <div class="tech-job-meta">
-              ${escapeHtml(job.customer_name||'')}${job.dealer_name ? ' · '+escapeHtml(job.dealer_name) : ''}${job.vin ? ' · …'+escapeHtml(job.vin.slice(-6)) : ''}
-            </div>
+      <div class="tech-up-card${blocked ? ' is-blocked' : ''}" data-open-job="${job.job_id}" role="button" tabindex="0">
+        <div class="tech-up-body">
+          <div class="tech-up-head">
+            <span class="tech-up-title">${escapeHtml(jobLabel(job))}</span>
+            <span class="tech-up-status${blocked ? ' is-blocked' : ''}">${statusLabel}</span>
           </div>
-          <span class="badge ${badgeClass(job.status)}" style="white-space:nowrap;">${fmtStatus(job.status)}</span>
+          <div class="tech-up-meta">${escapeHtml(jobMeta(job) || ('#' + job.job_id))}</div>
+          ${est ? `<div class="tech-up-sub">Est ${est}${job.so_number ? ' · ' + escapeHtml(job.so_number) : ''}</div>` : (job.so_number ? `<div class="tech-up-sub">${escapeHtml(job.so_number)}</div>` : '')}
         </div>
-        ${job.work_center ? `<div style="font-size:13px;font-weight:700;color:var(--sage);margin-bottom:4px;">${escapeHtml(job.work_center)}</div>` : ''}
-        ${estHrs ? `<div class="muted" style="font-size:12px;margin-bottom:10px;">Est ${estHrs} hrs</div>` : ''}
-        <div style="display:flex;gap:8px;align-items:center;">
-          ${actionHtml}
-          <button class="btn secondary btn-xl" data-open-job="${job.job_id}">View</button>
-        </div>
+        <div class="tech-up-action">${primary}</div>
       </div>
     `;
   }
 
   view(`
-    <div${isPhone ? ' class="phone-mode"' : ''}>
+    <div class="tech-page${isPhone ? ' phone-mode' : ''}">
 
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-      ${viewModeToggle()}
+    <div class="card tech-page-header">
+      <div class="tech-page-title-wrap">
+        <div class="dash-page-label">Tech</div>
+        <div class="muted">Track active labor, update job progress, and hand off to QC.</div>
+      </div>
+      <div class="tech-page-kpis">
+        ${kpi('Assigned', allMyJobs.length)}
+        ${kpi('In Queue', myJobs.length)}
+        ${kpi('Active', active ? 1 : 0)}
+      </div>
     </div>
 
-    ${active ? `
-      <div class="active-job-card">
-        <div class="label-sm">Active Job</div>
-        <div class="tech-job-so" style="margin-top:2px;">${escapeHtml(active.so_number || '#' + active.job_id)}</div>
-        <div class="tech-job-meta">${escapeHtml(active.customer_name||'')}${active.vin ? ' · …'+escapeHtml(active.vin.slice(-6)) : ''}${active.work_center ? ' · '+escapeHtml(active.work_center) : ''}</div>
-        <div class="timer-display" id="live-timer">00:00:00</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn danger btn-xl" id="stop-active" style="flex:1;">Stop Job</button>
-          <button class="btn btn-xl" id="submit-qc-active" style="flex:1;">Submit for QC</button>
-          <button class="btn secondary btn-xl" id="note-toggle" style="flex:1;">+ Note</button>
+  const blockerInline = active && hasBlocker(activeJob) ? `
+    <div class="tech-hero-section is-blocker">
+      <div class="tech-section-label">Blocker</div>
+      <div class="tech-section-body">${escapeHtml(blockerText(activeJob) || 'Job is on hold.')}</div>
+    </div>
+  ` : '';
+
+  const notesInline = active && activeJob && (activeJob.schedule_notes || '').trim() ? `
+    <div class="tech-hero-section">
+      <div class="tech-section-label">Notes</div>
+      <div class="tech-section-body is-prose">${escapeHtml(activeJob.schedule_notes)}</div>
+    </div>
+  ` : '';
+
+  const heroActive = active ? `
+    <section class="tech-hero is-active" aria-label="Active job">
+      <header class="tech-hero-head">
+        <div class="tech-hero-eyebrow"><span class="tech-hero-dot" aria-hidden="true"></span>Active labor</div>
+        ${active.so_number ? `<div class="tech-hero-so">${escapeHtml(active.so_number)}</div>` : ''}
+      </header>
+
+      <h2 class="tech-hero-title">${escapeHtml(jobLabel(activeJob || active))}</h2>
+      <div class="tech-hero-meta">${escapeHtml(jobMeta(activeJob || active) || ('Job #' + active.job_id))}</div>
+
+      <div class="tech-strip" role="group" aria-label="Time">
+        <div class="tech-strip-cell tech-strip-cell-lead">
+          <div class="tech-strip-label">Elapsed</div>
+          <div class="tech-strip-val tech-strip-val-lg" id="live-timer">00:00:00</div>
         </div>
-        <div id="qc-submit-panel" style="display:none;margin-top:14px;">
-          <textarea class="input" id="qc-submit-notes" rows="3" placeholder="Describe work completed…"></textarea>
-          <div style="margin-top:8px;display:flex;gap:8px;">
-            <button class="btn" id="qc-submit-confirm" style="flex:1;">Confirm Submit for QC</button>
-            <button class="btn secondary" id="qc-submit-cancel">Cancel</button>
+        ${estTargetStr ? `
+          <div class="tech-strip-cell">
+            <div class="tech-strip-label">Target</div>
+            <div class="tech-strip-val">${estTargetStr}</div>
           </div>
-        </div>
-        <div id="note-panel" style="display:none;margin-top:14px;">
-          <textarea class="input" id="note-input" rows="3" placeholder="Add a note to this job…"></textarea>
-          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-            <button class="btn secondary" id="note-submit">Save Note</button>
-            <span class="field-error" data-error-for="note-err" style="flex:1;"></span>
-          </div>
+        ` : ''}
+      </div>
+
+      <div class="tech-actions">
+        <button class="btn danger tech-stop" id="stop-active">Stop Work &amp; Log Labor</button>
+        <div class="tech-actions-sub">
+          <button class="btn secondary" id="submit-qc-active">Submit for QC</button>
+          <button class="btn secondary" id="note-toggle">+ Note</button>
         </div>
       </div>
+
+      <div id="qc-submit-panel" class="tech-inline-panel" style="display:none;">
+        <textarea class="input" id="qc-submit-notes" rows="3" placeholder="Describe work completed…"></textarea>
+        <div class="tech-inline-actions">
+          <button class="btn" id="qc-submit-confirm" style="flex:1;">Confirm Submit for QC</button>
+          <button class="btn secondary" id="qc-submit-cancel">Cancel</button>
+        </div>
+      </div>
+      <div id="note-panel" class="tech-inline-panel" style="display:none;">
+        <textarea class="input" id="note-input" rows="3" placeholder="Add a note to this job…"></textarea>
+        <div class="tech-inline-actions">
+          <button class="btn secondary" id="note-submit">Save Note</button>
+          <span class="field-error" data-error-for="note-err" style="flex:1;"></span>
+        </div>
+      </div>
+
+      ${blockerInline}
+      ${notesInline}
+    </section>
+  ` : '';
+
+  // Hero — IDLE state: promote the next job as the obvious action.
+  const heroIdle = !active ? (
+    nextJob ? `
+      <section class="tech-hero is-idle" aria-label="No active timer">
+        <header class="tech-hero-head">
+          <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        </header>
+        <h2 class="tech-hero-title">Ready to start</h2>
+        <div class="tech-hero-meta">Begin tracking time on your next assigned job.</div>
+
+        <div class="tech-hero-section is-promoted">
+          <div class="tech-section-label">Next up</div>
+          <div class="tech-next-title">${escapeHtml(jobLabel(nextJob))}</div>
+          <div class="tech-next-meta">${escapeHtml(jobMeta(nextJob) || ('Job #' + nextJob.job_id))}</div>
+          <div class="tech-next-sub">
+            ${nextJob.so_number ? escapeHtml(nextJob.so_number) : ''}
+            ${estHoursStr(nextJob) ? `${nextJob.so_number ? ' · ' : ''}Est ${estHoursStr(nextJob)}` : ''}
+          </div>
+          <button class="btn tech-next-start" data-start-job="${nextJob.job_id}">
+            <span class="tech-play-tri" aria-hidden="true"></span> Start this job
+          </button>
+        </div>
+      </section>
     ` : `
-      <div class="card" style="text-align:center;padding:28px 16px;">
-        <div style="font-size:13px;font-weight:700;color:rgba(0,0,0,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">No Active Job</div>
-        <div class="muted">Start a job below to begin tracking time.</div>
-      </div>
-    `}
+      <section class="tech-hero is-idle is-empty" aria-label="Nothing assigned">
+        <header class="tech-hero-head">
+          <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        </header>
+        <h2 class="tech-hero-title">Nothing assigned</h2>
+        <div class="tech-hero-meta">When a supervisor schedules work, it'll show up here.</div>
+      </section>
+    `
+  ) : '';
 
-    ${myJobs.length ? myJobs.map(techJobCard).join('') : `
-      <div class="card" style="text-align:center;padding:20px;">
-        <div class="muted">No jobs currently assigned to you.</div>
+  const upNextBlock = upNext.length ? `
+    <section class="tech-upnext" aria-label="Up next">
+      <div class="tech-upnext-head">
+        <span class="tech-upnext-title">Up next</span>
+        <span class="tech-upnext-count">${upNext.length} job${upNext.length === 1 ? '' : 's'}</span>
       </div>
-    `}
+      <div class="tech-upnext-list">
+        ${upNext.map(upNextCard).join('')}
+      </div>
+    </section>
+  ` : (active ? `
+    <section class="tech-upnext" aria-label="Up next">
+      <div class="tech-upnext-head"><span class="tech-upnext-title">Up next</span></div>
+      <div class="tech-upnext-empty">No other jobs assigned to you.</div>
+    </section>
+  ` : '');
 
-    ${isPhone ? '' : `
-    <div class="card">
-      <button class="section-header" data-collapse="alljobs-tech">
-        <span class="collapse-title">All Jobs</span>
-        <span class="collapse-chevron">▸</span>
-      </button>
-      <div class="collapse-body" id="collapse-alljobs-tech" style="display:none;">
-        <input class="input" id="tech-search" placeholder="Search SO#, VIN, customer" style="margin-bottom:10px;" />
-        <table class="table" id="tech-table">
-          <thead><tr>
-            <th>SO#</th><th>VIN</th><th>Customer</th><th>Status</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${allMyJobs.map(j=>`
-              <tr>
-                <td class="mono">${escapeHtml(j.so_number||'')}</td>
-                <td class="mono">${escapeHtml((j.vin||'').slice(-6))}</td>
-                <td>${escapeHtml(j.customer_name||'')}</td>
-                <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
-                <td><button class="btn secondary small-btn" data-open-job="${j.job_id}">Open</button></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+  const subTitle = active
+    ? 'Active labor and queue'
+    : (nextJob ? 'Ready to start your next job' : 'Nothing assigned right now');
+
+  view(`
+    <div class="tech-surface${isPhone ? ' phone-mode' : ''}">
+
+      <header class="tech-page-head">
+        <div class="tech-page-head-text">
+          <div class="tech-page-eyebrow">Technician</div>
+          <h1 class="tech-page-title">My Work</h1>
+          <div class="tech-page-sub">${escapeHtml(subTitle)}</div>
+        </div>
+        <div class="tech-page-head-aside">${viewModeToggle()}</div>
+      </header>
+
+      <div class="tech-layout">
+        <div class="tech-layout-main">
+          ${heroActive}${heroIdle}
+        </div>
+        <aside class="tech-layout-side">
+          ${upNextBlock}
+        </aside>
       </div>
-    </div>
-    `}
 
     </div>
   `);
@@ -2501,33 +2622,40 @@ async function loadTech() {
   }
 
   $$('[data-start-job]').forEach(btn => {
-    btn.onclick = async () => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
       const jobId = parseInt(btn.getAttribute('data-start-job'), 10);
       btn.disabled = true;
+      const original = btn.textContent;
       btn.textContent = 'Starting…';
       try {
         await api.timeStart(jobId, null, '');
         router();
-      } catch(e) {
-        alert(e.message);
+      } catch(err) {
+        alert(err.message);
         btn.disabled = false;
-        btn.textContent = 'Start';
+        btn.textContent = original;
       }
     };
   });
 
-  bindCollapsibles();
-  bindJobsTable();
-
-  const search = document.getElementById('tech-search');
-  if (search) {
-    search.addEventListener('input', () => {
-      const q = search.value.trim().toLowerCase();
-      $$('#tech-table tbody tr').forEach(r => {
-        r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
-      });
+  // Tap / keyboard-open for the up-next card bodies.
+  $$('.tech-up-card[data-open-job]').forEach(card => {
+    const open = () => {
+      const id = card.getAttribute('data-open-job');
+      window.history.pushState({}, '', '/ops/job/' + id);
+      router();
+    };
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      open();
     });
-  }
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+  });
+
+  bindJobsTable();
 }
 
 async function loadExecutive(){
@@ -2583,7 +2711,7 @@ async function loadExecutive(){
     <!-- Page header + quick actions -->
     <div class="dash-header-row">
       <div>
-        <div class="dash-page-label">Dashboard</div>
+        <div class="dash-page-label">Executive Summary</div>
         <div class="muted" style="margin-top:2px;font-size:13px;">${todayLabel}</div>
       </div>
       <div class="dash-quick-actions">
@@ -2938,11 +3066,11 @@ async function loadAdmin() {
   const activeCount = jobs.filter(j=>j.status!=='COMPLETE').length;
 
   view(`
-    <div class="card">
+    <div class="card admin-hub-hero">
       <div class="row" style="align-items:center;flex-wrap:wrap;gap:10px;">
         <div style="flex:1 1 200px;">
-          <h2 style="margin:0;">Admin Management</h2>
-          <div class="muted" style="margin-top:4px;">Role management, system overview, and configuration.</div>
+          <h2 style="margin:0;">Admin Hub</h2>
+          <div class="muted" style="margin-top:4px;">Manage users, scheduling controls, notifications, and operational tools.</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <div style="display:flex;background:rgba(0,0,0,0.06);border-radius:8px;padding:3px;gap:2px;">
@@ -3141,17 +3269,18 @@ async function loadAdmin() {
       <button class="btn" id="save-notify" style="margin-top:16px;">Save Notification Preferences</button>
     </div>
 
-    <div class="card">
-      <div class="collapse-title" style="margin-bottom:10px;">Admin Tools</div>
-      <div class="row">
-        <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
-        <a class="btn secondary" href="/ops/supervisor" data-link>Supervisor</a>
+    <div class="card admin-tools-hub">
+      <div class="collapse-title" style="margin-bottom:12px;">Admin Tools</div>
+      <div class="admin-tools-grid">
+        <a class="btn secondary" href="/ops/supervisor" data-link>Supervisor Queues</a>
+        <a class="btn secondary" href="/ops/schedule" data-link>Schedule Board</a>
         <a class="btn secondary" href="/ops/jobs" data-link>Jobs</a>
-        <a class="btn secondary" href="/ops/qc" data-link>QC</a>
+        <a class="btn secondary" href="/ops/qc" data-link>QC Queue</a>
         <a class="btn secondary" href="/ops/bom" data-link>BOMs</a>
         <a class="btn secondary" href="/ops/settings" data-link>Settings</a>
         <a class="btn secondary" href="/ops/admin#work-centers" data-link>Work Centers</a>
         <a class="btn secondary" href="/ops/quotes" data-link>Pricing</a>
+        <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
       </div>
     </div>
   `);

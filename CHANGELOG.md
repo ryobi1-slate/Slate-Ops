@@ -1,5 +1,50 @@
 # Slate Ops Changelog
 
+## 0.16.3 — Technician visual refinement (no layout change)
+
+### Technician (`/ops/tech`)
+- Stop button repainted in Slate Redwood (`--redwood`) instead of bright orange — operational tone, not promotional.
+- Hero title reduced (28px → 22px) so the elapsed timer is the strongest visual signal in the active state.
+- Active-state left accent now painted as an inset `box-shadow`, removing the active-vs-idle padding shift; both states share identical padding.
+- Up Next rail CTAs quieted to outlined sage so the rail clearly reads as secondary to the active hero.
+- Tightened phone (≤760) and tablet (≤1080) breakpoints; added a sub-480 breakpoint that stacks the timer cells vertically only on the smallest screens.
+
+## 0.16.2 — Technician screen execution-surface pass
+
+### Technician (`/ops/tech`)
+- Collapsed the card-stack feel into a single dominant active hero. Blocker and work notes are now inline divider-separated sections of the hero, not standalone competing cards.
+- Timer is now a flat structural strip directly under the job title (Elapsed | Target), top-and-bottom hairline rules, no panel background or gradient.
+- Stop / Submit-for-QC / + Note grouped into a single action cluster with a clear primary action.
+- Up Next rail rebuilt as one bordered panel of dense divider rows with edge-to-edge tap targets — no more floating card-per-job. Blocked and focused rows use inset accent rules instead of borders.
+- Removed `box-shadow` from hero and Up Next surfaces to reduce the "app card" feel.
+- Stronger Slate page header: condensed display title, sage-led eyebrow, page-level border-bottom that ties to the rest of Ops.
+- Removed stale CSS for `.tech-block-card`, `.tech-notes-card`, `.tech-next-card`, the old `.tech-timer*` panel, and the `.tech-stop-dot` glyph.
+
+## 0.16.1 — Technician screen integration pass
+
+### Technician (`/ops/tech`)
+- Composition reworked to feel like a Slate Ops page, not a phone mockup dropped into the desktop shell.
+- Added a Slate-style page header (eyebrow + title + sub) so the surface reads like the rest of Ops; the phone-view toggle moved into the header.
+- Switched from a centered narrow column to a true two-column layout on desktop (main hero + sticky Up Next sidebar). Stacks to a single column under 1080px and on phone view.
+- Removed the generic mobile-app status pill ("Running" / "Idle" green/grey dot) in favor of a Slate eyebrow with a sage status dot.
+- Active hero now uses a sage left rule (matching existing Slate card treatments) instead of a heavy elevated shadow.
+- Timer panel flattened into a single bordered "measurement strip" with elapsed | target side-by-side, swapping the gradient panel for a calmer Slate token surface.
+- Up Next sidebar restyled as a single bordered card with internal divider rows, replacing the heavier free-floating mobile-app cards.
+- Stop / Start buttons retuned to standard Slate radii and weight while preserving touch-friendly sizing.
+
+## 0.16.0 — Technician surface refresh (phone-first execution screen)
+
+### Technician (`/ops/tech`)
+- Rewrote the landing screen as a focused, phone-first execution surface.
+- Active state: unified hero card with status pill, job label, customer/unit meta, large mono timer with optional target, dominant "Stop Work & Log Labor" action, secondary "Submit for QC" and "+ Note" actions, inline QC/note panels.
+- Idle state is no longer a dead end — the next assigned job is promoted inside the hero as a clear "Start this job" CTA.
+- Empty state rendered when nothing is assigned.
+- Blocker card (amber, left-striped) surfaces `hold_reason` / `delay_reason` / `status_detail` for the active job.
+- Work notes card surfaces `schedule_notes` for the active job, kept visually secondary to the timer.
+- Up Next: simple vertical card list with one primary Start/Resume/Open action per job; cards tap-open into job detail.
+- Removed the legacy "All Jobs" collapsible table from the Tech screen to cut admin clutter.
+- Shell/color tokens, cards, and buttons reuse existing Ops design tokens — no shell redesign.
+
 ## 0.8.0 — Phase 0 UI Map (Dashboard + Scheduler Inspector + Job Detail Tabs)
 
 ### Dashboard (`/ops/exec`)
