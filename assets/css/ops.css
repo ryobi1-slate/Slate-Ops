@@ -1799,9 +1799,10 @@ body.slate-ops{ background: var(--p0-canvas); }
   position:relative;
   box-shadow:none;
 }
+/* Active accent painted as an inset rule so padding stays identical
+   between active and idle states. */
 .tech-hero.is-active{
-  border-left:3px solid var(--sage);
-  padding-left:28px;
+  box-shadow:inset 3px 0 0 var(--sage);
 }
 .tech-hero-head{
   display:flex;
@@ -1836,11 +1837,11 @@ body.slate-ops{ background: var(--p0-canvas); }
 }
 .tech-hero-title{
   margin:0 0 4px;
-  font-size:28px;
-  font-weight:900;
-  letter-spacing:-.015em;
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:-.01em;
   color:var(--ui-text, #0F172A);
-  line-height:1.1;
+  line-height:1.15;
 }
 .tech-hero-meta{
   font-size:13px;
@@ -1884,6 +1885,7 @@ body.slate-ops{ background: var(--p0-canvas); }
 
 /* ── Action cluster — Stop dominant, secondaries quiet ─────────── */
 .tech-actions{ display:flex; flex-direction:column; gap:10px; }
+/* Stop uses Slate Redwood — operational, not promotional. */
 .tech-stop{
   width:100%;
   padding:16px 20px !important;
@@ -1891,11 +1893,16 @@ body.slate-ops{ background: var(--p0-canvas); }
   font-weight:800 !important;
   letter-spacing:.03em;
   border-radius:8px !important;
-  background:#b84e0f !important;
-  border-color:#b84e0f !important;
+  background:var(--redwood, #0f3a2a) !important;
+  border-color:var(--redwood, #0f3a2a) !important;
+  color:#fff !important;
   box-shadow:none !important;
 }
-.tech-stop:hover{ filter:brightness(1.05); }
+.tech-stop:hover{
+  background:#143f31 !important;
+  border-color:#143f31 !important;
+  filter:none;
+}
 .tech-actions-sub{ display:flex; gap:8px; }
 .tech-actions-sub .btn{
   flex:1;
@@ -2085,41 +2092,57 @@ body.slate-ops{ background: var(--p0-canvas); }
   letter-spacing:.02em;
 }
 .tech-up-action{ flex-shrink:0; }
+/* Rail CTAs are quieter than the hero stop — outlined sage, not solid. */
 .tech-card-cta{
-  padding:8px 14px !important;
+  padding:7px 12px !important;
   font-size:12px !important;
-  font-weight:800 !important;
+  font-weight:700 !important;
+  letter-spacing:.04em;
   border-radius:6px !important;
-  min-width:72px;
+  min-width:64px;
+  background:transparent !important;
+  color:var(--sage) !important;
+  border:1px solid rgba(47,62,57,0.32) !important;
+}
+.tech-card-cta:hover{
+  background:rgba(47,62,57,0.06) !important;
+  border-color:var(--sage) !important;
+  color:var(--sage) !important;
 }
 
-/* ── Responsive (true viewport phone) ──────────────────────────── */
+/* ── Responsive (true viewport) ─────────────────────────────────── */
 @media (max-width: 1080px){
+  .tech-layout{ gap:16px; }
   .tech-hero{ padding:22px 22px; }
-  .tech-hero.is-active{ padding-left:22px; }
 }
-@media (max-width: 700px){
+@media (max-width: 760px){
   .tech-surface{ gap:14px; }
   .tech-page-head{ padding:2px 2px 10px; }
   .tech-page-title{ font-size:22px; }
   .tech-hero{ padding:18px 16px; border-radius:8px; }
-  .tech-hero.is-active{ padding-left:18px; }
-  .tech-hero-title{ font-size:22px; }
-  .tech-strip{ flex-direction:column; align-items:stretch; gap:14px; padding:14px 0; }
-  .tech-strip-val-lg{ font-size:44px; }
-  .tech-stop{ padding:18px !important; font-size:17px !important; }
+  .tech-hero-title{ font-size:20px; }
+  .tech-strip{ gap:18px; padding:14px 0; margin:16px 0 14px; }
+  .tech-strip-val-lg{ font-size:46px; }
+  .tech-strip-val{ font-size:20px; }
+  .tech-stop{ padding:17px !important; font-size:16px !important; }
+  .tech-actions-sub .btn{ padding:13px 14px !important; font-size:13px !important; }
   .tech-upnext-head{ padding:12px 14px 10px; }
-  .tech-up-card{ padding:12px 14px; }
+  .tech-up-card{ padding:12px 14px; min-height:64px; }
+}
+@media (max-width: 480px){
+  .tech-strip{ flex-direction:column; align-items:stretch; gap:12px; }
+  .tech-strip-val-lg{ font-size:42px; }
 }
 
-/* ── Manual phone view toggle — mirror responsive treatment ────── */
+/* ── Manual phone view toggle — mirror narrow-viewport treatment ── */
 .phone-mode .tech-layout{ grid-template-columns:1fr; gap:14px; }
 .phone-mode .tech-layout-side{ position:static; }
 .phone-mode .tech-hero{ padding:18px 16px; border-radius:8px; }
-.phone-mode .tech-hero.is-active{ padding-left:18px; }
-.phone-mode .tech-hero-title{ font-size:22px; }
-.phone-mode .tech-strip{ flex-direction:column; align-items:stretch; gap:14px; padding:14px 0; }
-.phone-mode .tech-strip-val-lg{ font-size:44px; }
-.phone-mode .tech-stop{ padding:18px !important; font-size:17px !important; }
+.phone-mode .tech-hero-title{ font-size:20px; }
+.phone-mode .tech-strip{ flex-direction:column; align-items:stretch; gap:12px; padding:14px 0; margin:16px 0 14px; }
+.phone-mode .tech-strip-val-lg{ font-size:42px; }
+.phone-mode .tech-strip-val{ font-size:20px; }
+.phone-mode .tech-stop{ padding:17px !important; font-size:16px !important; }
+.phone-mode .tech-actions-sub .btn{ padding:13px 14px !important; font-size:13px !important; }
 .phone-mode .tech-upnext-head{ padding:12px 14px 10px; }
-.phone-mode .tech-up-card{ padding:12px 14px; }
+.phone-mode .tech-up-card{ padding:12px 14px; min-height:64px; }

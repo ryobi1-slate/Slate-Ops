@@ -1,5 +1,14 @@
 # Slate Ops Changelog
 
+## 0.16.3 — Technician visual refinement (no layout change)
+
+### Technician (`/ops/tech`)
+- Stop button repainted in Slate Redwood (`--redwood`) instead of bright orange — operational tone, not promotional.
+- Hero title reduced (28px → 22px) so the elapsed timer is the strongest visual signal in the active state.
+- Active-state left accent now painted as an inset `box-shadow`, removing the active-vs-idle padding shift; both states share identical padding.
+- Up Next rail CTAs quieted to outlined sage so the rail clearly reads as secondary to the active hero.
+- Tightened phone (≤760) and tablet (≤1080) breakpoints; added a sub-480 breakpoint that stacks the timer cells vertically only on the smallest screens.
+
 ## 0.16.2 — Technician screen execution-surface pass
 
 ### Technician (`/ops/tech`)
