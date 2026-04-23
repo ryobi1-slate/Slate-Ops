@@ -119,50 +119,6 @@
     return 'scheduled';
   }
 
-  // CS-specific display helpers — do not share with scheduler/tech/admin views
-  function csJobLabel(s){
-    const m={
-      PENDING_INTAKE:'Pending Intake',
-      READY_FOR_SUPERVISOR_REVIEW:'Scheduled',
-      RETURNED_TO_CS:'Returned to CS',
-      APPROVED_FOR_SCHEDULING:'Scheduled',
-      SCHEDULED:'Scheduled',
-      IN_PROGRESS:'In Progress',
-      PENDING_QC:'In Progress',
-      COMPLETE:'Complete',
-      COMPLETE_AWAITING_PICKUP:'Complete - Awaiting Pickup',
-      ON_HOLD:'On Hold',
-      DELAYED:'Delayed',
-    };
-    return m[(s||'').toUpperCase()]||(s||'').replace(/_/g,' ');
-  }
-  function csJobBadge(s){
-    const t=(s||'').toUpperCase();
-    if(t==='ON_HOLD'||t==='DELAYED') return 'cs-red';
-    if(t==='SCHEDULED'||t==='APPROVED_FOR_SCHEDULING'||t==='READY_FOR_SUPERVISOR_REVIEW'||t==='COMPLETE_AWAITING_PICKUP') return 'cs-amber';
-    if(t==='IN_PROGRESS'||t==='PENDING_QC') return 'cs-blue';
-    if(t==='COMPLETE') return 'cs-green';
-    return 'scheduled';
-  }
-  function csPartsLabel(s){
-    const m={
-      NOT_READY:'Not Ready',
-      PARTIAL:'Partial',
-      READY:'Ready',
-      RECEIVED:'Ready',
-      HOLD:'Not Ready',
-      ORDERED:'Not Ready',
-      ARRIVED:'Ready',
-    };
-    return m[(s||'').toUpperCase()]||(s||'').replace(/_/g,' ');
-  }
-  function csPartsBadge(s){
-    const l=csPartsLabel(s);
-    if(l==='Ready') return 'cs-green';
-    if(l==='Partial') return 'cs-amber';
-    return 'cs-red';
-  }
-
   function minutesToHours(min){
     const h = (min/60);
     return (Math.round(h*10)/10).toFixed(1);
@@ -327,7 +283,7 @@
     const approvalHold = job.status === 'ON_HOLD' && job.delay_reason === 'approval';
     const hasHold      = partsHold || approvalHold;
 
-    const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','RECEIVED':'Ready','HOLD':'Not Ready','ORDERED':'Not Ready','ARRIVED':'Ready'};
+    const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','HOLD':'Hold'};
     const jobTypeLabel = {
       'UPFIT':'Upfit','COMMERCIAL_UPFIT':'Commercial Upfit','COMMERCIAL_BUILD':'Commercial Build',
       'RV_BUILD':'RV Build','RV_UPFIT':'RV Upfit','PARTS_ONLY':'Parts Only','SERVICE':'Service','WARRANTY':'Warranty',
@@ -343,7 +299,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             ${hasHold?`<span class="badge badge-hold">${partsHold?'Parts Hold':'Approval Hold'}</span>`:''}
-            <span class="badge ${isCS ? csJobBadge(job.status) : badgeClass(job.status)}">${isCS ? csJobLabel(job.status) : fmtStatus(job.status)}</span>
+            <span class="badge ${badgeClass(job.status)}">${fmtStatus(job.status)}</span>
           </div>
         </div>
         <div class="job-detail-kpis">
@@ -368,7 +324,7 @@
           <div class="form-grid" style="margin-bottom:14px;">
             <div><div class="label">VIN</div><div class="mono" style="margin-top:4px;">${escapeHtml(job.vin || '—')}</div></div>
             <div><div class="label">Job Type</div><div style="margin-top:4px;">${escapeHtml(jobTypeLabel[job.job_type] || job.job_type || '—')}</div></div>
-            <div><div class="label">Parts Status</div><div style="margin-top:4px;">${isCS ? `<span class="badge ${csPartsBadge(job.parts_status)}">${csPartsLabel(job.parts_status)||'—'}</span>` : escapeHtml(partsLabel[job.parts_status] || job.parts_status || '—')}</div></div>
+            <div><div class="label">Parts Status</div><div style="margin-top:4px;">${escapeHtml(partsLabel[job.parts_status] || job.parts_status || '—')}</div></div>
             <div><div class="label">Promised Date</div><div style="margin-top:4px;">${escapeHtml(job.requested_date || '—')}</div></div>
             <div><div class="label">Assigned Tech</div><div style="margin-top:4px;">${escapeHtml(job.assigned_name || '—')}</div></div>
             <div><div class="label">Scheduled</div><div style="margin-top:4px;">${escapeHtml((job.scheduled_start||'—').split(' ')[0])} &rarr; ${escapeHtml((job.scheduled_finish||'—').split(' ')[0])}</div></div>
@@ -577,7 +533,7 @@
       `<option value="${v}"${job.job_type===v?' selected':''}>${l}</option>`
     ).join('');
 
-    const partsOpts = [['NOT_READY','Not Ready'],['PARTIAL','Partial'],['READY','Ready']].map(([v,l]) =>
+    const partsOpts = [['NOT_READY','Not Ready'],['PARTIAL','Partial'],['READY','Ready'],['HOLD','Hold']].map(([v,l]) =>
       `<option value="${v}"${(job.parts_status||'NOT_READY')===v?' selected':''}>${l}</option>`
     ).join('');
 
@@ -597,14 +553,9 @@
 
       <div class="form-grid">
         <div>
-          <div class="label" style="margin-bottom:6px;">Customer Name</div>
+          <div class="label" style="margin-bottom:6px;">Customer</div>
           <input class="input" id="ef-customer" value="${escapeHtml(job.customer_name||'')}" placeholder="Customer name" />
           <div class="field-error" data-error-for="customer_name"></div>
-        </div>
-        <div>
-          <div class="label" style="margin-bottom:6px;">VIN Last 7–8</div>
-          <input class="input" id="ef-vin" maxlength="8" value="${escapeHtml(job.vin_last8||job.vin||'')}" placeholder="A1B2C3D4" />
-          <div class="field-error" data-error-for="vin_last8"></div>
         </div>
         <div>
           <div class="label" style="margin-bottom:6px;">Dealer</div>
@@ -615,11 +566,9 @@
           <div class="field-error" data-error-for="dealer_name"></div>
         </div>
         <div>
-          <div class="label" style="margin-bottom:6px;">Sales Person</div>
-          <select class="input" id="ef-sales">
-            <option value="">Select sales person</option>
-            ${salesOpts}
-          </select>
+          <div class="label" style="margin-bottom:6px;">VIN Last 7–8</div>
+          <input class="input" id="ef-vin" maxlength="8" value="${escapeHtml(job.vin_last8||job.vin||'')}" placeholder="A1B2C3D4" />
+          <div class="field-error" data-error-for="vin_last8"></div>
         </div>
         <div>
           <div class="label" style="margin-bottom:6px;">Job Type</div>
@@ -629,21 +578,28 @@
           <div class="field-error" data-error-for="job_type"></div>
         </div>
         <div>
-          <div class="label" style="margin-bottom:6px;">Est. Hours</div>
-          <input class="input" id="ef-est" type="number" min="0.5" step="0.5" value="${escapeHtml(estHours)}" placeholder="e.g. 2.5" />
-          <div class="field-error" data-error-for="estimated_hours"></div>
-        </div>
-        <div>
-          <div class="label" style="margin-bottom:6px;">Due Date</div>
-          <input class="input" id="ef-date" type="date" value="${escapeHtml(job.requested_date||'')}" />
-          <div class="field-error" data-error-for="requested_date"></div>
-        </div>
-        <div>
           <div class="label" style="margin-bottom:6px;">Parts Status</div>
           <select class="input" id="ef-parts">
             ${partsOpts}
           </select>
           <div class="field-error" data-error-for="parts_status"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Estimated Hours</div>
+          <input class="input" id="ef-est" type="number" min="0.5" step="0.5" value="${escapeHtml(estHours)}" placeholder="e.g. 2.5" />
+          <div class="field-error" data-error-for="estimated_hours"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Requested Date</div>
+          <input class="input" id="ef-date" type="date" value="${escapeHtml(job.requested_date||'')}" />
+          <div class="field-error" data-error-for="requested_date"></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px;">Sales Person</div>
+          <select class="input" id="ef-sales">
+            <option value="">Select sales person</option>
+            ${salesOpts}
+          </select>
         </div>
       </div>
 
@@ -705,10 +661,15 @@
       ` : ''}
 
       <div class="row" style="margin-top:14px;">
-        <button class="btn" id="ef-save">Save &amp; Close</button>
+        <button class="btn" id="ef-save">Save Changes</button>
+        <button class="btn secondary" id="ef-cancel">Cancel</button>
         <div class="field-error" data-error-for="ef-general" style="flex:1;"></div>
       </div>
     `;
+
+    el.querySelector('#ef-cancel').onclick = () => {
+      el.closest('#edit-panel').style.display = 'none';
+    };
 
     el.querySelector('#ef-save').onclick = async () => {
       el.querySelectorAll('.field-error').forEach(e => e.textContent = '');
@@ -746,7 +707,6 @@
 
       try {
         await api.editJob(job.job_id, payload);
-        el.closest('#edit-panel').style.display = 'none';
         router();
       } catch(e) {
         const field   = e?.data?.data?.field || e?.data?.field;
@@ -759,7 +719,7 @@
           el.querySelector('[data-error-for="ef-general"]').textContent = message;
         }
         btn.disabled = false;
-        btn.textContent = 'Save & Close';
+        btn.textContent = 'Save Changes';
       }
     };
   }
@@ -1305,16 +1265,13 @@ async function loadCS() {
       <div class="ops-list-row" data-job-id="${j.job_id}">
         <div class="ops-list-main">
           <div class="ops-list-title">
-            <span>${escapeHtml(j.customer_name||'—')}</span>
-            <span class="ops-dot">•</span>
-            <span class="mono">${escapeHtml(vin6)}</span>
-            <span class="ops-dot">•</span>
             <span class="mono">${escapeHtml(so)}</span>
+            <span class="ops-dot">•</span>
+            <span>${escapeHtml(j.customer_name||'—')}</span>
           </div>
           <div class="ops-list-sub">
-            <span class="badge ${csJobBadge(j.status)}">${csJobLabel(j.status)}</span>
-            <span class="ops-dot">•</span>
-            <span class="badge ${csPartsBadge(j.parts_status)}">${csPartsLabel(j.parts_status)||'—'}</span>
+            Dealer: ${escapeHtml(j.dealer_name||'—')}<span class="ops-dot">•</span>VIN: <span class="mono">${escapeHtml(vin6)}</span><span class="ops-dot">•</span>
+            <span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span>
           </div>
         </div>
         <div class="ops-list-actions">${rightHtml||''}</div>
@@ -1367,7 +1324,7 @@ async function loadCS() {
                     <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
                       <div class="cs-queue-main">
                         <div class="cs-queue-title">${escapeHtml(j.customer_name||'—')}</div>
-                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • ${escapeHtml(j.so_number||'—')} • <span class="badge ${csPartsBadge(j.parts_status)}">${csPartsLabel(j.parts_status)}</span></div>
+                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • ${escapeHtml(j.dealer_name||'—')}</div>
                       </div>
                       <div class="cs-queue-actions">
                         <button class="btn small-btn intake-btn" data-id="${j.job_id}">Complete Intake</button>
@@ -1394,7 +1351,7 @@ async function loadCS() {
                     <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
                       <div class="cs-queue-main">
                         <div class="cs-queue-title">${escapeHtml(j.customer_name||'—')}</div>
-                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • <span class="badge ${csPartsBadge(j.parts_status)}">${csPartsLabel(j.parts_status)}</span></div>
+                        <div class="cs-queue-meta">VIN <span class="mono">${escapeHtml(vin6)}</span> • ${escapeHtml(j.dealer_name||'—')}</div>
                       </div>
                       <div class="cs-queue-so-wrap">
                         <input class="input so mono" placeholder="S-ORD######" />
@@ -1418,18 +1375,14 @@ async function loadCS() {
             ${activeJobs.length ? `
               <div class="cs-queue-list">
                 ${activeJobs.map(j => {
-                  const vin6 = (j.vin || j.vin_last8 || '').slice(-6) || '—';
                   const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
                   return `
                     <article class="cs-queue-item" data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
                       <div class="cs-queue-main">
-                        <div class="cs-queue-title">${escapeHtml(j.customer_name||'—')} • <span class="mono">${escapeHtml(vin6)}</span> • <span class="mono">${escapeHtml(j.so_number||'—')}</span></div>
-                        <div class="cs-queue-meta">${escapeHtml(j.assigned_name ? 'Tech: '+j.assigned_name : j.dealer_name||'—')}</div>
+                        <div class="cs-queue-title"><span class="mono">${escapeHtml(j.so_number||'—')}</span> • ${escapeHtml(j.customer_name||'—')}</div>
+                        <div class="cs-queue-meta">${escapeHtml(j.dealer_name||'—')}</div>
                       </div>
-                      <div class="cs-queue-status">
-                        <span class="badge ${csJobBadge(j.status)}">${csJobLabel(j.status)}</span>
-                        <span class="badge ${csPartsBadge(j.parts_status)}" style="margin-left:4px;">${csPartsLabel(j.parts_status)}</span>
-                      </div>
+                      <div class="cs-queue-status"><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></div>
                       <div class="cs-queue-actions">
                         <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
                       </div>
@@ -1478,16 +1431,8 @@ async function loadCS() {
       <form id="manual-create">
         <div class="cs-manual-grid">
           <div class="cs-field">
-            <label>Customer Name</label>
+            <label>Customer</label>
             <input class="input" name="customer_name" id="create-customer" placeholder="Customer name" />
-          </div>
-          <div class="cs-field">
-            <label>VIN</label>
-            <input class="input mono" name="vin" id="create-vin" placeholder="VIN (required unless Parts Only)" />
-          </div>
-          <div class="cs-field">
-            <label>SO#</label>
-            <input class="input mono" name="so_number" id="create-so" placeholder="S-ORD######" />
           </div>
           <div class="cs-field">
             <label>Dealer</label>
@@ -1496,36 +1441,41 @@ async function loadCS() {
             </select>
           </div>
           <div class="cs-field">
+            <label>VIN</label>
+            <input class="input mono" name="vin" id="create-vin" placeholder="VIN (required unless Parts Only)" />
+          </div>
+          <div class="cs-field">
             <label>Job Type</label>
             <select class="select" name="job_type" id="create-job-type">
-              <option value="UPFIT">Upfit</option>
-              <option value="PARTS_ONLY">Parts Only</option>
-              <option value="WARRANTY">Warranty</option>
-              <option value="SERVICE">Service</option>
+              <option value="UPFIT">UPFIT</option>
+              <option value="PARTS_ONLY">PARTS_ONLY</option>
+              <option value="WARRANTY">WARRANTY</option>
+              <option value="SERVICE">SERVICE</option>
             </select>
           </div>
           <div class="cs-field">
-            <label>Sales Person</label>
-            <select class="select" name="sales_person" id="create-sales-person">
-              <option value="">Select...</option>
+            <label>Parts Status</label>
+            <select class="select" name="parts_status" id="create-parts-status">
+              <option value="NOT_READY">NOT_READY</option>
+              <option value="READY">READY</option>
+              <option value="ORDERED">ORDERED</option>
+              <option value="ARRIVED">ARRIVED</option>
             </select>
           </div>
           <div class="cs-field">
             <label>Est. Hours</label>
             <input class="input mono" name="estimated_hours" id="create-est-hours" value="1" />
           </div>
+
+          <div class="cs-field">
+            <label>SO#</label>
+            <input class="input mono" name="so_number" id="create-so" placeholder="S-ORD######" />
+          </div>
           <div class="cs-field">
             <label>Due Date (optional)</label>
             <input class="input" type="date" name="due_date" id="create-due-date" />
           </div>
-          <div class="cs-field">
-            <label>Parts Status</label>
-            <select class="select" name="parts_status" id="create-parts-status">
-              <option value="NOT_READY">Not Ready</option>
-              <option value="PARTIAL">Partial</option>
-              <option value="READY">Ready</option>
-            </select>
-          </div>
+
           <div class="cs-field" style="grid-column: 1 / -1;">
             <label>Notes</label>
             <textarea class="textarea" name="notes" id="create-notes" rows="3" placeholder="Optional notes"></textarea>
@@ -1548,16 +1498,6 @@ async function loadCS() {
         opts.push('<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>');
       });
       dealerSel.innerHTML = opts.join('');
-    }
-
-    // Sales Person options
-    const salesPersonSel = document.getElementById('create-sales-person');
-    if (salesPersonSel) {
-      const opts = ['<option value="">Select...</option>'];
-      salesList.forEach((s) => {
-        opts.push('<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>');
-      });
-      salesPersonSel.innerHTML = opts.join('');
     }
 
     const cancelBtn = document.getElementById('create-cancel');
@@ -1589,7 +1529,6 @@ async function loadCS() {
       const payload = {
         customer_name:   (data.customer_name || '').trim(),
         dealer_name:     (data.dealer_name || '').trim(),
-        sales_person:    (data.sales_person || '').trim(),
         vin_last8:       (data.vin || '').trim(),
         job_type:        jobType,
         parts_status:    (data.parts_status || 'NOT_READY').toUpperCase(),
@@ -1694,14 +1633,26 @@ async function openIntake(jobId, dealerList, salesList) {
     <div class="cs-intake-meta">
       <div class="cs-intake-meta-row"><span class="muted">Customer</span><span>${escapeHtml(job.customer_name || '—')}</span></div>
       <div class="cs-intake-meta-row"><span class="muted">Dealer</span><span>${escapeHtml(job.dealer_name || '—')}</span></div>
-      <div class="cs-intake-meta-row"><span class="muted">Status</span><span class="badge ${csJobBadge(job.status)}">${csJobLabel(job.status)}</span></div>
+      <div class="cs-intake-meta-row"><span class="muted">Status</span><span class="badge ${badgeClass(job.status)}">${fmtStatus(job.status)}</span></div>
     </div>
 
     <form id="cs-intake-form" style="margin-top:12px;">
       <div class="cs-manual-grid">
         <div class="cs-field">
-          <label>Customer Name</label>
+          <label>Customer</label>
           <input class="input" name="customer_name" value="${escapeHtml(job.customer_name || '')}" placeholder="Customer name" />
+        </div>
+        <div class="cs-field">
+          <label>Dealer</label>
+          <select class="select" name="dealer_name" id="cs-intake-dealer">
+            <option value="">Select…</option>
+          </select>
+        </div>
+        <div class="cs-field">
+          <label>Sales</label>
+          <select class="select" name="sales_person" id="cs-intake-sales">
+            <option value="">Select…</option>
+          </select>
         </div>
         <div class="cs-field">
           <label>VIN</label>
@@ -1712,40 +1663,28 @@ async function openIntake(jobId, dealerList, salesList) {
           <input class="input mono" name="so_number" value="${escapeHtml(job.so_number || '')}" placeholder="S-ORD######" />
         </div>
         <div class="cs-field">
-          <label>Sales Person</label>
-          <select class="select" name="sales_person" id="cs-intake-sales">
-            <option value="">Select…</option>
-          </select>
-        </div>
-        <div class="cs-field">
-          <label>Dealer</label>
-          <select class="select" name="dealer_name" id="cs-intake-dealer">
-            <option value="">Select…</option>
-          </select>
+          <label>Due Date</label>
+          <input class="input" type="date" name="due_date" value="${escapeHtml(due)}" />
         </div>
         <div class="cs-field">
           <label>Job Type</label>
           <select class="select" name="job_type">
-            ${[['UPFIT','Upfit'],['PARTS_ONLY','Parts Only'],['WARRANTY','Warranty'],['SERVICE','Service']].map(([v,l]) => `<option value="${v}" ${String(job.job_type||'UPFIT').toUpperCase()===v?'selected':''}>${l}</option>`).join('')}
+            ${['UPFIT','PARTS_ONLY','WARRANTY','SERVICE'].map(t => `<option value="${t}" ${String(job.job_type||'UPFIT').toUpperCase()===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="cs-field">
+          <label>Parts Status</label>
+          <select class="select" name="parts_status">
+            ${['NOT_READY','READY','ORDERED','ARRIVED'].map(p => `<option value="${p}" ${String(job.parts_status||'NOT_READY').toUpperCase()===p?'selected':''}>${p}</option>`).join('')}
           </select>
         </div>
         <div class="cs-field">
           <label>Est. Hours</label>
           <input class="input mono" name="estimated_hours" value="${escapeHtml(String(job.estimated_hours || job.estimated_minutes ? ((job.estimated_minutes||0)/60) : '1'))}" />
         </div>
-        <div class="cs-field">
-          <label>Due Date</label>
-          <input class="input" type="date" name="due_date" value="${escapeHtml(due)}" />
-        </div>
-        <div class="cs-field">
-          <label>Parts Status</label>
-          <select class="select" name="parts_status">
-            ${[['NOT_READY','Not Ready'],['PARTIAL','Partial'],['READY','Ready']].map(([v,l]) => `<option value="${v}" ${(csPartsLabel(job.parts_status||'NOT_READY')===l)?'selected':''}>${l}</option>`).join('')}
-          </select>
-        </div>
 
-        <div class="cs-field${job.parts_status === 'PARTIAL' ? ' cs-notes-partial' : ''}" style="grid-column: 1 / -1;">
-          <label>Notes${job.parts_status === 'PARTIAL' ? ' <span class="cs-notes-partial-flag">— parts partial</span>' : ''}</label>
+        <div class="cs-field" style="grid-column: 1 / -1;">
+          <label>Notes</label>
           <textarea class="textarea" name="notes" rows="3" placeholder="Notes">${escapeHtml(job.notes || '')}</textarea>
         </div>
       </div>
@@ -1754,7 +1693,7 @@ async function openIntake(jobId, dealerList, salesList) {
         <label class="cs-check"><input type="checkbox" id="cs-ready" checked /> Mark Ready for Scheduling</label>
         <div id="cs-intake-status" class="muted" style="margin-right:auto;"></div>
         <button class="btn secondary" type="button" id="cs-intake-clear">Clear</button>
-        <button class="btn" type="submit">Save &amp; Close</button>
+        <button class="btn" type="submit">Save</button>
       </div>
     </form>
   `;
@@ -2157,7 +2096,7 @@ async function loadSchedule(){
     const job = allJobs.find(j=>j.job_id===jobId) || await api.job(jobId);
     const estH = job.estimated_minutes ? (job.estimated_minutes/60).toFixed(1) : '—';
     const t = job.time || {approved_minutes_total:0,pending_minutes_total:0};
-    const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','RECEIVED':'Ready','HOLD':'Not Ready','ORDERED':'Not Ready','ARRIVED':'Ready'};
+    const partsLabel = {'NOT_READY':'Not Ready','PARTIAL':'Partial','READY':'Ready','HOLD':'Hold'};
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
