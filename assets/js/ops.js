@@ -2331,35 +2331,49 @@ async function loadTech() {
     ? `${String(Math.floor(estTargetMin/60)).padStart(2,'0')}:${String(estTargetMin%60).padStart(2,'0')}`
     : '';
 
+  const blockerInline = active && hasBlocker(activeJob) ? `
+    <div class="tech-hero-section is-blocker">
+      <div class="tech-section-label">Blocker</div>
+      <div class="tech-section-body">${escapeHtml(blockerText(activeJob) || 'Job is on hold.')}</div>
+    </div>
+  ` : '';
+
+  const notesInline = active && activeJob && (activeJob.schedule_notes || '').trim() ? `
+    <div class="tech-hero-section">
+      <div class="tech-section-label">Notes</div>
+      <div class="tech-section-body is-prose">${escapeHtml(activeJob.schedule_notes)}</div>
+    </div>
+  ` : '';
+
   const heroActive = active ? `
     <section class="tech-hero is-active" aria-label="Active job">
-      <div class="tech-hero-eyebrow"><span class="tech-hero-dot" aria-hidden="true"></span>Active labor</div>
-      ${active.so_number ? `<div class="tech-hero-so">${escapeHtml(active.so_number)}</div>` : ''}
+      <header class="tech-hero-head">
+        <div class="tech-hero-eyebrow"><span class="tech-hero-dot" aria-hidden="true"></span>Active labor</div>
+        ${active.so_number ? `<div class="tech-hero-so">${escapeHtml(active.so_number)}</div>` : ''}
+      </header>
+
       <h2 class="tech-hero-title">${escapeHtml(jobLabel(activeJob || active))}</h2>
       <div class="tech-hero-meta">${escapeHtml(jobMeta(activeJob || active) || ('Job #' + active.job_id))}</div>
 
-      <div class="tech-timer">
-        <div class="tech-timer-row">
-          <div class="tech-timer-main">
-            <div class="tech-timer-label">Labor time elapsed</div>
-            <div class="tech-timer-value" id="live-timer">00:00:00</div>
-          </div>
-          ${estTargetStr ? `
-            <div class="tech-timer-aside">
-              <div class="tech-timer-label">Target</div>
-              <div class="tech-timer-target-val">${estTargetStr}</div>
-            </div>
-          ` : ''}
+      <div class="tech-strip" role="group" aria-label="Time">
+        <div class="tech-strip-cell tech-strip-cell-lead">
+          <div class="tech-strip-label">Elapsed</div>
+          <div class="tech-strip-val tech-strip-val-lg" id="live-timer">00:00:00</div>
         </div>
+        ${estTargetStr ? `
+          <div class="tech-strip-cell">
+            <div class="tech-strip-label">Target</div>
+            <div class="tech-strip-val">${estTargetStr}</div>
+          </div>
+        ` : ''}
       </div>
 
-      <button class="btn danger btn-xl tech-stop" id="stop-active">
-        <span class="tech-stop-dot" aria-hidden="true"></span> Stop Work &amp; Log Labor
-      </button>
-
-      <div class="tech-hero-actions">
-        <button class="btn secondary btn-xl" id="submit-qc-active">Submit for QC</button>
-        <button class="btn secondary btn-xl" id="note-toggle">+ Note</button>
+      <div class="tech-actions">
+        <button class="btn danger tech-stop" id="stop-active">Stop Work &amp; Log Labor</button>
+        <div class="tech-actions-sub">
+          <button class="btn secondary" id="submit-qc-active">Submit for QC</button>
+          <button class="btn secondary" id="note-toggle">+ Note</button>
+        </div>
       </div>
 
       <div id="qc-submit-panel" class="tech-inline-panel" style="display:none;">
@@ -2376,6 +2390,9 @@ async function loadTech() {
           <span class="field-error" data-error-for="note-err" style="flex:1;"></span>
         </div>
       </div>
+
+      ${blockerInline}
+      ${notesInline}
     </section>
   ` : '';
 
@@ -2383,52 +2400,35 @@ async function loadTech() {
   const heroIdle = !active ? (
     nextJob ? `
       <section class="tech-hero is-idle" aria-label="No active timer">
-        <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        <header class="tech-hero-head">
+          <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        </header>
         <h2 class="tech-hero-title">Ready to start</h2>
         <div class="tech-hero-meta">Begin tracking time on your next assigned job.</div>
 
-        <div class="tech-next-card">
-          <div class="tech-next-label">Up next</div>
+        <div class="tech-hero-section is-promoted">
+          <div class="tech-section-label">Next up</div>
           <div class="tech-next-title">${escapeHtml(jobLabel(nextJob))}</div>
           <div class="tech-next-meta">${escapeHtml(jobMeta(nextJob) || ('Job #' + nextJob.job_id))}</div>
           <div class="tech-next-sub">
             ${nextJob.so_number ? escapeHtml(nextJob.so_number) : ''}
             ${estHoursStr(nextJob) ? `${nextJob.so_number ? ' · ' : ''}Est ${estHoursStr(nextJob)}` : ''}
           </div>
-          <button class="btn btn-xl tech-next-start" data-start-job="${nextJob.job_id}">
+          <button class="btn tech-next-start" data-start-job="${nextJob.job_id}">
             <span class="tech-play-tri" aria-hidden="true"></span> Start this job
           </button>
         </div>
       </section>
     ` : `
       <section class="tech-hero is-idle is-empty" aria-label="Nothing assigned">
-        <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        <header class="tech-hero-head">
+          <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        </header>
         <h2 class="tech-hero-title">Nothing assigned</h2>
         <div class="tech-hero-meta">When a supervisor schedules work, it'll show up here.</div>
       </section>
     `
   ) : '';
-
-  // Blocker + Work Notes (only meaningful for the active job)
-  const blocker = active && hasBlocker(activeJob) ? `
-    <section class="tech-block-card" aria-label="Blocker">
-      <div class="tech-block-icon" aria-hidden="true">!</div>
-      <div class="tech-block-body">
-        <div class="tech-block-title">Blocker</div>
-        <div class="tech-block-text">${escapeHtml(blockerText(activeJob) || 'Job is on hold.')}</div>
-      </div>
-    </section>
-  ` : '';
-
-  const workNotes = active && activeJob && (activeJob.schedule_notes || '').trim() ? `
-    <section class="tech-notes-card" aria-label="Work notes">
-      <div class="tech-notes-head">
-        <span class="tech-notes-icon" aria-hidden="true">📝</span>
-        <span class="tech-notes-title">Work notes</span>
-      </div>
-      <div class="tech-notes-body">${escapeHtml(activeJob.schedule_notes)}</div>
-    </section>
-  ` : '';
 
   const upNextBlock = upNext.length ? `
     <section class="tech-upnext" aria-label="Up next">
@@ -2466,8 +2466,6 @@ async function loadTech() {
       <div class="tech-layout">
         <div class="tech-layout-main">
           ${heroActive}${heroIdle}
-          ${blocker}
-          ${workNotes}
         </div>
         <aside class="tech-layout-side">
           ${upNextBlock}

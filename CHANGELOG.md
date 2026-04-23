@@ -1,5 +1,16 @@
 # Slate Ops Changelog
 
+## 0.16.2 — Technician screen execution-surface pass
+
+### Technician (`/ops/tech`)
+- Collapsed the card-stack feel into a single dominant active hero. Blocker and work notes are now inline divider-separated sections of the hero, not standalone competing cards.
+- Timer is now a flat structural strip directly under the job title (Elapsed | Target), top-and-bottom hairline rules, no panel background or gradient.
+- Stop / Submit-for-QC / + Note grouped into a single action cluster with a clear primary action.
+- Up Next rail rebuilt as one bordered panel of dense divider rows with edge-to-edge tap targets — no more floating card-per-job. Blocked and focused rows use inset accent rules instead of borders.
+- Removed `box-shadow` from hero and Up Next surfaces to reduce the "app card" feel.
+- Stronger Slate page header: condensed display title, sage-led eyebrow, page-level border-bottom that ties to the rest of Ops.
+- Removed stale CSS for `.tech-block-card`, `.tech-notes-card`, `.tech-next-card`, the old `.tech-timer*` panel, and the `.tech-stop-dot` glyph.
+
 ## 0.16.1 — Technician screen integration pass
 
 ### Technician (`/ops/tech`)
