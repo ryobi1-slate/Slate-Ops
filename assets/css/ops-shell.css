@@ -58,12 +58,39 @@
   --shell-muted:        var(--muted);
   --shell-nav-active-bg: rgba(47,62,57,0.10);
 
-  /* Legacy aliases — keep so any old refs in ops.css don't break */
-  --slate-sage:    var(--sage);
-  --slate-sand:    var(--sand);
-  --slate-arches:  var(--arches);
-  --slate-redwood: #0f3a2a;
-  --mono:          var(--font-mono);
+  /* Slate design tokens — mirrored from Dealer Portal */
+  --slate-sage:            #40464B;
+  --slate-sage-ink:        #2B3034;
+  --slate-sage-wash:       #F2F3F1;
+
+  --slate-sand:            #E1D8CB;
+  --slate-sand-deep:       #D4C9B7;
+  --slate-sand-wash:       #F5F1E9;
+
+  --slate-arches:          #D68B19;
+  --slate-arches-ink:      #B07212;
+  --slate-arches-wash:     #FDF2DF;
+
+  --slate-redwood:         #0F3A2A;
+  --slate-redwood-wash:    #E4EEE9;
+
+  --slate-flag:            #B22222;
+  --slate-flag-wash:       #F8E5E5;
+
+  --slate-ink:             #2A2E2C;
+  --slate-ink-muted:       #5A5E5C;
+  --slate-ink-subtle:      #8A8880;
+  --slate-ink-placeholder: #B0AEA6;
+
+  --slate-divider:         #E6E2D4;
+  --slate-divider-strong:  #D9D5C7;
+  --slate-divider-soft:    #F0EDE3;
+
+  --slate-surface:         #FFFFFF;
+  --slate-surface-tint:    #FAFAF7;
+  --slate-surface-page:    #F5F3ED;
+
+  --mono:                  var(--font-mono);
 }
 
 /* ─── 2. Shell Structure ─── */
@@ -308,18 +335,74 @@ body.slate-ops {
  *     .ops-btn-arches-solid for filled orange buttons.
  */
 .ops-btn-arches {
-  color: #d86b19 !important;
-  border-color: #d86b19 !important;
+  color: var(--slate-arches) !important;
+  border-color: var(--slate-arches) !important;
 }
 .ops-btn-arches:hover {
-  background-color: rgba(216,107,25,0.07) !important;
+  background-color: var(--slate-arches-wash) !important;
 }
 .ops-btn-arches-solid {
-  background-color: #d86b19 !important;
-  border-color: #d86b19 !important;
-  color: #ffffff !important;
+  background-color: var(--slate-arches) !important;
+  border-color: var(--slate-arches) !important;
+  color: var(--slate-surface) !important;
 }
 .ops-btn-arches-solid:hover {
-  background-color: #c05e14 !important;
-  border-color: #c05e14 !important;
+  background-color: var(--slate-arches-ink) !important;
+  border-color: var(--slate-arches-ink) !important;
 }
+
+/* ─── 8. CS page token classes ──────────────────────────────────────
+ * Semantic classes for the CS component. All colors via var(--slate-*).
+ * Applied by replacing Tailwind color utilities in the React bundle.
+ */
+
+/* Page background */
+.ops-cs-page { background-color: var(--slate-surface-page); }
+
+/* Card surface — white bg + divider border replaces shadow-sm */
+.ops-cs-card {
+  background-color: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+}
+
+/* Section separator border */
+.ops-cs-border-b { border-bottom: 1px solid var(--slate-divider-soft); }
+
+/* Divider color override (used alongside Tailwind divide-x / divide-y) */
+.ops-cs-divide > * + * { border-color: var(--slate-divider-soft); }
+
+/* Table header */
+.ops-cs-thead {
+  background-color: var(--slate-sage-wash);
+  color: var(--slate-ink-subtle);
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+/* Table row states */
+.ops-cs-row-selected { background-color: var(--slate-arches-wash); }
+.ops-cs-row-hover:hover { background-color: var(--slate-surface-tint); }
+
+/* Input fields */
+.ops-cs-input { border-color: var(--slate-divider); background-color: var(--slate-surface); }
+.ops-cs-input::placeholder { color: var(--slate-ink-placeholder); }
+.ops-cs-input:focus {
+  outline: none;
+  border-color: var(--slate-arches);
+  box-shadow: 0 0 0 1px var(--slate-arches);
+}
+
+/* Parts status badges */
+.ops-badge-ready     { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.ops-badge-partial   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+.ops-badge-not-ready { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
+
+/* Job status badges */
+.ops-badge-status-intake     { background-color: var(--slate-sage-wash);  color: var(--slate-sage-ink); }
+.ops-badge-status-scheduled  { background-color: var(--slate-arches);     color: var(--slate-surface); }
+.ops-badge-status-inprogress { background-color: var(--slate-sage-ink);   color: var(--slate-surface); }
+.ops-badge-status-complete   { background-color: var(--slate-redwood);    color: var(--slate-surface); }
+.ops-badge-status-hold       { background-color: var(--slate-flag);       color: var(--slate-surface); }
+
+/* Inline text link (Reset filters) */
+.ops-cs-reset-link { color: var(--slate-ink-subtle); }
+.ops-cs-reset-link:hover { color: var(--slate-arches); }

@@ -1,5 +1,20 @@
 # Slate Ops Changelog
 
+## 0.17.3 — CS visual tokens: Dealer Portal design system
+
+- Mirrored full `--slate-*` token set from Dealer Portal into `ops-shell.css` `:root`
+- Added 23 semantic CSS classes (`ops-cs-*`, `ops-badge-*`, `ops-btn-arches-solid`) using only `var(--slate-*)` tokens — no invented colors, no hardcoded hex in class definitions
+- **Page background**: `--slate-surface-page` (#F5F3ED)
+- **Cards**: `--slate-surface` + `--slate-divider` border; `shadow-sm` replaced with token border
+- **Table headers**: `--slate-sage-wash` bg, `--slate-ink-subtle` text, `--slate-divider` bottom border
+- **Table rows**: selected → `--slate-arches-wash`; hover → `--slate-surface-tint`; dividers → `--slate-divider-soft`
+- **Inputs**: `--slate-divider` border; focus ring/border → `--slate-arches`
+- **Buttons**: `--slate-arches` fill → `--slate-arches-ink` hover (via updated `ops-btn-arches-solid`)
+- **Parts badges**: Ready → redwood-wash/redwood; Partial → arches-wash/arches-ink; Not Ready → flag-wash/flag
+- **Job status badges**: Intake → sage-wash/sage-ink; Scheduled → arches; In Progress → sage-ink; Complete → redwood; On Hold/Delayed → flag
+- **Edit panel**: orange left border removed; neutral `--slate-divider` card border
+- No behavior changes; CS scope only
+
 ## 0.17.2 — Role-based /ops landing route
 
 - Visiting bare `/ops` now redirects to the user's primary page based on role:
