@@ -1,5 +1,9 @@
 # Slate Ops Changelog
 
+## 0.16.4 — Cache-bust / deploy refresh (no code changes)
+
+- Plugin version bumped so WordPress asset URLs re-version and browsers / CDNs drop the previous bundle. No CSS, JS, or behavior changes.
+
 ## 0.16.3 — Technician visual refinement (no layout change)
 
 ### Technician (`/ops/tech`)
