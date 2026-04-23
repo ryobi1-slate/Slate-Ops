@@ -3094,11 +3094,16 @@ async function loadAdmin() {
     </div>
 
     <div class="card">
-      <div class="collapse-title" style="margin-bottom:10px;">Quick Links</div>
+      <div class="collapse-title" style="margin-bottom:10px;">Admin Tools</div>
       <div class="row">
         <a class="btn secondary" href="/wp-admin/users.php">WP Users</a>
-        <a class="btn secondary" href="/ops/exec" data-link>Exec Dashboard</a>
-        <a class="btn secondary" href="/ops/jobs" data-link>All Jobs</a>
+        <a class="btn secondary" href="/ops/supervisor" data-link>Supervisor</a>
+        <a class="btn secondary" href="/ops/jobs" data-link>Jobs</a>
+        <a class="btn secondary" href="/ops/qc" data-link>QC</a>
+        <a class="btn secondary" href="/ops/bom" data-link>BOMs</a>
+        <a class="btn secondary" href="/ops/settings" data-link>Settings</a>
+        <a class="btn secondary" href="/ops/admin#work-centers" data-link>Work Centers</a>
+        <a class="btn secondary" href="/ops/quotes" data-link>Pricing</a>
       </div>
     </div>
   `);
@@ -3791,23 +3796,26 @@ function suggestCloneBomNo(bomNo){
 async function render(){
     if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
     const r = state.route;
+    const c = slateOpsSettings.user.caps || {};
+    const canExecutive = !!c.admin || !!c.supervisor;
+    const canAdminTools = canExecutive;
     setActiveNav(
-      r.startsWith('/job/') ? '/jobs' :
-      r.startsWith('/jobs') ? '/jobs' :
-      r.startsWith('/new') ? '/new' :
+      r.startsWith('/job/') ? '/admin' :
+      r.startsWith('/jobs') ? '/admin' :
+      r.startsWith('/new') ? '/admin' :
       r.startsWith('/settings') ? '/settings' :
-      r.startsWith('/supervisor') ? '/supervisor' :
+      r.startsWith('/supervisor') ? '/admin' :
       r.startsWith('/cs') ? '/cs' :
       r.startsWith('/tech') ? '/tech' :
       r.startsWith('/admin') ? '/admin' :
       r.startsWith('/exec') ? '/exec' :
-      r.startsWith('/qc') ? '/qc' :
+      r.startsWith('/qc') ? '/admin' :
       r.startsWith('/schedule') ? '/schedule' :
-      r.startsWith('/bom') ? '/bom' :
+      r.startsWith('/bom') ? '/admin' :
       '/'
     );
     setPageTitle(
-      r.startsWith('/exec')       ? 'Dashboard'        :
+      r.startsWith('/exec')       ? 'Executive'        :
       r.startsWith('/cs')         ? 'Customer Service' :
       r.startsWith('/tech')       ? 'Tech'             :
       r.startsWith('/qc')         ? 'QC Queue'         :
@@ -3819,24 +3827,40 @@ async function render(){
       r.startsWith('/schedule')   ? 'Schedule'         :
       r.startsWith('/bom')        ? 'BOM Builder'      :
       r.startsWith('/settings')   ? 'Settings'         :
-      'Dashboard'
+      'Executive'
     );
 
     try{
       if (r === '/' || r === '') {
-        const c = slateOpsSettings.user.caps || {};
-        if (c.admin) { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
-        else if (c.supervisor) { window.history.replaceState({}, '', '/ops/supervisor'); state.route='/supervisor'; }
+        if (canExecutive) { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
         else if (c.cs) { window.history.replaceState({}, '', '/ops/cs'); state.route='/cs'; }
         else if (c.tech) { window.history.replaceState({}, '', '/ops/tech'); state.route='/tech'; }
         else { window.history.replaceState({}, '', '/ops/exec'); state.route='/exec'; }
         return await render();
       }
-      if (r.startsWith('/exec')) return await loadExecutive();
+      if (r.startsWith('/exec')) {
+        if (!canExecutive) {
+          const fallback = c.cs ? '/ops/cs' : '/ops/tech';
+          const fallbackRoute = c.cs ? '/cs' : '/tech';
+          window.history.replaceState({}, '', fallback);
+          state.route = fallbackRoute;
+          return await render();
+        }
+        return await loadExecutive();
+      }
       if (r.startsWith('/cs')) return await loadCS();
       if (r.startsWith('/tech')) return await loadTech();
       if (r.startsWith('/qc')) return await loadQC();
-      if (r.startsWith('/admin')) return await loadAdmin();
+      if (r.startsWith('/admin')) {
+        if (!canAdminTools) {
+          const fallback = c.cs ? '/ops/cs' : '/ops/tech';
+          const fallbackRoute = c.cs ? '/cs' : '/tech';
+          window.history.replaceState({}, '', fallback);
+          state.route = fallbackRoute;
+          return await render();
+        }
+        return await loadAdmin();
+      }
       if (r === '/' || r === '') return await loadDashboard();
       if (r.startsWith('/jobs')) return await loadJobsList();
       if (r.startsWith('/job/')) {
@@ -3848,9 +3872,13 @@ async function render(){
       if (r.startsWith('/schedule')) return await loadSchedule();
       if (r.startsWith('/bom')) return await loadBOM();
       if (r.startsWith('/settings')) {
-        // Admins manage settings inside the Admin view
-        const c = slateOpsSettings.user.caps || {};
-        if (c.admin) { window.history.replaceState({}, '', '/ops/admin'); state.route = '/admin'; return await render(); }
+        if (!canAdminTools) {
+          const fallback = c.cs ? '/ops/cs' : '/ops/tech';
+          const fallbackRoute = c.cs ? '/cs' : '/tech';
+          window.history.replaceState({}, '', fallback);
+          state.route = fallbackRoute;
+          return await render();
+        }
         return await loadSettings();
       }
 
