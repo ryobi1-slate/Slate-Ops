@@ -2333,18 +2333,24 @@ async function loadTech() {
 
   const heroActive = active ? `
     <section class="tech-hero is-active" aria-label="Active job">
-      <div class="tech-hero-head">
-        <span class="tech-hero-eyebrow">Active labor</span>
-        <span class="tech-hero-status">Running</span>
-      </div>
-      <h2 class="tech-hero-title">${escapeHtml(jobLabel(activeJob || active))}</h2>
-      <div class="tech-hero-meta">${escapeHtml(jobMeta(activeJob || active) || (active.so_number || '#' + active.job_id))}</div>
+      <div class="tech-hero-eyebrow"><span class="tech-hero-dot" aria-hidden="true"></span>Active labor</div>
       ${active.so_number ? `<div class="tech-hero-so">${escapeHtml(active.so_number)}</div>` : ''}
+      <h2 class="tech-hero-title">${escapeHtml(jobLabel(activeJob || active))}</h2>
+      <div class="tech-hero-meta">${escapeHtml(jobMeta(activeJob || active) || ('Job #' + active.job_id))}</div>
 
       <div class="tech-timer">
-        <div class="tech-timer-label">Labor time elapsed</div>
-        <div class="tech-timer-value" id="live-timer">00:00:00</div>
-        ${estTargetStr ? `<div class="tech-timer-target"><span>Target</span><strong>${estTargetStr}</strong></div>` : ''}
+        <div class="tech-timer-row">
+          <div class="tech-timer-main">
+            <div class="tech-timer-label">Labor time elapsed</div>
+            <div class="tech-timer-value" id="live-timer">00:00:00</div>
+          </div>
+          ${estTargetStr ? `
+            <div class="tech-timer-aside">
+              <div class="tech-timer-label">Target</div>
+              <div class="tech-timer-target-val">${estTargetStr}</div>
+            </div>
+          ` : ''}
+        </div>
       </div>
 
       <button class="btn danger btn-xl tech-stop" id="stop-active">
@@ -2377,16 +2383,14 @@ async function loadTech() {
   const heroIdle = !active ? (
     nextJob ? `
       <section class="tech-hero is-idle" aria-label="No active timer">
-        <div class="tech-hero-head">
-          <span class="tech-hero-eyebrow">No active timer</span>
-          <span class="tech-hero-status is-muted">Idle</span>
-        </div>
-        <div class="tech-idle-msg">Start your next job to begin tracking time.</div>
+        <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        <h2 class="tech-hero-title">Ready to start</h2>
+        <div class="tech-hero-meta">Begin tracking time on your next assigned job.</div>
 
         <div class="tech-next-card">
           <div class="tech-next-label">Up next</div>
           <div class="tech-next-title">${escapeHtml(jobLabel(nextJob))}</div>
-          <div class="tech-next-meta">${escapeHtml(jobMeta(nextJob) || ('#' + nextJob.job_id))}</div>
+          <div class="tech-next-meta">${escapeHtml(jobMeta(nextJob) || ('Job #' + nextJob.job_id))}</div>
           <div class="tech-next-sub">
             ${nextJob.so_number ? escapeHtml(nextJob.so_number) : ''}
             ${estHoursStr(nextJob) ? `${nextJob.so_number ? ' · ' : ''}Est ${estHoursStr(nextJob)}` : ''}
@@ -2398,12 +2402,9 @@ async function loadTech() {
       </section>
     ` : `
       <section class="tech-hero is-idle is-empty" aria-label="Nothing assigned">
-        <div class="tech-hero-head">
-          <span class="tech-hero-eyebrow">No active timer</span>
-          <span class="tech-hero-status is-muted">Idle</span>
-        </div>
-        <div class="tech-empty-title">Nothing assigned to you right now</div>
-        <div class="tech-empty-sub">When a supervisor schedules work, it'll show up here.</div>
+        <div class="tech-hero-eyebrow"><span class="tech-hero-dot is-muted" aria-hidden="true"></span>No active timer</div>
+        <h2 class="tech-hero-title">Nothing assigned</h2>
+        <div class="tech-hero-meta">When a supervisor schedules work, it'll show up here.</div>
       </section>
     `
   ) : '';
@@ -2429,31 +2430,49 @@ async function loadTech() {
     </section>
   ` : '';
 
+  const upNextBlock = upNext.length ? `
+    <section class="tech-upnext" aria-label="Up next">
+      <div class="tech-upnext-head">
+        <span class="tech-upnext-title">Up next</span>
+        <span class="tech-upnext-count">${upNext.length} job${upNext.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="tech-upnext-list">
+        ${upNext.map(upNextCard).join('')}
+      </div>
+    </section>
+  ` : (active ? `
+    <section class="tech-upnext" aria-label="Up next">
+      <div class="tech-upnext-head"><span class="tech-upnext-title">Up next</span></div>
+      <div class="tech-upnext-empty">No other jobs assigned to you.</div>
+    </section>
+  ` : '');
+
+  const subTitle = active
+    ? 'Active labor and queue'
+    : (nextJob ? 'Ready to start your next job' : 'Nothing assigned right now');
+
   view(`
     <div class="tech-surface${isPhone ? ' phone-mode' : ''}">
 
-      <div class="tech-viewmode-row">${viewModeToggle()}</div>
+      <header class="tech-page-head">
+        <div class="tech-page-head-text">
+          <div class="tech-page-eyebrow">Technician</div>
+          <h1 class="tech-page-title">My Work</h1>
+          <div class="tech-page-sub">${escapeHtml(subTitle)}</div>
+        </div>
+        <div class="tech-page-head-aside">${viewModeToggle()}</div>
+      </header>
 
-      ${heroActive}${heroIdle}
-      ${blocker}
-      ${workNotes}
-
-      ${upNext.length ? `
-        <section class="tech-upnext" aria-label="Up next">
-          <div class="tech-upnext-head">
-            <span class="tech-upnext-title">Up next</span>
-            <span class="tech-upnext-count">${upNext.length} job${upNext.length === 1 ? '' : 's'}</span>
-          </div>
-          <div class="tech-upnext-list">
-            ${upNext.map(upNextCard).join('')}
-          </div>
-        </section>
-      ` : (active ? `
-        <section class="tech-upnext" aria-label="Up next">
-          <div class="tech-upnext-head"><span class="tech-upnext-title">Up next</span></div>
-          <div class="tech-upnext-empty">No other jobs assigned to you.</div>
-        </section>
-      ` : '')}
+      <div class="tech-layout">
+        <div class="tech-layout-main">
+          ${heroActive}${heroIdle}
+          ${blocker}
+          ${workNotes}
+        </div>
+        <aside class="tech-layout-side">
+          ${upNextBlock}
+        </aside>
+      </div>
 
     </div>
   `);

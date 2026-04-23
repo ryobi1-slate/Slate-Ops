@@ -1,5 +1,17 @@
 # Slate Ops Changelog
 
+## 0.16.1 — Technician screen integration pass
+
+### Technician (`/ops/tech`)
+- Composition reworked to feel like a Slate Ops page, not a phone mockup dropped into the desktop shell.
+- Added a Slate-style page header (eyebrow + title + sub) so the surface reads like the rest of Ops; the phone-view toggle moved into the header.
+- Switched from a centered narrow column to a true two-column layout on desktop (main hero + sticky Up Next sidebar). Stacks to a single column under 1080px and on phone view.
+- Removed the generic mobile-app status pill ("Running" / "Idle" green/grey dot) in favor of a Slate eyebrow with a sage status dot.
+- Active hero now uses a sage left rule (matching existing Slate card treatments) instead of a heavy elevated shadow.
+- Timer panel flattened into a single bordered "measurement strip" with elapsed | target side-by-side, swapping the gradient panel for a calmer Slate token surface.
+- Up Next sidebar restyled as a single bordered card with internal divider rows, replacing the heavier free-floating mobile-app cards.
+- Stop / Start buttons retuned to standard Slate radii and weight while preserving touch-friendly sizing.
+
 ## 0.16.0 — Technician surface refresh (phone-first execution screen)
 
 ### Technician (`/ops/tech`)
