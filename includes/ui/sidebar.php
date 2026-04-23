@@ -23,17 +23,7 @@ if (!function_exists('ops_nav_link')) {
 ?>
 <aside class="ops-sidebar">
   <div class="ops-brand">
-    <svg class="ops-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 44" aria-label="Slate">
-      <!-- blade mark -->
-      <polygon points="5,40 14,4 21,4 12,40" fill="white"/>
-      <!-- wordmark -->
-      <text x="28" y="36"
-        font-family="'IBM Plex Sans',system-ui,-apple-system,sans-serif"
-        font-weight="900"
-        font-size="32"
-        letter-spacing="2"
-        fill="white">SLATE</text>
-    </svg>
+    <img class="ops-logo" src="<?php echo esc_url(SLATE_OPS_URL . 'assets/logos/slate-logo.svg'); ?>" alt="Slate" width="120" height="28">
   </div>
 
   <nav class="ops-nav">

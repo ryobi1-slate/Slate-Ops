@@ -130,29 +130,31 @@ body.slate-ops {
 /* ─── 3. Sidebar ─── */
 .ops-sidebar {
   width: var(--shell-sidebar-w);
-  background: var(--shell-sidebar-bg);
-  color: var(--sage);
+  background: var(--slate-surface);
+  color: var(--slate-ink-muted);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   overflow-y: auto;
-  border-right: 1px solid rgba(47,62,57,0.12);
+  border-right: 1px solid var(--slate-divider);
 }
 
 .ops-brand {
   padding: 20px 16px 16px;
-  border-bottom: 1px solid rgba(47,62,57,0.10);
+  border-bottom: 1px solid var(--slate-divider-soft);
 }
 
 .ops-logo {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 36px;
+  max-height: 32px;
+  /* White SVG on light sidebar: invert to dark ink */
+  filter: brightness(0) saturate(0) opacity(0.75);
 }
 .ops-logo polygon,
 .ops-logo text {
-  fill: var(--sage) !important;
+  fill: var(--slate-sage-ink) !important;
 }
 
 /* Legacy icon — hidden when SVG logo is used */
@@ -175,7 +177,7 @@ body.slate-ops {
   padding: 9px 10px;
   border: none;
   border-radius: 10px;
-  color: rgba(47,62,57,0.72);
+  color: var(--slate-ink-muted);
   text-decoration: none;
   font-weight: 600;
   font-size: 13px;
@@ -189,13 +191,14 @@ body.slate-ops {
 }
 
 .ops-nav-link:hover {
-  background: rgba(47,62,57,0.06);
-  color: rgba(47,62,57,0.96);
+  background: var(--slate-sage-wash);
+  color: var(--slate-ink);
 }
 
 .ops-nav-link.active {
-  background: rgba(47,62,57,0.12);
-  color: var(--sage);
+  background: var(--slate-surface-tint);
+  color: var(--slate-ink);
+  box-shadow: inset 3px 0 0 var(--slate-arches);
 }
 
 /* Material icon sizing */
@@ -212,7 +215,7 @@ body.slate-ops {
 /* Sidebar footer */
 .ops-sidebar-footer {
   padding: 10px 10px;
-  border-top: 1px solid rgba(47,62,57,0.10);
+  border-top: 1px solid var(--slate-divider-soft);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -224,20 +227,20 @@ body.slate-ops {
 .ops-sidebar-user-name {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(47,62,57,0.92);
+  color: var(--slate-ink);
   line-height: 1.2;
 }
 
 .ops-sidebar-user-role {
   font-size: 9px;
-  color: rgba(47,62,57,0.52);
+  color: var(--slate-ink-subtle);
   margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.09em;
 }
 
 .ops-sidebar-logout {
-  color: rgba(47,62,57,0.52);
+  color: var(--slate-ink-subtle);
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -245,7 +248,7 @@ body.slate-ops {
   border-radius: 6px;
   transition: color 0.12s;
 }
-.ops-sidebar-logout:hover { color: var(--sage); }
+.ops-sidebar-logout:hover { color: var(--slate-ink); }
 .ops-sidebar-logout .material-symbols-outlined { font-size: 20px; }
 
 /* ─── 4. Topbar ─── */
@@ -342,13 +345,13 @@ body.slate-ops {
   background-color: var(--slate-arches-wash) !important;
 }
 .ops-btn-arches-solid {
-  background-color: var(--slate-arches) !important;
-  border-color: var(--slate-arches) !important;
+  background-color: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
   color: var(--slate-surface) !important;
 }
 .ops-btn-arches-solid:hover {
-  background-color: var(--slate-arches-ink) !important;
-  border-color: var(--slate-arches-ink) !important;
+  background-color: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
 }
 
 /* ─── 8. CS page token classes ──────────────────────────────────────
@@ -398,10 +401,11 @@ body.slate-ops {
 
 /* Job status badges */
 .ops-badge-status-intake     { background-color: var(--slate-sage-wash);  color: var(--slate-sage-ink); }
-.ops-badge-status-scheduled  { background-color: var(--slate-arches);     color: var(--slate-sage-ink); }
+.ops-badge-status-scheduled  { background-color: var(--slate-sage-wash);  color: var(--slate-sage-ink); }
 .ops-badge-status-inprogress { background-color: var(--slate-sage-ink);   color: var(--slate-surface); }
 .ops-badge-status-complete   { background-color: var(--slate-redwood);    color: var(--slate-surface); }
 .ops-badge-status-hold       { background-color: var(--slate-flag);       color: var(--slate-surface); }
+.ops-badge-status-pending-qc { background-color: var(--slate-arches-wash); color: var(--slate-arches-ink); }
 
 /* Inline text link (Reset filters) */
 .ops-cs-reset-link { color: var(--slate-ink-muted); }
