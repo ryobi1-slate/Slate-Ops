@@ -1,5 +1,18 @@
 # Slate Ops Changelog
 
+## 0.16.0 — Technician surface refresh (phone-first execution screen)
+
+### Technician (`/ops/tech`)
+- Rewrote the landing screen as a focused, phone-first execution surface.
+- Active state: unified hero card with status pill, job label, customer/unit meta, large mono timer with optional target, dominant "Stop Work & Log Labor" action, secondary "Submit for QC" and "+ Note" actions, inline QC/note panels.
+- Idle state is no longer a dead end — the next assigned job is promoted inside the hero as a clear "Start this job" CTA.
+- Empty state rendered when nothing is assigned.
+- Blocker card (amber, left-striped) surfaces `hold_reason` / `delay_reason` / `status_detail` for the active job.
+- Work notes card surfaces `schedule_notes` for the active job, kept visually secondary to the timer.
+- Up Next: simple vertical card list with one primary Start/Resume/Open action per job; cards tap-open into job detail.
+- Removed the legacy "All Jobs" collapsible table from the Tech screen to cut admin clutter.
+- Shell/color tokens, cards, and buttons reuse existing Ops design tokens — no shell redesign.
+
 ## 0.8.0 — Phase 0 UI Map (Dashboard + Scheduler Inspector + Job Detail Tabs)
 
 ### Dashboard (`/ops/exec`)
