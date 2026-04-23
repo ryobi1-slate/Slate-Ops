@@ -1280,26 +1280,38 @@ async function loadCS() {
   }
 
   view(`
-    <div class="cs-header">
-      <div>
-        <div class="cs-title">Customer Service</div>
-        <div class="cs-sub">Complete intake, assign SO#s, and create jobs.</div>
-      </div>
-      <div class="cs-header-actions">
-        <div class="cs-kpi-pills">
-          <span class="cs-pill"><span class="cs-pill-label">Pending Intake</span><span class="cs-pill-val">${portalNeeds.length}</span></span>
-          <span class="cs-pill"><span class="cs-pill-label">Needs SO#</span><span class="cs-pill-val">${manualNeeds.length}</span></span>
+    <div class="card cs-header-card">
+      <div class="cs-header">
+        <div>
+          <div class="cs-title">Customer Service</div>
+          <div class="cs-sub">Complete intake, assign SO numbers, and move jobs cleanly into scheduling.</div>
         </div>
-        <input class="input" id="cs-search" placeholder="Search SO#, VIN, customer…" style="max-width:260px;" />
-        <button class="btn" id="start-new-intake" type="button">Start Intake</button>
+        <div class="cs-header-actions">
+          <input class="input cs-search" id="cs-search" placeholder="Search SO#, VIN, customer…" />
+          <button class="btn" id="start-new-intake" type="button">Create Manual Job</button>
+        </div>
+      </div>
+      <div class="cs-kpi-row">
+        <div class="cs-kpi-card">
+          <div class="cs-kpi-label">Pending Intake</div>
+          <div class="cs-kpi-value">${portalNeeds.length}</div>
+        </div>
+        <div class="cs-kpi-card">
+          <div class="cs-kpi-label">Needs SO</div>
+          <div class="cs-kpi-value">${manualNeeds.length}</div>
+        </div>
+        <div class="cs-kpi-card">
+          <div class="cs-kpi-label">Active Jobs</div>
+          <div class="cs-kpi-value">${activeJobs.length}</div>
+        </div>
       </div>
     </div>
 
     <div class="cs-layout">
       <div class="cs-left">
-        <div class="card">
+        <div class="card cs-queue-card">
           <div class="cs-section-head">
-            <h2 class="cs-section-title">PENDING INTAKE - PORTAL JOBS</h2>
+            <h2 class="cs-section-title">Pending Intake</h2>
             <div class="muted">${portalNeeds.length} item(s)</div>
           </div>
           <table class="table">
@@ -1327,15 +1339,15 @@ async function loadCS() {
                   </tr>
                 `;
               }).join('') : `
-                <tr><td colspan="4" class="muted">No portal jobs pending intake.</td></tr>
+                <tr><td colspan="4"><div class="cs-empty-state">No portal intake jobs right now.</div></td></tr>
               `}
             </tbody>
           </table>
         </div>
 
-        <div class="card" style="margin-top:14px;">
+        <div class="card cs-queue-card">
           <div class="cs-section-head">
-            <h2 class="cs-section-title">NEEDS SO# - MANUAL JOBS</h2>
+            <h2 class="cs-section-title">Needs SO</h2>
             <div class="muted">${manualNeeds.length} item(s)</div>
           </div>
           <table class="table">
@@ -1367,7 +1379,43 @@ async function loadCS() {
                   </tr>
                 `;
               }).join('') : `
-                <tr><td colspan="5" class="muted">No manual jobs need SO#.</td></tr>
+                <tr><td colspan="5"><div class="cs-empty-state">No manual jobs waiting on an SO number.</div></td></tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card cs-queue-card">
+          <div class="cs-section-head">
+            <h2 class="cs-section-title">Active Jobs</h2>
+            <div class="muted">${activeJobs.length} item(s)</div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>SO</th>
+                <th>CUSTOMER</th>
+                <th>STATUS</th>
+                <th>DEALER</th>
+                <th style="text-align:right;">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${activeJobs.length ? activeJobs.map(j => {
+                const search = [j.customer_name||'', j.dealer_name||'', j.so_number||'', j.vin||j.vin_last8||''].join(' ').toLowerCase();
+                return `
+                  <tr data-job-id="${j.job_id}" data-search="${escapeHtml(search)}">
+                    <td class="mono">${escapeHtml(j.so_number||'—')}</td>
+                    <td>${escapeHtml(j.customer_name||'—')}</td>
+                    <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+                    <td>${escapeHtml(j.dealer_name||'—')}</td>
+                    <td style="text-align:right; white-space:nowrap;">
+                      <button class="btn secondary small-btn" data-open-job="${j.job_id}">View</button>
+                    </td>
+                  </tr>
+                `;
+              }).join('') : `
+                <tr><td colspan="5"><div class="cs-empty-state">No active jobs in queue.</div></td></tr>
               `}
             </tbody>
           </table>
@@ -1398,7 +1446,7 @@ async function loadCS() {
     const host  = document.getElementById('intake-form-content');
     if (!host) return;
     host.innerHTML = `
-      <h3 style="margin:0 0 10px;">Create Manual Job</h3>
+      <div class="cs-create-head"><h3 class="cs-create-title">Create Manual Job</h3><p class="cs-create-sub">Quick intake form. Add only what you know now.</p></div>
       <form id="manual-create">
         <div class="cs-manual-grid">
           <div class="cs-field">
