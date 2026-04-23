@@ -374,7 +374,7 @@ body.slate-ops {
 /* Table header */
 .ops-cs-thead {
   background-color: var(--slate-sage-wash);
-  color: var(--slate-ink-subtle);
+  color: var(--slate-ink-muted);
   border-bottom: 1px solid var(--slate-divider);
 }
 
@@ -383,7 +383,7 @@ body.slate-ops {
 .ops-cs-row-hover:hover { background-color: var(--slate-surface-tint); }
 
 /* Input fields */
-.ops-cs-input { border-color: var(--slate-divider); background-color: var(--slate-surface); }
+.ops-cs-input { border: 1px solid var(--slate-divider); background-color: var(--slate-surface); }
 .ops-cs-input::placeholder { color: var(--slate-ink-placeholder); }
 .ops-cs-input:focus {
   outline: none;
@@ -398,11 +398,11 @@ body.slate-ops {
 
 /* Job status badges */
 .ops-badge-status-intake     { background-color: var(--slate-sage-wash);  color: var(--slate-sage-ink); }
-.ops-badge-status-scheduled  { background-color: var(--slate-arches);     color: var(--slate-surface); }
+.ops-badge-status-scheduled  { background-color: var(--slate-arches);     color: var(--slate-sage-ink); }
 .ops-badge-status-inprogress { background-color: var(--slate-sage-ink);   color: var(--slate-surface); }
 .ops-badge-status-complete   { background-color: var(--slate-redwood);    color: var(--slate-surface); }
 .ops-badge-status-hold       { background-color: var(--slate-flag);       color: var(--slate-surface); }
 
 /* Inline text link (Reset filters) */
-.ops-cs-reset-link { color: var(--slate-ink-subtle); }
+.ops-cs-reset-link { color: var(--slate-ink-muted); }
 .ops-cs-reset-link:hover { color: var(--slate-arches); }
