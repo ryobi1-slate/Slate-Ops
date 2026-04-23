@@ -1,5 +1,13 @@
 # Slate Ops Changelog
 
+## 0.17.4 — Visual polish: buttons, status badges, sidebar, logo
+
+- **Buttons**: Primary buttons (Create Job, Save & Close) now use `--slate-sage` fill → `--slate-sage-ink` hover; orange/arches removed as primary color
+- **Status badges**: Scheduled → neutral sage-wash/sage-ink; Pending QC → amber arches-wash/arches-ink (separated from In Progress); In Progress → dark sage-ink; Complete → redwood; Blocked/Hold → flag red
+- **Sidebar**: Background → `--slate-surface`; border → `--slate-divider`; nav links → `--slate-ink-muted`; hover → `--slate-sage-wash`; active → `--slate-surface-tint` with arches left accent (`box-shadow: inset 3px 0 0 var(--slate-arches)`); user/footer colors all via `--slate-ink-*` tokens
+- **Logo**: Replaced inline SVG with `assets/logos/slate-logo.svg` local asset; CSS filter renders it dark on the light sidebar; no external URLs
+- CSS-only visual changes; no behavior or routing changes
+
 ## 0.17.3 — CS visual tokens: Dealer Portal design system
 
 - Mirrored full `--slate-*` token set from Dealer Portal into `ops-shell.css` `:root`
