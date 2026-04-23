@@ -1,5 +1,31 @@
 # Slate Ops Changelog
 
+## 0.17.2 — Role-based /ops landing route
+
+- Visiting bare `/ops` now redirects to the user's primary page based on role:
+  admin/supervisor → `/ops/exec`, cs → `/ops/cs`, tech → `/ops/tech`
+- Direct routes (`/ops/cs`, `/ops/exec`, `/ops/tech`, etc.) are unaffected
+- Logic reads `slateOpsSettings.user.caps`; no PHP or routing changes
+
+## 0.17.1 — CS: Start Date field
+
+- Added Start Date field (`scheduled_start`) to the CS job list, create form, and edit panel
+- Wires the existing backend field — no schema or API changes
+- Field order: Customer Name → VIN# → SO# → Lead Tech → Est. Hours → Start Date → Due Date → Notes → Job Status → Parts Status
+- Both create and save payloads include `scheduled_start`
+
+## 0.17.0 — CS cleanup: field order, labels, colors, Save & Close
+
+- **Field order** applied to job list table, create form, and edit panel:
+  Customer Name → VIN# → SO# → Lead Tech → Est. Hours → Due Date → Notes → Job Status → Parts Status
+- "Description" label renamed to "Notes" throughout CS UI (backend field unchanged)
+- **Save & Close**: X button removed from edit panel; Save renamed to "Save & Close"; panel closes automatically on successful save
+- **Job Status labels**: `APPROVED_FOR_SCHEDULING` → "Scheduled", `PENDING_QC` → "In Progress"; added `COMPLETE_AWAITING_PICKUP` → "Complete - Awaiting Pickup", `DELAYED` → "Delayed"
+- **Job Status colors**: Red = On Hold/Delayed, Amber = Scheduled/Complete-Awaiting-Pickup, Blue = In Progress, Green = Complete
+- **Parts Status colors**: Red = Not Ready, Amber = Partial, Green = Ready/Received/Arrived
+- Parts labels normalized: `RECEIVED`/`ARRIVED` → "Ready", `HOLD` → "Not Ready"
+- Notes cell styled bold when `parts_status = PARTIAL` for visibility
+
 ## 0.16.4 — Cache-bust / deploy refresh (no code changes)
 
 - Plugin version bumped so WordPress asset URLs re-version and browsers / CDNs drop the previous bundle. No CSS, JS, or behavior changes.
