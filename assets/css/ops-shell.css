@@ -18,34 +18,45 @@
 :root {
   /* Slate palette — single source of truth */
   --sage:         #2f3e39;
-  --sage-mid:     #3e514b;
-  --sage-lt:      #4d6560;
-  --sand:         #dddcc7;
-  --sand-lt:      #eae9d8;
+  --sage-mid:     #445a53;
+  --sage-lt:      #5d726c;
+  --sand:         #f4f1e8;
+  --sand-lt:      #faf8f2;
   --arches:       #d86b19;
   --arches-lt:    #f2893a;
   --black:        #111111;
   --white:        #ffffff;
   --muted:        rgba(0,0,0,0.55);
-  --border:       rgba(0,0,0,0.12);
-  --border-md:    rgba(0,0,0,0.18);
-  --shadow:       0 1px 4px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04);
-  --radius:       10px;
+  --border:       rgba(47,62,57,0.12);
+  --border-md:    rgba(47,62,57,0.20);
+  --shadow:       0 1px 1px rgba(18,25,22,0.04);
+  --radius:       12px;
+  --radius-sm:    8px;
+  --radius-pill:  999px;
   --font-sans:    'IBM Plex Sans', system-ui, -apple-system, sans-serif;
   --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
+  --space-1:      8px;
+  --space-2:      12px;
+  --space-3:      16px;
+  --space-4:      24px;
+  --surface-bg:   #f4f1e8;
+  --surface-card: #ffffff;
+  --stroke-subtle: rgba(47,62,57,0.12);
+  --control-bg:   #fbfaf6;
+  --control-border: rgba(47,62,57,0.22);
 
   /* Shell tokens (used by shell partials) */
-  --shell-sidebar-bg:   var(--sage);
-  --shell-sidebar-w:    260px;
-  --shell-header-h:     52px;
-  --shell-header-bg:    var(--white);
-  --shell-canvas:       var(--sand);
-  --shell-surface:      var(--white);
-  --shell-border:       var(--border);
+  --shell-sidebar-bg:   #f6f2e8;
+  --shell-sidebar-w:    152px;
+  --shell-header-h:     56px;
+  --shell-header-bg:    rgba(255,255,255,0.92);
+  --shell-canvas:       var(--surface-bg);
+  --shell-surface:      var(--surface-card);
+  --shell-border:       var(--stroke-subtle);
   --shell-accent:       var(--arches);
   --shell-text:         var(--black);
   --shell-muted:        var(--muted);
-  --shell-nav-active-bg: rgba(255,255,255,0.13);
+  --shell-nav-active-bg: rgba(47,62,57,0.10);
 
   /* Legacy aliases — keep so any old refs in ops.css don't break */
   --slate-sage:    var(--sage);
@@ -80,32 +91,41 @@ body.slate-ops {
 
 .ops-content {
   flex: 1;
-  padding: 20px;
+  padding: 24px 28px;
   overflow-y: auto;
   background: var(--sand);
+}
+.ops-content > #ops-view{
+  max-width: 1140px;
+  margin: 0 auto;
 }
 
 /* ─── 3. Sidebar ─── */
 .ops-sidebar {
   width: var(--shell-sidebar-w);
   background: var(--shell-sidebar-bg);
-  color: var(--white);
+  color: var(--sage);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   overflow-y: auto;
+  border-right: 1px solid rgba(47,62,57,0.12);
 }
 
 .ops-brand {
-  padding: 24px 20px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid rgba(47,62,57,0.10);
 }
 
 .ops-logo {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 44px;
+  max-height: 36px;
+}
+.ops-logo polygon,
+.ops-logo text {
+  fill: var(--sage) !important;
 }
 
 /* Legacy icon — hidden when SVG logo is used */
@@ -115,7 +135,7 @@ body.slate-ops {
 /* Nav */
 .ops-nav {
   flex: 1;
-  padding: 10px 10px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -124,14 +144,14 @@ body.slate-ops {
 .ops-nav-link {
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 12px 14px;
+  gap: 9px;
+  padding: 9px 10px;
   border: none;
   border-radius: 10px;
-  color: rgba(255,255,255,0.60);
+  color: rgba(47,62,57,0.72);
   text-decoration: none;
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 600;
+  font-size: 13px;
   font-family: var(--font-sans);
   transition: background 0.12s, color 0.12s;
   cursor: pointer;
@@ -142,20 +162,20 @@ body.slate-ops {
 }
 
 .ops-nav-link:hover {
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.90);
+  background: rgba(47,62,57,0.06);
+  color: rgba(47,62,57,0.96);
 }
 
 .ops-nav-link.active {
-  background: rgba(255,255,255,0.15);
-  color: var(--white);
+  background: rgba(47,62,57,0.12);
+  color: var(--sage);
 }
 
 /* Material icon sizing */
 .ops-nav-icon,
 .ops-nav-link .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
   width: 24px;
   flex-shrink: 0;
@@ -164,8 +184,8 @@ body.slate-ops {
 
 /* Sidebar footer */
 .ops-sidebar-footer {
-  padding: 12px 14px;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 10px;
+  border-top: 1px solid rgba(47,62,57,0.10);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -175,22 +195,22 @@ body.slate-ops {
 .ops-sidebar-user {}
 
 .ops-sidebar-user-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,0.85);
+  color: rgba(47,62,57,0.92);
   line-height: 1.2;
 }
 
 .ops-sidebar-user-role {
-  font-size: 10px;
-  color: rgba(255,255,255,0.40);
+  font-size: 9px;
+  color: rgba(47,62,57,0.52);
   margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.09em;
 }
 
 .ops-sidebar-logout {
-  color: rgba(255,255,255,0.38);
+  color: rgba(47,62,57,0.52);
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -198,15 +218,15 @@ body.slate-ops {
   border-radius: 6px;
   transition: color 0.12s;
 }
-.ops-sidebar-logout:hover { color: var(--white); }
+.ops-sidebar-logout:hover { color: var(--sage); }
 .ops-sidebar-logout .material-symbols-outlined { font-size: 20px; }
 
 /* ─── 4. Topbar ─── */
 .ops-header {
   height: var(--shell-header-h);
   background: var(--shell-header-bg);
-  border-bottom: 1px solid var(--shell-border);
-  padding: 0 20px;
+  border-bottom: 1px solid rgba(47,62,57,0.10);
+  padding: 0 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -214,9 +234,9 @@ body.slate-ops {
 }
 
 .ops-page-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
-  color: var(--black);
+  color: rgba(47,62,57,0.88);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -224,9 +244,9 @@ body.slate-ops {
 /* ─── 5. Version badge ─── */
 .ops-version-badge {
   display: inline-block;
-  background: rgba(0,0,0,0.05);
-  color: rgba(0,0,0,0.38);
-  border: 1px solid rgba(0,0,0,0.09);
+  background: rgba(47,62,57,0.06);
+  color: rgba(47,62,57,0.60);
+  border: 1px solid rgba(47,62,57,0.14);
   border-radius: 6px;
   font-size: 10px;
   font-family: var(--font-mono);
