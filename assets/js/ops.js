@@ -107,9 +107,21 @@
     if (el) el.textContent = title;
   }
 
+  const STATUS_LABELS = {
+    INTAKE:           'Intake',
+    READY_FOR_BUILD:  'Ready for Build',
+    QUEUED:           'Queued',
+    IN_PROGRESS:      'In Progress',
+    PENDING_QC:       'Pending QC',
+    READY_FOR_PICKUP: 'Ready for Pickup',
+    COMPLETE:         'Complete',
+    DELAYED:          'Delayed',
+    ON_HOLD:          'On Hold',
+  };
+
   function fmtStatus(s){
     if(!s) return '';
-    return s.replaceAll('_',' ');
+    return STATUS_LABELS[s] || s.replaceAll('_',' ');
   }
 
   function badgeClass(status){
@@ -211,7 +223,11 @@
             <tr>
               <td class="mono">${j.so_number || ''}</td>
               <td class="mono">${(j.vin || '').slice(-6)}</td>
-              <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
+              <td>
+                <select class="cs-inline-status" data-job-id="${j.job_id}" data-orig="${j.status}">
+                  ${['INTAKE','READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','READY_FOR_PICKUP','COMPLETE','DELAYED','ON_HOLD'].map(s => `<option value="${s}"${j.status===s?' selected':''}>${fmtStatus(s)}</option>`).join('')}
+                </select>
+              </td>
               <td>${j.scheduled_start || ''}</td>
               <td>${j.scheduled_finish || ''}</td>
               <td>${j.assigned_name || ''}</td>
@@ -229,6 +245,23 @@
         const id = b.getAttribute('data-open-job');
         window.history.pushState({}, '', '/ops/job/' + id);
         router();
+      };
+    });
+
+    $$('.cs-inline-status').forEach(sel => {
+      sel.onchange = async () => {
+        const jobId = sel.getAttribute('data-job-id');
+        const orig  = sel.getAttribute('data-orig');
+        const next  = sel.value;
+        sel.disabled = true;
+        try {
+          await api.setStatus(jobId, next);
+          router();
+        } catch(e) {
+          sel.value   = orig;
+          sel.disabled = false;
+          toast('Status update failed', true);
+        }
       };
     });
   }
