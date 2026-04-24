@@ -1,5 +1,19 @@
 # Slate Ops Changelog
 
+## 0.17.5 — CS softness pass: radius, borders, text hierarchy, empty state
+
+- **Radius tokens**: `--slate-radius-lg: 12px` and `--slate-radius-md: 8px` added to `:root`
+- **Cards**: `border-radius: var(--slate-radius-lg)` applied via `.ops-cs-card`
+- **Inputs/selects**: `border-radius: var(--slate-radius-md)` applied via `.ops-cs-input`
+- **Buttons**: `border-radius: var(--slate-radius-md)` applied via `.ops-btn-arches-solid` and `.ops-btn-arches`
+- **Badge pills**: all `.ops-badge-*` classes set to `border-radius: 999px` — fully rounded pills with slightly wider horizontal padding
+- **Table row dividers**: `border-bottom: 1px solid var(--slate-divider-soft)` on each row; cell padding increased to 14px (from 12px)
+- **Table header**: padding increased slightly for breathing room
+- **Text hierarchy**: `.ops-cs-card label` uses `--slate-ink-subtle` and `font-weight: 500`; `h1/h2` use `--slate-ink`
+- **Empty state**: dashed `--slate-divider-soft` border, `--slate-radius-lg` corners, `--slate-ink-muted` text; class `ops-cs-empty` replaces raw Tailwind utilities
+- **Section spacing**: card margin-bottom increased to 20px
+- CSS-only visual changes; no behavior or routing changes
+
 ## 0.17.4 — Visual polish: buttons, status badges, sidebar, logo
 
 - **Buttons**: Primary buttons (Create Job, Save & Close) now use `--slate-sage` fill → `--slate-sage-ink` hover; orange/arches removed as primary color
