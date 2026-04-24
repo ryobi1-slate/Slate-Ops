@@ -1,3 +1,9 @@
 node_modules/
 react-ui/node_modules/
+
+# One-time import artifacts — raw exports and generated data files
 local-imports/*.csv
+local-imports/*.jsonl
+
+# Pre-import backups contain live job data
+backup/*.json
