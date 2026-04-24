@@ -121,7 +121,7 @@
 
   function fmtStatus(s){
     if(!s) return '';
-    return STATUS_LABELS[s] || s.replaceAll('_',' ');
+    return escapeHtml(STATUS_LABELS[s] || s.replaceAll('_',' '));
   }
 
   function badgeClass(status){
@@ -224,9 +224,11 @@
               <td class="mono">${j.so_number || ''}</td>
               <td class="mono">${(j.vin || '').slice(-6)}</td>
               <td>
-                <select class="cs-inline-status" data-job-id="${j.job_id}" data-orig="${j.status}">
-                  ${['INTAKE','READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','READY_FOR_PICKUP','COMPLETE','DELAYED','ON_HOLD'].map(s => `<option value="${s}"${j.status===s?' selected':''}>${fmtStatus(s)}</option>`).join('')}
-                </select>
+                ${(isAdmin || isSupervisor || isCS) ? `
+                  <select class="cs-inline-status" data-job-id="${j.job_id}" data-orig="${escapeAttr(j.status)}">
+                    ${Object.keys(STATUS_LABELS).map(s => `<option value="${s}"${j.status===s?' selected':''}>${fmtStatus(s)}</option>`).join('')}
+                  </select>
+                ` : `<span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span>`}
               </td>
               <td>${j.scheduled_start || ''}</td>
               <td>${j.scheduled_finish || ''}</td>
