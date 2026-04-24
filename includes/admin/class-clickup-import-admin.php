@@ -58,6 +58,8 @@ class Slate_Ops_ClickUp_Import_Admin {
 
 				if ( $ext !== 'jsonl' ) {
 					$notice = 'Rejected: file must have a .jsonl extension (got .' . esc_html( $ext ) . ').';
+				} elseif ( ! self::validate_jsonl_content( $file['tmp_name'] ) ) {
+					$notice = 'Rejected: file does not appear to be valid JSONL (first line failed JSON decode).';
 				} elseif ( ! move_uploaded_file( $file['tmp_name'], self::jsonl_path() ) ) {
 					$notice = 'Upload failed: could not save file. Check directory permissions.';
 				} else {
@@ -211,6 +213,22 @@ class Slate_Ops_ClickUp_Import_Admin {
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	// ── Upload validation ────────────────────────────────────────────────────
+
+	private static function validate_jsonl_content( $tmp_path ) {
+		$fh = fopen( $tmp_path, 'r' );
+		if ( ! $fh ) {
+			return false;
+		}
+		$first = trim( fgets( $fh ) );
+		fclose( $fh );
+		if ( $first === '' ) {
+			return false;
+		}
+		$decoded = json_decode( $first, true );
+		return is_array( $decoded );
 	}
 
 	// ── Step dispatcher ──────────────────────────────────────────────────────
