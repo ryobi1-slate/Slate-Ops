@@ -3,7 +3,7 @@
  * Slate Ops — main shell template.
  *
  * Served for every /ops/* request via the template_include filter.
- * All page content is rendered by assets/js/ops.js into #ops-view.
+ * All page content is rendered by assets/react/app.js (React) into #ops-view.
  *
  * Layout is assembled from shared partials in includes/ui/:
  *   layout-shell.php  — <html><head><body> wrapper
@@ -35,7 +35,7 @@ $user = wp_get_current_user();
 $shell_part = 'open';
 include SLATE_OPS_PATH . 'includes/ui/layout-shell.php';
 
-// #ops-view is empty — JS router (ops.js) injects all page content at runtime.
+// #ops-view is empty — React app (app.js) mounts and renders all content at runtime.
 
 // Close layout shell (outputs </section></div></body></html>)
 $shell_part = 'close';
