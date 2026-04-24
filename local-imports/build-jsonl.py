@@ -124,7 +124,7 @@ def build():
             continue
 
         customer = task_name
-        so       = ''   # not present in ClickUp export
+        so       = r.get('SO# (short text)', '').strip() or r.get('STOCK # (short text)', '').strip()
 
         # Skip if no identifier at all
         if not customer and not so:
