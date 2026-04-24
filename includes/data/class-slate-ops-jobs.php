@@ -90,7 +90,7 @@ class Slate_Ops_Jobs {
    */
   public static function get_schedulable( $limit = 200 ) {
     return self::query([
-      'statuses'         => 'APPROVED_FOR_SCHEDULING',
+      'statuses'         => 'READY_FOR_BUILD',
       'limit'            => $limit,
       'order_by'         => 'priority',
       'order'            => 'ASC',

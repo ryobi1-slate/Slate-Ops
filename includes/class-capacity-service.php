@@ -56,7 +56,7 @@ class Slate_Capacity_Service {
         "SELECT work_center, SUM(COALESCE(estimated_minutes, 0)) AS allocated
          FROM $jobs_table
          WHERE archived_at IS NULL
-           AND status IN ('SCHEDULED','IN_PROGRESS')
+           AND status IN ('QUEUED','IN_PROGRESS')
            AND work_center IS NOT NULL
            AND scheduled_start IS NOT NULL
            AND DATE(scheduled_start) <= %s
@@ -153,7 +153,7 @@ class Slate_Capacity_Service {
                 promised_date, target_ship_date, status, scheduling_flag
          FROM $jobs_table
          WHERE archived_at IS NULL
-           AND status IN ('SCHEDULED','IN_PROGRESS','APPROVED_FOR_SCHEDULING')
+           AND status IN ('QUEUED','IN_PROGRESS','READY_FOR_BUILD')
            AND (scheduled_start IS NULL OR DATE(scheduled_start) <= %s)
          LIMIT 1000",
         $to
@@ -246,7 +246,7 @@ class Slate_Capacity_Service {
           "SELECT work_center, SUM(COALESCE(estimated_minutes, 0)) AS allocated
            FROM $jobs_table
            WHERE archived_at IS NULL
-             AND status IN ('SCHEDULED','IN_PROGRESS')
+             AND status IN ('QUEUED','IN_PROGRESS')
              AND work_center IS NOT NULL
              AND DATE(scheduled_start) <= %s
              AND DATE(COALESCE(scheduled_finish, scheduled_start)) >= %s
