@@ -115,6 +115,11 @@ class Slate_Ops_REST {
           'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
           'callback' => [__CLASS__, 'edit_job'],
         ],
+        [
+          'methods' => 'DELETE',
+          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'callback' => [__CLASS__, 'delete_job'],
+        ],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/notes', [
@@ -1320,6 +1325,21 @@ foreach ($rows as &$r) {
     }
 
     return self::get_job(['id' => $job_id]);
+  }
+
+  public static function delete_job($req) {
+    global $wpdb;
+    $job_id = intval($req['id']);
+    $t      = $wpdb->prefix . 'slate_ops_jobs';
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    self::audit('job', $job_id, 'delete', null, null, null, 'Job deleted by ' . wp_get_current_user()->display_name);
+
+    $wpdb->delete($t, ['job_id' => $job_id], ['%d']);
+
+    return new WP_REST_Response(['deleted' => true, 'job_id' => $job_id], 200);
   }
 
   public static function add_note($req) {
