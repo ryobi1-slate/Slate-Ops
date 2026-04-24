@@ -484,5 +484,4 @@ body.slate-ops {
   border-radius: var(--slate-radius-lg);
   color: var(--slate-ink-muted);
   font-size: 14px;
-  border-color: var(--slate-divider-soft);
 }
