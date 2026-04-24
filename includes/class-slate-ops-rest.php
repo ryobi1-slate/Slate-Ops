@@ -1451,7 +1451,7 @@ foreach ($rows as &$r) {
       'vin_last8' => $vin_last8 ?: null,
       'job_type' => $job_type,
       'parts_status' => $parts_status,
-      'status' => $so_number !== '' ? 'READY_FOR_BUILD' : 'INTAKE',
+      'status' => 'INTAKE',
       'status_updated_at' => $now,
       'delay_reason' => null,
       'priority' => $priority,
@@ -1499,11 +1499,9 @@ foreach ($rows as &$r) {
 
     $now = Slate_Ops_Utils::now_gmt();
     $update = [
-      'so_number'         => $so,
-      'status'            => 'READY_FOR_BUILD',
-      'status_updated_at' => $now,
-      'dealer_status'     => 'waiting',
-      'updated_at'        => $now,
+      'so_number'     => $so,
+      'dealer_status' => 'waiting',
+      'updated_at'    => $now,
     ];
 
     // Accept full intake fields when provided (portal-originated jobs completing intake).
@@ -1562,7 +1560,6 @@ foreach ($rows as &$r) {
     $wpdb->update($t, $update, ['job_id' => $job_id]);
 
     self::audit('job', $job_id, 'update', 'so_number', $old_so, $so, 'SO# set');
-    self::audit('job', $job_id, 'update', 'status', $job['status'], 'READY_FOR_BUILD', 'Moved to Ready for Build');
 
     $job2 = self::job_by_id($job_id);
     self::maybe_update_clickup_name($job2);
