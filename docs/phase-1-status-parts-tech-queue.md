@@ -28,7 +28,7 @@ All status values are stored as bare uppercase strings in the `status VARCHAR(30
 | Status | DB Value | Who Creates It |
 |---|---|---|
 | Pending Intake | `PENDING_INTAKE` | Job creation without an SO number |
-| Approved for Scheduling | `APPROVED_FOR_SCHEDULING` | CS adds SO number, or CS releases job, or portal intake |
+| Approved for Scheduling | `APPROVED_FOR_SCHEDULING` | CS adds SO number via `set_so()`, or job created with SO number already present |
 | Scheduled | `SCHEDULED` | Supervisor assigns job to a technician |
 | In Progress | `IN_PROGRESS` | Technician starts the work timer |
 | Pending QC | `PENDING_QC` | Technician submits job for supervisor review |
@@ -38,6 +38,8 @@ All status values are stored as bare uppercase strings in the `status VARCHAR(30
 | Complete – Awaiting Pickup | `COMPLETE_AWAITING_PICKUP` | ClickUp importer only (legacy) |
 
 The `status_detail` column (`VARCHAR(100) NULL`) carries supplementary text when a status alone is ambiguous. The `status_updated_at` column records when the status last changed.
+
+> **Dual-column release model:** `APPROVED_FOR_SCHEDULING` is valid for two separate columns. The `status` column reaches this value when CS adds an SO number (`set_so()`) or when a job is created with one already present. The `scheduling_status` column is set to `APPROVED_FOR_SCHEDULING` separately by `release_job()` (see §7). The job list endpoint's `ready_only` filter matches on either column (`scheduling_status = 'APPROVED_FOR_SCHEDULING' OR status = 'APPROVED_FOR_SCHEDULING'`), so a job can appear in the scheduler queue via either path.
 
 ---
 
@@ -65,7 +67,7 @@ The dealer-facing portal collapses internal statuses into three coarse buckets v
 
 | Portal Label | Internal Statuses Mapped |
 |---|---|
-| `waiting` | `PENDING_INTAKE`, `APPROVED_FOR_SCHEDULING`, `SCHEDULED`, `ON_HOLD` |
+| `waiting` | `PENDING_INTAKE`, `READY_FOR_SUPERVISOR_REVIEW`, `RETURNED_TO_CS`, `APPROVED_FOR_SCHEDULING`, `SCHEDULED`, `ON_HOLD` |
 | `in_process` | `IN_PROGRESS`, `PENDING_QC` |
 | `complete` | `COMPLETE` |
 
@@ -271,7 +273,7 @@ The job list endpoint (`GET /jobs`) accepts these filters relevant to tech workf
 
 ## 9. Queue Order Logic
 
-The scheduler queue shows jobs with `status = 'APPROVED_FOR_SCHEDULING'` ordered by `priority_score DESC` (highest score appears first). Score is computed by `Slate_Priority_Service` (`class-priority-service.php`) and stored in the `priority_score` column.
+The scheduler queue surfaces jobs with `status = 'APPROVED_FOR_SCHEDULING'`. Score is computed by `Slate_Priority_Service` (`class-priority-service.php`) and stored in the `priority_score` column. The `get_schedulable()` helper (see below) currently sorts by the integer `priority` field (1–5, ASC) rather than by `priority_score`; aligning the sort key is a planned improvement.
 
 ### Scoring Factors
 
@@ -290,7 +292,7 @@ Each factor contributes additively to the final score:
 | Manual priority = 5 (lowest) | −10 |
 | Age in ready queue > 14 days | +5 |
 
-Due-date urgency checks both `promised_date` and `target_ship_date`; whichever is nearest is used. Only one urgency tier applies per job (the higher one).
+Due-date urgency checks `promised_date` first; if empty, it falls back to `target_ship_date`. Only one urgency tier applies per job (the higher one).
 
 ### Score Refresh
 
@@ -302,7 +304,8 @@ Due-date urgency checks both `promised_date` and `target_ship_date`; whichever i
 
 - `status = 'APPROVED_FOR_SCHEDULING'`
 - Not archived
-- Ordered by `priority ASC` (the integer `priority` field, 1–5, separate from `priority_score`)
+- Ordered by `priority ASC` (the manual integer `priority` field, 1–5; lower integer = higher priority)
+- `priority_score` is computed and stored per job but is not yet the sort key used by `get_schedulable()`
 
 ---
 
