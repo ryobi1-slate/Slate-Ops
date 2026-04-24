@@ -1,5 +1,14 @@
 # Slate Ops Changelog
 
+## 0.17.7 — Tech mobile: dark timer panel
+
+- Replaced 3 separate HRS/MIN/SEC dark boxes with a single unified dark panel (`bg-[#1f2d29]`, `rounded-2xl`, increased padding)
+- "LABOR TIME ELAPSED" eyebrow label — 10px uppercase, `text-white/50`, tracked
+- Elapsed time rendered as `HH:MM:SS` in a single `text-5xl` mono display
+- Optional TARGET row (below a `border-white/10` divider) renders only when `r.estimated_minutes` is present on the active job; formatted with existing `yu()` zero-pad helper
+- No efficiency calculation (no source data); no fake data
+- No behavior changes — timer increment, start/stop, and action buttons unchanged; all CSS uses existing Tailwind/hardcoded values already present in the Tech page
+
 ## 0.17.6 — Page header hierarchy: eyebrow + title + description + divider
 
 - **CSS classes added**: `ops-page-header`, `ops-page-eyebrow`, `ops-page-title`, `ops-page-desc`
