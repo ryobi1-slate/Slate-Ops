@@ -403,12 +403,12 @@ body.slate-ops {
 .ops-badge-not-ready { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
 
 /* Job status badges */
-.ops-badge-status-intake     { background-color: var(--slate-sage-wash);  color: var(--slate-sage-ink); }
-.ops-badge-status-scheduled  { background-color: var(--slate-sage-wash);  color: var(--slate-sage-ink); }
-.ops-badge-status-inprogress { background-color: var(--slate-sage-ink);   color: var(--slate-surface); }
-.ops-badge-status-complete   { background-color: var(--slate-redwood);    color: var(--slate-surface); }
-.ops-badge-status-hold       { background-color: var(--slate-flag);       color: var(--slate-surface); }
-.ops-badge-status-pending-qc { background-color: var(--slate-arches-wash); color: var(--slate-arches-ink); }
+.ops-badge-status-intake     { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-scheduled  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-inprogress { background-color: var(--slate-sage);         color: var(--slate-surface); }
+.ops-badge-status-complete   { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.ops-badge-status-hold       { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
+.ops-badge-status-pending-qc { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
 
 /* Inline text link (Reset filters) */
 .ops-cs-reset-link { color: var(--slate-ink-muted); }

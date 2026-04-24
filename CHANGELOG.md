@@ -1,5 +1,28 @@
 # Slate Ops Changelog
 
+## 0.17.9 — Hotfix: restore section div bracket after timer panel; remove redundant rounded-full
+
+- **Blank page fix**: v0.17.7 timer panel replacement was missing one closing `]})` that shut the parent section div; all Ops pages rendered blank as a result. Inserted the missing bracket sequence to restore correct JSX tree structure.
+- **`rounded-full` removed** from the Exec Recent Job Movement badge className — redundant because `.ops-badge-status-*` CSS already enforces `border-radius: 999px !important` via the softness pass
+- `app.js` bracket + class change only; no CSS or logic changes
+
+## 0.17.8 — Exec page: fix status labels and badge colors
+
+- **Exec Recent Job Movement table**: replaced raw enum values (`M.status`) with human-readable labels via inline map; added `rounded-full` pill class; fallback changed from `bg-slate-200` to `ops-badge-status-intake`
+- **PENDING_QC label**: corrected from `"In Progress"` → `"Pending QC"` in the CS component `SL` map
+- **In Progress badge**: `--slate-sage-ink` bg → `--slate-sage` bg (lighter, token-aligned)
+- **Complete badge**: `--slate-redwood` fill → `--slate-redwood-wash` bg / `--slate-redwood` text (softer)
+- **On Hold / Delayed badge**: `--slate-flag` fill → `--slate-flag-wash` bg / `--slate-flag` text (softer)
+- CSS + mapping only; no logic changes
+
+## 0.17.7 — Tech mobile: dark timer panel
+
+- **Timer panel**: Replaced 3 separate HRS/MIN/SEC dark boxes with a single unified dark panel (`bg-[#1f2d29]`, `rounded-2xl`, increased padding)
+- **Label**: "LABOR TIME ELAPSED" eyebrow — 10px uppercase, `text-white/50`, tracked
+- **Display**: Elapsed time rendered as `HH:MM:SS` in a single `text-5xl` mono display
+- **Target row**: Optional row (below a `border-white/10` divider) renders only when `r.estimated_minutes` is present on the active job; formatted with existing `yu()` zero-pad helper
+- No efficiency calculation (no source data); no fake data; no behavior changes
+
 ## 0.17.6 — Page header hierarchy: eyebrow + title + description + divider
 
 - **CSS classes added**: `ops-page-header`, `ops-page-eyebrow`, `ops-page-title`, `ops-page-desc`
