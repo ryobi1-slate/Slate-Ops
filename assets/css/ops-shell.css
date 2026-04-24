@@ -2,7 +2,7 @@
  * ops-shell.css — Slate Ops shared layout shell styles v0.9
  *
  * Design system aligned with Slate Scheduler v0.4 and mockup reference.
- * Font: IBM Plex Sans / IBM Plex Mono (loaded via layout-shell.php)
+ * Font: Roboto Flex / JetBrains Mono (loaded via layout-shell.php)
  * Sidebar: dark sage #2f3e39 — matches mockup exactly
  *
  * Sections:
@@ -33,8 +33,8 @@
   --radius:       12px;
   --radius-sm:    8px;
   --radius-pill:  999px;
-  --font-sans:    'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans:    'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', 'Roboto Mono', ui-monospace, 'SF Mono', Consolas, monospace;
   --space-1:      8px;
   --space-2:      12px;
   --space-3:      16px;
@@ -47,9 +47,9 @@
 
   /* Shell tokens (used by shell partials) */
   --shell-sidebar-bg:   #f6f2e8;
-  --shell-sidebar-w:    152px;
+  --shell-sidebar-w:    172px;
   --shell-header-h:     56px;
-  --shell-header-bg:    rgba(255,255,255,0.92);
+  --shell-header-bg:    var(--slate-surface);
   --shell-canvas:       var(--surface-bg);
   --shell-surface:      var(--surface-card);
   --shell-border:       var(--stroke-subtle);
@@ -90,10 +90,62 @@
   --slate-surface-tint:    #FAFAF7;
   --slate-surface-page:    #F5F3ED;
 
-  --slate-radius-lg:       12px;
+  --slate-radius-sm:       3px;
   --slate-radius-md:       8px;
+  --slate-radius-lg:       12px;
+  --slate-radius-xl:       12px;
+  --slate-radius-full:     999px;
 
-  --mono:                  var(--font-mono);
+  /* Typography scale — mirrored from Dealer Portal */
+  --slate-text-micro:  11px;
+  --slate-text-xs:     12px;
+  --slate-text-sm:     13px;
+  --slate-text-base:   14px;
+  --slate-text-md:     16px;
+  --slate-text-lg:     18px;
+  --slate-text-xl:     22px;
+  --slate-text-2xl:    28px;
+  --slate-weight-regular: 400;
+  --slate-weight-medium:  500;
+
+  /* Spacing scale — 4px base, mirrored from Dealer Portal */
+  --slate-space-2xs: 2px;
+  --slate-space-xs:  4px;
+  --slate-space-sm:  8px;
+  --slate-space-md:  12px;
+  --slate-space-lg:  16px;
+  --slate-space-xl:  24px;
+  --slate-space-2xl: 32px;
+  --slate-space-3xl: 48px;
+  --slate-space-4xl: 64px;
+
+  /* Shell dimensions — mirrored from Dealer Portal */
+  --slate-shell-maxwidth:      1440px;
+  --slate-sidebar-w-expanded:  172px;
+  --slate-sidebar-w-collapsed: 44px;
+  --slate-sidebar-transition:  160ms ease;
+
+  /* Shadows */
+  --slate-shadow-subtle: 0 1px 2px rgba(42,46,44,0.04);
+  --slate-shadow-pop:    0 4px 12px rgba(42,46,44,0.08);
+
+  /* Z-index */
+  --slate-z-base:      0;
+  --slate-z-dropdown:  100;
+  --slate-z-sticky:    200;
+  --slate-z-modal:     300;
+  --slate-z-tooltip:   400;
+
+  /* Motion */
+  --slate-duration-fast:   100ms;
+  --slate-duration-normal: 160ms;
+  --slate-duration-slow:   240ms;
+  --slate-ease:            ease;
+
+  --slate-font-sans: var(--font-sans);
+  --slate-font-mono: var(--font-mono);
+
+  --mono: var(--font-mono);
 }
 
 /* ─── 2. Shell Structure ─── */
@@ -125,8 +177,8 @@ body.slate-ops {
   overflow-y: auto;
   background: var(--sand);
 }
-.ops-content > #ops-view{
-  max-width: 1140px;
+.ops-content > #ops-view {
+  max-width: var(--slate-shell-maxwidth);
   margin: 0 auto;
 }
 
@@ -171,15 +223,18 @@ body.slate-ops {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 9px 10px;
+  padding: var(--slate-space-sm) var(--slate-space-md);
   border: none;
-  border-radius: 10px;
+  border-radius: 0;
+  border-left: 2px solid transparent;
   color: var(--slate-ink-muted);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: var(--slate-weight-medium);
+  font-size: var(--slate-text-sm);
   font-family: var(--font-sans);
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--slate-duration-fast) var(--slate-ease),
+              color var(--slate-duration-fast) var(--slate-ease),
+              border-color var(--slate-duration-fast) var(--slate-ease);
   cursor: pointer;
   background: none;
   width: 100%;
@@ -188,14 +243,14 @@ body.slate-ops {
 }
 
 .ops-nav-link:hover {
-  background: var(--slate-sage-wash);
+  background: var(--slate-surface-tint);
   color: var(--slate-ink);
 }
 
 .ops-nav-link.active {
-  background: var(--slate-surface-tint);
-  color: var(--slate-ink);
-  box-shadow: inset 3px 0 0 var(--slate-arches);
+  color: var(--slate-sage);
+  border-left-color: var(--slate-sage);
+  background: var(--slate-sage-wash);
 }
 
 /* Material icon sizing */
@@ -223,7 +278,7 @@ body.slate-ops {
 
 .ops-sidebar-user-name {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--slate-weight-medium);
   color: var(--slate-ink);
   line-height: 1.2;
 }
@@ -252,19 +307,129 @@ body.slate-ops {
 .ops-header {
   height: var(--shell-header-h);
   background: var(--shell-header-bg);
-  border-bottom: 1px solid rgba(47,62,57,0.10);
-  padding: 0 18px;
+  border-bottom: 1px solid var(--slate-divider);
+  padding: 0 var(--slate-space-xl);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--slate-space-md);
   flex-shrink: 0;
 }
 
+.ops-header__left {
+  display: flex;
+  align-items: center;
+}
+
+.ops-header__center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ops-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-md);
+}
+
+/* Topbar logo (mirrors .slate-topbar__logo-link / __logo) */
+.ops-topbar__logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  line-height: 0;
+}
+
+.ops-topbar__logo {
+  height: 24px;
+  width: auto;
+  display: block;
+}
+
+/* User avatar — <details>/<summary> dropdown */
+details.ops-topbar__account > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.ops-topbar__account > summary::-webkit-details-marker { display: none; }
+
+.ops-topbar__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--slate-radius-full);
+  background: var(--slate-sage);
+  color: var(--slate-surface);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: 0.04em;
+  font-family: var(--font-sans);
+  transition: background var(--slate-duration-fast) var(--slate-ease);
+  user-select: none;
+}
+
+.ops-topbar__avatar:hover {
+  background: var(--slate-sage-ink);
+}
+
+.ops-topbar__dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + var(--slate-space-sm));
+  right: 0;
+  min-width: 180px;
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  box-shadow: var(--slate-shadow-pop);
+  padding: var(--slate-space-md);
+  z-index: var(--slate-z-dropdown);
+}
+
+details.ops-topbar__account[open] .ops-topbar__dropdown {
+  display: block;
+}
+
+.ops-topbar__dropdown-name {
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink);
+}
+
+.ops-topbar__dropdown-role {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-muted);
+  margin-top: var(--slate-space-2xs);
+}
+
+.ops-topbar__dropdown-divider {
+  border: none;
+  border-top: 1px solid var(--slate-divider);
+  margin: var(--slate-space-sm) 0;
+}
+
+.ops-topbar__dropdown-link {
+  display: block;
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  text-decoration: none;
+  padding: var(--slate-space-2xs) 0;
+  transition: color var(--slate-duration-fast) var(--slate-ease);
+}
+
+.ops-topbar__dropdown-link:hover {
+  color: var(--slate-sage);
+}
+
+/* Page title — populated by JS via setPageTitle() */
 .ops-page-title {
-  font-size: 11px;
-  font-weight: 900;
-  color: rgba(47,62,57,0.88);
-  letter-spacing: 0.14em;
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink-muted);
+  letter-spacing: var(--slate-tracking-label, 0.08em);
   text-transform: uppercase;
 }
 
@@ -283,7 +448,7 @@ body.slate-ops {
   white-space: nowrap;
   flex-shrink: 0;
 }
-.ops-version-badge strong { font-weight: 700; }
+.ops-version-badge strong { font-weight: var(--slate-weight-medium); }
 
 /* ─── 6. Responsive ─── */
 @media (max-width: 900px) {
@@ -499,11 +664,12 @@ body.slate-ops {
   margin-bottom: 4px;
 }
 
-.ops-page-title {
+.ops-page-header .ops-page-title {
   color: var(--slate-ink) !important;
   font-weight: 500 !important;
   text-transform: none !important;
   letter-spacing: normal !important;
+  font-size: var(--slate-text-xl) !important;
 }
 
 .ops-page-desc {

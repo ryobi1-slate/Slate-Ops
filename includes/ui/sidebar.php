@@ -22,10 +22,6 @@ if (!function_exists('ops_nav_link')) {
 }
 ?>
 <aside class="ops-sidebar">
-  <div class="ops-brand">
-    <img class="ops-logo" src="<?php echo esc_url(SLATE_OPS_URL . 'assets/logos/slate-logo.svg'); ?>" alt="Slate" width="116" height="26">
-  </div>
-
   <nav class="ops-nav">
     <?php
     $is_admin = current_user_can(Slate_Ops_Utils::CAP_ADMIN);
