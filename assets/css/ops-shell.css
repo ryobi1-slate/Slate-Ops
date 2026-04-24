@@ -515,6 +515,15 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--slate-sage-ink) !important;
   border-color: var(--slate-sage-ink) !important;
 }
+.ops-btn-danger {
+  background-color: #c0392b !important;
+  border-color: #c0392b !important;
+  color: #ffffff !important;
+}
+.ops-btn-danger:hover {
+  background-color: #922b21 !important;
+  border-color: #922b21 !important;
+}
 
 /* ─── 8. CS page token classes ──────────────────────────────────────
  * Semantic classes for the CS component. All colors via var(--slate-*).
