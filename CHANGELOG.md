@@ -1,5 +1,17 @@
 # Slate Ops Changelog
 
+## 0.17.6 — Page header hierarchy: eyebrow + title + description + divider
+
+- **CSS classes added**: `ops-page-header`, `ops-page-eyebrow`, `ops-page-title`, `ops-page-desc`
+- **`ops-page-header`**: `padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--slate-divider)`
+- **`ops-page-eyebrow`**: 10px uppercase, `letter-spacing: 0.12em`, `color: var(--slate-arches)`
+- **`ops-page-title`**: `color: var(--slate-ink)`, `font-weight: 500`, no forced caps
+- **`ops-page-desc`**: `color: var(--slate-ink-muted)`
+- **CS page**: eyebrow "CS Queue" added above h1; header wrapper gets `ops-page-header` divider; stats summary card wrapper removed (plain flex row)
+- **Exec page**: existing eyebrow div, h1, and description converted to new semantic classes; header wrapper uses `ops-page-header`
+- **Schedule page**: same treatment as CS (eyebrow "Schedule" added; card wrapper on stats removed)
+- CSS + markup changes only; no logic or routing changes
+
 ## 0.17.5 — CS softness pass: radius, borders, text hierarchy, empty state
 
 - **Radius tokens**: `--slate-radius-lg: 12px` and `--slate-radius-md: 8px` added to `:root`

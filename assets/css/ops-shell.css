@@ -485,3 +485,33 @@ body.slate-ops {
   color: var(--slate-ink-muted);
   font-size: 14px;
 }
+
+/* ─── 10. Page header pattern ────────────────────────────────────────
+ * Eyebrow + title + description + divider.
+ * Mirrors Dealer Portal header structure across all Ops pages.
+ */
+.ops-page-header {
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.ops-page-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--slate-arches);
+  margin-bottom: 4px;
+}
+
+.ops-page-title {
+  color: var(--slate-ink) !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.ops-page-desc {
+  color: var(--slate-ink-muted) !important;
+}
