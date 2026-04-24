@@ -39,7 +39,7 @@ function eq(mixed $actual, mixed $expected, string $label): void {
 
 // ── Constants ────────────────────────────────────────────────────────
 
-echo "\nConstants\n";
+echo "\nConstants — canonical\n";
 eq(Slate_Ops_Statuses::INTAKE,           'INTAKE',           'INTAKE');
 eq(Slate_Ops_Statuses::READY_FOR_BUILD,  'READY_FOR_BUILD',  'READY_FOR_BUILD');
 eq(Slate_Ops_Statuses::QUEUED,           'QUEUED',           'QUEUED');
@@ -49,6 +49,12 @@ eq(Slate_Ops_Statuses::READY_FOR_PICKUP, 'READY_FOR_PICKUP', 'READY_FOR_PICKUP')
 eq(Slate_Ops_Statuses::COMPLETE,         'COMPLETE',         'COMPLETE');
 eq(Slate_Ops_Statuses::DELAYED,          'DELAYED',          'DELAYED');
 eq(Slate_Ops_Statuses::ON_HOLD,          'ON_HOLD',          'ON_HOLD');
+
+echo "\nConstants — non-canonical transitional\n";
+eq(Slate_Ops_Statuses::READY_FOR_SUPERVISOR_REVIEW, 'READY_FOR_SUPERVISOR_REVIEW', 'READY_FOR_SUPERVISOR_REVIEW');
+eq(Slate_Ops_Statuses::RETURNED_TO_CS,              'RETURNED_TO_CS',              'RETURNED_TO_CS');
+ok(!Slate_Ops_Statuses::is_canonical('READY_FOR_SUPERVISOR_REVIEW'), 'READY_FOR_SUPERVISOR_REVIEW not in canonical set');
+ok(!Slate_Ops_Statuses::is_canonical('RETURNED_TO_CS'),              'RETURNED_TO_CS not in canonical set');
 
 // ── all() ────────────────────────────────────────────────────────────
 

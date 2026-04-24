@@ -24,20 +24,29 @@ class Slate_Ops_Statuses {
     const DELAYED          = 'DELAYED';
     const ON_HOLD          = 'ON_HOLD';
 
+    // ── Non-canonical transitional constants (not in all()) ───────────
+
+    const READY_FOR_SUPERVISOR_REVIEW = 'READY_FOR_SUPERVISOR_REVIEW';
+    const RETURNED_TO_CS              = 'RETURNED_TO_CS';
+
     // ── Canonical set ─────────────────────────────────────────────────
 
     public static function all(): array {
-        return [
-            self::INTAKE,
-            self::READY_FOR_BUILD,
-            self::QUEUED,
-            self::IN_PROGRESS,
-            self::PENDING_QC,
-            self::READY_FOR_PICKUP,
-            self::COMPLETE,
-            self::DELAYED,
-            self::ON_HOLD,
-        ];
+        static $all = null;
+        if ($all === null) {
+            $all = [
+                self::INTAKE,
+                self::READY_FOR_BUILD,
+                self::QUEUED,
+                self::IN_PROGRESS,
+                self::PENDING_QC,
+                self::READY_FOR_PICKUP,
+                self::COMPLETE,
+                self::DELAYED,
+                self::ON_HOLD,
+            ];
+        }
+        return $all;
     }
 
     // ── Labels ────────────────────────────────────────────────────────
@@ -59,16 +68,20 @@ class Slate_Ops_Statuses {
     // ── Legacy normalization ──────────────────────────────────────────
 
     private static function legacy_map(): array {
-        return [
-            'PENDING_INTAKE'           => self::INTAKE,
-            'NEEDS_SO'                 => self::INTAKE,
-            'READY_TO_SCHEDULE'        => self::READY_FOR_BUILD,
-            'READY_FOR_SCHEDULING'     => self::READY_FOR_BUILD,
-            'APPROVED_FOR_SCHEDULING'  => self::READY_FOR_BUILD,
-            'SCHEDULED'                => self::QUEUED,
-            'COMPLETE_AWAITING_PICKUP' => self::READY_FOR_PICKUP,
-            'COMPLETED'                => self::COMPLETE,
-        ];
+        static $map = null;
+        if ($map === null) {
+            $map = [
+                'PENDING_INTAKE'           => self::INTAKE,
+                'NEEDS_SO'                 => self::INTAKE,
+                'READY_TO_SCHEDULE'        => self::READY_FOR_BUILD,
+                'READY_FOR_SCHEDULING'     => self::READY_FOR_BUILD,
+                'APPROVED_FOR_SCHEDULING'  => self::READY_FOR_BUILD,
+                'SCHEDULED'                => self::QUEUED,
+                'COMPLETE_AWAITING_PICKUP' => self::READY_FOR_PICKUP,
+                'COMPLETED'                => self::COMPLETE,
+            ];
+        }
+        return $map;
     }
 
     // ── Badge CSS classes ─────────────────────────────────────────────

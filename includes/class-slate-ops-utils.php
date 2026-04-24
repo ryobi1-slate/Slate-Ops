@@ -98,8 +98,8 @@ class Slate_Ops_Utils {
       Slate_Ops_Statuses::QUEUED,
       Slate_Ops_Statuses::ON_HOLD,
       Slate_Ops_Statuses::DELAYED,
-      'READY_FOR_SUPERVISOR_REVIEW',
-      'RETURNED_TO_CS',
+      Slate_Ops_Statuses::READY_FOR_SUPERVISOR_REVIEW,
+      Slate_Ops_Statuses::RETURNED_TO_CS,
     ];
     if (in_array($canonical, $waiting, true)) return 'waiting';
     if (in_array($canonical, [Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::PENDING_QC], true)) return 'in_process';
