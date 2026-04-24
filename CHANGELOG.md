@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.17.9 — Hotfix: restore section div bracket after timer panel; remove redundant rounded-full
+
+- **Blank page fix**: v0.17.7 timer panel replacement was missing one closing `]})` that shut the parent section div; all Ops pages rendered blank as a result. Inserted the missing bracket sequence to restore correct JSX tree structure.
+- **`rounded-full` removed** from the Exec Recent Job Movement badge className — redundant because `.ops-badge-status-*` CSS already enforces `border-radius: 999px !important` via the softness pass
+- `app.js` bracket + class change only; no CSS or logic changes
+
 ## 0.17.8 — Exec page: fix status labels and badge colors
 
 - **Exec Recent Job Movement table**: replaced raw enum values (`M.status`) with human-readable labels via inline map; added `rounded-full` pill class; fallback changed from `bg-slate-200` to `ops-badge-status-intake`
