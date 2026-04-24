@@ -90,6 +90,9 @@
   --slate-surface-tint:    #FAFAF7;
   --slate-surface-page:    #F5F3ED;
 
+  --slate-radius-lg:       12px;
+  --slate-radius-md:       8px;
+
   --mono:                  var(--font-mono);
 }
 
@@ -410,3 +413,75 @@ body.slate-ops {
 /* Inline text link (Reset filters) */
 .ops-cs-reset-link { color: var(--slate-ink-muted); }
 .ops-cs-reset-link:hover { color: var(--slate-arches); }
+
+/* ─── 9. Softness pass ───────────────────────────────────────────────
+ * Radius, borders, text hierarchy, spacing, empty state.
+ * All overrides use !important to beat Tailwind utilities in app.css.
+ */
+
+/* Radius */
+.ops-cs-card    { border-radius: var(--slate-radius-lg) !important; }
+.ops-cs-input   { border-radius: var(--slate-radius-md) !important; }
+.ops-btn-arches-solid { border-radius: var(--slate-radius-md) !important; }
+.ops-btn-arches       { border-radius: var(--slate-radius-md) !important; }
+
+/* Badge pills — fully rounded */
+.ops-badge-ready,
+.ops-badge-partial,
+.ops-badge-not-ready,
+.ops-badge-status-intake,
+.ops-badge-status-scheduled,
+.ops-badge-status-inprogress,
+.ops-badge-status-complete,
+.ops-badge-status-hold,
+.ops-badge-status-pending-qc {
+  border-radius: 999px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+}
+
+/* Table row dividers */
+.ops-cs-row-hover,
+.ops-cs-row-selected {
+  border-bottom: 1px solid var(--slate-divider-soft) !important;
+}
+
+/* Table cell height — slightly taller rows */
+.ops-cs-row-hover td,
+.ops-cs-row-selected td {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+/* Table header height */
+.ops-cs-thead th {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+}
+
+/* Text hierarchy — labels use subtle ink; headings use full ink */
+.ops-cs-card label {
+  color: var(--slate-ink-subtle) !important;
+  font-weight: 500 !important;
+}
+.ops-cs-card h1,
+.ops-cs-card h2 {
+  color: var(--slate-ink) !important;
+}
+
+/* Section card spacing */
+.ops-cs-card.mb-4,
+.ops-cs-page .ops-cs-card {
+  margin-bottom: 20px !important;
+}
+
+/* Empty state */
+.ops-cs-empty {
+  margin: 24px;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1.5px dashed var(--slate-divider-soft);
+  border-radius: var(--slate-radius-lg);
+  color: var(--slate-ink-muted);
+  font-size: 14px;
+}
