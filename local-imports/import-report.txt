@@ -1,0 +1,180 @@
+ClickUp Active Import — Pre-Import Report
+============================================================
+Generated:       2026-04-24 01:14:12
+Source CSV:      clickup-export.csv
+Total CSV rows:  254
+Active (queued): 23
+Skipped:         231
+Warnings:        23
+
+Active rows by job_status:
+    3  Complete - Awaiting Pickup
+    9  Delayed
+    4  In Progress
+    7  Scheduled
+
+Active rows by parts_status:
+   13  Not Ready
+   10  Ready
+
+Active rows queued for import:
+------------------------------------------------------------
+   1. [Complete - Awaiting Pickup / Ready] Gresham Toyota
+      Tech: Jake, Seth
+      Est:  5.0h
+      Dates: start=2026-02-17  due=-
+      Notes: Sequoia - Accessories / Lift / Tires & Wheels
+   2. [In Progress / Ready] Mercedes-Benz of Wilsonville
+      Tech: Jake, Seth, Gary, Tim
+      Est:  46.0h
+      Notes: Bedrcok
+   3. [Complete - Awaiting Pickup / Ready] Gresham Toyota
+      Tech: Jake, Seth
+      Est:  5.0h
+      Dates: start=2026-02-26  due=2026-03-06
+      Notes: Flares on order, install bed cover and side steps
+   4. [Complete - Awaiting Pickup / Ready] Gresham Toyota
+      Tech: Seth
+      Est:  5.0h
+      Dates: start=2026-02-26  due=2026-03-06
+      Notes: Waiting on mud flaps, everything else is here.
+   5. [Delayed / Not Ready] Cory
+      Est:  5.0h
+      Notes: Window on order Date TBD
+   6. [In Progress / Ready] Mercedes Benz of Anchorage
+      Tech: Jake, Seth, Gary
+      Est:  53.0h
+      Notes: Bedrock
+   7. [Scheduled / Ready] Earl Thompson
+      Est:  27.0h
+      Dates: start=2026-04-29  due=-
+      Notes: Waiting on parts 3/24
+   8. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Notes: Waiting on Partitions
+   9. [Scheduled / Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Dates: start=2026-04-24  due=-
+      Notes: /Waiting on Partitions 4-15
+  10. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Notes: Waiting on Partitions 4-15
+  11. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Notes: Waiting on Partition
+  12. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Notes: Waiting on Partition
+  13. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Notes: Waiting on Partition 4-15
+  14. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Notes: Waiting on Partition
+  15. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Sigma
+      Est:  5.0h
+      Notes: Waiting on Partition 4-15
+  16. [Delayed / Not Ready] Mercedes-Benz of Wilsonville Stinky
+      Tech: Tim
+      Est:  1.0h
+      Dates: start=2026-04-20  due=-
+      Notes: floor
+  17. [In Progress / Ready] Hadi Sharifi
+      Tech: Seth
+      Est:  3.0h
+      Dates: start=2026-04-16  due=2026-04-24
+      Notes: compressor
+  18. [Scheduled / Not Ready] Mercedes-Benz of Thousand Oaks
+      Notes: RVIA "B"
+  19. [Scheduled / Not Ready] Mercedes Benz of Seattle
+      Notes: RVIA "B"
+  20. [In Progress / Ready] Mercedes-Benz of Wilsonville
+      Tech: Tim
+      Est:  1.0h
+      Dates: start=2026-04-23  due=2026-04-23
+      Notes: floor 170
+  21. [Scheduled / Ready] Mercedes-Benz of Wilsonville
+      Tech: Tim
+      Est:  2.0h
+      Notes: low/high l-track
+  22. [Scheduled / Not Ready] Mercedes-Benz of Wilsonville
+      Est:  2.0h
+      Dates: start=2026-04-27  due=2026-04-29
+      Notes: rack
+  23. [Scheduled / Not Ready] Mercedes-Benz of Wilsonville
+      Est:  2.0h
+      Dates: start=2026-04-27  due=2026-04-29
+      Notes: rack
+
+Warnings (23 rows — will import, action needed after):
+------------------------------------------------------------
+  row 199  'Gresham Toyota'
+           SO# absent — will need to be set manually after import
+  row 206  'Mercedes-Benz of Wilsonville'
+           SO# absent — will need to be set manually after import
+  row 208  'Gresham Toyota'
+           SO# absent — will need to be set manually after import
+  row 209  'Gresham Toyota'
+           SO# absent — will need to be set manually after import
+  row 210  'Cory'
+           SO# absent — will need to be set manually after import
+  row 216  'Mercedes Benz of Anchorage'
+           SO# absent — will need to be set manually after import
+  row 221  'Earl Thompson'
+           SO# absent — will need to be set manually after import
+  row 232  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 233  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 234  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 235  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 236  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 237  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 238  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 239  'Mercedes-Benz of Wilsonville Sigma'
+           SO# absent — will need to be set manually after import
+  row 245  'Mercedes-Benz of Wilsonville Stinky'
+           SO# absent — will need to be set manually after import
+  row 249  'Hadi Sharifi'
+           SO# absent — will need to be set manually after import
+  row 250  'Mercedes-Benz of Thousand Oaks'
+           SO# absent — will need to be set manually after import
+  row 251  'Mercedes Benz of Seattle'
+           SO# absent — will need to be set manually after import
+  row 252  'Mercedes-Benz of Wilsonville'
+           SO# absent — will need to be set manually after import
+  row 253  'Mercedes-Benz of Wilsonville'
+           SO# absent — will need to be set manually after import
+  row 254  'Mercedes-Benz of Wilsonville'
+           SO# absent — will need to be set manually after import
+  row 255  'Mercedes-Benz of Wilsonville'
+           SO# absent — will need to be set manually after import
+
+Skipped rows (231 total):
+------------------------------------------------------------
+  row   2  'Johnson RV'  — Status = Closed (closed history — use separate import)
+  row   3  'The Natty Dresser'  — Status = Closed (closed history — use separate import)
+  row   4  'Rich Holland Paint'  — Status = Closed (closed history — use separate import)
+  row   5  'Rich Holland Paint'  — Status = Closed (closed history — use separate import)
+  row   6  'Test Task'  — Status = Closed (closed history — use separate import)
+  row   7  'Mercedes-Benz of Thousand Oaks / Bedrock'  — Status = Closed (closed history — use separate import)
+  row   8  'Mercedes-Benz Of Wilsonville / Homberg'  — Status = Closed (closed history — use separate import)
+  row   9  'Mercedes Benz of Wilsonville / Jacen Moon'  — Status = Closed (closed history — use separate import)
+  row  10  'Lion Roofing'  — Status = Closed (closed history — use separate import)
+  row  11  'Mercedes Benz of Wilsonville / Trinity Flooring'  — Status = Closed (closed history — use separate import)
+  row  12  'Mercedes-Benz Of Wilsonville / Ivan Kulia'  — Status = Closed (closed history — use separate import)
+  row  13  'Mercedes Benz of Seattle / Kyle Smurdon'  — Status = Closed (closed history — use separate import)
+  row  14  'Mercedes Benz of Wilsonville'  — Status = Closed (closed history — use separate import)
+  row  15  'Mercedes-Benz of Seattle / Junior Segura'  — Status = Closed (closed history — use separate import)
+  row  16  'Mercedes-Benz of Seattle / DeWayne Simpson'  — Status = Closed (closed history — use separate import)
+  row  17  'Mercedes-Benz of Wilsonville / HELP Group'  — Status = Closed (closed history — use separate import)
+  row  18  'Mercedes-Benz of Wilsonville / Tressie Word'  — Status = Closed (closed history — use separate import)
+  row  19  'Mercedes-Benz of Wilsonville / ReSys, Inc.'  — Status = Closed (closed history — use separate import)
+  row  20  'Mercedes-Benz of Wilsonville / Justin Oldfield'  — Status = Closed (closed history — use separate import)
+  row  21  'Junior Segura'  — Status = Closed (closed history — use separate import)
+  ... and 211 more (all Closed history)
