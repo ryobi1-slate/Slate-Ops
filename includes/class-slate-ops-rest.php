@@ -876,7 +876,7 @@ public static function perm_ops() {
     return self::perm_supervisor_or_admin();
   }
   public static function perm_cs_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN) || current_user_can('edit_posts'));
+    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
   }
   public static function perm_cs_or_supervisor_or_admin() {
     return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
@@ -1129,7 +1129,7 @@ foreach ($rows as &$r) {
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
     $is_supervisor = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN);
-    $is_cs         = current_user_can(Slate_Ops_Utils::CAP_CS)         || current_user_can(Slate_Ops_Utils::CAP_ADMIN) || current_user_can('edit_posts');
+    $is_cs         = current_user_can(Slate_Ops_Utils::CAP_CS)         || current_user_can(Slate_Ops_Utils::CAP_ADMIN);
 
     $update = [];
     $audits = [];
