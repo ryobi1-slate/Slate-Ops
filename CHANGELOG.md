@@ -1,5 +1,14 @@
 # Slate Ops Changelog
 
+## 0.17.8 — Exec page: fix status labels and badge colors
+
+- **Exec Recent Job Movement table**: replaced raw enum values (`M.status`) with human-readable labels via inline map; added `rounded-full` pill class; fallback changed from `bg-slate-200` to `ops-badge-status-intake`
+- **PENDING_QC label**: corrected from `"In Progress"` → `"Pending QC"` in the CS component `SL` map
+- **In Progress badge**: `--slate-sage-ink` bg → `--slate-sage` bg (lighter, token-aligned)
+- **Complete badge**: `--slate-redwood` fill → `--slate-redwood-wash` bg / `--slate-redwood` text (softer)
+- **On Hold / Delayed badge**: `--slate-flag` fill → `--slate-flag-wash` bg / `--slate-flag` text (softer)
+- CSS + mapping only; no logic changes
+
 ## 0.17.7 — Tech mobile: dark timer panel
 
 - **Timer panel**: Replaced 3 separate HRS/MIN/SEC dark boxes with a single unified dark panel (`bg-[#1f2d29]`, `rounded-2xl`, increased padding)
