@@ -570,13 +570,19 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-partial   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
 .ops-badge-not-ready { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
 
-/* Job status badges */
+/* Job status badges — legacy names */
 .ops-badge-status-intake     { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
 .ops-badge-status-scheduled  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
 .ops-badge-status-inprogress { background-color: var(--slate-sage);         color: var(--slate-surface); }
 .ops-badge-status-complete   { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
 .ops-badge-status-hold       { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
 .ops-badge-status-pending-qc { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+
+/* Job status badges — canonical names */
+.ops-badge-status-ready-for-build  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-queued           { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-ready-for-pickup { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.ops-badge-status-delayed          { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
 
 /* Inline text link (Reset filters) */
 .ops-cs-reset-link { color: var(--slate-ink-muted); }
@@ -602,7 +608,11 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-status-inprogress,
 .ops-badge-status-complete,
 .ops-badge-status-hold,
-.ops-badge-status-pending-qc {
+.ops-badge-status-pending-qc,
+.ops-badge-status-ready-for-build,
+.ops-badge-status-queued,
+.ops-badge-status-ready-for-pickup,
+.ops-badge-status-delayed {
   border-radius: 999px !important;
   padding-left: 10px !important;
   padding-right: 10px !important;

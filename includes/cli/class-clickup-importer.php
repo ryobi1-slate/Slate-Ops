@@ -30,9 +30,9 @@ class Slate_Ops_ClickUp_Importer {
 
 	private static $status_map = [
 		'Delayed'                    => 'DELAYED',
-		'Scheduled'                  => 'APPROVED_FOR_SCHEDULING',
+		'Scheduled'                  => 'QUEUED',
 		'In Progress'                => 'IN_PROGRESS',
-		'Complete - Awaiting Pickup' => 'COMPLETE_AWAITING_PICKUP',
+		'Complete - Awaiting Pickup' => 'READY_FOR_PICKUP',
 		'Complete'                   => 'COMPLETE',
 		'On Hold'                    => 'ON_HOLD',
 	];
@@ -185,7 +185,7 @@ class Slate_Ops_ClickUp_Importer {
 		$errors   = [];
 
 		foreach ( $rows as $r ) {
-			$status       = self::$status_map[ $r['job_status'] ]   ?? 'PENDING_INTAKE';
+			$status       = self::$status_map[ $r['job_status'] ]   ?? 'INTAKE';
 			$parts_status = self::$parts_map[ $r['parts_status'] ]  ?? 'NOT_READY';
 
 			// For DELAYED jobs, set a delay_reason so the UI can reflect it

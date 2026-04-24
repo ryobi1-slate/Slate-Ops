@@ -67,7 +67,7 @@ job_type VARCHAR(30) NOT NULL DEFAULT 'UPFIT',
 parts_status VARCHAR(20) NOT NULL DEFAULT 'NOT_READY',
 
 -- Status + scheduling
-status VARCHAR(30) NOT NULL DEFAULT 'PENDING_INTAKE',
+status VARCHAR(30) NOT NULL DEFAULT 'INTAKE',
 status_detail VARCHAR(100) NULL,
 status_updated_at DATETIME NULL,
 
@@ -520,12 +520,15 @@ KEY awaiting_idx (awaiting_direction)
     // Backfill primary_owner_id from assigned_user_id for existing jobs.
     $wpdb->query("UPDATE $jobs SET primary_owner_id = assigned_user_id WHERE primary_owner_id IS NULL AND assigned_user_id IS NOT NULL");
 
-    // Migrate existing status values to the new workflow status set.
-    // UNSCHEDULED → PENDING_INTAKE (jobs not yet processed by CS).
-    // READY_FOR_SCHEDULING → APPROVED_FOR_SCHEDULING (no supervisor gate existed before;
-    //   treat previously "ready" jobs as approved so they remain schedulable).
-    $wpdb->query("UPDATE $jobs SET status = 'PENDING_INTAKE' WHERE status = 'UNSCHEDULED'");
-    $wpdb->query("UPDATE $jobs SET status = 'APPROVED_FOR_SCHEDULING' WHERE status = 'READY_FOR_SCHEDULING'");
+    // Migrate legacy status values to the canonical set.
+    // Earliest legacy values go first so later passes pick them up.
+    $wpdb->query("UPDATE $jobs SET status = 'INTAKE'           WHERE status IN ('UNSCHEDULED','PENDING_INTAKE','NEEDS_SO','RETURNED_TO_CS')");
+    $wpdb->query("UPDATE $jobs SET status = 'READY_FOR_BUILD'  WHERE status IN ('READY_FOR_SCHEDULING','APPROVED_FOR_SCHEDULING','READY_TO_SCHEDULE','READY_FOR_SUPERVISOR_REVIEW')");
+    $wpdb->query("UPDATE $jobs SET status = 'QUEUED'           WHERE status = 'SCHEDULED'");
+    $wpdb->query("UPDATE $jobs SET status = 'READY_FOR_PICKUP' WHERE status IN ('COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
+    $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status = 'COMPLETED'");
+    // Migrate scheduling_status column to match canonical job status values.
+    $wpdb->query("UPDATE $jobs SET scheduling_status = 'READY_FOR_BUILD' WHERE scheduling_status = 'APPROVED_FOR_SCHEDULING'");
 
     $exists = $wpdb->get_var("SELECT COUNT(*) FROM $settings WHERE id=1");
     if (!$exists) {

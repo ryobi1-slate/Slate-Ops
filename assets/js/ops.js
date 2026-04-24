@@ -166,7 +166,7 @@
     const data = await api.jobs('?limit=50');
     state.jobs = data.jobs || [];
     const counts = {
-      pendingIntake: state.jobs.filter(j => j.status === 'PENDING_INTAKE').length,
+      pendingIntake: state.jobs.filter(j => j.status === 'INTAKE').length,
       needsSo: state.jobs.filter(j => !j.so_number).length,
       inProgress: state.jobs.filter(j => j.status === 'IN_PROGRESS').length,
       pendingQc: state.jobs.filter(j => j.status === 'PENDING_QC').length,
@@ -502,7 +502,7 @@
 
     const clearHoldBtn = document.getElementById('clear-hold-btn');
     if(clearHoldBtn) clearHoldBtn.onclick = async ()=>{
-      try{ await api.editJob(job.job_id,{status:'SCHEDULED',delay_reason:''}); router(); }catch(e){ alert(e.message); }
+      try{ await api.editJob(job.job_id,{status:'QUEUED',delay_reason:''}); router(); }catch(e){ alert(e.message); }
     };
 
     const saveHoldNote = document.getElementById('save-hold-note');
@@ -539,7 +539,7 @@
 
     const estHours = job.estimated_minutes ? (job.estimated_minutes / 60).toFixed(1) : '';
 
-    const statusOpts = ['PENDING_INTAKE','READY_FOR_SUPERVISOR_REVIEW','RETURNED_TO_CS','APPROVED_FOR_SCHEDULING','SCHEDULED','IN_PROGRESS','PENDING_QC','COMPLETE','ON_HOLD'].map(s =>
+    const statusOpts = ['INTAKE','READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','READY_FOR_PICKUP','COMPLETE','DELAYED','ON_HOLD'].map(s =>
       `<option value="${s}"${job.status===s?' selected':''}>${fmtStatus(s)}</option>`
     ).join('');
 
@@ -800,7 +800,7 @@
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             ${kpi('In Progress',    byS('IN_PROGRESS').length)}
-            ${kpi('Scheduled',      byS('SCHEDULED').length)}
+            ${kpi('Queued',         byS('QUEUED').length)}
             ${kpi('Pending QC',     byS('PENDING_QC').length)}
             <span style="padding:6px 14px;border-radius:20px;background:rgba(39,174,96,0.13);color:#1a8a4a;font-size:12px;font-weight:700;letter-spacing:.04em;">&#x2022; System Status: Optimal</span>
           </div>
@@ -1246,15 +1246,15 @@ async function loadCS() {
 
   const portalNeeds = allJobs.filter(j => {
     const s = (j.status||'').toUpperCase();
-    return (s === 'PENDING_INTAKE') && j.created_from === 'portal';
+    return (s === 'INTAKE') && j.created_from === 'portal';
   });
   const manualNeeds = allJobs.filter(j => {
     const s = (j.status||'').toUpperCase();
-    return (s === 'PENDING_INTAKE') && j.created_from !== 'portal' && !j.so_number;
+    return (s === 'INTAKE') && j.created_from !== 'portal' && !j.so_number;
   });
   const activeJobs = allJobs.filter(j => {
     const s = (j.status||'').toUpperCase();
-    return s === 'SCHEDULED' || s === 'IN_PROGRESS' || s === 'PENDING_QC';
+    return s === 'QUEUED' || s === 'IN_PROGRESS' || s === 'PENDING_QC';
   });
 
   // helper: compact job row used inside accordions
@@ -1752,7 +1752,7 @@ async function openIntake(jobId, dealerList, salesList) {
     };
 
     const ready = document.getElementById('cs-ready');
-    if (ready && ready.checked) payload.status = 'READY_FOR_SUPERVISOR_REVIEW';
+    if (ready && ready.checked) payload.status = 'READY_FOR_BUILD';
 
     const statusEl = document.getElementById('cs-intake-status');
     if (statusEl) statusEl.textContent = 'Saving…';
@@ -1818,7 +1818,7 @@ async function loadSchedule(){
     // unscheduled / ready-for-scheduling
     const unscheduled = allJobs.filter(j=>{
       const s=(j.status||'').toUpperCase();
-      return s==='APPROVED_FOR_SCHEDULING';
+      return s==='READY_FOR_BUILD';
     });
 
     // KPIs
@@ -2006,7 +2006,7 @@ async function loadSchedule(){
           job.work_center = bay;
           job.scheduled_start = date;
           job.scheduled_finish = ds(nf);
-          if(job.status==='APPROVED_FOR_SCHEDULING') job.status='SCHEDULED';
+          if(job.status==='READY_FOR_BUILD') job.status='QUEUED';
           renderBoard();
         } catch(err){ alert(err.message); }
       });
@@ -2155,7 +2155,7 @@ async function loadSchedule(){
     // jobs eligible to schedule
     const eligible = allJobs.filter(j=>{
       const s=(j.status||'').toUpperCase();
-      return s==='APPROVED_FOR_SCHEDULING'||s==='SCHEDULED';
+      return s==='READY_FOR_BUILD'||s==='QUEUED';
     });
     const jobSelectOpts = eligible.map(j=>{
       const label = (j.so_number||'#'+j.job_id)+' — '+(j.customer_name||j.dealer_name||'');
@@ -2243,7 +2243,7 @@ async function loadSchedule(){
           if(start) job.scheduled_start = start;
           if(fin) job.scheduled_finish = fin;
           if(tech){ job.assigned_user_id = tech; const u=users.find(x=>x.id===tech); if(u) job.assigned_name=u.name; }
-          if(job.status==='APPROVED_FOR_SCHEDULING') job.status='SCHEDULED';
+          if(job.status==='READY_FOR_BUILD') job.status='QUEUED';
         }
         closeModal();
         renderBoard();
@@ -2264,7 +2264,7 @@ async function loadTech() {
   ]);
   const active  = activeResp.active;
   const allMyJobs = myJobsResp.jobs || [];
-  const myJobs  = allMyJobs.filter(j => ['SCHEDULED','IN_PROGRESS','PENDING_QC','ON_HOLD'].includes(j.status));
+  const myJobs  = allMyJobs.filter(j => ['QUEUED','IN_PROGRESS','PENDING_QC','ON_HOLD'].includes(j.status));
 
   const activeJobId = active ? parseInt(active.job_id, 10) : 0;
   // Full job record for the active segment (so we can read blocker/notes fields)
@@ -2276,7 +2276,7 @@ async function loadTech() {
   const queue = myJobs
     .filter(j => j.job_id !== activeJobId)
     .sort((a, b) => {
-      const pri = s => ({ IN_PROGRESS: 0, SCHEDULED: 1, ON_HOLD: 2, PENDING_QC: 3 })[s] ?? 9;
+      const pri = s => ({ IN_PROGRESS: 0, QUEUED: 1, ON_HOLD: 2, PENDING_QC: 3 })[s] ?? 9;
       const dp = pri(a.status) - pri(b.status);
       if (dp !== 0) return dp;
       const as = a.scheduled_start || '9999';
@@ -2664,22 +2664,22 @@ async function loadExecutive(){
   const now = Date.now();
 
   const countByStatus = (statuses) => jobs.filter(j => statuses.includes((j.status || '').toUpperCase())).length;
-  const activeJobs = jobs.filter(j => !['COMPLETE', 'COMPLETED'].includes((j.status || '').toUpperCase()));
+  const activeJobs = jobs.filter(j => j.status !== 'COMPLETE');
   const needsSo = activeJobs.filter(j => !(j.so_number || '').trim()).length;
 
   const kpi = [
     { label: 'Needs SO', value: needsSo },
-    { label: 'Ready to Schedule', value: countByStatus(['APPROVED_FOR_SCHEDULING', 'READY_FOR_SCHEDULING']) },
-    { label: 'Scheduled', value: countByStatus(['SCHEDULED']) },
+    { label: 'Ready for Build', value: countByStatus(['READY_FOR_BUILD']) },
+    { label: 'Queued', value: countByStatus(['QUEUED']) },
     { label: 'In Progress', value: countByStatus(['IN_PROGRESS']) },
     { label: 'Pending QC', value: countByStatus(['PENDING_QC']) },
-    { label: 'Complete', value: countByStatus(['COMPLETE', 'COMPLETED']) },
+    { label: 'Complete', value: countByStatus(['COMPLETE']) },
   ];
 
   const flowHealth = [
-    { label: 'Intake waiting', value: countByStatus(['PENDING_INTAKE', 'READY_FOR_SUPERVISOR_REVIEW']) },
-    { label: 'Ready queue', value: countByStatus(['APPROVED_FOR_SCHEDULING', 'READY_FOR_SCHEDULING']) },
-    { label: 'Active load', value: countByStatus(['IN_PROGRESS', 'SCHEDULED']) },
+    { label: 'Intake', value: countByStatus(['INTAKE']) },
+    { label: 'Ready queue', value: countByStatus(['READY_FOR_BUILD']) },
+    { label: 'Active load', value: countByStatus(['IN_PROGRESS', 'QUEUED']) },
     { label: 'QC waiting', value: countByStatus(['PENDING_QC']) },
   ];
 
@@ -3067,8 +3067,8 @@ async function loadAdmin() {
         <div class="value">${byS('PENDING_QC')}${deltaChip(2, false)}</div>
       </div>
       <div class="stat-tile">
-        <div class="label">Pending Intake</div>
-        <div class="value">${byS('PENDING_INTAKE')}${deltaChip(1, true)}</div>
+        <div class="label">Intake</div>
+        <div class="value">${byS('INTAKE')}${deltaChip(1, true)}</div>
       </div>
       <div class="stat-tile">
         <div class="label">Users</div>

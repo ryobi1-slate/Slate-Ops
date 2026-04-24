@@ -22,7 +22,7 @@ class Slate_Ops_REST {
    */
   private static function build_scheduler_update_fields($input, $now) {
     $update = [
-      'status' => 'SCHEDULED',
+      'status' => 'QUEUED',
       'status_updated_at' => $now,
       'updated_at' => $now,
     ];
@@ -1019,8 +1019,8 @@ if ($status_in) {
 // Optional TOC gate for "unscheduled" lists
 if ($ready_only === 1) {
   $where .= " AND (scheduling_status = %s OR status = %s)";
-  $params[] = 'APPROVED_FOR_SCHEDULING';
-  $params[] = 'APPROVED_FOR_SCHEDULING';
+  $params[] = 'READY_FOR_BUILD';
+  $params[] = 'READY_FOR_BUILD';
 }
 
 if ($so_missing === 1) {
@@ -1451,7 +1451,7 @@ foreach ($rows as &$r) {
       'vin_last8' => $vin_last8 ?: null,
       'job_type' => $job_type,
       'parts_status' => $parts_status,
-      'status' => $so_number !== '' ? 'APPROVED_FOR_SCHEDULING' : 'PENDING_INTAKE',
+      'status' => 'INTAKE',
       'status_updated_at' => $now,
       'delay_reason' => null,
       'priority' => $priority,
@@ -1499,11 +1499,9 @@ foreach ($rows as &$r) {
 
     $now = Slate_Ops_Utils::now_gmt();
     $update = [
-      'so_number'         => $so,
-      'status'            => 'APPROVED_FOR_SCHEDULING',
-      'status_updated_at' => $now,
-      'dealer_status'     => 'waiting',
-      'updated_at'        => $now,
+      'so_number'     => $so,
+      'dealer_status' => 'waiting',
+      'updated_at'    => $now,
     ];
 
     // Accept full intake fields when provided (portal-originated jobs completing intake).
@@ -1562,7 +1560,6 @@ foreach ($rows as &$r) {
     $wpdb->update($t, $update, ['job_id' => $job_id]);
 
     self::audit('job', $job_id, 'update', 'so_number', $old_so, $so, 'SO# set');
-    self::audit('job', $job_id, 'update', 'status', $job['status'], 'APPROVED_FOR_SCHEDULING', 'Moved to Approved for Scheduling');
 
     $job2 = self::job_by_id($job_id);
     self::maybe_update_clickup_name($job2);
@@ -1630,7 +1627,7 @@ foreach ($rows as &$r) {
   /**
    * Release a job to the scheduler (TOC Rope).
    * Phase 0: you can skip this and schedule manually.
-   * Phase 1+: scheduler can be configured to only show jobs with scheduling_status=APPROVED_FOR_SCHEDULING.
+   * Phase 1+: scheduler can be configured to only show jobs with scheduling_status=READY_FOR_BUILD.
    */
   public static function release_job($req) {
     global $wpdb;
@@ -1672,7 +1669,7 @@ foreach ($rows as &$r) {
     $now = Slate_Ops_Utils::now_gmt();
 
     $update = [
-      'scheduling_status' => 'APPROVED_FOR_SCHEDULING',
+      'scheduling_status' => 'READY_FOR_BUILD',
       'ready_queue_entered_at' => $now,
       'override_flag' => $override ? 1 : 0,
       'override_reason' => $override ? ($override_reason ?: null) : null,
@@ -2304,7 +2301,7 @@ if ($row) {
       . ($job['quote_number'] ? "Quote #: {$job['quote_number']}\n" : "")
       . ($job['vin'] ? "VIN: {$job['vin']}\n" : "")
       . ($job['dealer_name'] ? "Dealer: {$job['dealer_name']}\n" : "")
-      . "Status: PENDING_INTAKE\n";
+      . "Status: INTAKE\n";
 
     $resp = Slate_Ops_ClickUp::create_unscheduled_task($name, $desc);
     if (is_wp_error($resp)) return;
@@ -2368,7 +2365,7 @@ $wpdb->insert($t, [
   'source' => 'portal',
   'created_from' => 'portal',
   'portal_quote_id' => $quote_id,
-  'status' => 'PENDING_INTAKE',
+  'status' => 'INTAKE',
   'status_updated_at' => $now,
   'delay_reason' => null,
   'priority' => 3,
@@ -2615,8 +2612,8 @@ self::maybe_push_dealer_portal_status($job);
     $body = $req->get_json_params() ?: [];
     $note = sanitize_text_field($body['note'] ?? '');
 
-    // Return to SCHEDULED if it had a scheduled_start, otherwise APPROVED_FOR_SCHEDULING.
-    $new_status = !empty($job['scheduled_start']) ? 'SCHEDULED' : 'APPROVED_FOR_SCHEDULING';
+    // Return to QUEUED if it had a scheduled_start, otherwise READY_FOR_BUILD.
+    $new_status = !empty($job['scheduled_start']) ? 'QUEUED' : 'READY_FOR_BUILD';
 
     $wpdb->update($t, [
       'delay_reason'    => null,

@@ -95,7 +95,7 @@ class Slate_Priority_Service {
               ready_queue_entered_at, delay_reason, priority_score
        FROM $t
        WHERE archived_at IS NULL
-         AND status IN ('PENDING_INTAKE','APPROVED_FOR_SCHEDULING','SCHEDULED')
+         AND status IN ('INTAKE','READY_FOR_BUILD','QUEUED')
        LIMIT 1000",
       ARRAY_A
     ) ?: [];

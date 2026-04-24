@@ -91,11 +91,19 @@ class Slate_Ops_Utils {
   }
 
   public static function dealer_status_from_internal($status) {
-    $status = strtoupper((string)$status);
-    $waiting = ['PENDING_INTAKE','READY_FOR_SUPERVISOR_REVIEW','RETURNED_TO_CS','APPROVED_FOR_SCHEDULING','SCHEDULED','ON_HOLD'];
-    if (in_array($status, $waiting, true)) return 'waiting';
-    if (in_array($status, ['IN_PROGRESS','PENDING_QC'], true)) return 'in_process';
-    if ($status === 'COMPLETE') return 'complete';
+    $canonical = Slate_Ops_Statuses::normalize((string)$status);
+    $waiting = [
+      Slate_Ops_Statuses::INTAKE,
+      Slate_Ops_Statuses::READY_FOR_BUILD,
+      Slate_Ops_Statuses::QUEUED,
+      Slate_Ops_Statuses::ON_HOLD,
+      Slate_Ops_Statuses::DELAYED,
+      Slate_Ops_Statuses::READY_FOR_SUPERVISOR_REVIEW,
+      Slate_Ops_Statuses::RETURNED_TO_CS,
+    ];
+    if (in_array($canonical, $waiting, true)) return 'waiting';
+    if (in_array($canonical, [Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::PENDING_QC], true)) return 'in_process';
+    if (in_array($canonical, [Slate_Ops_Statuses::COMPLETE, Slate_Ops_Statuses::READY_FOR_PICKUP], true)) return 'complete';
     return 'waiting';
   }
 
