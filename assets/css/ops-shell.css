@@ -694,21 +694,3 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-page-desc {
   color: var(--slate-ink-muted) !important;
 }
-
-/* Inline status select in CS jobs table */
-.cs-inline-status {
-  width: auto;
-  padding: 3px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--control-border);
-  background: var(--control-bg);
-  cursor: pointer;
-  color: var(--black);
-}
-.cs-inline-status:disabled {
-  opacity: 0.5;
-  cursor: wait;
-}

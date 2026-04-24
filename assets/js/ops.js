@@ -223,13 +223,7 @@
             <tr>
               <td class="mono">${j.so_number || ''}</td>
               <td class="mono">${(j.vin || '').slice(-6)}</td>
-              <td>
-                ${(isAdmin || isSupervisor || isCS) ? `
-                  <select class="cs-inline-status" data-job-id="${j.job_id}" data-orig="${escapeAttr(j.status)}">
-                    ${Object.keys(STATUS_LABELS).map(s => `<option value="${s}"${j.status===s?' selected':''}>${fmtStatus(s)}</option>`).join('')}
-                  </select>
-                ` : `<span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span>`}
-              </td>
+              <td><span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span></td>
               <td>${j.scheduled_start || ''}</td>
               <td>${j.scheduled_finish || ''}</td>
               <td>${j.assigned_name || ''}</td>
@@ -247,23 +241,6 @@
         const id = b.getAttribute('data-open-job');
         window.history.pushState({}, '', '/ops/job/' + id);
         router();
-      };
-    });
-
-    $$('.cs-inline-status').forEach(sel => {
-      sel.onchange = async () => {
-        const jobId = sel.getAttribute('data-job-id');
-        const orig  = sel.getAttribute('data-orig');
-        const next  = sel.value;
-        sel.disabled = true;
-        try {
-          await api.setStatus(jobId, next);
-          router();
-        } catch(e) {
-          sel.value   = orig;
-          sel.disabled = false;
-          toast('Status update failed', true);
-        }
       };
     });
   }
