@@ -149,15 +149,9 @@ body.slate-ops {
 
 .ops-logo {
   display: block;
-  width: 100%;
-  height: auto;
-  max-height: 32px;
-  /* White SVG on light sidebar: invert to dark ink */
-  filter: brightness(0) saturate(0) opacity(0.75);
-}
-.ops-logo polygon,
-.ops-logo text {
-  fill: var(--slate-sage-ink) !important;
+  width: auto;
+  height: 26px;
+  max-height: 28px;
 }
 
 /* Legacy icon — hidden when SVG logo is used */
