@@ -201,14 +201,14 @@ body.slate-ops {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  background: var(--sand);
+  background: var(--slate-surface-page);
 }
 
 .ops-content {
   flex: 1;
   padding: 0;
   overflow-y: auto;
-  background: var(--sand);
+  background: var(--slate-surface-page);
 }
 .ops-content > #ops-view {
   max-width: var(--slate-shell-maxwidth);
