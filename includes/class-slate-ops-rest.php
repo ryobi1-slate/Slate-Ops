@@ -2209,28 +2209,12 @@ return self::get_job(['id' => $job_id]);
     $break_min = (int)($cfg['break_minutes'] ?? 10);
     $break_cnt = (int)($cfg['break_count']   ?? 2);
 
-    // Phase 1 applied-deduction rule (based on raw minutes worked today).
-    // This is the earned/applied deduction only — not the full scheduled deduction
-    // that assumes a complete shift was worked. A tech who logs 5 min gets 0 deduction.
-    //
-    //   < 2 h  (< 120 min) → 0 deductions
-    //   2–4 h (120–239 min) → 1 break
-    //   4–6 h (240–359 min) → 2 breaks
-    //   ≥ 6 h  (≥ 360 min) → 2 breaks + lunch
-    //
-    // Break count is capped at the configured break_cnt from settings.
-    $breaks_to_apply = 0;
-    $apply_lunch     = false;
-    if ($raw_minutes >= 360) {
-      $breaks_to_apply = min(2, $break_cnt);
-      $apply_lunch     = true;
-    } elseif ($raw_minutes >= 240) {
-      $breaks_to_apply = min(2, $break_cnt);
-    } elseif ($raw_minutes >= 120) {
-      $breaks_to_apply = min(1, $break_cnt);
-    }
-    $applied_deduction = ($break_min * $breaks_to_apply) + ($apply_lunch ? $lunch_min : 0);
-    $net_minutes       = max(0, $raw_minutes - $applied_deduction);
+    // This is a job-costing/performance deduction, not payroll calculation.
+    // configured_deduction = total shop overhead (all breaks + lunch) from saved settings.
+    // applied_deduction    = min(configured, raw) so net is never negative.
+    $configured_deduction = ($break_min * $break_cnt) + $lunch_min;
+    $applied_deduction    = min($configured_deduction, $raw_minutes);
+    $net_minutes          = max(0, $raw_minutes - $applied_deduction);
 
     return [
       'date'              => $date,

@@ -1,5 +1,18 @@
 # Slate Ops Changelog
 
+## 0.25.8 — Tech screen Today's Time: job-costing deduction formula
+
+**PHP — `time_daily_summary()`:**
+- Replaced tiered Phase 1 rule with the correct job-costing/performance formula:
+  - `configured_deduction = (break_count × break_minutes) + lunch_minutes` (from saved settings)
+  - `applied_deduction = min(configured_deduction, raw_minutes)` — never deducts more than was worked
+  - `net_minutes = raw_minutes - applied_deduction` (floor 0)
+- Example: 5 min raw, 80 min configured → applied = 5 min, net = 0 min (correct for costing)
+- Example: 240 min raw, 80 min configured → applied = 80 min, net = 160 min
+- Settings remain connected to `slate_ops_settings` table (not hardcoded)
+- Added code comment: "This is a job-costing/performance deduction, not payroll calculation."
+- No React changes — frontend already renders `ee.deduction_minutes` / `ee.net_minutes` directly from backend
+
 ## 0.25.7 — Fix Tech screen Today's Time deduction (tiered rule)
 
 **PHP — `time_daily_summary()`:**
