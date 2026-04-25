@@ -256,12 +256,13 @@ body.slate-ops {
 
 .ops-sidebar-collapse-row {
   display: flex;
+  justify-content: center;
   align-items: center;
-  padding: var(--slate-space-sm) var(--slate-space-sm) var(--slate-space-2xs) var(--slate-space-md);
+  padding: var(--slate-space-sm) 0 var(--slate-space-xs);
 }
 
 .ops-sidebar-nav-section {
-  padding: 0 var(--slate-space-md) var(--slate-space-sm);
+  padding: var(--slate-space-sm) var(--slate-space-md);
   overflow: hidden;
   transition: opacity var(--slate-sidebar-transition);
 }
