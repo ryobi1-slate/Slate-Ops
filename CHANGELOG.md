@@ -1,5 +1,21 @@
 # Slate Ops Changelog
 
+## 0.26.3 — Shell: sidebar visual polish + sage logo
+
+**`assets/logos/slate-logo-sage.png`** — Slate Sage PNG logo asset added; dark sage parallelogram shape with white "|SLATE" wordmark (actual brand asset)
+
+**`includes/ui/topbar.php`:** logo source updated from `slate-logo.svg` (orange bar variant) to `slate-logo-sage.png`; `object-fit: contain`, height 24px, width auto
+
+**`includes/ui/sidebar.php`:**
+- Split sidebar header into two stacked rows: `.ops-sidebar-collapse-row` (chevron alone) + `.ops-sidebar-nav-section` (NAVIGATE label alone)
+
+**`assets/css/ops-shell.css`:**
+- `.ops-sidebar-header`: changed from single flex row to `flex-direction: column`; removed fixed height
+- `.ops-sidebar-collapse-row`: new compact row; left padding `var(--slate-space-md)` to align chevron icon center with nav item icons
+- `.ops-sidebar-nav-section`: new label area; collapsed state adds `height: 0; padding: 0` to remove the gap left by opacity-only hiding
+- `.ops-sidebar-collapse-btn`: full button reset (`border: none !important`, `box-shadow: none`, `appearance: none`, `background: transparent !important`); hover removes redundant `background` override (already set on base)
+- `.ops-nav-link.active`: removed redundant `border-left-color: transparent` (base class already sets `border-left: 2px solid transparent`); background stays `--slate-sage-wash`
+
 ## 0.26.2 — Shell: sidebar collapse + Dealer Portal nav alignment
 
 **`includes/ui/sidebar.php`:**
