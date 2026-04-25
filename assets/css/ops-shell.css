@@ -287,26 +287,12 @@ body.slate-ops {
   transition: opacity var(--slate-sidebar-transition);
 }
 
-.ops-sidebar-nav-hint {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--slate-ink-subtle);
-  background: var(--slate-surface-page);
-  border: var(--slate-border-soft);
-  border-radius: var(--slate-radius-sm);
-  padding: 1px 5px;
-  white-space: nowrap;
-  transition: opacity var(--slate-sidebar-transition);
-}
-
 /* ─── 3b. Collapsed sidebar state ─── */
 html.ops-sidebar-collapsed .ops-sidebar {
   width: var(--slate-sidebar-w-collapsed);
 }
 
-html.ops-sidebar-collapsed .ops-sidebar-nav-label,
-html.ops-sidebar-collapsed .ops-sidebar-nav-hint {
+html.ops-sidebar-collapsed .ops-sidebar-nav-label {
   opacity: 0;
   pointer-events: none;
 }

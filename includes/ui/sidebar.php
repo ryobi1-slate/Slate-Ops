@@ -28,7 +28,6 @@ if (!function_exists('ops_nav_link')) {
       <span class="material-symbols-outlined">chevron_left</span>
     </button>
     <span class="ops-sidebar-nav-label">Navigate</span>
-    <kbd class="ops-sidebar-nav-hint">⌘K</kbd>
   </div>
 
   <nav class="ops-nav">
@@ -83,13 +82,6 @@ if (!function_exists('ops_nav_link')) {
   };
 
   btn.addEventListener('click', toggle);
-
-  document.addEventListener('keydown', function (e) {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      toggle();
-    }
-  });
 
   // Sync initial aria-label if sidebar was restored collapsed by FOUC script
   if (document.documentElement.classList.contains('ops-sidebar-collapsed')) {
