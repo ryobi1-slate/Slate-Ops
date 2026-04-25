@@ -12,7 +12,7 @@
 
   // ─── Escape helper ────────────────────────────────────────────────────────
   function esc(val) {
-    return String(val ?? '')
+    return String(val == null ? '' : val)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')

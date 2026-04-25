@@ -179,7 +179,7 @@
 }
 
 .pur-kpi--warning .pur-kpi-value {
-  color: #b07212;
+  color: var(--slate-arches-ink);
 }
 
 /* ─── 6. Section cards ─── */
