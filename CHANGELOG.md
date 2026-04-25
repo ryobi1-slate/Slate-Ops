@@ -1,5 +1,20 @@
 # Slate Ops Changelog
 
+## 0.26.7 — Executive page: match Purchasing visual pattern
+
+**Root cause:** `pur-subnav`/`pur-tab` CSS lived only in `purchasing.css` (page-specific). Executive page doesn't load `purchasing.css`, so WP theme button defaults rendered tabs as boxed/outlined buttons instead of underline tabs.
+
+**`assets/css/ops-shell.css`:**
+- Section 21 (new): Added `pur-subnav` and `pur-tab` tab styles to global shell CSS so they are available on all pages. Added `border: none !important`, `background: none !important`, `box-shadow: none !important`, `border-radius: 0` to defeat WP theme button defaults.
+- Section 16: `.slate-kpi-card` — added `!important` to `border` to prevent WP theme from overriding with a dark top border.
+- Section 16: Added `.slate-kpi-grid--exec { grid-template-columns: repeat(4, 1fr) }` — fixed 4-column layout for Executive's 8-card grids (avoids 7+1 awkward wrap from `auto-fill`).
+
+**`assets/react/app.js`:**
+- Executive component overview/capture/bottlenecks KPI grids: changed `className:"slate-kpi-grid"` → `"slate-kpi-grid slate-kpi-grid--exec"` (4-col layout). No data/logic changes.
+
+**Before:** boxed red/orange tab outlines (WP theme button defaults), dark top KPI card borders (WP theme override), 7+1 awkward grid wrap  
+**After:** clean underline tabs matching Purchasing, uniform card borders, 4×2 KPI grid layout
+
 ## 0.26.6 — Sidebar: center collapse chevron matching Dealer Portal
 
 **`assets/css/ops-shell.css`:**
