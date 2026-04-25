@@ -1,5 +1,15 @@
 # Slate Ops Changelog
 
+## 0.25.0 — Tech screen UI cleanup
+
+- **Sidebar**: hidden on mobile/tablet (≤900px) for Tech route — no bottom nav bar squeezing the phone UI
+- **Topbar**: hidden on Tech route — phone panel owns its own header
+- **Layout**: `ops-content` padding removed for Tech; `#ops-view` participates in flex height chain so panel fills viewport
+- **Bottom nav**: removed single-button "MY JOBS" bar (redundant with sidebar nav)
+- **Help on Another Job**: label corrected to title case
+- **Section spacing**: `space-y-6` → `space-y-4`, `py-5` → `py-4` in main content area
+- CSS changes in `ops-shell.css` (section 11); no logic/data changes
+
 ## 0.24.0 — Tech screen: visibility rules and Up Next sorting
 
 - **Up Next** now fetches only `QUEUED`, `IN_PROGRESS`, and `PENDING_QC` jobs assigned to the current tech; `READY_FOR_BUILD`, `UNSCHEDULED`, and `ON_HOLD` jobs no longer appear

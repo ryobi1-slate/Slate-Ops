@@ -694,3 +694,27 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-page-desc {
   color: var(--slate-ink-muted) !important;
 }
+
+/* ─── 11. Tech screen layout overrides ──────────────────────────────
+ * Phone-first panel: full-height, no shell padding, centered on desktop.
+ * On mobile the Ops sidebar is hidden — the tech panel is self-contained.
+ */
+.ops-role-tech .ops-header  { display: none; }
+.ops-role-tech .ops-content {
+  padding: 0;
+  overflow: hidden;
+}
+.ops-role-tech .ops-content > #ops-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .ops-role-tech .ops-sidebar {
+    display: none !important;
+  }
+  .ops-role-tech .ops-body {
+    padding-bottom: 0 !important;
+  }
+}
