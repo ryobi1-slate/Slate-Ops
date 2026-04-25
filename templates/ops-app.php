@@ -31,6 +31,11 @@ $role_label = $caps['admin']      ? 'Admin'
 
 $user = wp_get_current_user();
 
+// Route-specific body class — used for layout overrides (e.g. tech full-screen panel).
+$_ops_path  = Slate_Ops_Routes::current_path(); // e.g. "tech", "cs", "schedule/…"
+$_ops_route = strtok($_ops_path, '/');           // first segment only
+$page_class = $_ops_route ? 'ops-page-' . sanitize_html_class($_ops_route) : '';
+
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
 $shell_part = 'open';
 include SLATE_OPS_PATH . 'includes/ui/layout-shell.php';

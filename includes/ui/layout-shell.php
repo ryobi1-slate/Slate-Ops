@@ -19,7 +19,8 @@
  *
  * Expected context variables (set before the 'open' include):
  *   $caps        array    — current_user_caps_summary()
- *   $role_class  string   — CSS class derived from role
+ *   $role_class  string   — CSS class derived from role (e.g. ops-role-tech)
+ *   $page_class  string   — CSS class derived from route (e.g. ops-page-tech); optional
  *   $role_label  string   — human-readable role
  *   $user        WP_User  — current user object
  */
@@ -39,7 +40,7 @@ if ($shell_part === 'open') : ?>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@8..144,300..700&display=swap" rel="stylesheet">
   <?php wp_head(); ?>
 </head>
-<body class="slate-ops <?php echo esc_attr($role_class); ?>">
+<body class="slate-ops <?php echo esc_attr($role_class); ?> <?php echo esc_attr($page_class ?? ''); ?>">
 <div id="slate-ops-app" class="ops-shell">
   <?php include SLATE_OPS_PATH . 'includes/ui/sidebar.php'; ?>
   <div class="ops-body">

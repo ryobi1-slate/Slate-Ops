@@ -696,25 +696,27 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 /* ─── 11. Tech screen layout overrides ──────────────────────────────
+ * Scoped to .ops-page-tech (set by route, not by user role) so that
+ * admins and supervisors visiting /ops/tech get the same layout.
  * Phone-first panel: full-height, no shell padding, centered on desktop.
  * On mobile the Ops sidebar is hidden — the tech panel is self-contained.
  */
-.ops-role-tech .ops-header  { display: none; }
-.ops-role-tech .ops-content {
+.ops-page-tech .ops-header  { display: none; }
+.ops-page-tech .ops-content {
   padding: 0;
   overflow: hidden;
 }
-.ops-role-tech .ops-content > #ops-view {
+.ops-page-tech .ops-content > #ops-view {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 @media (max-width: 900px) {
-  .ops-role-tech .ops-sidebar {
+  .ops-page-tech .ops-sidebar {
     display: none !important;
   }
-  .ops-role-tech .ops-body {
+  .ops-page-tech .ops-body {
     padding-bottom: 0 !important;
   }
 }
