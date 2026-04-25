@@ -92,9 +92,10 @@
   --slate-surface-tint:    #FAFAF7;
   --slate-surface-page:    #F5F3ED;
 
+  --slate-radius-none:     0;
   --slate-radius-sm:       3px;
-  --slate-radius-md:       8px;
-  --slate-radius-lg:       12px;
+  --slate-radius-md:       5px;
+  --slate-radius-lg:       8px;
   --slate-radius-xl:       12px;
   --slate-radius-full:     999px;
 
@@ -110,6 +111,16 @@
   --slate-weight-regular: 400;
   --slate-weight-medium:  500;
 
+  /* Line heights */
+  --slate-leading-tight:   1.2;
+  --slate-leading-normal:  1.5;
+  --slate-leading-relaxed: 1.65;
+
+  /* Letter spacing */
+  --slate-tracking-normal: 0;
+  --slate-tracking-label:  0.08em;
+  --slate-tracking-wide:   0.12em;
+
   /* Spacing scale — 4px base, mirrored from Dealer Portal */
   --slate-space-2xs: 2px;
   --slate-space-xs:  4px;
@@ -121,13 +132,22 @@
   --slate-space-3xl: 48px;
   --slate-space-4xl: 64px;
 
+  /* Border shorthands */
+  --slate-border-width:  1px;
+  --slate-border-thick:  2px;
+  --slate-border:        1px solid #E6E2D4;
+  --slate-border-strong: 1px solid #D9D5C7;
+  --slate-border-soft:   1px solid #F0EDE3;
+
   /* Shell dimensions — mirrored from Dealer Portal */
+  --slate-shell-topbar-height: 56px;
   --slate-shell-maxwidth:      1440px;
   --slate-sidebar-w-expanded:  172px;
   --slate-sidebar-w-collapsed: 44px;
   --slate-sidebar-transition:  160ms ease;
 
   /* Shadows */
+  --slate-shadow-none:   none;
   --slate-shadow-subtle: 0 1px 2px rgba(42,46,44,0.04);
   --slate-shadow-pop:    0 4px 12px rgba(42,46,44,0.08);
 
