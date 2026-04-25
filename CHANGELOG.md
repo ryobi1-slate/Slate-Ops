@@ -2,9 +2,9 @@
 
 ## 0.26.3 — Shell: sidebar visual polish + sage logo
 
-**`assets/logos/slate-logo-sage.svg`** — new brand logo asset: dark sage parallelogram shape with white "|SLATE" wordmark matching Dealer Portal visual identity
+**`assets/logos/slate-logo-sage.png`** — Slate Sage PNG logo asset added; dark sage parallelogram shape with white "|SLATE" wordmark (actual brand asset)
 
-**`includes/ui/topbar.php`:** logo source updated from `slate-logo.svg` (orange bar variant) to `slate-logo-sage.svg`; `object-fit: contain`, height 24px, width auto
+**`includes/ui/topbar.php`:** logo source updated from `slate-logo.svg` (orange bar variant) to `slate-logo-sage.png`; `object-fit: contain`, height 24px, width auto
 
 **`includes/ui/sidebar.php`:**
 - Split sidebar header into two stacked rows: `.ops-sidebar-collapse-row` (chevron alone) + `.ops-sidebar-nav-section` (NAVIGATE label alone)
