@@ -22,6 +22,14 @@ if (!function_exists('ops_nav_link')) {
 }
 ?>
 <aside class="ops-sidebar">
+
+  <div class="ops-sidebar-header">
+    <button class="ops-sidebar-collapse-btn" id="ops-sidebar-toggle" type="button" aria-label="Collapse sidebar">
+      <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+    <span class="ops-sidebar-nav-label">Navigate</span>
+  </div>
+
   <nav class="ops-nav">
     <?php
     $is_admin = current_user_can(Slate_Ops_Utils::CAP_ADMIN);
@@ -60,4 +68,24 @@ if (!function_exists('ops_nav_link')) {
       <span class="material-symbols-outlined">logout</span>
     </a>
   </div>
+
 </aside>
+<script>
+(function () {
+  var btn = document.getElementById('ops-sidebar-toggle');
+  if (!btn) return;
+
+  var toggle = function () {
+    var isCollapsed = document.documentElement.classList.toggle('ops-sidebar-collapsed');
+    btn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    try { localStorage.setItem('slate_ops_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch (e) {}
+  };
+
+  btn.addEventListener('click', toggle);
+
+  // Sync initial aria-label if sidebar was restored collapsed by FOUC script
+  if (document.documentElement.classList.contains('ops-sidebar-collapsed')) {
+    btn.setAttribute('aria-label', 'Expand sidebar');
+  }
+})();
+</script>
