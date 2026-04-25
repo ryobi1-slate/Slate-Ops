@@ -38,6 +38,7 @@ if ($shell_part === 'open') : ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@8..144,300..700&display=swap" rel="stylesheet">
+  <script>try{if(localStorage.getItem('slate_ops_sidebar_collapsed')==='1')document.documentElement.classList.add('ops-sidebar-collapsed');}catch(e){}</script>
   <?php wp_head(); ?>
 </head>
 <body class="slate-ops <?php echo esc_attr($role_class); ?> <?php echo esc_attr($page_class ?? ''); ?>">

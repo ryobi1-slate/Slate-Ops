@@ -22,6 +22,15 @@ if (!function_exists('ops_nav_link')) {
 }
 ?>
 <aside class="ops-sidebar">
+
+  <div class="ops-sidebar-header">
+    <button class="ops-sidebar-collapse-btn" id="ops-sidebar-toggle" type="button" aria-label="Collapse sidebar">
+      <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+    <span class="ops-sidebar-nav-label">Navigate</span>
+    <kbd class="ops-sidebar-nav-hint">⌘K</kbd>
+  </div>
+
   <nav class="ops-nav">
     <?php
     $is_admin = current_user_can(Slate_Ops_Utils::CAP_ADMIN);
@@ -60,4 +69,15 @@ if (!function_exists('ops_nav_link')) {
       <span class="material-symbols-outlined">logout</span>
     </a>
   </div>
+
 </aside>
+<script>
+(function () {
+  var btn = document.getElementById('ops-sidebar-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var collapsed = document.documentElement.classList.toggle('ops-sidebar-collapsed');
+    try { localStorage.setItem('slate_ops_sidebar_collapsed', collapsed ? '1' : '0'); } catch (e) {}
+  });
+})();
+</script>

@@ -1,5 +1,22 @@
 # Slate Ops Changelog
 
+## 0.26.2 — Shell: sidebar collapse + Dealer Portal nav alignment
+
+**`includes/ui/sidebar.php`:**
+- Added sidebar header: collapse toggle button (chevron_left), "Navigate" label, ⌘K keyboard hint
+- Collapse button toggles `html.ops-sidebar-collapsed` class; state persisted to `localStorage` key `slate_ops_sidebar_collapsed`
+- Inline script runs immediately after sidebar renders (no FOUC dependency)
+
+**`includes/ui/layout-shell.php`:**
+- Added single-line FOUC-prevention script in `<head>` — restores collapsed class from localStorage before first paint
+
+**`assets/css/ops-shell.css`:**
+- Section 3: `.ops-sidebar` gains `overflow: hidden` + `transition: width` for smooth collapse animation
+- Section 3a: New `.ops-sidebar-header` with collapse button, nav label, and keyboard hint styles
+- Section 3b: Collapsed state — `html.ops-sidebar-collapsed .ops-sidebar` → 44px width; labels fade out; chevron rotates 180°; nav links center their icons
+- Nav hover: `--slate-surface-tint` → `--slate-sage-wash` (matches Dealer Portal warm hover)
+- Mobile breakpoint: `.ops-sidebar-header` hidden in bottom-tab layout; collapsed overrides reset so mobile is unaffected
+
 ## 0.26.1 — Dealer Portal component alignment
 
 **`assets/css/ops-shell.css` — new component system (sections 14–20):**
