@@ -1311,6 +1311,10 @@ foreach ($rows as &$r) {
       return self::get_job(['id' => $job_id]);
     }
 
+    // Readiness gate: block transition to READY_FOR_BUILD if requirements unmet.
+    $gate = self::check_ready_for_build_gate($job, $update);
+    if ($gate) return $gate;
+
     $update['updated_at'] = $now;
     $wpdb->update($t, $update, ['job_id' => $job_id]);
 
@@ -1325,6 +1329,49 @@ foreach ($rows as &$r) {
     }
 
     return self::get_job(['id' => $job_id]);
+  }
+
+  /**
+   * Gate: block moving a job to READY_FOR_BUILD when required fields are missing
+   * or parts are in a blocking state (NOT_READY / HOLD).
+   *
+   * PARTIAL is not blocked server-side — the frontend warns and lets the user confirm.
+   *
+   * @param array $job    Current job row from DB.
+   * @param array $update Pending field updates (merged with $job for evaluation).
+   * @return WP_Error|null  WP_Error (HTTP 422) on failure, null on pass.
+   */
+  private static function check_ready_for_build_gate(array $job, array $update = []): ?WP_Error {
+    if (!isset($update['status']) || $update['status'] !== 'READY_FOR_BUILD') {
+      return null;
+    }
+
+    $data    = array_merge($job, $update);
+    $missing = [];
+
+    if (empty(trim((string)($data['customer_name'] ?? '')))) {
+      $missing[] = 'customer name';
+    }
+    if (empty(trim((string)($data['so_number'] ?? '')))) {
+      $missing[] = 'SO#';
+    }
+    if (empty((int)($data['estimated_minutes'] ?? 0))) {
+      $missing[] = 'estimated hours';
+    }
+
+    $ps = strtoupper((string)($data['parts_status'] ?? 'NOT_READY'));
+    if ($ps === 'NOT_READY') {
+      $missing[] = 'parts are Not Ready';
+    } elseif ($ps === 'HOLD') {
+      $missing[] = 'parts are On Hold';
+    }
+
+    if (!empty($missing)) {
+      $msg = 'Cannot move to Ready for Build. Missing: ' . implode(', ', $missing) . '.';
+      return new WP_Error('not_ready_for_build', $msg, ['status' => 422]);
+    }
+
+    return null;
   }
 
   public static function delete_job($req) {
@@ -1719,6 +1766,14 @@ if (!empty($delay_reason)) {
 // Priority 1-5
 if ($priority >= 1 && $priority <= 5) {
   $update['priority'] = $priority;
+}
+
+// Readiness gate: block transition to READY_FOR_BUILD if requirements unmet.
+if ($new_status === 'READY_FOR_BUILD') {
+  $current_job = self::job_by_id($job_id);
+  if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+  $gate = self::check_ready_for_build_gate($current_job, ['status' => $new_status]);
+  if ($gate) return $gate;
 }
 
 $wpdb->update($t, $update, ['job_id' => $job_id]);
