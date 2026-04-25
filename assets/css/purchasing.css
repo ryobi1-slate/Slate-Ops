@@ -1,0 +1,623 @@
+/*
+ * purchasing.css — Slate Ops Purchasing Workspace
+ *
+ * Plain CSS, no Tailwind. All colors via --slate-* tokens defined in ops-shell.css.
+ * All class names prefixed with .pur- to avoid collisions with existing styles.
+ *
+ * Sections:
+ *   1. Page shell
+ *   2. Preview mode banner
+ *   3. Page header
+ *   4. Sub-navigation tabs
+ *   5. KPI stat cards
+ *   6. Section cards
+ *   7. Tables
+ *   8. Status badges
+ *   9. Empty states
+ *  10. API Status screen
+ *  11. Form controls
+ *  12. Action buttons
+ */
+
+/* ─── 1. Page shell ─── */
+.pur-page {
+  font-family: var(--font-sans);
+  color: var(--slate-ink);
+  max-width: 1200px;
+}
+
+/* ─── 2. Preview mode banner ─── */
+.pur-preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--slate-arches-wash);
+  border: 1px solid var(--slate-arches);
+  border-radius: var(--slate-radius-md);
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  font-size: var(--slate-text-sm);
+  color: var(--slate-arches-ink);
+}
+
+.pur-preview-banner .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pur-preview-banner strong {
+  font-weight: 600;
+}
+
+/* ─── 3. Page header ─── */
+.pur-page-header {
+  padding-bottom: 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.pur-page-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--slate-arches);
+  margin-bottom: 4px;
+}
+
+.pur-page-title {
+  font-size: var(--slate-text-xl);
+  font-weight: 500;
+  color: var(--slate-ink);
+  margin: 0 0 4px;
+}
+
+.pur-page-desc {
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  margin: 0;
+}
+
+/* ─── 4. Sub-navigation tabs ─── */
+.pur-subnav {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--slate-divider);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pur-subnav::-webkit-scrollbar {
+  display: none;
+}
+
+.pur-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  color: var(--slate-ink-muted);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 100ms ease, border-color 100ms ease;
+}
+
+.pur-tab:hover {
+  color: var(--slate-ink);
+}
+
+.pur-tab.active {
+  color: var(--slate-sage);
+  border-bottom-color: var(--slate-sage);
+}
+
+.pur-tab .material-symbols-outlined {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ─── 5. KPI stat cards ─── */
+.pur-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1000px) {
+  .pur-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .pur-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pur-kpi {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  padding: 20px;
+}
+
+.pur-kpi-label {
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--slate-ink-subtle);
+  margin-bottom: 8px;
+}
+
+.pur-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--slate-ink);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.pur-kpi-sub {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-muted);
+}
+
+.pur-kpi--alert .pur-kpi-value {
+  color: var(--slate-arches);
+}
+
+.pur-kpi--warning .pur-kpi-value {
+  color: #b07212;
+}
+
+/* ─── 6. Section cards ─── */
+.pur-card {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.pur-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+
+.pur-card-title {
+  font-size: var(--slate-text-base);
+  font-weight: 600;
+  color: var(--slate-ink);
+  margin: 0;
+}
+
+.pur-card-meta {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+}
+
+.pur-card-body {
+  padding: 20px;
+}
+
+/* ─── 7. Tables ─── */
+.pur-table-wrap {
+  overflow-x: auto;
+}
+
+.pur-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--slate-text-sm);
+}
+
+.pur-table thead tr {
+  background: var(--slate-sage-wash);
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.pur-table thead th {
+  padding: 11px 16px;
+  text-align: left;
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--slate-ink-muted);
+  white-space: nowrap;
+}
+
+.pur-table thead th:first-child { padding-left: 20px; }
+.pur-table thead th:last-child  { padding-right: 20px; text-align: right; }
+
+.pur-table tbody tr {
+  border-bottom: 1px solid var(--slate-divider-soft);
+  transition: background 80ms ease;
+}
+
+.pur-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.pur-table tbody tr:hover {
+  background: var(--slate-surface-tint);
+}
+
+.pur-table tbody td {
+  padding: 14px 16px;
+  color: var(--slate-ink);
+  vertical-align: middle;
+}
+
+.pur-table tbody td:first-child { padding-left: 20px; }
+.pur-table tbody td:last-child  { padding-right: 20px; text-align: right; }
+
+.pur-table .pur-col-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--slate-ink-muted);
+}
+
+.pur-table .pur-col-muted {
+  color: var(--slate-ink-muted);
+}
+
+.pur-table .pur-col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pur-table .pur-col-alert {
+  color: var(--slate-arches);
+  font-weight: 600;
+}
+
+/* Reorder alert row */
+.pur-table tbody tr.pur-row-alert td:first-child {
+  border-left: 3px solid var(--slate-arches);
+  padding-left: 17px;
+}
+
+/* ─── 8. Status badges ─── */
+.pur-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.pur-badge--draft {
+  background: var(--slate-sage-wash);
+  color: var(--slate-ink-muted);
+}
+
+.pur-badge--pending {
+  background: var(--slate-arches-wash);
+  color: var(--slate-arches-ink);
+}
+
+.pur-badge--approved {
+  background: var(--slate-redwood-wash);
+  color: var(--slate-redwood);
+}
+
+.pur-badge--rejected {
+  background: var(--slate-flag-wash);
+  color: var(--slate-flag);
+}
+
+.pur-badge--submitted {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+
+.pur-badge--acknowledged {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+
+.pur-badge--shipped {
+  background: var(--slate-arches-wash);
+  color: var(--slate-arches-ink);
+}
+
+.pur-badge--partial {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.pur-badge--active {
+  background: var(--slate-redwood-wash);
+  color: var(--slate-redwood);
+}
+
+.pur-badge--inactive {
+  background: var(--slate-sage-wash);
+  color: var(--slate-ink-subtle);
+}
+
+.pur-badge--connected {
+  background: var(--slate-redwood-wash);
+  color: var(--slate-redwood);
+}
+
+.pur-badge--disconnected {
+  background: var(--slate-flag-wash);
+  color: var(--slate-flag);
+}
+
+.pur-badge--preview {
+  background: var(--slate-arches-wash);
+  color: var(--slate-arches-ink);
+}
+
+/* ─── 9. Empty states ─── */
+.pur-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--slate-ink-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.pur-empty .material-symbols-outlined {
+  font-size: 40px;
+  color: var(--slate-divider-strong);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.pur-empty-title {
+  font-weight: 600;
+  color: var(--slate-ink-muted);
+  margin-bottom: 4px;
+}
+
+/* ─── 10. API Status screen ─── */
+.pur-api-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 700px) {
+  .pur-api-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pur-api-card {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  padding: 20px;
+}
+
+.pur-api-card-title {
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--slate-ink-subtle);
+  margin-bottom: 12px;
+}
+
+.pur-api-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--slate-divider-soft);
+  font-size: var(--slate-text-sm);
+  gap: 12px;
+}
+
+.pur-api-row:last-child {
+  border-bottom: none;
+}
+
+.pur-api-row-label {
+  color: var(--slate-ink-muted);
+  flex-shrink: 0;
+}
+
+.pur-api-row-value {
+  color: var(--slate-ink);
+  font-weight: 500;
+  text-align: right;
+}
+
+.pur-api-row-value--muted {
+  color: var(--slate-ink-subtle);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.pur-api-note {
+  background: var(--slate-surface-tint);
+  border: 1px solid var(--slate-divider-soft);
+  border-radius: var(--slate-radius-md);
+  padding: 14px 16px;
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  line-height: 1.5;
+}
+
+/* ─── 11. Form controls ─── */
+.pur-field {
+  margin-bottom: 16px;
+}
+
+.pur-label {
+  display: block;
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  color: var(--slate-ink-subtle);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.pur-input {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: var(--slate-text-sm);
+  font-family: var(--font-sans);
+  color: var(--slate-ink-subtle);
+  background: var(--slate-surface-tint);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  box-sizing: border-box;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* ─── 12. Action buttons ─── */
+.pur-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--slate-radius-md);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+  white-space: nowrap;
+}
+
+.pur-btn .material-symbols-outlined {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.pur-btn--primary {
+  background: var(--slate-sage);
+  color: var(--slate-surface);
+  border-color: var(--slate-sage);
+}
+
+.pur-btn--primary:hover {
+  background: var(--slate-sage-ink);
+  border-color: var(--slate-sage-ink);
+}
+
+.pur-btn--outline {
+  background: var(--slate-surface);
+  color: var(--slate-ink-muted);
+  border-color: var(--slate-divider-strong);
+}
+
+.pur-btn--outline:hover {
+  background: var(--slate-surface-tint);
+  color: var(--slate-ink);
+  border-color: var(--slate-divider-strong);
+}
+
+.pur-btn--disabled,
+.pur-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pur-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ─── Overview activity feed ─── */
+.pur-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pur-activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--slate-divider-soft);
+  font-size: var(--slate-text-sm);
+}
+
+.pur-activity-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pur-activity-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--slate-sage-wash);
+  color: var(--slate-sage);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pur-activity-icon .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.pur-activity-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pur-activity-text {
+  color: var(--slate-ink);
+  margin-bottom: 2px;
+}
+
+.pur-activity-time {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+}
+
+/* ─── Demand screen demand-level indicator ─── */
+.pur-demand-bar-wrap {
+  width: 80px;
+  height: 6px;
+  background: var(--slate-divider);
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.pur-demand-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--slate-sage);
+}
+
+.pur-demand-bar--low    { background: var(--slate-redwood-wash); }
+.pur-demand-bar--medium { background: var(--slate-arches); }
+.pur-demand-bar--high   { background: var(--slate-flag); }
