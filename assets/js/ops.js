@@ -107,9 +107,21 @@
     if (el) el.textContent = title;
   }
 
+  const STATUS_LABELS = {
+    INTAKE:           'Intake',
+    READY_FOR_BUILD:  'Ready for Build',
+    QUEUED:           'Queued',
+    IN_PROGRESS:      'In Progress',
+    PENDING_QC:       'Pending QC',
+    READY_FOR_PICKUP: 'Ready for Pickup',
+    COMPLETE:         'Complete',
+    DELAYED:          'Delayed',
+    ON_HOLD:          'On Hold',
+  };
+
   function fmtStatus(s){
     if(!s) return '';
-    return s.replaceAll('_',' ');
+    return escapeHtml(STATUS_LABELS[s] || s.replaceAll('_',' '));
   }
 
   function badgeClass(status){
