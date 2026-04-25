@@ -326,13 +326,13 @@
 }
 
 .pur-badge--submitted {
-  background: #e8f0fe;
-  color: #1a56db;
+  background: var(--slate-surface-tint);
+  color: var(--slate-ink-muted);
 }
 
 .pur-badge--acknowledged {
-  background: #e8f0fe;
-  color: #1a56db;
+  background: var(--slate-sage-wash);
+  color: var(--slate-sage-ink);
 }
 
 .pur-badge--shipped {
@@ -341,8 +341,8 @@
 }
 
 .pur-badge--partial {
-  background: #fef9c3;
-  color: #854d0e;
+  background: var(--slate-arches-wash);
+  color: var(--slate-arches-ink);
 }
 
 .pur-badge--active {

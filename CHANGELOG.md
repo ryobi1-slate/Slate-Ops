@@ -1,5 +1,35 @@
 # Slate Ops Changelog
 
+## 0.26.0 — Shared design system tokens + visual drift cleanup
+
+**`assets/css/ops-shell.css` — token additions/normalization:**
+- Radius scale corrected: `--slate-radius-none: 0`, `--slate-radius-md: 5px` (was 8px), `--slate-radius-lg: 8px` (was 12px)
+- Added line height tokens: `--slate-leading-tight`, `--slate-leading-normal`, `--slate-leading-relaxed`
+- Added letter spacing tokens: `--slate-tracking-normal`, `--slate-tracking-label`, `--slate-tracking-wide`
+- Added border shorthand tokens: `--slate-border-width`, `--slate-border-thick`, `--slate-border`, `--slate-border-strong`, `--slate-border-soft`
+- Added `--slate-shadow-none: none` and `--slate-shell-topbar-height: 56px`
+
+**`assets/css/purchasing.css` — badge drift fix:**
+- `pur-badge--submitted`: replaced hardcoded `#e8f0fe / #1a56db` (blue) → `--slate-surface-tint / --slate-ink-muted`
+- `pur-badge--acknowledged`: replaced hardcoded `#e8f0fe / #1a56db` (blue) → `--slate-sage-wash / --slate-sage-ink`
+- `pur-badge--partial`: replaced hardcoded `#fef9c3 / #854d0e` (yellow) → `--slate-arches-wash / --slate-arches-ink`
+
+**`assets/react/app.js` — drift fixes (7 targeted replacements):**
+- `IN_PROGRESS` job card header: `bg-blue-700` → `bg-slate-600` (sage-neutral)
+- `PENDING_QC` job card header: `bg-purple-700` → `bg-slate-500`
+- QUEUED status badge pill: `bg-blue-100 text-blue-700` → `bg-slate-100 text-slate-600`
+- QUEUED status dot: `bg-blue-400` → `bg-slate-400`
+- Delete button hover: `hover:text-rose-500` → `hover:text-red-700`
+- Sidebar: removed `shadow-xl` (sidebar already has CSS border-right)
+- Modal card: `shadow-2xl` → `shadow-sm`
+
+**Deferred (not safe to change in bulk):**
+- `font-bold` (233 instances) — pervasive, needs Tailwind config rebuild
+- `rounded-full` (13 instances) — acceptable for pill badges
+- `orange`/`amber`/`green` Tailwind classes — semantic and acceptable
+- Hardcoded `#d86b19` arches hex in buttons — requires CSS class + JS co-migration
+- No PHP changes
+
 ## 0.25.9 — Executive dashboard: labor/job performance KPI tabs
 
 **New REST endpoint — `GET /slate-ops/v1/executive/labor-summary`** (admin/supervisor only):
