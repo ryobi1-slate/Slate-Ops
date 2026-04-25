@@ -1984,16 +1984,19 @@ return self::get_job(['id' => $job_id]);
 
     $user_id = get_current_user_id();
 
-    // Auto-stop any open segment for this tech.
+    // Job-status guard: only QUEUED or IN_PROGRESS jobs can be started.
+    if (!in_array($job['status'], ['QUEUED', 'IN_PROGRESS'], true)) {
+      return new WP_Error('invalid_status', 'Job cannot be started in its current status', ['status' => 422]);
+    }
+
+    // Duplicate-timer guard.
     $segments = $wpdb->prefix . 'slate_ops_time_segments';
     $open = $wpdb->get_row($wpdb->prepare("SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' ORDER BY start_ts DESC LIMIT 1", $user_id), ARRAY_A);
     if ($open) {
-      $wpdb->update($segments, [
-        'end_ts' => Slate_Ops_Utils::now_gmt(),
-        'updated_at' => Slate_Ops_Utils::now_gmt(),
-      ], ['segment_id' => (int)$open['segment_id']]);
-
-      self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, Slate_Ops_Utils::now_gmt(), 'Auto-stopped due to starting another job');
+      if ((int)$open['job_id'] === $job_id) {
+        return ['segment_id' => (int)$open['segment_id'], 'job_id' => $job_id, 'started_at' => $open['start_ts']];
+      }
+      return new WP_Error('timer_conflict', 'You already have an active timer on another job. Pause it before starting a new one.', ['status' => 409]);
     }
 
     // Reason required when not assigned (and assignment exists).
@@ -2065,6 +2068,7 @@ return self::get_job(['id' => $job_id]);
 
     return [
       'segment_id' => (int)$open['segment_id'],
+      'job_id'     => (int)$open['job_id'],
       'stopped_at' => $now,
     ];
   }
