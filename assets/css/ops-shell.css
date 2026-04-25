@@ -1,5 +1,5 @@
 /*
- * ops-shell.css — Slate Ops shared layout shell styles v0.9
+ * ops-shell.css — Slate Ops shared layout shell styles v1.0
  *
  * Design system aligned with Slate Scheduler v0.4 and mockup reference.
  * Font: Roboto Flex / JetBrains Mono (loaded via layout-shell.php)
@@ -12,6 +12,8 @@
  *   4. Topbar / header
  *   5. Version badge
  *   6. Responsive
+ *   11. Tech screen layout overrides
+ *   12. Tech screen: Slate palette for React cards (WP theme reset)
  */
 
 /* ─── 1. Design Tokens ─── */
@@ -719,4 +721,26 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   .ops-page-tech .ops-body {
     padding-bottom: 0 !important;
   }
+}
+
+/* ─── 12. Tech screen: Palette override for help button & job cards ──
+ * Tailwind @layer utilities loses to unlayered WordPress theme CSS (e.g.
+ * button { color: … }). The #ops-view ID gives specificity 1,2,0 which
+ * beats any element-only theme selector. bg/color are set here so the
+ * theme can never tint the help button or job cards.
+ */
+.ops-page-tech #ops-view .ops-tech-help-btn {
+  background-color: var(--surface-card);
+  color: var(--sage);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.ops-page-tech #ops-view .ops-tech-help-btn:hover {
+  background-color: var(--sand);
+}
+.ops-page-tech #ops-view .ops-tech-card {
+  background-color: var(--surface-card);
 }
