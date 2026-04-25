@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.23.0
+ * Version: 0.24.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.23.0');
+define('SLATE_OPS_VERSION', '0.24.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -52,40 +52,56 @@ add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
 
-    wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
+  wp_enqueue_style('material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', [], null);
 
   $ver_shell = file_exists(SLATE_OPS_PATH . 'assets/css/ops-shell.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-shell.css') : SLATE_OPS_VERSION;
-  $ver_app_css = file_exists(SLATE_OPS_PATH . 'assets/react/app.css') ? filemtime(SLATE_OPS_PATH . 'assets/react/app.css') : SLATE_OPS_VERSION;
-  $ver_app_js  = file_exists(SLATE_OPS_PATH . 'assets/react/app.js') ? filemtime(SLATE_OPS_PATH . 'assets/react/app.js') : SLATE_OPS_VERSION;
 
-  // ops-shell.css: structural shell tokens (sidebar, topbar, version badge).
+  // ops-shell.css: structural shell tokens (sidebar, topbar, version badge). Always loaded.
   wp_enqueue_style('slate-ops-shell', SLATE_OPS_URL . 'assets/css/ops-shell.css', ['material-symbols'], $ver_shell);
-  wp_enqueue_style('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.css', ['slate-ops-shell'], $ver_app_css);
-  wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element'], $ver_app_js, true);
 
-  $current_user = wp_get_current_user();
+  // Narrow check: only the purchasing sub-tree gets the purchasing bundle.
+  // Exact match 'purchasing' or sub-paths 'purchasing/…' — nothing else.
+  $current_path = Slate_Ops_Routes::current_path();
+  $is_purchasing = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
 
-  wp_localize_script('slate-ops-react', 'slateOpsSettings', [
-    'api' => [
-      'root' => esc_url_raw(rest_url('slate-ops/v1')),
-      'nonce' => wp_create_nonce('wp_rest'),
-    ],
-    'user' => [
-      'id' => get_current_user_id(),
-      'name' => $current_user->display_name,
-      'caps' => Slate_Ops_Utils::current_user_caps_summary(),
-      'roles' => array_values((array) $current_user->roles),
-    ],
-    'colors' => [
-      'sage' => '#404f4b',
-      'sand' => '#e1dfc8',
-      'arches' => '#d86b19',
-      'redwood' => '#0f342a',
-      'black' => '#000000',
-      'white' => '#ffffff',
-    ],
-    'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
-  ]);
+  if ($is_purchasing) {
+    // Purchasing workspace — standalone vanilla JS; React app is not loaded here.
+    $ver_pur_css = file_exists(SLATE_OPS_PATH . 'assets/css/purchasing.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/purchasing.css') : SLATE_OPS_VERSION;
+    $ver_pur_js  = file_exists(SLATE_OPS_PATH . 'assets/js/purchasing.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/purchasing.js')   : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-purchasing',  SLATE_OPS_URL . 'assets/css/purchasing.css', ['slate-ops-shell'], $ver_pur_css);
+    wp_enqueue_script('slate-ops-purchasing', SLATE_OPS_URL . 'assets/js/purchasing.js',   [],                  $ver_pur_js,  true);
+  } else {
+    // All other /ops/* routes — React app, exactly as before.
+    $ver_app_css = file_exists(SLATE_OPS_PATH . 'assets/react/app.css') ? filemtime(SLATE_OPS_PATH . 'assets/react/app.css') : SLATE_OPS_VERSION;
+    $ver_app_js  = file_exists(SLATE_OPS_PATH . 'assets/react/app.js')  ? filemtime(SLATE_OPS_PATH . 'assets/react/app.js')  : SLATE_OPS_VERSION;
+
+    wp_enqueue_style('slate-ops-react',  SLATE_OPS_URL . 'assets/react/app.css', ['slate-ops-shell'], $ver_app_css);
+    wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js',  ['wp-element'],      $ver_app_js,  true);
+
+    $current_user = wp_get_current_user();
+
+    wp_localize_script('slate-ops-react', 'slateOpsSettings', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'user' => [
+        'id'    => get_current_user_id(),
+        'name'  => $current_user->display_name,
+        'caps'  => Slate_Ops_Utils::current_user_caps_summary(),
+        'roles' => array_values((array) $current_user->roles),
+      ],
+      'colors' => [
+        'sage'    => '#404f4b',
+        'sand'    => '#e1dfc8',
+        'arches'  => '#d86b19',
+        'redwood' => '#0f342a',
+        'black'   => '#000000',
+        'white'   => '#ffffff',
+      ],
+      'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
+    ]);
+  }
 });
 
 add_filter('template_include', function($template) {

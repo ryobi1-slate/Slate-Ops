@@ -31,12 +31,13 @@ if (!function_exists('ops_nav_link')) {
     ?>
 
     <?php if ($is_admin || $is_exec) : ?>
-      <?php ops_nav_link('/ops/exec',     '/exec',     'dashboard',      'Executive'); ?>
-      <?php ops_nav_link('/ops/cs',       '/cs',       'person',         'CS'); ?>
-      <?php ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech'); ?>
-      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule'); ?>
-      <?php ops_nav_link('/ops/admin',    '/admin',    'shield',         'Admin'); ?>
-      <?php ops_nav_link('/ops/settings', '/settings', 'settings',       'Settings'); ?>
+      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',      'Executive'); ?>
+      <?php ops_nav_link('/ops/cs',         '/cs',         'person',         'CS'); ?>
+      <?php ops_nav_link('/ops/tech',       '/tech',       'build',          'Tech'); ?>
+      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_month', 'Schedule'); ?>
+      <?php ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart',  'Purchasing'); ?>
+      <?php ops_nav_link('/ops/admin',      '/admin',      'shield',         'Admin'); ?>
+      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',       'Settings'); ?>
     <?php elseif ($is_cs) : ?>
       <?php ops_nav_link('/ops/cs',       '/cs',       'person',         'CS'); ?>
       <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule'); ?>
