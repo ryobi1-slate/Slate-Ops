@@ -111,7 +111,6 @@
   --slate-text-2xl:    28px;
   --slate-weight-regular: 400;
   --slate-weight-medium:  500;
-  --slate-weight-bold:    600;
 
   /* Line heights */
   --slate-leading-tight:   1.2;
@@ -845,7 +844,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 .slate-card__title {
   font-size: var(--slate-text-md);
-  font-weight: var(--slate-weight-bold);
+  font-weight: var(--slate-weight-medium);
   color: var(--slate-ink);
   margin: 0;
   line-height: var(--slate-leading-tight);
@@ -872,14 +871,14 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 .slate-kpi-card__label {
   font-size: var(--slate-text-micro);
-  font-weight: var(--slate-weight-bold);
+  font-weight: var(--slate-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--slate-tracking-label);
   color: var(--slate-ink-muted);
 }
 .slate-kpi-card__value {
   font-size: var(--slate-text-2xl);
-  font-weight: var(--slate-weight-bold);
+  font-weight: var(--slate-weight-medium);
   color: var(--slate-ink);
   line-height: var(--slate-leading-tight);
 }
@@ -903,7 +902,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .slate-table thead th {
   padding: var(--slate-space-md) var(--slate-space-xl);
   font-size: var(--slate-text-micro);
-  font-weight: var(--slate-weight-bold);
+  font-weight: var(--slate-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--slate-tracking-label);
   color: var(--slate-ink-muted);
@@ -920,7 +919,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   color: var(--slate-ink-muted);
 }
 .slate-table__lead {
-  font-weight: var(--slate-weight-bold) !important;
+  font-weight: var(--slate-weight-medium) !important;
   color: var(--slate-ink) !important;
 }
 .slate-table__num {
