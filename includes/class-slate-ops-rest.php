@@ -1807,6 +1807,15 @@ if ($priority >= 1 && $priority <= 5) {
   $update['priority'] = $priority;
 }
 
+// Guard: PENDING_QC requires job to be IN_PROGRESS (matches submit_qc behavior).
+if ($new_status === 'PENDING_QC') {
+  $current_job = self::job_by_id($job_id);
+  if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+  if ($current_job['status'] !== 'IN_PROGRESS') {
+    return new WP_Error('invalid_state', 'Job must be In Progress to submit for QC', ['status' => 422]);
+  }
+}
+
 // Readiness gate: block transition to READY_FOR_BUILD if requirements unmet.
 if ($new_status === 'READY_FOR_BUILD') {
   $current_job = self::job_by_id($job_id);
