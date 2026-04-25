@@ -1,5 +1,16 @@
 # Slate Ops Changelog
 
+## 0.26.6 — Sidebar: center collapse chevron matching Dealer Portal
+
+**`assets/css/ops-shell.css`:**
+- `.ops-sidebar-collapse-row`: added `justify-content: center`; changed padding from `8px 8px 2px 12px` (left-pinned) to `8px 0 4px` (centered, no horizontal padding)
+- `.ops-sidebar-nav-section`: changed padding from `0 12px 8px` (no top — tight) to `8px 12px` (8px breathing room above NAVIGATE, left-aligned at 12px matching nav item rhythm)
+
+**Before:** chevron left-pinned at 12px, NAVIGATE had no top gap  
+**After:** chevron centered in full sidebar width (expanded and collapsed), NAVIGATE 8px below chevron, left-aligned
+
+Collapsed state: chevron centers naturally in 44px sidebar; NAVIGATE collapses to zero height/padding via existing rule.
+
 ## 0.26.5 — Shell: full-width topbar matching Dealer Portal structure
 
 **`includes/ui/layout-shell.php`:**
