@@ -1060,7 +1060,7 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
                scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes,
                scheduler_locked, hold_reason, schedule_notes, scheduling_flag,
                scheduled_start, scheduled_finish, requested_date, promised_date, target_ship_date,
-               clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
+               clickup_task_id, clickup_estimate_ms, dealer_status, queue_order, created_at, updated_at
         FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
 
 $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
@@ -1229,6 +1229,16 @@ foreach ($rows as &$r) {
       }
     }
 
+    // Queue order (CS / supervisor)
+    if (($is_cs || $is_supervisor) && array_key_exists('queue_order', $body)) {
+      $qo = self::parse_queue_order($body, 'queue_order');
+      if ($qo instanceof WP_Error) return $qo;
+      if ($qo !== (isset($job['queue_order']) ? (int)$job['queue_order'] : null)) {
+        $audits[] = ['queue_order', $job['queue_order'] ?? null, $qo];
+        $update['queue_order'] = $qo;
+      }
+    }
+
     // CS + supervisor: Job Status and Lead Tech (per CS MVP rules).
     if ($is_cs || $is_supervisor) {
       if (array_key_exists('status', $body)) {
@@ -1329,6 +1339,31 @@ foreach ($rows as &$r) {
     }
 
     return self::get_job(['id' => $job_id]);
+  }
+
+  /**
+   * Parse and validate a queue_order value from a request body.
+   *
+   * @param array  $body  Decoded request body.
+   * @param string $key   Key to read (default 'queue_order').
+   * @return int|null|WP_Error  Validated integer, null, or validation error.
+   */
+  private static function parse_queue_order(array $body, string $key = 'queue_order') {
+    $raw = $body[$key] ?? null;
+    if ($raw === null || $raw === '') {
+      return null;
+    }
+    if (is_int($raw) && $raw >= 1) {
+      return $raw;
+    }
+    $str = trim((string) $raw);
+    if ($str === '') {
+      return null;
+    }
+    if (!preg_match('/^[1-9][0-9]*$/', $str)) {
+      return self::validation_error('queue_order', 'invalid_queue_order', 'Queue order must be a positive whole number.');
+    }
+    return (int) $str;
   }
 
   /**
@@ -1487,6 +1522,9 @@ foreach ($rows as &$r) {
       $notes = 'Parts: ' . $notes;
     }
 
+    $queue_order = self::parse_queue_order($body, 'queue_order');
+    if ($queue_order instanceof WP_Error) return $queue_order;
+
     $now = Slate_Ops_Utils::now_gmt();
     $inserted = $wpdb->insert($t, [
       'source' => $created_from,
@@ -1506,6 +1544,7 @@ foreach ($rows as &$r) {
       'requested_date' => $requested_date ?: null,
       'sales_person' => $sales_person ?: null,
       'notes' => $notes ?: null,
+      'queue_order' => $queue_order,
       'dealer_status' => 'waiting',
       'created_by' => get_current_user_id(),
       'created_at' => $now,

@@ -55,7 +55,7 @@ class Slate_Ops_Jobs {
     $limit           = max(1, (int) ($args['limit']   ?? 500));
     $offset          = max(0, (int) ($args['offset']  ?? 0));
     $exclude_archived = (bool) ($args['exclude_archived'] ?? true);
-    $order_col       = in_array($args['order_by'] ?? '', ['created_at','status','priority','scheduled_start'], true)
+    $order_col       = in_array($args['order_by'] ?? '', ['created_at','status','priority','scheduled_start','queue_order'], true)
                          ? $args['order_by']
                          : 'created_at';
     $order_dir       = strtoupper($args['order'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';

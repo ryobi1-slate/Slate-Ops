@@ -118,6 +118,9 @@ sales_person VARCHAR(255) NULL,
 stock_number VARCHAR(64) NULL,
 notes TEXT NULL,
 
+-- Manual queue ordering for Tech Up Next
+queue_order INT UNSIGNED NULL,
+
 -- ClickUp
 clickup_task_id VARCHAR(64) NULL,
 clickup_estimate_ms BIGINT UNSIGNED NULL,
