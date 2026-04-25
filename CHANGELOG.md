@@ -1,5 +1,14 @@
 # Slate Ops Changelog
 
+## 0.25.3 — Tech screen: fix action button palette
+
+- **Complete**: secondary outline — `ops-tech-action-secondary` (white bg → `--surface-card`, sage text → `--sage`, sage border → `--border-md`)
+- **Pause**: primary filled — `ops-tech-action-primary` (dark sage bg → `--sage`, white text); most-used in-session action promoted to primary
+- **Notes**: secondary outline — `ops-tech-action-secondary`
+- **Play** (Up Next + Help cards): `ops-tech-play-btn` (dark sage bg, white text; `[disabled]` attribute triggers grey/muted CSS state — no extra JS class needed)
+- Root cause: Tailwind `@layer utilities` loses to unlayered WP theme `button {}` selectors; Section 13 in `ops-shell.css` uses `.ops-page-tech #ops-view` ID scope (specificity 1,2,0) to enforce palette
+- `app.js` + `ops-shell.css` changes; no logic or PHP changes
+
 ## 0.25.2 — Tech screen UI cleanup Part 2
 
 - **Desktop layout**: removed `max-w-[480px] mx-auto shadow-2xl` phone-mockup constraint from the Tech panel; panel now fills the content area on all viewports

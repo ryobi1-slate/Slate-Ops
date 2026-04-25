@@ -744,3 +744,56 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-page-tech #ops-view .ops-tech-card {
   background-color: var(--surface-card);
 }
+
+/* ─── 13. Tech screen: action button palette ────────────────────────
+ * Primary = Pause (dark sage fill, white text — most-used in-session).
+ * Secondary = Complete / Notes (white bg, sage text, sage border).
+ * Play = Up Next / Help card play icon (same as primary, disabled via
+ *        [disabled] attribute selector so no extra JS class needed).
+ */
+.ops-page-tech #ops-view .ops-tech-action-primary {
+  background-color: var(--sage);
+  color: var(--white);
+  border: 1px solid transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.ops-page-tech #ops-view .ops-tech-action-primary:hover:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .ops-tech-action-primary:active:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .ops-tech-action-secondary {
+  background-color: var(--surface-card);
+  color: var(--sage);
+  border: 1px solid var(--border-md);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.ops-page-tech #ops-view .ops-tech-action-secondary:hover:not([disabled]) {
+  background-color: var(--sand);
+}
+.ops-page-tech #ops-view .ops-tech-action-primary[disabled],
+.ops-page-tech #ops-view .ops-tech-action-secondary[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ops-page-tech #ops-view .ops-tech-play-btn {
+  background-color: var(--sage);
+  color: var(--white);
+  border: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.ops-page-tech #ops-view .ops-tech-play-btn:hover:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .ops-tech-play-btn[disabled] {
+  background-color: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
