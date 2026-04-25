@@ -7,6 +7,11 @@
 - **Color**: Help button renders white background (`--surface-card`), sage text (`--sage`), neutral border (`--border`); hover transitions to sand (`--sand`)
 - `app.js` + `ops-shell.css` changes; no PHP or logic changes
 
+## 0.25.1 — Tech screen: guarantee ops-page-tech body class via React
+
+- **Body class fix**: `g0` component now adds `ops-page-tech` to `document.body` on mount and removes it on unmount; ensures Section 11 CSS (sidebar/topbar hiding, full-height layout) applies regardless of whether the PHP route system set the class
+- `app.js` change and version bump; no CSS or functional PHP changes
+
 ## 0.25.0 — Tech screen UI cleanup
 
 - **Sidebar**: hidden on mobile/tablet (≤900px) for Tech route — no bottom nav bar squeezing the phone UI
