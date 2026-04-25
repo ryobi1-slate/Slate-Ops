@@ -75,9 +75,25 @@ if (!function_exists('ops_nav_link')) {
 (function () {
   var btn = document.getElementById('ops-sidebar-toggle');
   if (!btn) return;
-  btn.addEventListener('click', function () {
-    var collapsed = document.documentElement.classList.toggle('ops-sidebar-collapsed');
-    try { localStorage.setItem('slate_ops_sidebar_collapsed', collapsed ? '1' : '0'); } catch (e) {}
+
+  var toggle = function () {
+    var isCollapsed = document.documentElement.classList.toggle('ops-sidebar-collapsed');
+    btn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    try { localStorage.setItem('slate_ops_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch (e) {}
+  };
+
+  btn.addEventListener('click', toggle);
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      toggle();
+    }
   });
+
+  // Sync initial aria-label if sidebar was restored collapsed by FOUC script
+  if (document.documentElement.classList.contains('ops-sidebar-collapsed')) {
+    btn.setAttribute('aria-label', 'Expand sidebar');
+  }
 })();
 </script>

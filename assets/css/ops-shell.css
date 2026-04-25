@@ -213,7 +213,8 @@ body.slate-ops {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-right: 1px solid var(--slate-divider);
   transition: width var(--slate-sidebar-transition);
 }
