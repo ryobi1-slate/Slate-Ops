@@ -373,6 +373,13 @@ class Slate_Ops_REST {
         'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
         'callback' => [__CLASS__, 'create_quote_from_bom'],
       ]);
+
+      // ── Executive dashboard ─────────────────────────────────────────
+      register_rest_route($ns, '/executive/labor-summary', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'callback'            => [__CLASS__, 'executive_labor_summary'],
+      ]);
     }
   }
 
@@ -2893,6 +2900,191 @@ self::maybe_push_dealer_portal_status($job);
     return rest_ensure_response([
       'saved'  => $saved,
       'errors' => $errors,
+    ]);
+  }
+
+  /**
+   * GET /executive/labor-summary
+   * Job-costing and performance aggregates for the Executive dashboard.
+   * Admin/Supervisor only. Not for payroll.
+   */
+  public static function executive_labor_summary($req) {
+    global $wpdb;
+    $jobs_t = $wpdb->prefix . 'slate_ops_jobs';
+    $segs_t = $wpdb->prefix . 'slate_ops_time_segments';
+
+    // ── Overview: active job counts + estimate totals ─────────────────
+    $ov = $wpdb->get_row(
+      "SELECT
+         COUNT(*) AS active_jobs,
+         SUM(status = 'IN_PROGRESS')      AS in_progress,
+         SUM(status = 'PENDING_QC')       AS pending_qc,
+         SUM(status = 'READY_FOR_PICKUP') AS ready_for_pickup,
+         COALESCE(SUM(COALESCE(estimated_minutes,0)),0) AS total_estimated_minutes
+       FROM $jobs_t
+       WHERE status != 'COMPLETE' AND archived_at IS NULL",
+      ARRAY_A
+    );
+
+    // Total logged minutes across all active jobs
+    $total_logged = (int)$wpdb->get_var(
+      "SELECT COALESCE(SUM(TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, NOW()))),0)
+       FROM $segs_t s
+       JOIN $jobs_t j ON j.job_id = s.job_id
+       WHERE j.status != 'COMPLETE'
+         AND j.archived_at IS NULL
+         AND s.state = 'active'"
+    );
+
+    $total_est = (int)($ov['total_estimated_minutes'] ?? 0);
+    $overview = [
+      'active_jobs'              => (int)($ov['active_jobs']       ?? 0),
+      'in_progress'              => (int)($ov['in_progress']        ?? 0),
+      'pending_qc'               => (int)($ov['pending_qc']         ?? 0),
+      'ready_for_pickup'         => (int)($ov['ready_for_pickup']   ?? 0),
+      'total_estimated_minutes'  => $total_est,
+      'total_logged_minutes'     => $total_logged,
+      'variance_minutes'         => $total_logged - $total_est,
+      'labor_capture_pct'        => $total_est > 0 ? round($total_logged / $total_est * 100, 1) : null,
+    ];
+
+    // ── Tech performance ──────────────────────────────────────────────
+    // Logged minutes per tech (all active segments, any job)
+    $tech_logged_rows = $wpdb->get_results(
+      "SELECT user_id,
+              COALESCE(SUM(TIMESTAMPDIFF(MINUTE, start_ts, COALESCE(end_ts, NOW()))),0) AS logged_minutes
+       FROM $segs_t
+       WHERE state = 'active'
+       GROUP BY user_id",
+      ARRAY_A
+    );
+
+    // Job assignment stats per tech (active jobs only)
+    $tech_job_rows = $wpdb->get_results(
+      "SELECT assigned_user_id,
+              COUNT(*) AS total_assigned,
+              SUM(status != 'COMPLETE') AS active_assigned,
+              COALESCE(SUM(CASE WHEN status != 'COMPLETE' THEN COALESCE(estimated_minutes,0) ELSE 0 END),0) AS est_minutes
+       FROM $jobs_t
+       WHERE assigned_user_id IS NOT NULL AND archived_at IS NULL
+       GROUP BY assigned_user_id",
+      ARRAY_A
+    );
+
+    // Collect all user IDs and fetch display names in one pass
+    $uid_set = [];
+    foreach ($tech_logged_rows as $r) $uid_set[(int)$r['user_id']] = true;
+    foreach ($tech_job_rows   as $r) $uid_set[(int)$r['assigned_user_id']] = true;
+    $user_names = [];
+    foreach (array_keys($uid_set) as $uid) {
+      $u = get_userdata($uid);
+      if ($u) $user_names[$uid] = $u->display_name;
+    }
+
+    $tech_map = [];
+    foreach ($tech_job_rows as $r) {
+      $uid = (int)$r['assigned_user_id'];
+      $tech_map[$uid] = [
+        'user_id'        => $uid,
+        'name'           => $user_names[$uid] ?? "User $uid",
+        'total_assigned' => (int)$r['total_assigned'],
+        'active_jobs'    => (int)$r['active_assigned'],
+        'est_minutes'    => (int)$r['est_minutes'],
+        'logged_minutes' => 0,
+      ];
+    }
+    foreach ($tech_logged_rows as $r) {
+      $uid = (int)$r['user_id'];
+      if (!isset($tech_map[$uid])) {
+        $tech_map[$uid] = [
+          'user_id' => $uid, 'name' => $user_names[$uid] ?? "User $uid",
+          'total_assigned' => 0, 'active_jobs' => 0, 'est_minutes' => 0, 'logged_minutes' => 0,
+        ];
+      }
+      $tech_map[$uid]['logged_minutes'] = (int)$r['logged_minutes'];
+    }
+    $tech_performance = array_values($tech_map);
+
+    // ── Job performance ───────────────────────────────────────────────
+    $job_rows = $wpdb->get_results(
+      "SELECT j.job_id, j.so_number, j.customer_name, j.status, j.assigned_user_id,
+              COALESCE(j.estimated_minutes,0) AS estimated_minutes,
+              COALESCE(SUM(TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, NOW()))),0) AS logged_minutes
+       FROM $jobs_t j
+       LEFT JOIN $segs_t s ON s.job_id = j.job_id AND s.state = 'active'
+       WHERE j.archived_at IS NULL
+       GROUP BY j.job_id
+       ORDER BY j.status, j.so_number",
+      ARRAY_A
+    );
+
+    $job_performance = [];
+    foreach ($job_rows as $r) {
+      $uid = (int)$r['assigned_user_id'];
+      $job_performance[] = [
+        'job_id'             => (int)$r['job_id'],
+        'so_number'          => $r['so_number'],
+        'customer_name'      => $r['customer_name'],
+        'status'             => $r['status'],
+        'lead_tech'          => $uid ? ($user_names[$uid] ?? "User $uid") : '—',
+        'estimated_minutes'  => (int)$r['estimated_minutes'],
+        'logged_minutes'     => (int)$r['logged_minutes'],
+      ];
+    }
+
+    // ── Labor capture ─────────────────────────────────────────────────
+    $lc = $wpdb->get_row(
+      "SELECT
+         COUNT(*) AS total_active,
+         SUM(estimated_minutes > 0) AS with_estimate,
+         SUM(estimated_minutes IS NULL OR estimated_minutes = 0) AS missing_estimate
+       FROM $jobs_t
+       WHERE status != 'COMPLETE' AND archived_at IS NULL",
+      ARRAY_A
+    );
+
+    $jobs_with_logged = (int)$wpdb->get_var(
+      "SELECT COUNT(DISTINCT j.job_id)
+       FROM $jobs_t j
+       JOIN $segs_t s ON s.job_id = j.job_id AND s.state = 'active'
+       WHERE j.status != 'COMPLETE' AND j.archived_at IS NULL"
+    );
+
+    $total_raw_all = (int)$wpdb->get_var(
+      "SELECT COALESCE(SUM(TIMESTAMPDIFF(MINUTE, start_ts, COALESCE(end_ts, NOW()))),0)
+       FROM $segs_t WHERE state = 'active'"
+    );
+
+    $total_active = (int)($lc['total_active'] ?? 0);
+    $with_estimate = (int)($lc['with_estimate'] ?? 0);
+    $labor_capture = [
+      'jobs_with_estimate'        => $with_estimate,
+      'jobs_missing_estimate'     => (int)($lc['missing_estimate'] ?? 0),
+      'jobs_with_logged_time'     => $jobs_with_logged,
+      'jobs_no_logged_time'       => max(0, $total_active - $jobs_with_logged),
+      'total_raw_logged_minutes'  => $total_raw_all,
+      'estimate_coverage_pct'     => $total_active > 0 ? round($with_estimate / $total_active * 100, 1) : 0,
+    ];
+
+    // ── Bottlenecks ───────────────────────────────────────────────────
+    $status_rows = $wpdb->get_results(
+      "SELECT status, COUNT(*) AS cnt FROM $jobs_t WHERE archived_at IS NULL GROUP BY status",
+      ARRAY_A
+    );
+    $status_map = [];
+    foreach ($status_rows as $r) $status_map[$r['status']] = (int)$r['cnt'];
+
+    $bottlenecks = [];
+    foreach (['READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','READY_FOR_PICKUP','ON_HOLD','DELAYED'] as $st) {
+      $bottlenecks[] = ['status' => $st, 'count' => $status_map[$st] ?? 0];
+    }
+
+    return rest_ensure_response([
+      'overview'         => $overview,
+      'tech_performance' => $tech_performance,
+      'job_performance'  => $job_performance,
+      'labor_capture'    => $labor_capture,
+      'bottlenecks'      => $bottlenecks,
     ]);
   }
 }
