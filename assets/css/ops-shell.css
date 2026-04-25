@@ -77,6 +77,7 @@
   --slate-redwood-wash:    #E4EEE9;
 
   --slate-flag:            #B22222;
+  --slate-flag-ink:        #8B1A1A;
   --slate-flag-wash:       #F8E5E5;
 
   --slate-ink:             #2A2E2C;
@@ -110,6 +111,7 @@
   --slate-text-2xl:    28px;
   --slate-weight-regular: 400;
   --slate-weight-medium:  500;
+  --slate-weight-bold:    600;
 
   /* Line heights */
   --slate-leading-tight:   1.2;
@@ -538,13 +540,13 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   border-color: var(--slate-sage-ink) !important;
 }
 .ops-btn-danger {
-  background-color: #c0392b !important;
-  border-color: #c0392b !important;
+  background-color: var(--slate-flag) !important;
+  border-color: var(--slate-flag) !important;
   color: #ffffff !important;
 }
 .ops-btn-danger:hover {
-  background-color: #922b21 !important;
-  border-color: #922b21 !important;
+  background-color: var(--slate-flag-ink) !important;
+  border-color: var(--slate-flag-ink) !important;
 }
 
 /* ─── 8. CS page token classes ──────────────────────────────────────
@@ -680,7 +682,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   margin: 24px;
   padding: 48px 24px;
   text-align: center;
-  border: 1.5px dashed var(--slate-divider-soft);
+  border: 1px solid var(--slate-divider-soft);
   border-radius: var(--slate-radius-lg);
   color: var(--slate-ink-muted);
   font-size: 14px;
@@ -698,7 +700,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 
 .ops-page-eyebrow {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--slate-weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--slate-arches);
@@ -816,4 +818,213 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--border);
   color: var(--muted);
   cursor: not-allowed;
+}
+
+/* ─── 14. Portal page container ─────────────────────────────────────
+ * Full-page scroll wrapper for /ops/* views. Mirrors Dealer Portal layout.
+ */
+.slate-portal {
+  padding: var(--slate-space-2xl);
+  max-width: var(--slate-shell-maxwidth);
+  box-sizing: border-box;
+}
+
+/* ─── 15. Card surface ──────────────────────────────────────────────
+ * White card with divider border; replaces shadow-sm + rounded-xl soup.
+ */
+.slate-card {
+  background-color: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--slate-space-xl);
+}
+.slate-card__header {
+  padding: var(--slate-space-lg) var(--slate-space-xl);
+  border-bottom: var(--slate-border);
+}
+.slate-card__title {
+  font-size: var(--slate-text-md);
+  font-weight: var(--slate-weight-bold);
+  color: var(--slate-ink);
+  margin: 0;
+  line-height: var(--slate-leading-tight);
+}
+
+/* ─── 16. KPI grid + card ───────────────────────────────────────────
+ * Responsive grid of metric summary cards.
+ */
+.slate-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--slate-space-lg);
+  margin-bottom: var(--slate-space-xl);
+}
+.slate-kpi-card {
+  background-color: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-lg);
+  padding: var(--slate-space-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 112px;
+}
+.slate-kpi-card__label {
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  color: var(--slate-ink-muted);
+}
+.slate-kpi-card__value {
+  font-size: var(--slate-text-2xl);
+  font-weight: var(--slate-weight-bold);
+  color: var(--slate-ink);
+  line-height: var(--slate-leading-tight);
+}
+.slate-kpi-card__sub {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-muted);
+}
+
+/* ─── 17. Table ─────────────────────────────────────────────────────
+ * Semantic table; all spacing and color via tokens. No utility soup.
+ */
+.slate-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--slate-text-sm);
+  text-align: left;
+}
+.slate-table thead {
+  background-color: var(--slate-surface-page);
+}
+.slate-table thead th {
+  padding: 10px var(--slate-space-xl);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  color: var(--slate-ink-muted);
+  border-bottom: var(--slate-border);
+}
+.slate-table tbody tr {
+  border-bottom: var(--slate-border-soft);
+}
+.slate-table tbody tr:hover {
+  background-color: var(--slate-sage-wash);
+}
+.slate-table tbody td {
+  padding: 12px var(--slate-space-xl);
+  color: var(--slate-ink-muted);
+}
+.slate-table__lead {
+  font-weight: var(--slate-weight-bold) !important;
+  color: var(--slate-ink) !important;
+}
+.slate-table__num {
+  font-variant-numeric: tabular-nums;
+}
+.slate-table__empty {
+  padding: var(--slate-space-3xl) var(--slate-space-xl);
+  text-align: center;
+  color: var(--slate-ink-muted);
+  font-style: italic;
+}
+
+/* ─── 18. Button component ──────────────────────────────────────────
+ * Semantic button variants mirroring Dealer Portal. No blue/purple.
+ */
+.slate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-xs);
+  padding: var(--slate-space-sm) var(--slate-space-lg);
+  border-radius: var(--slate-radius-md);
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--slate-duration-normal) var(--slate-ease),
+              border-color var(--slate-duration-normal) var(--slate-ease);
+  text-decoration: none;
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: 1;
+}
+.slate-btn--primary {
+  background-color: var(--slate-sage);
+  color: var(--slate-surface);
+  border-color: var(--slate-sage);
+}
+.slate-btn--primary:hover:not([disabled]) {
+  background-color: var(--slate-sage-ink);
+  border-color: var(--slate-sage-ink);
+}
+.slate-btn--secondary {
+  background-color: var(--slate-surface);
+  color: var(--slate-sage);
+  border-color: var(--slate-divider);
+}
+.slate-btn--secondary:hover:not([disabled]) {
+  background-color: var(--slate-sage-wash);
+}
+.slate-btn--outline {
+  background-color: transparent;
+  color: var(--slate-ink);
+  border-color: var(--slate-divider);
+}
+.slate-btn--outline:hover:not([disabled]) {
+  background-color: var(--slate-surface-page);
+}
+.slate-btn[disabled],
+.slate-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── 19. Status badge ──────────────────────────────────────────────
+ * Inline status pill. No blue/purple/pink — only sage palette.
+ */
+.slate-status {
+  display: inline-block;
+  padding: 2px var(--slate-space-sm);
+  border-radius: var(--slate-radius-sm);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.slate-status--neutral {
+  background-color: var(--slate-surface-page);
+  color: var(--slate-ink-muted);
+  border: var(--slate-border);
+}
+.slate-status--attention {
+  background-color: var(--slate-arches-wash);
+  color: var(--slate-arches-ink);
+}
+.slate-status--healthy {
+  background-color: var(--slate-redwood-wash);
+  color: var(--slate-redwood);
+}
+.slate-status--critical {
+  background-color: var(--slate-flag-wash);
+  color: var(--slate-flag);
+}
+
+/* ─── 20. Error banner ──────────────────────────────────────────────
+ * Inline error message; replaces Tailwind red-50 utility soup.
+ */
+.ops-banner-error {
+  background-color: var(--slate-flag-wash);
+  border: 1px solid var(--slate-flag);
+  color: var(--slate-flag);
+  padding: 12px var(--slate-space-lg);
+  border-radius: var(--slate-radius-md);
+  font-size: var(--slate-text-sm);
+  margin-bottom: var(--slate-space-lg);
 }

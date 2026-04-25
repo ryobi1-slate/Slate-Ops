@@ -1,5 +1,35 @@
 # Slate Ops Changelog
 
+## 0.26.1 — Dealer Portal component alignment
+
+**`assets/css/ops-shell.css` — new component system (sections 14–20):**
+- Added `--slate-weight-bold: 600` and `--slate-flag-ink: #8B1A1A` tokens to `:root`
+- Section 14: `.slate-portal` — page container with token-driven padding and max-width
+- Section 15: `.slate-card`, `.slate-card__header`, `.slate-card__title` — white card surface
+- Section 16: `.slate-kpi-grid`, `.slate-kpi-card`, `__label`, `__value`, `__sub` — KPI metric cards
+- Section 17: `.slate-table` with thead/tbody/tr/td/th token styles, `__lead`, `__num`, `__empty` modifiers
+- Section 18: `.slate-btn` with `--primary`, `--secondary`, `--outline` variants — no blue/purple
+- Section 19: `.slate-status` with `--neutral`, `--attention`, `--healthy`, `--critical` — no blue/purple/pink
+- Section 20: `.ops-banner-error` — inline error banner using `--slate-flag-wash` + `--slate-flag`
+- Fixed `.ops-btn-danger`: hardcoded `#c0392b / #922b21` → `var(--slate-flag) / var(--slate-flag-ink)`
+- Fixed `.ops-cs-empty`: `1.5px dashed` border → `1px solid var(--slate-divider-soft)`
+- Fixed `.ops-page-eyebrow`: `font-weight: 700` → `var(--slate-weight-medium)`
+
+**`assets/react/app.js` — Executive dashboard restyled to use component classes:**
+- Outer wrapper: `flex-1 overflow-y-auto slate-portal` (removed `p-8 font-sans` utility soup)
+- Loading state: `"text-center py-16 text-slate-400"` → `ops-cs-empty`
+- Error banner: Tailwind `bg-red-50 border border-red-200 text-red-700` soup → `ops-banner-error`
+- Overview/Capture/Bottleneck KPI grids: `grid grid-cols-* gap-4` → `slate-kpi-grid`
+- KPI cards: `ops-cs-card p-4 rounded-xl flex flex-col justify-between h-28` → `slate-kpi-card`
+- KPI labels: `text-[10px] font-bold text-slate-400 uppercase tracking-wider` → `slate-kpi-card__label`
+- KPI values: `text-3xl font-bold text-slate-900` → `slate-kpi-card__value`
+- Table section wrappers: `ops-cs-card rounded-xl overflow-hidden` → `slate-card`
+- Table headers: `px-6 py-4 ops-cs-border-b` → `slate-card__header`
+- Table titles: `font-bold text-lg text-slate-800` → `slate-card__title`
+- Tables: `w-full text-sm text-left` → `slate-table`; all th/td/tr utility soup removed — CSS handles it
+- Table lead cells: `px-6 py-3 font-bold text-slate-900` → `slate-table__lead`
+- Table empty cells: `px-6 py-8 text-center text-slate-400 italic` → `slate-table__empty`
+
 ## 0.26.0 — Shared design system tokens + visual drift cleanup
 
 **`assets/css/ops-shell.css` — token additions/normalization:**
