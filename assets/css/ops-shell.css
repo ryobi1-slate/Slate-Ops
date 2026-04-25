@@ -135,9 +135,9 @@
   /* Border shorthands */
   --slate-border-width:  1px;
   --slate-border-thick:  2px;
-  --slate-border:        1px solid #E6E2D4;
-  --slate-border-strong: 1px solid #D9D5C7;
-  --slate-border-soft:   1px solid #F0EDE3;
+  --slate-border:        var(--slate-border-width) solid var(--slate-divider);
+  --slate-border-strong: var(--slate-border-width) solid var(--slate-divider-strong);
+  --slate-border-soft:   var(--slate-border-width) solid var(--slate-divider-soft);
 
   /* Shell dimensions — mirrored from Dealer Portal */
   --slate-shell-topbar-height: 56px;
