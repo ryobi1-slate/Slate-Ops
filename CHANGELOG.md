@@ -1,5 +1,24 @@
 # Slate Ops Changelog
 
+## 0.25.9 — Executive dashboard: labor/job performance KPI tabs
+
+**New REST endpoint — `GET /slate-ops/v1/executive/labor-summary`** (admin/supervisor only):
+- Returns five aggregates: `overview`, `tech_performance`, `job_performance`, `labor_capture`, `bottlenecks`
+- Overview: active job counts (total, in-progress, pending QC, ready for pickup), total estimated minutes, total logged minutes, variance, labor capture %
+- Tech Performance: per-tech assigned/active job counts, est. minutes, logged minutes, variance, capture %
+- Job Performance: per-job SO#, customer, status, lead tech, est. minutes, logged minutes, variance, % used
+- Labor Capture: jobs with/missing estimate, jobs with/without logged time, total raw logged hours, estimate coverage %
+- Bottlenecks: count per status (READY_FOR_BUILD, QUEUED, IN_PROGRESS, PENDING_QC, READY_FOR_PICKUP, ON_HOLD, DELAYED)
+
+**React — Executive `t0` component rebuilt with 5 tabs** (Purchasing page tab style):
+- Overview, Tech Performance, Job Performance, Labor Capture, Bottlenecks
+- Uses `pur-subnav` / `pur-tab` CSS classes (active underline, Slate colors)
+- Fetches `/executive/labor-summary` on mount; shows loading/error states
+- KPI cards use existing `ops-cs-card` class; tables use `ops-cs-thead` / `ops-cs-divide`
+- No payroll logic; all metrics are job-costing/performance signals
+
+- `includes/class-slate-ops-rest.php` + `assets/react/app.js` changes; no CSS changes
+
 ## 0.25.8 — Tech screen Today's Time: job-costing deduction formula
 
 **PHP — `time_daily_summary()`:**
