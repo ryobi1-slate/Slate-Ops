@@ -1,5 +1,13 @@
 # Slate Ops Changelog
 
+## 0.26.8 — Executive page: match Purchasing page background
+
+**`assets/css/ops-shell.css`:**
+- `.ops-body` and `.ops-content`: changed `background: var(--sand)` → `background: var(--slate-surface-page)` — aligns the content area background with `--slate-surface-page` (#F5F3ED), matching the Purchasing page and Dealer Portal rhythm. CS page's `.ops-cs-page` already overrides with the same token; Tech screen unaffected.
+
+**`assets/react/app.js`:**
+- Executive wrapper: removed `flex-1 overflow-y-auto` from className (was `"flex-1 overflow-y-auto slate-portal"`, now `"slate-portal"`). These were redundant — `#ops-view`'s parent is not flex so `flex-1` did nothing; scrolling is handled by `ops-content`'s `overflow-y: auto`. Removing them eliminates the nested scroll container that contributed to the tinted-panel appearance.
+
 ## 0.26.7 — Executive page: match Purchasing visual pattern
 
 **Root cause:** `pur-subnav`/`pur-tab` CSS lived only in `purchasing.css` (page-specific). Executive page doesn't load `purchasing.css`, so WP theme button defaults rendered tabs as boxed/outlined buttons instead of underline tabs.
