@@ -1,5 +1,13 @@
 # Slate Ops Changelog
 
+## 0.24.0 — Tech screen: visibility rules and Up Next sorting
+
+- **Up Next** now fetches only `QUEUED`, `IN_PROGRESS`, and `PENDING_QC` jobs assigned to the current tech; `READY_FOR_BUILD`, `UNSCHEDULED`, and `ON_HOLD` jobs no longer appear
+- **Up Next sort order**: IN_PROGRESS first → QUEUED → PENDING_QC, then `scheduled_start` ASC (nulls last) → `queue_order` ASC (nulls last) → `created_at` ASC
+- **Help on Another Job** now fetches only `IN_PROGRESS` jobs and excludes jobs where the current user is the lead tech (`assigned_user_id`), sorted by `scheduled_start` ASC then `created_at` ASC
+- **Play button** disabled for `PENDING_QC` status; also fixed a duplicate `COMPLETE` check in the `b0` guard
+- `app.js` logic changes only; no PHP or CSS changes
+
 ## 0.17.9 — Hotfix: restore section div bracket after timer panel; remove redundant rounded-full
 
 - **Blank page fix**: v0.17.7 timer panel replacement was missing one closing `]})` that shut the parent section div; all Ops pages rendered blank as a result. Inserted the missing bracket sequence to restore correct JSX tree structure.
