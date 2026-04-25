@@ -1,5 +1,12 @@
 # Slate Ops Changelog
 
+## 0.25.2 — Tech screen UI cleanup Part 2
+
+- **Desktop layout**: removed `max-w-[480px] mx-auto shadow-2xl` phone-mockup constraint from the Tech panel; panel now fills the content area on all viewports
+- **Help button / job cards**: added `ops-tech-help-btn` and `ops-tech-card` CSS classes backed by unlayered `#ops-view`-scoped rules in `ops-shell.css` (Section 12); these rules carry specificity 1,2,0 and beat any unlayered WordPress theme `button {}` selectors that were overriding Tailwind's `@layer utilities` color classes with pink/magenta
+- **Color**: Help button renders white background (`--surface-card`), sage text (`--sage`), neutral border (`--border`); hover transitions to sand (`--sand`)
+- `app.js` + `ops-shell.css` changes; no PHP or logic changes
+
 ## 0.25.0 — Tech screen UI cleanup
 
 - **Sidebar**: hidden on mobile/tablet (≤900px) for Tech route — no bottom nav bar squeezing the phone UI
