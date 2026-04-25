@@ -723,7 +723,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   }
 }
 
-/* ─── 12. Tech screen: Slate palette override for React job cards ──────
+/* ─── 12. Tech screen: Palette override for help button & job cards ──
  * Tailwind @layer utilities loses to unlayered WordPress theme CSS (e.g.
  * button { color: … }). The #ops-view ID gives specificity 1,2,0 which
  * beats any element-only theme selector. bg/color are set here so the
