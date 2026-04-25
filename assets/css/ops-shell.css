@@ -196,7 +196,7 @@ body.slate-ops {
 
 .ops-content {
   flex: 1;
-  padding: 24px 28px;
+  padding: 0;
   overflow-y: auto;
   background: var(--sand);
 }
@@ -619,9 +619,6 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   html.ops-sidebar-collapsed .ops-nav-label { width: auto; overflow: visible; opacity: 1; }
 }
 
-@media (max-width: 700px) {
-  .ops-content { padding: 0; }
-}
 
 /* ─── 7. Ops action button colors ───────────────────────────────────
  * These are NOT in a Tailwind @layer so they beat any WordPress theme
