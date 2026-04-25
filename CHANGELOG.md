@@ -1,5 +1,12 @@
 # Slate Ops Changelog
 
+## 0.25.5 — Tech timer endpoint hardening
+
+- **`set_status()` PENDING_QC guard**: `POST /jobs/{id}/status` now returns 422 if the job is not IN_PROGRESS when transitioning to PENDING_QC; matches the guard already present in `submit_qc`; prevents backend from accepting Complete from wrong states
+- **Complete handler response check**: React `I=` handler now inspects `res.ok` on the `/jobs/{id}/status` fetch and throws with the backend error message if not ok — previously a 422 was silently swallowed
+- **Complete handler status pre-flight**: React `I=` now checks `r.status !== "IN_PROGRESS"` before showing the confirm dialog and sets the error banner immediately without a network call
+- `class-slate-ops-rest.php` + `app.js` changes; no CSS changes
+
 ## 0.25.4 — Tech timer workflow hardening
 
 - **`time_start()` job-status guard**: returns 422 if the job is not in QUEUED or IN_PROGRESS status; prevents starting timers on completed/held jobs
