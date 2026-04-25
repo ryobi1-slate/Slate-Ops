@@ -27,6 +27,101 @@ API Status tab should show:
 
 Sync buttons should remain disabled until the Power Automate integration phase.
 
+## Ownership
+
+Slate owns the integration direction and first-pass build plan.
+
+Outside help should be used only when required for:
+
+- Business Central permissions
+- Power Automate connector setup
+- BC environment/company access
+- Custom BC API pages or extension work
+- Issues that cannot be solved from the Slate side
+
+Do not assume Simcrest owns this integration by default.
+
+## Confirmed Power Automate / BC Connector Access
+
+Power Automate can access the Dynamics 365 Business Central connector.
+
+Confirmed connector actions visible:
+
+- Create record (V3)
+- Delete record (V3)
+- Find one record (V3)
+- Find records (V3)
+- Get record (V3)
+- Run action (V3)
+- Update record (V3)
+- Get adaptive card (V3)
+- Get an image, file or document (V3)
+- Get url (V3)
+- List companies (V3)
+- Update an image, file or document (V3)
+
+Confirmed sandbox/company context from Power Automate testing:
+
+```text
+Environment: SANDBOX093024
+Company examples shown:
+- Ryan O Test
+- Slate (Ryan O Test 04022024)
+API category: v2.0
+```
+
+Confirmed standard API table/entity discovery includes at least:
+
+```text
+vendors
+items expected to be available through the same selector
+salesQuotes confirmed in an existing quote-create test flow
+```
+
+Existing quote-side PA test flow:
+
+```text
+Flow: BC - Quote Created (HTTP)
+Action: Create record (V3)
+API category: v2.0
+Table: salesQuotes
+Mapped fields include:
+- externalDocumentNo
+- documentDate
+- sellToCustomerNo / Customer No.
+```
+
+This confirms that Power Automate can use the BC connector for standard `v2.0` actions in the sandbox. Purchasing still needs table-level tests for vendors, items, purchaseOrders, and purchaseOrderLines before writeback work is started.
+
+## Slate BC Extension
+
+Slate has a Business Central extension installed:
+
+```text
+Name: Slate Custom APIs
+Publisher: Slate
+Version: 1.0.0.1
+Published As: Dev
+```
+
+The extension should be treated as a Slate-owned BC integration asset.
+
+Potential uses:
+
+- Clean purchasing demand API
+- Item/vendor mapping
+- Open purchase order status
+- Production shortage view
+- Purchase request writeback endpoint
+- Reduced Power Automate transformation logic
+
+For V1, Power Automate remains the preferred integration layer. Power Automate may call either:
+
+- standard BC connector actions, or
+- custom API pages exposed by the Slate Custom APIs extension
+
+The extension should be reviewed before finalizing demand sync, vendor sync, item sync, open PO sync, or purchase document writeback.
+
 ## Locked Architecture Direction
 
 The integration layer is Power Automate.
@@ -79,15 +174,15 @@ For V1, the WordPress side should not need direct BC connection details. It need
 From prior Slate BC planning:
 
 - Slate uses Microsoft Dynamics 365 Business Central.
-- Simcrest is supporting BC implementation.
+- Slate prefers to own the integration path and involve outside BC support only when needed.
 - Current operational process still uses manual BC review and Excel connector workflows.
 - Purchasing planning has centered around Planning Worksheet, Requisition Worksheet, Prod. Order - Shortage List, and Item Availability by Event.
 - Power Automate is the preferred integration layer for V1.
 - Portal/Slate Ops emits signed events to Power Automate.
 - Power Automate talks to Business Central.
 - Power Automate posts signed callbacks back to WordPress.
-- Standard BC connector/actions are preferred for V1.
-- Custom BC API pages or AL work are deferred until needed.
+- Standard BC connector/actions are available in the sandbox.
+- Custom BC API pages through the Slate Custom APIs extension are available as an option if standard entities do not expose the right data shape.
 
 ## Event Model To Reuse
 
@@ -246,7 +341,7 @@ Confirm which BC source drives demand:
 - Planning Worksheet, secondary candidate for broader MRP/production planning
 - Prod. Order - Shortage List, useful for immediate production shortages
 - Item Availability by Event, useful for visibility but not a purchasing engine by itself
-- Custom API page, likely later if standard connector cannot expose the right shape
+- Custom API page through Slate Custom APIs extension, likely preferred if standard connector cannot expose the right shape
 
 ### Purchase Order Data
 
@@ -261,6 +356,32 @@ Confirm which BC source drives demand:
 - Line totals
 - Received quantities
 - Outstanding quantities
+
+## Required PA/BC Table Tests Before Writeback
+
+Before any purchasing writeback build, test these through Power Automate `Find records (V3)` in the sandbox:
+
+```text
+vendors
+items
+purchaseOrders
+purchaseOrderLines
+```
+
+For each test, record:
+
+```text
+Environment
+Company
+API category
+Table name
+Action
+Run result
+Returned fields
+Error message, if any
+```
+
+Do not start with create/write actions. Read access should be confirmed first.
 
 ## Key Mapping Questions
 
@@ -387,9 +508,9 @@ Demand rows should eventually support:
 - `bc_item_id`
 - `bc_vendor_id`
 
-## Information Needed From Simcrest / BC Team
+## Information Needed From BC / Power Automate Setup
 
-Ask for these, but do not store secrets in the repo:
+Ask for these only when the local workflow is stable and PA/BC integration is being prepared. Do not store secrets in the repo.
 
 - Which BC source should drive purchasing demand
 - Whether PA can access that source with standard BC connector actions
@@ -401,6 +522,7 @@ Ask for these, but do not store secrets in the repo:
 - Required fields for purchase order creation
 - Error response examples
 - Any required custom API page or extension work
+- Whether outside BC support is required for the specific missing piece
 
 ## Build Rule
 
