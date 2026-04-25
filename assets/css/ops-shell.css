@@ -901,7 +901,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--slate-surface-page);
 }
 .slate-table thead th {
-  padding: 10px var(--slate-space-xl);
+  padding: var(--slate-space-md) var(--slate-space-xl);
   font-size: var(--slate-text-micro);
   font-weight: var(--slate-weight-bold);
   text-transform: uppercase;
@@ -916,7 +916,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--slate-sage-wash);
 }
 .slate-table tbody td {
-  padding: 12px var(--slate-space-xl);
+  padding: var(--slate-space-md) var(--slate-space-xl);
   color: var(--slate-ink-muted);
 }
 .slate-table__lead {
@@ -951,7 +951,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   text-decoration: none;
   -webkit-appearance: none;
   appearance: none;
-  line-height: 1;
+  line-height: var(--slate-leading-tight);
 }
 .slate-btn--primary {
   background-color: var(--slate-sage);
@@ -989,7 +989,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  */
 .slate-status {
   display: inline-block;
-  padding: 2px var(--slate-space-sm);
+  padding: var(--slate-space-2xs) var(--slate-space-sm);
   border-radius: var(--slate-radius-sm);
   font-size: var(--slate-text-micro);
   font-weight: var(--slate-weight-medium);
@@ -1023,7 +1023,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--slate-flag-wash);
   border: 1px solid var(--slate-flag);
   color: var(--slate-flag);
-  padding: 12px var(--slate-space-lg);
+  padding: var(--slate-space-md) var(--slate-space-lg);
   border-radius: var(--slate-radius-md);
   font-size: var(--slate-text-sm);
   margin-bottom: var(--slate-space-lg);
