@@ -24,10 +24,14 @@ if (!function_exists('ops_nav_link')) {
 <aside class="ops-sidebar">
 
   <div class="ops-sidebar-header">
-    <button class="ops-sidebar-collapse-btn" id="ops-sidebar-toggle" type="button" aria-label="Collapse sidebar">
-      <span class="material-symbols-outlined">chevron_left</span>
-    </button>
-    <span class="ops-sidebar-nav-label">Navigate</span>
+    <div class="ops-sidebar-collapse-row">
+      <button class="ops-sidebar-collapse-btn" id="ops-sidebar-toggle" type="button" aria-label="Collapse sidebar">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+    </div>
+    <div class="ops-sidebar-nav-section">
+      <span class="ops-sidebar-nav-label">Navigate</span>
+    </div>
   </div>
 
   <nav class="ops-nav">

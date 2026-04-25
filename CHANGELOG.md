@@ -1,5 +1,17 @@
 # Slate Ops Changelog
 
+## 0.26.3 — Shell: sidebar visual polish
+
+**`includes/ui/sidebar.php`:**
+- Split sidebar header into two stacked rows: `.ops-sidebar-collapse-row` (chevron alone) + `.ops-sidebar-nav-section` (NAVIGATE label alone)
+
+**`assets/css/ops-shell.css`:**
+- `.ops-sidebar-header`: changed from single flex row to `flex-direction: column`; removed fixed height
+- `.ops-sidebar-collapse-row`: new compact row for the collapse button with padding
+- `.ops-sidebar-nav-section`: new label area with collapse transition; replaces nav-label as the collapsed-state target
+- `.ops-sidebar-collapse-btn`: full button reset (`border: none !important`, `box-shadow: none`, `-webkit-appearance: none`, `background: transparent !important`) to override WP theme button styles; neutral muted-ink icon; hover leaves background transparent, tints icon to `--slate-ink`; custom `:focus-visible` ring using sage-wash
+- `.ops-nav-link.active`: `border-left-color: transparent` (no left accent line); background stays `--slate-sage-wash`; color → `--slate-ink` (matches Dealer Portal warm-neutral active style)
+
 ## 0.26.2 — Shell: sidebar collapse + Dealer Portal nav alignment
 
 **`includes/ui/sidebar.php`:**
