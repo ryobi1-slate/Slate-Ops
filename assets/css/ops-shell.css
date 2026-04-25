@@ -973,9 +973,11 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   gap: var(--slate-space-lg);
   margin-bottom: var(--slate-space-xl);
 }
-/* 4-column fixed layout for pages with many KPI cards (e.g. Executive) */
-.slate-kpi-grid--exec {
-  grid-template-columns: repeat(4, 1fr);
+/* 4-column fixed layout for pages with many KPI cards (e.g. Executive) — desktop only */
+@media (min-width: 901px) {
+  .slate-kpi-grid--exec {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 .slate-kpi-card {
   background-color: var(--slate-surface);
@@ -1154,8 +1156,8 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .pur-subnav {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid var(--slate-divider);
-  margin-bottom: 24px;
+  border-bottom: var(--slate-border);
+  margin-bottom: var(--slate-space-xl);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1165,19 +1167,19 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 16px;
+  padding: var(--slate-space-md) var(--slate-space-lg);
   border: none !important;
   background: none !important;
   box-shadow: none !important;
-  border-bottom: 2px solid transparent;
+  border-bottom: var(--slate-border-thick) solid transparent;
   margin-bottom: -1px;
   font-size: var(--slate-text-sm);
   font-weight: var(--slate-weight-medium);
   color: var(--slate-ink-muted);
-  font-family: var(--font-sans);
+  font-family: var(--slate-font-sans);
   cursor: pointer;
   white-space: nowrap;
-  transition: color 100ms ease, border-color 100ms ease;
+  transition: color var(--slate-duration-fast) var(--slate-ease), border-color var(--slate-duration-fast) var(--slate-ease);
   border-radius: 0;
   outline: none;
 }
@@ -1192,6 +1194,6 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .pur-tab .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--slate-text-md);
   line-height: 1;
 }
