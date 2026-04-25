@@ -247,7 +247,7 @@ body.slate-ops {
 .ops-sidebar-collapse-row {
   display: flex;
   align-items: center;
-  padding: var(--slate-space-sm) var(--slate-space-sm) var(--slate-space-2xs);
+  padding: var(--slate-space-sm) var(--slate-space-sm) var(--slate-space-2xs) var(--slate-space-md);
 }
 
 .ops-sidebar-nav-section {
@@ -278,7 +278,6 @@ body.slate-ops {
 
 .ops-sidebar-collapse-btn:hover {
   color: var(--slate-ink);
-  background: transparent !important;
 }
 
 .ops-sidebar-collapse-btn:focus-visible {
@@ -309,6 +308,8 @@ html.ops-sidebar-collapsed .ops-sidebar {
 html.ops-sidebar-collapsed .ops-sidebar-nav-section {
   opacity: 0;
   pointer-events: none;
+  height: 0;
+  padding: 0;
 }
 
 html.ops-sidebar-collapsed .ops-sidebar-collapse-btn .material-symbols-outlined {
@@ -374,7 +375,6 @@ html.ops-sidebar-collapsed .ops-sidebar-footer {
 
 .ops-nav-link.active {
   color: var(--slate-ink);
-  border-left-color: transparent;
   background: var(--slate-sage-wash);
 }
 

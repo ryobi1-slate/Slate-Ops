@@ -23,10 +23,11 @@ $_initials = ($_fn && $_ln)
   <div class="ops-header__left">
     <a class="ops-topbar__logo-link" href="/ops/" aria-label="Slate Ops — go to home">
       <img class="ops-topbar__logo"
-           src="<?php echo esc_url(SLATE_OPS_URL . 'assets/logos/slate-logo.svg'); ?>"
+           src="<?php echo esc_url(SLATE_OPS_URL . 'assets/logos/slate-logo-sage.svg'); ?>"
            alt="Slate"
-           width="116"
-           height="24">
+           width="auto"
+           height="24"
+           style="object-fit:contain;height:24px;width:auto;">
     </a>
   </div>
 
