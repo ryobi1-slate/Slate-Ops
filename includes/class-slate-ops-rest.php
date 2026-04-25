@@ -1807,6 +1807,15 @@ if ($priority >= 1 && $priority <= 5) {
   $update['priority'] = $priority;
 }
 
+// Guard: COMPLETE requires job to be READY_FOR_PICKUP (idempotent if already COMPLETE).
+if ($new_status === Slate_Ops_Statuses::COMPLETE) {
+  $current_job = self::job_by_id($job_id);
+  if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+  if ($current_job['status'] !== Slate_Ops_Statuses::COMPLETE && $current_job['status'] !== Slate_Ops_Statuses::READY_FOR_PICKUP) {
+    return new WP_Error('invalid_state', 'Job must be Ready for Pickup to mark complete', ['status' => 422]);
+  }
+}
+
 // Guard: PENDING_QC requires job to be IN_PROGRESS (matches submit_qc behavior).
 if ($new_status === 'PENDING_QC') {
   $current_job = self::job_by_id($job_id);
@@ -1953,8 +1962,8 @@ return self::get_job(['id' => $job_id]);
     }
 
     if ($decision === 'PASS') {
-      $new_status = 'COMPLETE';
-      $audit_note = 'QC passed';
+      $new_status = Slate_Ops_Statuses::READY_FOR_PICKUP;
+      $audit_note = 'QC passed — ready for pickup';
     } else {
       $new_status = 'IN_PROGRESS';
       $audit_note = 'QC failed: ' . $notes;

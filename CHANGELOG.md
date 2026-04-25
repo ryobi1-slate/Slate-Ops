@@ -1,5 +1,19 @@
 # Slate Ops Changelog
 
+## 0.25.6 — Supervisor QC and Pickup flow
+
+State flow: IN_PROGRESS → PENDING_QC → READY_FOR_PICKUP → COMPLETE (fail path: PENDING_QC → IN_PROGRESS)
+
+**PHP:**
+- `review_qc()`: QC PASS now transitions PENDING_QC → READY_FOR_PICKUP (previously went straight to COMPLETE, skipping pickup step)
+- `set_status()`: added COMPLETE guard — job must be READY_FOR_PICKUP to mark complete (422 otherwise)
+
+**React — Supervisor dashboard (`n0` component):**
+- **Pending QC panel**: lists all PENDING_QC jobs; supervisor can Pass QC (→ READY_FOR_PICKUP) or Fail / Send Back (→ IN_PROGRESS via `window.prompt` for required note); error banner on failure; busy-lock prevents double-submit; page reloads on success
+- **Ready for Pickup panel**: lists all READY_FOR_PICKUP jobs; CS/Supervisor can Mark Complete (→ COMPLETE); same error/busy/reload pattern
+
+- `class-slate-ops-rest.php` + `app.js` changes; no CSS changes
+
 ## 0.25.5 — Tech timer endpoint hardening
 
 - **`set_status()` PENDING_QC guard**: `POST /jobs/{id}/status` now returns 422 if the job is not IN_PROGRESS when transitioning to PENDING_QC; matches the guard already present in `submit_qc`; prevents backend from accepting Complete from wrong states
