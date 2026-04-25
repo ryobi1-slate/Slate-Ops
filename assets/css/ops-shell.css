@@ -973,9 +973,15 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   gap: var(--slate-space-lg);
   margin-bottom: var(--slate-space-xl);
 }
+/* 4-column fixed layout for pages with many KPI cards (e.g. Executive) — desktop only */
+@media (min-width: 901px) {
+  .slate-kpi-grid--exec {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 .slate-kpi-card {
   background-color: var(--slate-surface);
-  border: var(--slate-border);
+  border: var(--slate-border) !important;
   border-radius: var(--slate-radius-lg);
   padding: var(--slate-space-lg);
   display: flex;
@@ -1140,4 +1146,54 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   border-radius: var(--slate-radius-md);
   font-size: var(--slate-text-sm);
   margin-bottom: var(--slate-space-lg);
+}
+
+/* ─── 21. Sub-navigation tabs (shared: Purchasing + Executive) ───────
+ * Underline-style horizontal tab row. Sourced from purchasing.css so
+ * the pattern works on all pages via ops-shell.css (always loaded).
+ * !important on border/background overrides WP theme button defaults.
+ */
+.pur-subnav {
+  display: flex;
+  gap: 0;
+  border-bottom: var(--slate-border);
+  margin-bottom: var(--slate-space-xl);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pur-subnav::-webkit-scrollbar { display: none; }
+
+.pur-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--slate-space-md) var(--slate-space-lg);
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  border-bottom: var(--slate-border-thick) solid transparent;
+  margin-bottom: -1px;
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink-muted);
+  font-family: var(--slate-font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--slate-duration-fast) var(--slate-ease), border-color var(--slate-duration-fast) var(--slate-ease);
+  border-radius: 0;
+  outline: none;
+}
+
+.pur-tab:hover {
+  color: var(--slate-ink);
+}
+
+.pur-tab.active {
+  color: var(--slate-sage);
+  border-bottom-color: var(--slate-sage);
+}
+
+.pur-tab .material-symbols-outlined {
+  font-size: var(--slate-text-md);
+  line-height: 1;
 }
