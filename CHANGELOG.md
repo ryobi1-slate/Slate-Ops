@@ -1,5 +1,17 @@
 # Slate Ops Changelog
 
+## 0.25.7 — Fix Tech screen Today's Time deduction (tiered rule)
+
+**PHP — `time_daily_summary()`:**
+- Replaced binary threshold (`>= 180 min → apply all deductions`) with Phase 1 tiered rule:
+  - `< 2 h (< 120 min)` → 0 deductions (a 5-minute log no longer shows a negative net)
+  - `2–4 h (120–239 min)` → 1 break
+  - `4–6 h (240–359 min)` → 2 breaks
+  - `≥ 6 h (≥ 360 min)` → 2 breaks + lunch
+- Break count capped at configured `break_count` from `slate_ops_settings` (settings remain connected, not hardcoded)
+- Return payload now always includes `lunch_minutes`, `break_minutes`, `break_count` for transparency
+- No React changes — frontend already renders `ee.deduction_minutes` / `ee.net_minutes` directly from backend
+
 ## 0.25.6 — Supervisor QC and Pickup flow
 
 State flow: IN_PROGRESS → PENDING_QC → READY_FOR_PICKUP → COMPLETE (fail path: PENDING_QC → IN_PROGRESS)

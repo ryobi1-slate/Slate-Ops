@@ -2203,28 +2203,46 @@ return self::get_job(['id' => $job_id]);
       $segments_out[] = $r;
     }
 
-    // Load break/lunch config
+    // Load break/lunch config from saved settings (not hardcoded).
     $cfg = $wpdb->get_row("SELECT lunch_minutes, break_minutes, break_count FROM $settings WHERE id=1", ARRAY_A);
     $lunch_min = (int)($cfg['lunch_minutes'] ?? 30);
     $break_min = (int)($cfg['break_minutes'] ?? 10);
     $break_cnt = (int)($cfg['break_count']   ?? 2);
-    $deduction = $lunch_min + ($break_min * $break_cnt);
 
-    // Only apply deduction if tech worked more than half a standard shift (> 3h)
-    $apply_deduction = $raw_minutes >= 180;
-    $net_minutes     = $apply_deduction ? max(0, $raw_minutes - $deduction) : $raw_minutes;
+    // Phase 1 applied-deduction rule (based on raw minutes worked today).
+    // This is the earned/applied deduction only — not the full scheduled deduction
+    // that assumes a complete shift was worked. A tech who logs 5 min gets 0 deduction.
+    //
+    //   < 2 h  (< 120 min) → 0 deductions
+    //   2–4 h (120–239 min) → 1 break
+    //   4–6 h (240–359 min) → 2 breaks
+    //   ≥ 6 h  (≥ 360 min) → 2 breaks + lunch
+    //
+    // Break count is capped at the configured break_cnt from settings.
+    $breaks_to_apply = 0;
+    $apply_lunch     = false;
+    if ($raw_minutes >= 360) {
+      $breaks_to_apply = min(2, $break_cnt);
+      $apply_lunch     = true;
+    } elseif ($raw_minutes >= 240) {
+      $breaks_to_apply = min(2, $break_cnt);
+    } elseif ($raw_minutes >= 120) {
+      $breaks_to_apply = min(1, $break_cnt);
+    }
+    $applied_deduction = ($break_min * $breaks_to_apply) + ($apply_lunch ? $lunch_min : 0);
+    $net_minutes       = max(0, $raw_minutes - $applied_deduction);
 
     return [
       'date'              => $date,
       'user_id'           => $user_id,
       'raw_minutes'       => $raw_minutes,
-      'deduction_minutes' => $apply_deduction ? $deduction : 0,
+      'deduction_minutes' => $applied_deduction,
       'net_minutes'       => $net_minutes,
       'lunch_minutes'     => $lunch_min,
       'break_minutes'     => $break_min,
       'break_count'       => $break_cnt,
-      'deduction_applied'    => $apply_deduction,
-      'segments'             => $segments_out,
+      'deduction_applied' => $applied_deduction > 0,
+      'segments'          => $segments_out,
     ];
   }
 
