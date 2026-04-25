@@ -179,9 +179,19 @@ body.slate-ops {
   background: var(--sand);
 }
 
+/* Column flex: topbar on top, sidebar+content row below */
 .ops-shell {
   display: flex;
+  flex-direction: column;
   height: 100vh;
+  overflow: hidden;
+}
+
+/* Row wrapper: sidebar + main content, fills remaining height below topbar */
+.ops-shell-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -577,7 +587,6 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 
 /* ─── 6. Responsive ─── */
 @media (max-width: 900px) {
-  .ops-shell         { flex-direction: column; }
   .ops-sidebar {
     position: fixed;
     bottom: 0; left: 0; right: 0;

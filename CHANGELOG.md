@@ -1,5 +1,24 @@
 # Slate Ops Changelog
 
+## 0.26.5 — Shell: full-width topbar matching Dealer Portal structure
+
+**`includes/ui/layout-shell.php`:**
+- Moved `topbar.php` include above the sidebar — topbar is now the first child of `.ops-shell`
+- Added `.ops-shell-body` div wrapping sidebar + `.ops-body` (row flex container below topbar)
+- Close sequence updated to close the extra nesting level
+
+**`assets/css/ops-shell.css`:**
+- `.ops-shell`: added `flex-direction: column` — topbar sits on top, body row fills remaining height
+- Added `.ops-shell-body { display: flex; flex: 1; min-height: 0; overflow: hidden }` — row wrapper for sidebar + content
+- Removed redundant `@media (max-width: 900px) { .ops-shell { flex-direction: column } }` (desktop is already column)
+
+**Before:** sidebar started at top-left; topbar was inside `.ops-body`, offset to the right of the sidebar  
+**After:** topbar spans full viewport width; sidebar and content begin below the topbar — matches Dealer Portal structure
+
+Sidebar collapse behavior (localStorage, 172px/44px, chevron animation) unchanged.  
+Tech screen override (`.ops-page-tech .ops-header { display: none }`) still hides topbar on full-screen tech view.  
+Mobile bottom-tab layout unaffected (sidebar is `position: fixed`; `.ops-body` padding-bottom unchanged).
+
 ## 0.26.4 — Shell: fix main content left gutter
 
 **`assets/css/ops-shell.css`:**

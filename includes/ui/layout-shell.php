@@ -21,8 +21,16 @@
  *   $caps        array    — current_user_caps_summary()
  *   $role_class  string   — CSS class derived from role (e.g. ops-role-tech)
  *   $page_class  string   — CSS class derived from route (e.g. ops-page-tech); optional
- *   $role_label  string   — human-readable role
+ *   $role_label  string   — human-readable role label
  *   $user        WP_User  — current user object
+ *
+ * Shell structure:
+ *   .ops-shell (column flex, 100vh)
+ *     .ops-header          — full-width topbar spanning entire viewport
+ *     .ops-shell-body      — row flex, fills remaining height
+ *       .ops-sidebar       — sidebar nav
+ *       .ops-body          — main content column
+ *         .ops-content     — scrollable content area
  */
 if (!defined('ABSPATH')) exit;
 
@@ -43,13 +51,15 @@ if ($shell_part === 'open') : ?>
 </head>
 <body class="slate-ops <?php echo esc_attr($role_class); ?> <?php echo esc_attr($page_class ?? ''); ?>">
 <div id="slate-ops-app" class="ops-shell">
-  <?php include SLATE_OPS_PATH . 'includes/ui/sidebar.php'; ?>
-  <div class="ops-body">
-    <?php include SLATE_OPS_PATH . 'includes/ui/topbar.php'; ?>
-    <section class="ops-content">
-      <div id="ops-view"></div>
+  <?php include SLATE_OPS_PATH . 'includes/ui/topbar.php'; ?>
+  <div class="ops-shell-body">
+    <?php include SLATE_OPS_PATH . 'includes/ui/sidebar.php'; ?>
+    <div class="ops-body">
+      <section class="ops-content">
+        <div id="ops-view"></div>
 <?php elseif ($shell_part === 'close') : ?>
-    </section>
+      </section>
+    </div>
   </div>
 </div>
 <?php wp_footer(); ?>
