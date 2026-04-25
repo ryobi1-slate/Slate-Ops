@@ -1,5 +1,14 @@
 # Slate Ops Changelog
 
+## 0.25.4 — Tech timer workflow hardening
+
+- **`time_start()` job-status guard**: returns 422 if the job is not in QUEUED or IN_PROGRESS status; prevents starting timers on completed/held jobs
+- **`time_start()` duplicate-timer guard**: if tech has an active timer on the same job, returns 200 idempotently; if on a different job, returns 409 "You already have an active timer on another job. Pause it before starting a new one."
+- **`time_stop()` response**: now includes `job_id` alongside `segment_id` and `stopped_at`
+- **React Play/Start pre-flight guard**: `Ot` handler checks `r` (active job) before calling the API — if a different job is already active, sets the error banner immediately without a network round-trip
+- **Notes button**: replaces `alert("Notes coming soon")` stub with a real `add_note` API call (`POST /jobs/{id}/notes`); prompts for text via `window.prompt`, refreshes job data on success
+- `class-slate-ops-rest.php` + `app.js` changes; no CSS changes
+
 ## 0.25.3 — Tech screen: fix action button palette
 
 - **Complete**: secondary outline — `ops-tech-action-secondary` (white bg → `--surface-card`, sage text → `--sage`, sage border → `--border-md`)
