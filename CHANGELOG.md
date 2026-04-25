@@ -1,5 +1,13 @@
 # Slate Ops Changelog
 
+## 0.26.4 — Shell: fix main content left gutter
+
+**`assets/css/ops-shell.css`:**
+- `.ops-content`: removed `padding: 24px 28px`; set to `padding: 0`
+- Each page wrapper (`p-6`, `p-8`, `.slate-portal`, `.ops-cs-page`) already provides its own internal padding — the shell padding was stacking on top and creating a 52–60px double-gutter
+- Removed now-redundant `@media (max-width: 700px) { .ops-content { padding: 0 } }` override (same as base now)
+- Result: content starts ~24–32px from sidebar edge, matching Dealer Portal rhythm; Tech screen unaffected (its override sets `padding: 0` separately)
+
 ## 0.26.3 — Shell: sidebar visual polish + sage logo
 
 **`assets/logos/slate-logo-sage.png`** — Slate Sage PNG logo asset added; dark sage parallelogram shape with white "|SLATE" wordmark (actual brand asset)
