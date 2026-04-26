@@ -59,6 +59,25 @@
     });
   }
 
+  function apiPost(path, data) {
+    if (!API_ROOT) return Promise.reject(new Error('API not configured'));
+    return fetch(API_ROOT + '/purchasing/' + path, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': API_NONCE, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.json().then(function (body) {
+          throw new Error(body.message || 'Request failed (' + res.status + ')');
+        }).catch(function () {
+          throw new Error('Request failed (' + res.status + ')');
+        });
+      }
+      return res.json();
+    });
+  }
+
   function loadAll() {
     state.loading = true;
     state.error   = null;
@@ -279,6 +298,52 @@
       '</div>';
   }
 
+  // ─── Create purchase requests ─────────────────────────────────────────────
+  function handleCreateRequests() {
+    var selected = state.demand.filter(function (d) {
+      return state.selectedDemandIds.indexOf(String(d.id)) !== -1 &&
+             d.preferred_vendor_id;
+    });
+
+    if (!selected.length) {
+      state.error = 'No eligible items selected. Items must have a vendor assigned.';
+      render();
+      return;
+    }
+
+    state.loading = true;
+    state.error   = null;
+    render();
+
+    var items = selected.map(function (d) {
+      return {
+        item_id:          parseInt(d.id, 10),
+        item_description: String(d.description || d.part_number || 'Unknown item'),
+        vendor_id:        parseInt(d.preferred_vendor_id, 10),
+        qty:              parseInt(d.suggested_order, 10) > 0 ? parseInt(d.suggested_order, 10) : 1,
+        unit_cost:        parseFloat(d.unit_cost) || 0,
+      };
+    });
+
+    apiPost('requests', { items: items })
+      .then(function (res) {
+        var count = (res.created || []).length;
+        state.notice = 'Created ' + count + ' purchase request' + (count !== 1 ? 's' : '') + '.';
+        state.selectedDemandIds = [];
+        return apiFetch('requests');
+      })
+      .then(function (requests) {
+        state.requests = requests || [];
+        state.loading  = false;
+        render();
+      })
+      .catch(function (err) {
+        state.loading = false;
+        state.error   = err.message || 'Failed to create purchase requests.';
+        render();
+      });
+  }
+
   // ─── Demand tab ───────────────────────────────────────────────────────────
   function filteredDemand() {
     var f = state.filters;
@@ -318,6 +383,31 @@
     '</div>';
   }
 
+  function renderDemandActionBar() {
+    if (!state.selectedDemandIds.length) return '';
+    var vendorIds = {};
+    state.demand.forEach(function (d) {
+      if (state.selectedDemandIds.indexOf(String(d.id)) !== -1 && d.preferred_vendor_id) {
+        vendorIds[d.preferred_vendor_id] = true;
+      }
+    });
+    var n = state.selectedDemandIds.length;
+    var v = Object.keys(vendorIds).length;
+    return '<div class="pur-demand-action-bar">' +
+      '<span class="pur-demand-action-info">' +
+        n + ' item' + (n !== 1 ? 's' : '') + ' selected' +
+        (v > 0 ? ' across ' + v + ' vendor' + (v !== 1 ? 's' : '') : '') +
+      '</span>' +
+      '<div class="pur-demand-action-btns">' +
+        '<button class="pur-btn pur-btn--outline" data-action="clear-selection">Clear</button>' +
+        '<button class="pur-btn pur-btn--primary" data-action="create-requests">' +
+          '<span class="material-symbols-outlined">add_shopping_cart</span>' +
+          'Create Request' + (v > 1 ? 's' : '') +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
   function renderDemand() {
     if (state.loading) return renderLoading();
 
@@ -332,16 +422,36 @@
     } else if (!items.length) {
       body = renderEmpty('search_off', 'No results', 'Try adjusting the filters.');
     } else {
+      var eligibleIds = items
+        .filter(function (d) { return d.preferred_vendor_id; })
+        .map(function (d) { return String(d.id); });
+      var allSelected = eligibleIds.length > 0 && eligibleIds.every(function (id) {
+        return state.selectedDemandIds.indexOf(id) !== -1;
+      });
+
       var rows = items.map(function (d) {
-        var onHand  = parseInt(d.on_hand, 10);
-        var reorder = parseInt(d.reorder_point, 10);
+        var onHand      = parseInt(d.on_hand, 10);
+        var reorder     = parseInt(d.reorder_point, 10);
         var needsReorder = reorder > 0 && onHand <= reorder;
-        var pct      = reorder > 0 ? Math.min(100, Math.round((onHand / reorder) * 100)) : 100;
-        var level    = d.demand_level || 'low';
-        var barClass = level === 'high' ? 'pur-demand-bar--high'
-                     : level === 'medium' ? 'pur-demand-bar--medium'
-                     : 'pur-demand-bar--low';
-        return '<tr' + (needsReorder ? ' class="pur-row-alert"' : '') + '>' +
+        var isDisabled  = !d.preferred_vendor_id;
+        var isSelected  = state.selectedDemandIds.indexOf(String(d.id)) !== -1;
+        var pct         = reorder > 0 ? Math.min(100, Math.round((onHand / reorder) * 100)) : 100;
+        var level       = d.demand_level || 'low';
+        var barClass    = level === 'high' ? 'pur-demand-bar--high'
+                        : level === 'medium' ? 'pur-demand-bar--medium'
+                        : 'pur-demand-bar--low';
+        var rowClasses  = [
+          needsReorder ? 'pur-row-alert'    : '',
+          isSelected   ? 'pur-row-selected' : '',
+          isDisabled   ? 'pur-row-disabled' : '',
+        ].filter(Boolean).join(' ');
+        return '<tr' + (rowClasses ? ' class="' + rowClasses + '"' : '') +
+               ' data-demand-id="' + d.id + '">' +
+          '<td class="pur-col-check">' +
+            '<input type="checkbox" class="pur-demand-check" data-id="' + d.id + '"' +
+              (isSelected ? ' checked' : '') + (isDisabled ? ' disabled' : '') +
+            '>' +
+          '</td>' +
           '<td class="pur-col-mono">' + esc(d.part_number) + '</td>' +
           '<td>' + esc(d.description) + '</td>' +
           '<td class="pur-col-muted">' + esc(d.preferred_vendor_name || '—') + '</td>' +
@@ -356,6 +466,11 @@
       }).join('');
       body = '<div class="pur-table-wrap"><table class="pur-table">' +
         '<thead><tr>' +
+          '<th class="pur-col-check">' +
+            '<input type="checkbox" class="pur-demand-check" data-action="select-all-demand"' +
+              (allSelected ? ' checked' : '') +
+            '>' +
+          '</th>' +
           '<th>Part #</th>' +
           '<th>Description</th>' +
           '<th>Vendor</th>' +
@@ -379,6 +494,7 @@
         '<span class="pur-card-meta">' + esc(meta) + '</span>' +
       '</div>' +
       renderDemandFilters() +
+      renderDemandActionBar() +
       body +
     '</div>';
   }
@@ -389,7 +505,7 @@
 
     var body;
     if (!state.requests.length) {
-      body = renderEmpty('request_quote', 'No purchase requests', 'Purchase requests will appear here once created (Phase 2).');
+      body = renderEmpty('request_quote', 'No purchase requests', 'Select items on the Demand tab to create purchase requests.');
     } else {
       var rows = state.requests.map(function (r) {
         var total      = parseFloat(r.qty || 0) * parseFloat(r.unit_cost || 0);
@@ -652,6 +768,56 @@
         render();
       });
     });
+
+    // Select-all demand checkbox
+    el.querySelectorAll('[data-action="select-all-demand"]').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        var eligibleIds = filteredDemand()
+          .filter(function (d) { return d.preferred_vendor_id; })
+          .map(function (d) { return String(d.id); });
+        state.selectedDemandIds = cb.checked ? eligibleIds : [];
+        render();
+      });
+    });
+
+    // Individual demand row checkboxes
+    el.querySelectorAll('.pur-demand-check[data-id]').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        var id  = String(cb.getAttribute('data-id'));
+        var idx = state.selectedDemandIds.indexOf(id);
+        if (cb.checked && idx === -1) {
+          state.selectedDemandIds.push(id);
+        } else if (!cb.checked && idx !== -1) {
+          state.selectedDemandIds.splice(idx, 1);
+        }
+        render();
+      });
+    });
+
+    // Clear selection
+    el.querySelectorAll('[data-action="clear-selection"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.selectedDemandIds = [];
+        render();
+      });
+    });
+
+    // Create purchase requests
+    el.querySelectorAll('[data-action="create-requests"]').forEach(function (btn) {
+      btn.addEventListener('click', handleCreateRequests);
+    });
+
+    // Set indeterminate state on select-all after binding
+    var selectAll = el.querySelector('[data-action="select-all-demand"]');
+    if (selectAll) {
+      var eligibleIds = filteredDemand()
+        .filter(function (d) { return d.preferred_vendor_id; })
+        .map(function (d) { return String(d.id); });
+      var selCount = eligibleIds.filter(function (id) {
+        return state.selectedDemandIds.indexOf(id) !== -1;
+      }).length;
+      selectAll.indeterminate = selCount > 0 && selCount < eligibleIds.length;
+    }
   }
 
   // ─── Boot ─────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # Slate Ops Changelog
 
-## 0.27.3 — CS page: split-view layout (jobs list + detail panel)
+## 0.28.1 — CS page: split-view layout (jobs list + detail panel)
 
 **Layout refactor — CS only. No REST, logic, or permission changes.**
 

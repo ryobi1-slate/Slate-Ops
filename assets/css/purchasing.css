@@ -716,3 +716,65 @@
 .pur-banner-close:hover {
   opacity: 1;
 }
+
+/* ─── Demand row selection ─── */
+.pur-col-check {
+  width: 40px;
+  padding-left: 16px !important;
+  padding-right: 6px !important;
+  text-align: center !important;
+}
+
+.pur-demand-check {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--slate-sage);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.pur-demand-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.pur-table tbody tr.pur-row-selected {
+  background: var(--slate-sage-wash);
+}
+
+.pur-table tbody tr.pur-row-selected:hover {
+  background: var(--slate-sage-wash);
+}
+
+.pur-table tbody tr.pur-row-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.pur-table tbody tr.pur-row-disabled .pur-demand-check {
+  pointer-events: auto;
+}
+
+/* ─── Demand action bar ─── */
+.pur-demand-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--slate-sage-wash);
+  border-bottom: 1px solid var(--slate-divider-soft);
+  flex-wrap: wrap;
+}
+
+.pur-demand-action-info {
+  font-size: var(--slate-text-sm);
+  color: var(--slate-sage-ink);
+  font-weight: 500;
+}
+
+.pur-demand-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
