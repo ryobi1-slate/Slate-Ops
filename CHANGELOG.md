@@ -1,5 +1,33 @@
 # Slate Ops Changelog
 
+## 0.27.2 — Phase 1 purchasing: live REST data, demand filters, correct status model
+
+**`includes/data/class-slate-ops-purchasing.php`:**
+- Rewritten with correct SOT status vocabulary: `draft → review → approved → held → ordered → cancelled`
+- `maybe_seed()`: seeds 5 vendors + 8 items on first install via `run_install()` — guarded by option flag + empty-table check (vendors AND items). Runs only on activation or version upgrade; not on every `init`.
+
+**`includes/class-slate-ops-purchasing-rest.php`:**
+- Stripped to 6 read-only GET endpoints (Phase 1 only): `/purchasing/overview`, `/purchasing/requests`, `/purchasing/items`, `/purchasing/vendors`, `/purchasing/orders`, `/purchasing/api-status`. No POST/PATCH/DELETE endpoints.
+
+**`includes/class-slate-ops-install.php`:**
+- Added `preferred_vendor VARCHAR(255)` column to `pur_items` table for demand vendor filter.
+- `run_install()` calls `maybe_seed()` — seed runs during install/upgrade only.
+
+**`assets/js/purchasing.js`:**
+- Full rewrite: flat SOT state, `loadAll()` with `Promise.allSettled` (partial failures don't blank all tabs), demand filters (search, urgency, vendor), correct status badges, focus-preserving filter re-render, UTC-aware date parsing.
+
+**`assets/css/purchasing.css`:**
+- Added filter bar, error/notice banner, and API status variant styles.
+- Token cleanup: replaced hardcoded `10px/12px/16px/14px` values with `--slate-space-md/lg` and `--slate-text-base`; `line-height: 1` → `var(--slate-leading-tight)`.
+- Error banner: changed from `--slate-redwood-wash/redwood` → `--slate-flag-wash/flag/flag-ink`. Redwood reserved for healthy/on-track states.
+
+## 0.27.1 — Executive page: override React root sage tint via `.slate-portal`
+
+**Root cause:** The React app root wrapper applies `bg-background-light` (`#e1dfc8`, sage/warm-green tint) to itself. This wrapper sits between `#ops-view` and the Executive component's `.slate-portal` div, overriding the shell's `--slate-surface-page` background set on `.ops-content`. Purchasing pages bypass this (they use a separate vanilla JS bundle that doesn't go through the React root), which is why Purchasing shows the correct neutral background.
+
+**`assets/css/ops-shell.css`:**
+- `.slate-portal`: added `background: var(--slate-surface-page)` — directly overrides the React root's `bg-background-light` sage tint for the Executive component. Token-based, targeted to `.slate-portal` only.
+
 ## 0.26.8 — Executive page: match Purchasing page background
 
 **`assets/css/ops-shell.css`:**
