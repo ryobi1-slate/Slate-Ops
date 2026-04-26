@@ -181,7 +181,11 @@ class Slate_Ops_Purchasing_REST {
   // ── Integration / PA readiness handlers ───────────────────────────────────
 
   public static function h_integration_status($req) {
-    return rest_ensure_response(Slate_Ops_PA_Events::get_status());
+    $status = Slate_Ops_PA_Events::get_status();
+    if (!self::check_admin()) {
+      unset($status['flow_urls']);
+    }
+    return rest_ensure_response($status);
   }
 
   public static function h_save_integration_settings($req) {
