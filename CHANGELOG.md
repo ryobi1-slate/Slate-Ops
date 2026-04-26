@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.28.2 — Fix: blank CS page (split-body bracket imbalance)
+
+**`assets/react/app.js`:**
+- Removed one extra `})` in the CS component return expression that closed the `ops-cs-split-body` div before the right panel was added as a child — leaving its `children:[` array unclosed and producing a `SyntaxError: Unexpected token '}'` that blanked the entire CS page.
+- After the fix the right panel (`ops-cs-right`) is correctly nested inside `ops-cs-split-body` as intended by the split-view layout.
+
 ## 0.28.1 — CS page: split-view layout (jobs list + detail panel)
 
 **Layout refactor — CS only. No REST, logic, or permission changes.**
