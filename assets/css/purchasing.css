@@ -621,3 +621,98 @@
 .pur-demand-bar--low    { background: var(--slate-redwood-wash); }
 .pur-demand-bar--medium { background: var(--slate-arches); }
 .pur-demand-bar--high   { background: var(--slate-flag); }
+
+/* ─── API status value variants ─── */
+.pur-api-row-value--warn {
+  color: var(--slate-arches);
+  font-weight: 500;
+}
+
+.pur-api-row-value--ok {
+  color: var(--slate-sage);
+  font-weight: 500;
+}
+
+/* ─── Demand filters bar ─── */
+.pur-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--slate-space-lg);
+}
+
+.pur-filter-input {
+  flex: 1;
+  min-width: 180px;
+  padding: var(--slate-space-sm) var(--slate-space-md);
+  font-size: var(--slate-text-sm);
+  font-family: var(--font-sans);
+  color: var(--slate-ink);
+  background: var(--slate-surface-tint);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  box-sizing: border-box;
+}
+
+.pur-filter-input:focus {
+  outline: none;
+  border-color: var(--slate-sage);
+}
+
+.pur-filter-select {
+  padding: var(--slate-space-sm) var(--slate-space-md);
+  font-size: var(--slate-text-sm);
+  font-family: var(--font-sans);
+  color: var(--slate-ink);
+  background: var(--slate-surface-tint);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  cursor: pointer;
+}
+
+.pur-filter-select:focus {
+  outline: none;
+  border-color: var(--slate-sage);
+}
+
+/* ─── Error and notice banners ─── */
+.pur-error-banner,
+.pur-notice-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--slate-space-md);
+  padding: var(--slate-space-md) var(--slate-space-lg);
+  border-radius: var(--slate-radius-md);
+  font-size: var(--slate-text-sm);
+  margin-bottom: var(--slate-space-lg);
+}
+
+.pur-error-banner {
+  background: var(--slate-flag-wash);
+  border: 1px solid var(--slate-flag);
+  color: var(--slate-flag-ink);
+}
+
+.pur-notice-banner {
+  background: var(--slate-sage-wash);
+  border: 1px solid var(--slate-sage);
+  color: var(--slate-sage-ink);
+}
+
+.pur-banner-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--slate-text-base);
+  line-height: var(--slate-leading-tight);
+  padding: 0;
+  opacity: 0.6;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.pur-banner-close:hover {
+  opacity: 1;
+}
