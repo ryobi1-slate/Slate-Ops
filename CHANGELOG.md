@@ -1,5 +1,20 @@
 # Slate Ops Changelog
 
+## 0.30.1 — Executive dashboard UI polish
+
+**Visual polish only — no REST, formula, or schema changes.**
+
+**`assets/react/app.js` (Executive component):**
+- Stripped Tailwind utility soup from page header: removed `mb-2`, `text-3xl`, `mb-1`, `text-sm`, `mb-6`; all spacing/typography now driven by CSS token classes (`ops-page-eyebrow`, `ops-page-title`, `ops-page-desc`, `pur-subnav`).
+- Added `slate-table__num` to all numeric column headers (`th`) and data cells (`td`) in Tech Performance and Job Performance tables — enables right-align + tabular-nums.
+- Job Performance: status cell now renders a `slate-status` pill with semantic variant mapping (COMPLETE→healthy, ON_HOLD→critical, IN_PROGRESS/PENDING_QC→attention, others→neutral); raw underscore strings replaced with space-separated labels.
+- Tech Performance and Job Performance: variance cell wrapped in `slate-status` pill — over-logged (logged > est) shows `--attention` (orange), under-logged shows `--healthy` (green), zero shows `--neutral`.
+
+**`assets/css/ops-shell.css`:**
+- `slate-table__num`: added `text-align: right !important` so numeric column headers and cells align consistently.
+- `ops-page-desc`: added `font-size: var(--slate-text-sm)` so the class is self-contained (was relying on Tailwind `text-sm` in JSX).
+- `.slate-kpi-grid--exec .slate-kpi-card`: reduced `min-height` from 112px to 80px for compact executive dashboard density.
+
 ## 0.28.2 — Fix: blank CS page (split-body bracket imbalance)
 
 **`assets/react/app.js`:**

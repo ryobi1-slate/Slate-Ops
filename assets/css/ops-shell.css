@@ -829,6 +829,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .ops-page-desc {
+  font-size: var(--slate-text-sm);
   color: var(--slate-ink-muted) !important;
 }
 
@@ -980,6 +981,10 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+/* Compact card height for the exec dashboard — no tall whitespace */
+.slate-kpi-grid--exec .slate-kpi-card {
+  min-height: 80px;
+}
 .slate-kpi-card {
   background-color: var(--slate-surface);
   border: var(--slate-border) !important;
@@ -1045,6 +1050,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 .slate-table__num {
   font-variant-numeric: tabular-nums;
+  text-align: right !important;
 }
 .slate-table__empty {
   padding: var(--slate-space-3xl) var(--slate-space-xl);
