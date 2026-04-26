@@ -53,6 +53,19 @@ class Slate_Ops_Purchasing_REST {
       ],
     ]);
 
+    register_rest_route($ns, '/purchasing/requests/(?P<id>\d+)', [
+      [
+        'methods'             => 'GET',
+        'permission_callback' => $perm,
+        'callback'            => [__CLASS__, 'h_get_request'],
+      ],
+      [
+        'methods'             => 'PATCH',
+        'permission_callback' => $perm,
+        'callback'            => [__CLASS__, 'h_update_request'],
+      ],
+    ]);
+
     register_rest_route($ns, '/purchasing/orders', [
       'methods'             => 'GET',
       'permission_callback' => $perm,
@@ -90,6 +103,43 @@ class Slate_Ops_Purchasing_REST {
 
   public static function h_list_order_lines($req) {
     return rest_ensure_response(Slate_Ops_Purchasing::list_order_lines((int) $req['id']));
+  }
+
+  public static function h_get_request($req) {
+    $row = Slate_Ops_Purchasing::get_request((int) $req['id']);
+    if (!$row) {
+      return new WP_Error('not_found', 'Purchase request not found.', ['status' => 404]);
+    }
+    return rest_ensure_response($row);
+  }
+
+  public static function h_update_request($req) {
+    $id  = (int) $req['id'];
+    $raw = $req->get_json_params();
+
+    $row = Slate_Ops_Purchasing::get_request($id);
+    if (!$row) {
+      return new WP_Error('not_found', 'Purchase request not found.', ['status' => 404]);
+    }
+
+    if (array_key_exists('status', $raw)) {
+      $new_status = sanitize_text_field($raw['status']);
+      $allowed    = Slate_Ops_Purchasing::allowed_transitions($row['status']);
+      if (!in_array($new_status, $allowed, true)) {
+        return new WP_Error(
+          'invalid_transition',
+          'Cannot move "' . $row['status'] . '" to "' . $new_status . '".',
+          ['status' => 422]
+        );
+      }
+      Slate_Ops_Purchasing::update_request_status($id, $new_status);
+    }
+
+    if (array_key_exists('notes', $raw)) {
+      Slate_Ops_Purchasing::update_request_notes($id, sanitize_textarea_field($raw['notes']));
+    }
+
+    return rest_ensure_response(Slate_Ops_Purchasing::get_request($id));
   }
 
   public static function h_create_requests($req) {

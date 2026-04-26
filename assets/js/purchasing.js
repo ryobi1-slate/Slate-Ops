@@ -34,6 +34,7 @@
       vendor:  'all',
     },
     activeRequestId: null,
+    draftNotes:      null,   // notes textarea value while drawer is open
   };
 
   // Track which tabs have been loaded to avoid redundant fetches.
@@ -63,6 +64,25 @@
     if (!API_ROOT) return Promise.reject(new Error('API not configured'));
     return fetch(API_ROOT + '/purchasing/' + path, {
       method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': API_NONCE, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.json().then(function (body) {
+          throw new Error(body.message || 'Request failed (' + res.status + ')');
+        }).catch(function () {
+          throw new Error('Request failed (' + res.status + ')');
+        });
+      }
+      return res.json();
+    });
+  }
+
+  function apiPatch(path, data) {
+    if (!API_ROOT) return Promise.reject(new Error('API not configured'));
+    return fetch(API_ROOT + '/purchasing/' + path, {
+      method: 'PATCH',
       credentials: 'same-origin',
       headers: { 'X-WP-Nonce': API_NONCE, 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -298,6 +318,121 @@
       '</div>';
   }
 
+  // ─── Status transition map (mirrors SOT) ─────────────────────────────────
+  var PR_TRANSITIONS = {
+    draft:     ['review', 'held', 'cancelled'],
+    review:    ['approved', 'held', 'cancelled'],
+    approved:  ['ordered', 'held', 'cancelled'],
+    held:      ['review', 'cancelled'],
+    ordered:   [],
+    cancelled: [],
+  };
+
+  var STATUS_ACTION_META = {
+    review:    { label: 'Submit for Review', cls: 'pur-btn--outline'  },
+    approved:  { label: 'Approve',           cls: 'pur-btn--primary'  },
+    held:      { label: 'Place on Hold',     cls: 'pur-btn--warn'     },
+    ordered:   { label: 'Mark as Ordered',   cls: 'pur-btn--primary'  },
+    cancelled: { label: 'Cancel Request',    cls: 'pur-btn--danger'   },
+  };
+
+  // ─── PR detail drawer ─────────────────────────────────────────────────────
+  function handleStatusChange(id, newStatus) {
+    state.error = null;
+    apiPatch('requests/' + id, { status: newStatus })
+      .then(function () { return apiFetch('requests'); })
+      .then(function (requests) {
+        state.requests = requests || [];
+        state.notice   = 'Status updated to "' + newStatus + '".';
+        render();
+      })
+      .catch(function (err) {
+        state.error = err.message || 'Failed to update status.';
+        render();
+      });
+  }
+
+  function handleSaveNotes(id) {
+    var notes = state.draftNotes !== null ? state.draftNotes
+      : (state.requests.find(function (r) { return String(r.id) === String(id); }) || {}).notes || '';
+    state.error = null;
+    apiPatch('requests/' + id, { notes: notes })
+      .then(function () { return apiFetch('requests'); })
+      .then(function (requests) {
+        state.requests   = requests || [];
+        state.draftNotes = null;
+        state.notice     = 'Notes saved.';
+        render();
+      })
+      .catch(function (err) {
+        state.error = err.message || 'Failed to save notes.';
+        render();
+      });
+  }
+
+  function renderDrawer() {
+    if (!state.activeRequestId) return '';
+    var r = state.requests.find(function (req) {
+      return String(req.id) === String(state.activeRequestId);
+    });
+    if (!r) return '';
+
+    var total     = parseFloat(r.qty || 0) * parseFloat(r.unit_cost || 0);
+    var allowed   = PR_TRANSITIONS[r.status] || [];
+    var notesVal  = state.draftNotes !== null ? state.draftNotes : (r.notes || '');
+    var notesChanged = state.draftNotes !== null && state.draftNotes !== (r.notes || '');
+
+    var actionBtns = allowed.map(function (s) {
+      var meta = STATUS_ACTION_META[s] || { label: s, cls: 'pur-btn--outline' };
+      return '<button class="pur-btn ' + meta.cls + '" data-action="status-change" data-status="' + s + '" data-request-id="' + r.id + '">' +
+        meta.label +
+      '</button>';
+    }).join('');
+
+    var fields = [
+      ['Item',          esc(r.item_description)],
+      ['Vendor',        esc(r.vendor_name_resolved || '—')],
+      ['Qty',           esc(r.qty)],
+      ['Unit Cost',     fmt$(r.unit_cost)],
+      ['Total',         fmt$(total)],
+      ['Requested By',  esc(r.requested_by_name || '—')],
+      ['Created',       esc(fmtDate(r.created_at))],
+      ['Updated',       esc(fmtDate(r.updated_at))],
+    ].map(function (pair) {
+      return '<div class="pur-drawer-field">' +
+        '<span class="pur-drawer-label">' + pair[0] + '</span>' +
+        '<span class="pur-drawer-value">' + pair[1] + '</span>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="pur-drawer-scrim" data-action="close-drawer"></div>' +
+      '<div class="pur-drawer" role="dialog" aria-label="Purchase request details">' +
+        '<div class="pur-drawer-header">' +
+          '<div class="pur-drawer-header-left">' +
+            '<span class="pur-drawer-pr-number">' + esc(r.request_number || 'PR') + '</span>' +
+            badge(r.status) +
+          '</div>' +
+          '<button class="pur-drawer-close" data-action="close-drawer" aria-label="Close">✕</button>' +
+        '</div>' +
+        '<div class="pur-drawer-title">' + esc(r.item_description) + '</div>' +
+        '<div class="pur-drawer-body">' +
+          '<div class="pur-drawer-fields">' + fields + '</div>' +
+          '<div class="pur-drawer-notes-section">' +
+            '<label class="pur-drawer-label" for="pur-notes-input">Notes</label>' +
+            '<textarea id="pur-notes-input" class="pur-drawer-notes-input" rows="4"' +
+              ' data-action="edit-notes" data-request-id="' + r.id + '">' +
+              esc(notesVal) +
+            '</textarea>' +
+            '<button class="pur-btn pur-btn--outline pur-drawer-notes-save' +
+              (notesChanged ? '' : ' pur-btn--disabled') + '"' +
+              (notesChanged ? '' : ' disabled') +
+              ' data-action="save-notes" data-request-id="' + r.id + '">Save Notes</button>' +
+          '</div>' +
+        '</div>' +
+        (allowed.length ? '<div class="pur-drawer-footer">' + actionBtns + '</div>' : '') +
+      '</div>';
+  }
+
   // ─── Create purchase requests ─────────────────────────────────────────────
   function handleCreateRequests() {
     var selected = state.demand.filter(function (d) {
@@ -510,7 +645,7 @@
       var rows = state.requests.map(function (r) {
         var total      = parseFloat(r.qty || 0) * parseFloat(r.unit_cost || 0);
         var vendorName = r.vendor_name_resolved || '—';
-        return '<tr>' +
+        return '<tr class="pur-row-clickable" data-action="open-request" data-request-id="' + r.id + '">' +
           '<td class="pur-col-mono">' + esc(r.request_number || '—') + '</td>' +
           '<td>' + esc(r.item_description) + '</td>' +
           '<td class="pur-col-muted">' + esc(vendorName) + '</td>' +
@@ -726,7 +861,8 @@
         '<div class="pur-tab-content">' +
           renderCurrentTab() +
         '</div>' +
-      '</div>';
+      '</div>' +
+      renderDrawer();
 
     bindEvents(el);
 
@@ -807,6 +943,58 @@
       btn.addEventListener('click', handleCreateRequests);
     });
 
+    // Open PR detail drawer on row click
+    el.querySelectorAll('[data-action="open-request"]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        state.activeRequestId = row.getAttribute('data-request-id');
+        state.draftNotes      = null;
+        render();
+      });
+    });
+
+    // Close drawer
+    el.querySelectorAll('[data-action="close-drawer"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.activeRequestId = null;
+        state.draftNotes      = null;
+        render();
+      });
+    });
+
+    // Status change buttons in drawer
+    el.querySelectorAll('[data-action="status-change"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        handleStatusChange(
+          btn.getAttribute('data-request-id'),
+          btn.getAttribute('data-status')
+        );
+      });
+    });
+
+    // Notes textarea — update draftNotes without re-rendering
+    el.querySelectorAll('[data-action="edit-notes"]').forEach(function (ta) {
+      var reqId    = ta.getAttribute('data-request-id');
+      var origNotes = (state.requests.find(function (r) { return String(r.id) === String(reqId); }) || {}).notes || '';
+      ta.addEventListener('input', function () {
+        state.draftNotes = ta.value;
+        // Enable/disable save button without full re-render
+        var saveBtn = ta.closest('.pur-drawer-notes-section') &&
+                      ta.closest('.pur-drawer-notes-section').querySelector('[data-action="save-notes"]');
+        if (saveBtn) {
+          var changed = ta.value !== origNotes;
+          saveBtn.disabled = !changed;
+          saveBtn.classList.toggle('pur-btn--disabled', !changed);
+        }
+      });
+    });
+
+    // Save notes button
+    el.querySelectorAll('[data-action="save-notes"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        handleSaveNotes(btn.getAttribute('data-request-id'));
+      });
+    });
+
     // Set indeterminate state on select-all after binding
     var selectAll = el.querySelector('[data-action="select-all-demand"]');
     if (selectAll) {
@@ -822,6 +1010,13 @@
 
   // ─── Boot ─────────────────────────────────────────────────────────────────
   function boot() {
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && state.activeRequestId) {
+        state.activeRequestId = null;
+        state.draftNotes      = null;
+        render();
+      }
+    });
     render();
     loadAll();
   }

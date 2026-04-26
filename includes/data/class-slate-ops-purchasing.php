@@ -6,6 +6,20 @@ class Slate_Ops_Purchasing {
   // SOT status values for purchase requests
   const PR_STATUSES = ['draft', 'review', 'approved', 'held', 'ordered', 'cancelled'];
 
+  // Allowed forward transitions per SOT
+  const PR_TRANSITIONS = [
+    'draft'     => ['review', 'held', 'cancelled'],
+    'review'    => ['approved', 'held', 'cancelled'],
+    'approved'  => ['ordered', 'held', 'cancelled'],
+    'held'      => ['review', 'cancelled'],
+    'ordered'   => [],
+    'cancelled' => [],
+  ];
+
+  public static function allowed_transitions($status) {
+    return self::PR_TRANSITIONS[$status] ?? [];
+  }
+
   // ── Table helpers ──────────────────────────────────────────────────────────
 
   private static function t($name) {
@@ -110,6 +124,15 @@ class Slate_Ops_Purchasing {
     return $wpdb->update(
       self::t('requests'),
       ['status' => $status, 'updated_at' => Slate_Ops_Utils::now_gmt()],
+      ['id' => (int) $id]
+    );
+  }
+
+  public static function update_request_notes($id, $notes) {
+    global $wpdb;
+    return $wpdb->update(
+      self::t('requests'),
+      ['notes' => $notes, 'updated_at' => Slate_Ops_Utils::now_gmt()],
       ['id' => (int) $id]
     );
   }
