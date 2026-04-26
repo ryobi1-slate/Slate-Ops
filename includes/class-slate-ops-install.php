@@ -509,6 +509,8 @@ KEY awaiting_idx (awaiting_direction)
       contact_phone VARCHAR(50) NULL,
       lead_time_days SMALLINT UNSIGNED NOT NULL DEFAULT 0,
       payment_terms VARCHAR(50) NULL,
+      freight_terms VARCHAR(50) NULL,
+      min_order_amount DECIMAL(19,4) NULL,
       status VARCHAR(20) NOT NULL DEFAULT 'active',
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL,

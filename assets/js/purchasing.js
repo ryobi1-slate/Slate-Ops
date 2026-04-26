@@ -34,6 +34,10 @@
       vendor:  'all',
     },
     activeRequestId: null,
+    activeVendorId:  null,
+    activePoId:      null,
+    poLines:         {},
+    poLinesLoading:  false,
     draftNotes:      null,   // notes textarea value while drawer is open
   };
 
@@ -157,6 +161,18 @@
     return n + (n === 1 ? ' day' : ' days');
   }
 
+  function vendorFlags(v) {
+    var flags = [];
+    if (!v.contact_email)                flags.push('Missing email');
+    if (!v.contact_phone)                flags.push('Missing phone');
+    if (!parseInt(v.lead_time_days, 10)) flags.push('Missing lead time');
+    if (!v.payment_terms)                flags.push('Missing payment terms');
+    if (!v.freight_terms)                flags.push('Missing freight terms');
+    if (v.min_order_amount == null)      flags.push('No minimum order set');
+    if (v.status !== 'active')           flags.push('Vendor is ' + (v.status || 'unknown'));
+    return flags;
+  }
+
   function badge(status) {
     var labels = {
       // Purchase request statuses (SOT)
@@ -176,6 +192,8 @@
       // Vendor statuses
       active:       'Active',
       inactive:     'Inactive',
+      hold:         'On Hold',
+      missing_info: 'Missing Info',
     };
     return '<span class="pur-badge pur-badge--' + esc(status) + '">' + esc(labels[status] || status) + '</span>';
   }
@@ -433,6 +451,128 @@
       '</div>';
   }
 
+  // ─── Vendor detail drawer ────────────────────────────────────────────────
+  function renderVendorDrawer() {
+    if (!state.activeVendorId) return '';
+    var v = state.vendors.find(function (vv) {
+      return String(vv.id) === String(state.activeVendorId);
+    });
+    if (!v) return '';
+
+    var flags = vendorFlags(v);
+    var warningsHtml = !flags.length ? '' :
+      '<div class="pur-drawer-warnings">' +
+      flags.map(function (f) {
+        return '<div class="pur-drawer-warning-item">' +
+          '<span class="material-symbols-outlined">warning</span>' +
+          esc(f) +
+        '</div>';
+      }).join('') +
+      '</div>';
+
+    var fields = [
+      ['Email',         esc(v.contact_email || '—')],
+      ['Phone',         esc(v.contact_phone || '—')],
+      ['Lead Time',     esc(fmtLeadTime(v.lead_time_days))],
+      ['Payment Terms', esc(v.payment_terms || '—')],
+      ['Freight Terms', esc(v.freight_terms || '—')],
+      ['Min Order',     v.min_order_amount != null ? fmt$(v.min_order_amount) : '—'],
+    ].map(function (pair) {
+      return '<div class="pur-drawer-field">' +
+        '<span class="pur-drawer-label">' + pair[0] + '</span>' +
+        '<span class="pur-drawer-value">' + pair[1] + '</span>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="pur-drawer-scrim" data-action="close-vendor-drawer"></div>' +
+      '<div class="pur-drawer" role="dialog" aria-label="Vendor details">' +
+        '<div class="pur-drawer-header">' +
+          '<div class="pur-drawer-header-left">' +
+            badge(v.status) +
+            (flags.length ? badge('missing_info') : '') +
+          '</div>' +
+          '<button class="pur-drawer-close" data-action="close-vendor-drawer" aria-label="Close">✕</button>' +
+        '</div>' +
+        '<div class="pur-drawer-title">' + esc(v.name) + '</div>' +
+        '<div class="pur-drawer-body">' +
+          warningsHtml +
+          '<div class="pur-drawer-fields">' + fields + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // ─── PO detail drawer ─────────────────────────────────────────────────────
+  function renderPoDrawer() {
+    if (!state.activePoId) return '';
+    var p = state.openPos.find(function (po) {
+      return String(po.id) === String(state.activePoId);
+    });
+    if (!p) return '';
+
+    var source = p.bc_po_id ? 'Business Central' : 'Manual';
+    var fieldPairs = [
+      ['Ordered',    esc(fmtDate(p.ordered_at))],
+      ['Expected',   esc(fmtDate(p.expected_date))],
+      ['Total',      fmt$(p.total_value || 0)],
+      ['Source',     esc(source)],
+    ];
+    if (p.notes) fieldPairs.push(['Notes', esc(p.notes)]);
+    var fieldsHtml = fieldPairs.map(function (pair) {
+      return '<div class="pur-drawer-field">' +
+        '<span class="pur-drawer-label">' + pair[0] + '</span>' +
+        '<span class="pur-drawer-value">' + pair[1] + '</span>' +
+      '</div>';
+    }).join('');
+
+    var linesHtml;
+    if (state.poLinesLoading) {
+      linesHtml = renderLoading();
+    } else {
+      var lines = state.poLines[state.activePoId];
+      if (!lines || !lines.length) {
+        linesHtml = renderEmpty('receipt_long', 'No line items', 'No purchase order lines are recorded locally.');
+      } else {
+        var lineRows = lines.map(function (l) {
+          var lineTotal = parseFloat(l.qty_ordered || 0) * parseFloat(l.unit_cost || 0);
+          return '<tr>' +
+            '<td>' + esc(l.item_description) + '</td>' +
+            '<td class="pur-col-num">' + esc(l.qty_ordered) + '</td>' +
+            '<td class="pur-col-num">' + esc(l.qty_received) + '</td>' +
+            '<td class="pur-col-num">' + fmt$(l.unit_cost) + '</td>' +
+            '<td class="pur-col-num">' + fmt$(lineTotal) + '</td>' +
+          '</tr>';
+        }).join('');
+        linesHtml = '<div class="pur-table-wrap"><table class="pur-table">' +
+          '<thead><tr>' +
+            '<th>Item</th>' +
+            '<th style="text-align:right">Ordered</th>' +
+            '<th style="text-align:right">Received</th>' +
+            '<th style="text-align:right">Unit Cost</th>' +
+            '<th style="text-align:right">Total</th>' +
+          '</tr></thead>' +
+          '<tbody>' + lineRows + '</tbody>' +
+        '</table></div>';
+      }
+    }
+
+    return '<div class="pur-drawer-scrim" data-action="close-po-drawer"></div>' +
+      '<div class="pur-drawer" role="dialog" aria-label="Purchase order details">' +
+        '<div class="pur-drawer-header">' +
+          '<div class="pur-drawer-header-left">' +
+            '<span class="pur-drawer-pr-number">' + esc(p.po_number || 'PO') + '</span>' +
+            badge(p.status) +
+          '</div>' +
+          '<button class="pur-drawer-close" data-action="close-po-drawer" aria-label="Close">✕</button>' +
+        '</div>' +
+        '<div class="pur-drawer-title">' + esc(p.vendor_name || 'Purchase Order') + '</div>' +
+        '<div class="pur-drawer-body">' +
+          '<div class="pur-drawer-fields">' + fieldsHtml + '</div>' +
+          '<div class="pur-drawer-section-title">Line Items</div>' +
+          linesHtml +
+        '</div>' +
+      '</div>';
+  }
+
   // ─── Create purchase requests ─────────────────────────────────────────────
   function handleCreateRequests() {
     var selected = state.demand.filter(function (d) {
@@ -682,23 +822,50 @@
   function renderVendors() {
     if (state.loading) return renderLoading();
 
+    var totalV    = state.vendors.length;
+    var activeV   = state.vendors.filter(function (v) { return v.status === 'active'; }).length;
+    var inactiveV = totalV - activeV;
+    var missingV  = state.vendors.filter(function (v) { return vendorFlags(v).length > 0; }).length;
+
+    var countBar = totalV ? (
+      '<div class="pur-vendor-counts">' +
+        '<span class="pur-count-chip pur-count-chip--ok">' +
+          '<span class="material-symbols-outlined">check_circle</span>' + activeV + ' active' +
+        '</span>' +
+        '<span class="pur-count-chip pur-count-chip--muted">' +
+          '<span class="material-symbols-outlined">block</span>' + inactiveV + ' inactive / on hold' +
+        '</span>' +
+        (missingV ? (
+          '<span class="pur-count-chip pur-count-chip--warn">' +
+            '<span class="material-symbols-outlined">warning</span>' + missingV + ' missing info' +
+          '</span>'
+        ) : '') +
+      '</div>'
+    ) : '';
+
     var body;
-    if (!state.vendors.length) {
+    if (!totalV) {
       body = renderEmpty('storefront', 'No vendors', 'Vendors will appear here once added.');
     } else {
       var rows = state.vendors.map(function (v) {
-        return '<tr>' +
-          '<td class="pur-col-mono">' + esc(v.id) + '</td>' +
+        var flags   = vendorFlags(v);
+        var flagHtml = flags.length
+          ? '<span class="pur-vendor-warn-chip" title="' + esc(flags.join(', ')) + '">' +
+              '<span class="material-symbols-outlined">warning</span>' + flags.length +
+            '</span>'
+          : '<span class="pur-vendor-ok-chip"><span class="material-symbols-outlined">check_circle</span></span>';
+        return '<tr class="pur-row-clickable" data-action="open-vendor" data-vendor-id="' + esc(v.id) + '">' +
           '<td style="font-weight:500">' + esc(v.name) + '</td>' +
           '<td class="pur-col-muted">' + esc(v.contact_email || v.contact_phone || '—') + '</td>' +
           '<td class="pur-col-muted">' + esc(fmtLeadTime(v.lead_time_days)) + '</td>' +
           '<td class="pur-col-muted">' + esc(v.payment_terms || '—') + '</td>' +
           '<td>' + badge(v.status) + '</td>' +
+          '<td>' + flagHtml + '</td>' +
         '</tr>';
       }).join('');
       body = '<div class="pur-table-wrap"><table class="pur-table">' +
         '<thead><tr>' +
-          '<th>ID</th><th>Name</th><th>Contact</th><th>Lead Time</th><th>Terms</th><th>Status</th>' +
+          '<th>Name</th><th>Contact</th><th>Lead Time</th><th>Terms</th><th>Status</th><th>Flags</th>' +
         '</tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table></div>';
@@ -707,8 +874,9 @@
     return '<div class="pur-card">' +
       '<div class="pur-card-header">' +
         '<h2 class="pur-card-title">Vendors</h2>' +
-        '<span class="pur-card-meta">' + state.vendors.filter(function (v) { return v.status === 'active'; }).length + ' active</span>' +
+        '<span class="pur-card-meta">' + activeV + ' of ' + totalV + ' active</span>' +
       '</div>' +
+      countBar +
       body +
     '</div>';
   }
@@ -722,7 +890,7 @@
       body = renderEmpty('receipt_long', 'No open purchase orders', 'Purchase orders will appear here once created.');
     } else {
       var rows = state.openPos.map(function (p) {
-        return '<tr>' +
+        return '<tr class="pur-row-clickable" data-action="open-po" data-po-id="' + esc(p.id) + '">' +
           '<td class="pur-col-mono">' + esc(p.po_number) + '</td>' +
           '<td style="font-weight:500">' + esc(p.vendor_name || '—') + '</td>' +
           '<td class="pur-col-num pur-col-muted">' + esc(p.line_count || 0) + '</td>' +
@@ -862,7 +1030,9 @@
           renderCurrentTab() +
         '</div>' +
       '</div>' +
-      renderDrawer();
+      renderDrawer() +
+      renderVendorDrawer() +
+      renderPoDrawer();
 
     bindEvents(el);
 
@@ -946,6 +1116,8 @@
     // Open PR detail drawer on row click
     el.querySelectorAll('[data-action="open-request"]').forEach(function (row) {
       row.addEventListener('click', function () {
+        state.activeVendorId  = null;
+        state.activePoId      = null;
         state.activeRequestId = row.getAttribute('data-request-id');
         state.draftNotes      = null;
         render();
@@ -988,6 +1160,58 @@
       });
     });
 
+    // Open vendor drawer
+    el.querySelectorAll('[data-action="open-vendor"]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        state.activeRequestId = null;
+        state.activePoId      = null;
+        state.activeVendorId  = row.getAttribute('data-vendor-id');
+        render();
+      });
+    });
+
+    // Close vendor drawer
+    el.querySelectorAll('[data-action="close-vendor-drawer"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.activeVendorId = null;
+        render();
+      });
+    });
+
+    // Open PO drawer — fetches lines on first open; caches thereafter
+    el.querySelectorAll('[data-action="open-po"]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var id = row.getAttribute('data-po-id');
+        state.activeRequestId = null;
+        state.activeVendorId  = null;
+        state.activePoId      = id;
+        var needsLoad = !state.poLines.hasOwnProperty(id);
+        if (needsLoad) state.poLinesLoading = true;
+        render();
+        if (needsLoad) {
+          apiFetch('orders/' + id + '/lines')
+            .then(function (lines) {
+              state.poLines[id]    = lines || [];
+              state.poLinesLoading = false;
+              render();
+            })
+            .catch(function () {
+              state.poLines[id]    = [];
+              state.poLinesLoading = false;
+              render();
+            });
+        }
+      });
+    });
+
+    // Close PO drawer
+    el.querySelectorAll('[data-action="close-po-drawer"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.activePoId = null;
+        render();
+      });
+    });
+
     // Save notes button
     el.querySelectorAll('[data-action="save-notes"]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -1011,8 +1235,10 @@
   // ─── Boot ─────────────────────────────────────────────────────────────────
   function boot() {
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && state.activeRequestId) {
+      if (e.key === 'Escape' && (state.activeRequestId || state.activeVendorId || state.activePoId)) {
         state.activeRequestId = null;
+        state.activeVendorId  = null;
+        state.activePoId      = null;
         state.draftNotes      = null;
         render();
       }

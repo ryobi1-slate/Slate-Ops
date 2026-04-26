@@ -966,3 +966,88 @@
   background: var(--slate-surface-tint);
   flex-shrink: 0;
 }
+
+/* ─── 13. Phase 4 — Vendor readiness + PO drawer ─── */
+
+/* Missing badge variants for existing statuses */
+.pur-badge--review    { background: var(--slate-arches-wash);      color: var(--slate-arches-ink); }
+.pur-badge--held      { background: var(--slate-arches-wash);      color: var(--slate-arches-ink); }
+.pur-badge--ordered   { background: var(--slate-redwood-wash);     color: var(--slate-redwood); }
+.pur-badge--cancelled { background: var(--slate-flag-wash, #fef2f2); color: var(--slate-flag, #b91c1c); }
+.pur-badge--received  { background: var(--slate-redwood-wash);     color: var(--slate-redwood); }
+.pur-badge--closed    { background: var(--slate-sage-wash);        color: var(--slate-ink-subtle); }
+.pur-badge--hold      { background: var(--slate-arches-wash);      color: var(--slate-arches-ink); }
+.pur-badge--missing_info { background: var(--slate-arches-wash);   color: var(--slate-arches-ink); }
+
+/* Vendor summary count chips */
+.pur-vendor-counts {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+
+.pur-count-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+}
+
+.pur-count-chip .material-symbols-outlined { font-size: 14px; }
+
+.pur-count-chip--ok   { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.pur-count-chip--muted { background: var(--slate-surface-tint); color: var(--slate-ink-muted); }
+.pur-count-chip--warn { background: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+
+/* Inline vendor flag chip in table cell */
+.pur-vendor-warn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--slate-arches-ink);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+}
+
+.pur-vendor-warn-chip .material-symbols-outlined { font-size: 14px; }
+
+.pur-vendor-ok-chip { color: var(--slate-redwood); }
+.pur-vendor-ok-chip .material-symbols-outlined { font-size: 14px; }
+
+/* Warning list inside vendor drawer body */
+.pur-drawer-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--slate-arches-wash);
+  border: 1px solid var(--slate-arches);
+  border-radius: var(--slate-radius-md);
+}
+
+.pur-drawer-warning-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  color: var(--slate-arches-ink);
+}
+
+.pur-drawer-warning-item .material-symbols-outlined { font-size: 14px; }
+
+/* Section title inside drawer body (used for "Line Items" in PO drawer) */
+.pur-drawer-section-title {
+  font-size: var(--slate-text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--slate-ink-subtle);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
