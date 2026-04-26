@@ -102,7 +102,7 @@
 
   function fmtDate(dt) {
     if (!dt) return '—';
-    var d = new Date(String(dt).replace(' ', 'T'));
+    var d = new Date(String(dt).replace(' ', 'T') + 'Z');
     if (isNaN(d.getTime())) return String(dt);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
@@ -284,7 +284,7 @@
             d.description.toLowerCase().indexOf(q) === -1) return false;
       }
       if (f.urgency !== 'all' && d.demand_level !== f.urgency) return false;
-      if (f.vendor !== 'all' && (d.preferred_vendor || '') !== f.vendor) return false;
+      if (f.vendor !== 'all' && (d.preferred_vendor_name || '') !== f.vendor) return false;
       return true;
     });
   }
@@ -292,7 +292,7 @@
   function renderDemandFilters() {
     // Collect unique vendors from demand items for the vendor select
     var vendorSet = {};
-    state.demand.forEach(function (d) { if (d.preferred_vendor) vendorSet[d.preferred_vendor] = true; });
+    state.demand.forEach(function (d) { if (d.preferred_vendor_name) vendorSet[d.preferred_vendor_name] = true; });
     var vendorOptions = Object.keys(vendorSet).sort().map(function (v) {
       return '<option value="' + esc(v) + '"' + (state.filters.vendor === v ? ' selected' : '') + '>' + esc(v) + '</option>';
     }).join('');
@@ -339,7 +339,7 @@
         return '<tr' + (needsReorder ? ' class="pur-row-alert"' : '') + '>' +
           '<td class="pur-col-mono">' + esc(d.part_number) + '</td>' +
           '<td>' + esc(d.description) + '</td>' +
-          '<td class="pur-col-muted">' + esc(d.preferred_vendor || '—') + '</td>' +
+          '<td class="pur-col-muted">' + esc(d.preferred_vendor_name || '—') + '</td>' +
           '<td class="pur-col-num' + (needsReorder ? ' pur-col-alert' : '') + '">' + onHand + '</td>' +
           '<td class="pur-col-num pur-col-muted">' + reorder + '</td>' +
           '<td class="pur-col-num">' +
@@ -580,6 +580,15 @@
     var el = document.getElementById('ops-view');
     if (!el) return;
 
+    // Save focus state before innerHTML replacement destroys the active element.
+    var focusedFilter = null, selStart = 0, selEnd = 0;
+    var ae = document.activeElement;
+    if (ae && ae.getAttribute('data-filter')) {
+      focusedFilter = ae.getAttribute('data-filter');
+      selStart = ae.selectionStart || 0;
+      selEnd   = ae.selectionEnd   || 0;
+    }
+
     setPageTitle('Purchasing');
     setActiveNav();
 
@@ -599,6 +608,17 @@
       '</div>';
 
     bindEvents(el);
+
+    // Restore focus and cursor position for active filter inputs.
+    if (focusedFilter) {
+      var target = el.querySelector('[data-filter="' + focusedFilter + '"]');
+      if (target) {
+        target.focus();
+        if (target.setSelectionRange) {
+          try { target.setSelectionRange(selStart, selEnd); } catch (e) {}
+        }
+      }
+    }
   }
 
   // ─── Event binding ────────────────────────────────────────────────────────
@@ -619,14 +639,10 @@
       btn.addEventListener('click', function () { state.notice = null; render(); });
     });
 
-    // Demand filters
+    // Demand filters — input fires for both <input> and <select> in all modern browsers.
     el.querySelectorAll('[data-filter]').forEach(function (input) {
       var key = input.getAttribute('data-filter');
       input.addEventListener('input', function () {
-        state.filters[key] = input.value;
-        render();
-      });
-      input.addEventListener('change', function () {
         state.filters[key] = input.value;
         render();
       });

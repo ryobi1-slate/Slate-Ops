@@ -36,8 +36,15 @@ class Slate_Ops_Purchasing {
 
   public static function list_items() {
     global $wpdb;
-    $t = self::t('items');
-    return $wpdb->get_results("SELECT * FROM $t ORDER BY part_number ASC", ARRAY_A) ?: [];
+    $ti = self::t('items');
+    $tv = self::t('vendors');
+    return $wpdb->get_results(
+      "SELECT i.*, v.name AS preferred_vendor_name
+       FROM $ti i
+       LEFT JOIN $tv v ON i.preferred_vendor_id = v.id
+       ORDER BY i.part_number ASC",
+      ARRAY_A
+    ) ?: [];
   }
 
   public static function get_item($id) {
@@ -250,8 +257,10 @@ class Slate_Ops_Purchasing {
       ['name' => 'MotorPro Distribution', 'contact_email' => 'orders@motorpro.example',        'lead_time_days' => 7, 'payment_terms' => 'Net 45', 'status' => 'inactive'],
     ];
 
+    $vendor_ids = [];
     foreach ($vendors as $v) {
       $wpdb->insert($tv, array_merge($v, ['created_at' => $now, 'updated_at' => $now]));
+      $vendor_ids[$v['name']] = (int) $wpdb->insert_id;
     }
 
     $items = [
@@ -266,6 +275,9 @@ class Slate_Ops_Purchasing {
     ];
 
     foreach ($items as $item) {
+      $vendor_name = $item['preferred_vendor'];
+      unset($item['preferred_vendor']);
+      $item['preferred_vendor_id'] = $vendor_ids[$vendor_name] ?? null;
       $wpdb->insert($ti, array_merge($item, ['created_at' => $now, 'updated_at' => $now]));
     }
 
