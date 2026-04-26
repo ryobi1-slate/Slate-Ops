@@ -6,6 +6,20 @@ class Slate_Ops_Purchasing {
   // SOT status values for purchase requests
   const PR_STATUSES = ['draft', 'review', 'approved', 'held', 'ordered', 'cancelled'];
 
+  // Allowed forward transitions per SOT
+  const PR_TRANSITIONS = [
+    'draft'     => ['review', 'held', 'cancelled'],
+    'review'    => ['approved', 'held', 'cancelled'],
+    'approved'  => ['ordered', 'held', 'cancelled'],
+    'held'      => ['review', 'cancelled'],
+    'ordered'   => [],
+    'cancelled' => [],
+  ];
+
+  public static function allowed_transitions($status) {
+    return self::PR_TRANSITIONS[$status] ?? [];
+  }
+
   // ── Table helpers ──────────────────────────────────────────────────────────
 
   private static function t($name) {
@@ -81,6 +95,26 @@ class Slate_Ops_Purchasing {
     return $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE id = %d", (int) $id), ARRAY_A);
   }
 
+  public static function get_request_resolved($id) {
+    global $wpdb;
+    $tr = self::t('requests');
+    $tv = self::t('vendors');
+    $row = $wpdb->get_row(
+      $wpdb->prepare(
+        "SELECT r.*, v.name AS vendor_name_resolved
+         FROM $tr r
+         LEFT JOIN $tv v ON r.vendor_id = v.id
+         WHERE r.id = %d",
+        (int) $id
+      ),
+      ARRAY_A
+    );
+    if ($row) {
+      $row['requested_by_name'] = self::resolve_user_name($row['requested_by'] ?? null);
+    }
+    return $row;
+  }
+
   public static function create_request($data) {
     global $wpdb;
     $now = Slate_Ops_Utils::now_gmt();
@@ -110,6 +144,15 @@ class Slate_Ops_Purchasing {
     return $wpdb->update(
       self::t('requests'),
       ['status' => $status, 'updated_at' => Slate_Ops_Utils::now_gmt()],
+      ['id' => (int) $id]
+    );
+  }
+
+  public static function update_request_notes($id, $notes) {
+    global $wpdb;
+    return $wpdb->update(
+      self::t('requests'),
+      ['notes' => $notes, 'updated_at' => Slate_Ops_Utils::now_gmt()],
       ['id' => (int) $id]
     );
   }
