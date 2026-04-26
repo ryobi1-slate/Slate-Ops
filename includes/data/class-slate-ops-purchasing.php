@@ -3,6 +3,9 @@ if (!defined('ABSPATH')) exit;
 
 class Slate_Ops_Purchasing {
 
+  // SOT status values for purchase requests
+  const PR_STATUSES = ['draft', 'review', 'approved', 'held', 'ordered', 'cancelled'];
+
   // ── Table helpers ──────────────────────────────────────────────────────────
 
   private static function t($name) {
@@ -29,22 +32,6 @@ class Slate_Ops_Purchasing {
     return $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE id = %d", (int) $id), ARRAY_A);
   }
 
-  public static function create_vendor($data) {
-    global $wpdb;
-    $now = Slate_Ops_Utils::now_gmt();
-    $wpdb->insert(self::t('vendors'), array_merge($data, [
-      'created_at' => $now,
-      'updated_at' => $now,
-    ]));
-    return $wpdb->insert_id;
-  }
-
-  public static function update_vendor($id, $data) {
-    global $wpdb;
-    $data['updated_at'] = Slate_Ops_Utils::now_gmt();
-    return $wpdb->update(self::t('vendors'), $data, ['id' => (int) $id]);
-  }
-
   // ── Items ──────────────────────────────────────────────────────────────────
 
   public static function list_items() {
@@ -57,22 +44,6 @@ class Slate_Ops_Purchasing {
     global $wpdb;
     $t = self::t('items');
     return $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE id = %d", (int) $id), ARRAY_A);
-  }
-
-  public static function create_item($data) {
-    global $wpdb;
-    $now = Slate_Ops_Utils::now_gmt();
-    $wpdb->insert(self::t('items'), array_merge($data, [
-      'created_at' => $now,
-      'updated_at' => $now,
-    ]));
-    return $wpdb->insert_id;
-  }
-
-  public static function update_item($id, $data) {
-    global $wpdb;
-    $data['updated_at'] = Slate_Ops_Utils::now_gmt();
-    return $wpdb->update(self::t('items'), $data, ['id' => (int) $id]);
   }
 
   // ── Purchase Requests ──────────────────────────────────────────────────────
@@ -126,8 +97,7 @@ class Slate_Ops_Purchasing {
 
   public static function update_request_status($id, $status) {
     global $wpdb;
-    $allowed = ['draft', 'pending', 'approved', 'rejected'];
-    if (!in_array($status, $allowed, true)) {
+    if (!in_array($status, self::PR_STATUSES, true)) {
       return false;
     }
     return $wpdb->update(
@@ -181,8 +151,8 @@ class Slate_Ops_Purchasing {
     $tv = self::t('vendors');
     $tl = self::t('order_lines');
 
-    $open_requests        = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tr WHERE status NOT IN ('rejected')");
-    $pending_approval     = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tr WHERE status = 'pending'");
+    $open_requests        = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tr WHERE status NOT IN ('cancelled')");
+    $pending_review       = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tr WHERE status = 'review'");
     $items_tracked        = (int) $wpdb->get_var("SELECT COUNT(*) FROM $ti");
     $items_below_reorder  = (int) $wpdb->get_var("SELECT COUNT(*) FROM $ti WHERE on_hand <= reorder_point AND reorder_point > 0");
     $active_vendors       = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tv WHERE status = 'active'");
@@ -204,8 +174,22 @@ class Slate_Ops_Purchasing {
       ARRAY_A
     ) ?: [];
 
-    $icon_map  = ['approved' => 'check_circle', 'rejected' => 'cancel', 'pending' => 'edit_note', 'draft' => 'draft'];
-    $label_map = ['draft' => 'created as draft', 'pending' => 'submitted for approval', 'approved' => 'approved', 'rejected' => 'rejected'];
+    $icon_map  = [
+      'approved'  => 'check_circle',
+      'cancelled' => 'cancel',
+      'review'    => 'edit_note',
+      'ordered'   => 'local_shipping',
+      'held'      => 'pause_circle',
+      'draft'     => 'draft',
+    ];
+    $label_map = [
+      'draft'     => 'created as draft',
+      'review'    => 'submitted for review',
+      'approved'  => 'approved',
+      'held'      => 'placed on hold',
+      'ordered'   => 'marked as ordered',
+      'cancelled' => 'cancelled',
+    ];
 
     $recent_activity = array_map(function ($r) use ($icon_map, $label_map) {
       return [
@@ -229,7 +213,7 @@ class Slate_Ops_Purchasing {
 
     return [
       'open_requests'       => $open_requests,
-      'pending_approval'    => $pending_approval,
+      'pending_review'      => $pending_review,
       'items_below_reorder' => $items_below_reorder,
       'items_tracked'       => $items_tracked,
       'items_on_order'      => $items_on_order,
@@ -239,6 +223,53 @@ class Slate_Ops_Purchasing {
       'recent_activity'     => $recent_activity,
       'open_po_summary'     => $open_po_summary,
     ];
+  }
+
+  // ── Seed sample data ───────────────────────────────────────────────────────
+
+  public static function maybe_seed() {
+    if (get_option('slate_ops_pur_seeded')) return;
+
+    global $wpdb;
+    $tv = self::t('vendors');
+    $ti = self::t('items');
+
+    // Only seed when both tables are empty.
+    if ((int) $wpdb->get_var("SELECT COUNT(*) FROM $tv") > 0) {
+      update_option('slate_ops_pur_seeded', true);
+      return;
+    }
+
+    $now = Slate_Ops_Utils::now_gmt();
+
+    $vendors = [
+      ['name' => 'SlateAuto Supply',      'contact_email' => 'orders@slateauto.example',       'lead_time_days' => 2, 'payment_terms' => 'Net 30', 'status' => 'active'],
+      ['name' => 'Parts Direct',           'contact_email' => 'supply@partsdirect.example',     'lead_time_days' => 3, 'payment_terms' => 'Net 15', 'status' => 'active'],
+      ['name' => 'TireHub',                'contact_email' => 'wholesale@tirehub.example',      'lead_time_days' => 5, 'payment_terms' => 'Net 30', 'status' => 'active'],
+      ['name' => 'AutoParts Plus',         'contact_email' => 'accounts@autopartsplus.example', 'lead_time_days' => 4, 'payment_terms' => 'Net 30', 'status' => 'active'],
+      ['name' => 'MotorPro Distribution', 'contact_email' => 'orders@motorpro.example',        'lead_time_days' => 7, 'payment_terms' => 'Net 45', 'status' => 'inactive'],
+    ];
+
+    foreach ($vendors as $v) {
+      $wpdb->insert($tv, array_merge($v, ['created_at' => $now, 'updated_at' => $now]));
+    }
+
+    $items = [
+      ['part_number' => 'B-1042', 'description' => 'Brake Pad Set (Front)', 'preferred_vendor' => 'SlateAuto Supply', 'on_hand' => 8,  'reorder_point' => 10, 'unit_cost' => 28.50,  'demand_level' => 'high',   'forecasted_need' => 24, 'suggested_order' => 20],
+      ['part_number' => 'L-0318', 'description' => 'Oil Filter',             'preferred_vendor' => 'SlateAuto Supply', 'on_hand' => 14, 'reorder_point' => 20, 'unit_cost' => 4.25,   'demand_level' => 'high',   'forecasted_need' => 60, 'suggested_order' => 50],
+      ['part_number' => 'T-2201', 'description' => 'Tire (P225/60R18)',      'preferred_vendor' => 'TireHub',          'on_hand' => 2,  'reorder_point' => 4,  'unit_cost' => 145.00, 'demand_level' => 'high',   'forecasted_need' => 12, 'suggested_order' => 10],
+      ['part_number' => 'F-0071', 'description' => 'Air Filter',             'preferred_vendor' => 'AutoParts Plus',   'on_hand' => 6,  'reorder_point' => 8,  'unit_cost' => 12.00,  'demand_level' => 'medium', 'forecasted_need' => 18, 'suggested_order' => 15],
+      ['part_number' => 'S-0885', 'description' => 'Spark Plug Set',         'preferred_vendor' => 'AutoParts Plus',   'on_hand' => 3,  'reorder_point' => 6,  'unit_cost' => 22.00,  'demand_level' => 'high',   'forecasted_need' => 20, 'suggested_order' => 20],
+      ['part_number' => 'W-1124', 'description' => 'Wiper Blade',            'preferred_vendor' => 'Parts Direct',     'on_hand' => 12, 'reorder_point' => 15, 'unit_cost' => 8.50,   'demand_level' => 'medium', 'forecasted_need' => 30, 'suggested_order' => 20],
+      ['part_number' => 'C-4410', 'description' => 'Cabin Air Filter',       'preferred_vendor' => 'Parts Direct',     'on_hand' => 4,  'reorder_point' => 5,  'unit_cost' => 14.00,  'demand_level' => 'medium', 'forecasted_need' => 16, 'suggested_order' => 15],
+      ['part_number' => 'B-0093', 'description' => 'Battery (Group 35)',     'preferred_vendor' => 'Parts Direct',     'on_hand' => 1,  'reorder_point' => 3,  'unit_cost' => 94.00,  'demand_level' => 'high',   'forecasted_need' => 8,  'suggested_order' => 10],
+    ];
+
+    foreach ($items as $item) {
+      $wpdb->insert($ti, array_merge($item, ['created_at' => $now, 'updated_at' => $now]));
+    }
+
+    update_option('slate_ops_pur_seeded', true);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

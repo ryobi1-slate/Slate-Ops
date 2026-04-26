@@ -522,6 +522,7 @@ KEY awaiting_idx (awaiting_direction)
       bc_item_id VARCHAR(64) NULL,
       part_number VARCHAR(64) NOT NULL,
       description VARCHAR(255) NOT NULL,
+      preferred_vendor VARCHAR(255) NULL,
       on_hand INT NOT NULL DEFAULT 0,
       reorder_point INT NOT NULL DEFAULT 0,
       unit_cost DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
