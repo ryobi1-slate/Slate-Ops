@@ -242,7 +242,8 @@ class Slate_Ops_Purchasing {
     $ti = self::t('items');
 
     // Only seed when both tables are empty.
-    if ((int) $wpdb->get_var("SELECT COUNT(*) FROM $tv") > 0) {
+    if ((int) $wpdb->get_var("SELECT COUNT(*) FROM $tv") > 0 ||
+        (int) $wpdb->get_var("SELECT COUNT(*) FROM $ti") > 0) {
       update_option('slate_ops_pur_seeded', true);
       return;
     }

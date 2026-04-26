@@ -64,25 +64,30 @@
     state.error   = null;
     render();
 
-    Promise.all([
+    Promise.allSettled([
       apiFetch('overview'),
       apiFetch('items'),
       apiFetch('requests'),
       apiFetch('vendors'),
       apiFetch('orders'),
     ]).then(function (results) {
-      state.summary  = results[0];
-      state.demand   = results[1];
-      state.requests = results[2];
-      state.vendors  = results[3];
-      state.openPos  = results[4];
-      state.activity = (results[0] && results[0].recent_activity) ? results[0].recent_activity : [];
+      var errors = [];
+      function val(r, fallback) {
+        if (r.status === 'fulfilled') return r.value;
+        errors.push(r.reason && r.reason.message ? r.reason.message : 'A request failed');
+        return fallback;
+      }
+      state.summary  = val(results[0], null);
+      state.demand   = val(results[1], []);
+      state.requests = val(results[2], []);
+      state.vendors  = val(results[3], []);
+      state.openPos  = val(results[4], []);
+      state.activity = (state.summary && state.summary.recent_activity) ? state.summary.recent_activity : [];
       state.loading  = false;
       _loaded.all    = true;
-      render();
-    }).catch(function (err) {
-      state.loading = false;
-      state.error   = err.message || 'Failed to load purchasing data';
+      if (errors.length) {
+        state.error = 'Some data failed to load: ' + errors.join('; ');
+      }
       render();
     });
   }
