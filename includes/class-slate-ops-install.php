@@ -44,6 +44,13 @@ class Slate_Ops_Install {
     $quotes           = $wpdb->prefix . 'slate_quotes';
     $quote_lines      = $wpdb->prefix . 'slate_quote_lines';
 
+    // ── Purchasing tables ─────────────────────────────
+    $pur_vendors     = $wpdb->prefix . 'slate_ops_pur_vendors';
+    $pur_items       = $wpdb->prefix . 'slate_ops_pur_items';
+    $pur_requests    = $wpdb->prefix . 'slate_ops_pur_requests';
+    $pur_orders      = $wpdb->prefix . 'slate_ops_pur_orders';
+    $pur_order_lines = $wpdb->prefix . 'slate_ops_pur_order_lines';
+
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 
@@ -494,6 +501,95 @@ KEY awaiting_idx (awaiting_direction)
       KEY quote_idx (quote_id)
     ) $charset_collate;";
 
+    $sql_pur_vendors = "CREATE TABLE $pur_vendors (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      bc_vendor_id VARCHAR(64) NULL,
+      name VARCHAR(255) NOT NULL,
+      contact_email VARCHAR(255) NULL,
+      contact_phone VARCHAR(50) NULL,
+      lead_time_days SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+      payment_terms VARCHAR(50) NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'active',
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      KEY status_idx (status),
+      KEY bc_idx (bc_vendor_id)
+    ) $charset_collate;";
+
+    $sql_pur_items = "CREATE TABLE $pur_items (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      bc_item_id VARCHAR(64) NULL,
+      part_number VARCHAR(64) NOT NULL,
+      description VARCHAR(255) NOT NULL,
+      on_hand INT NOT NULL DEFAULT 0,
+      reorder_point INT NOT NULL DEFAULT 0,
+      unit_cost DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      demand_level VARCHAR(10) NOT NULL DEFAULT 'low',
+      forecasted_need INT NOT NULL DEFAULT 0,
+      suggested_order INT NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      KEY part_number_idx (part_number),
+      KEY bc_idx (bc_item_id)
+    ) $charset_collate;";
+
+    $sql_pur_requests = "CREATE TABLE $pur_requests (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      request_number VARCHAR(20) NULL,
+      item_id BIGINT UNSIGNED NULL,
+      item_description VARCHAR(255) NOT NULL,
+      vendor_id BIGINT UNSIGNED NULL,
+      qty INT NOT NULL DEFAULT 1,
+      unit_cost DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      status VARCHAR(20) NOT NULL DEFAULT 'draft',
+      requested_by BIGINT UNSIGNED NULL,
+      notes TEXT NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY request_number_idx (request_number),
+      KEY status_idx (status),
+      KEY vendor_idx (vendor_id),
+      KEY item_idx (item_id),
+      KEY requestor_idx (requested_by)
+    ) $charset_collate;";
+
+    $sql_pur_orders = "CREATE TABLE $pur_orders (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      bc_po_id VARCHAR(64) NULL,
+      po_number VARCHAR(20) NULL,
+      vendor_id BIGINT UNSIGNED NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'submitted',
+      ordered_at DATETIME NULL,
+      expected_date DATE NULL,
+      notes TEXT NULL,
+      created_by BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY po_number_idx (po_number),
+      KEY status_idx (status),
+      KEY vendor_idx (vendor_id),
+      KEY bc_idx (bc_po_id)
+    ) $charset_collate;";
+
+    $sql_pur_order_lines = "CREATE TABLE $pur_order_lines (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      po_id BIGINT UNSIGNED NOT NULL,
+      item_id BIGINT UNSIGNED NULL,
+      item_description VARCHAR(255) NOT NULL,
+      qty_ordered INT NOT NULL DEFAULT 0,
+      qty_received INT NOT NULL DEFAULT 0,
+      unit_cost DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      KEY po_idx (po_id),
+      KEY item_idx (item_id)
+    ) $charset_collate;";
+
     // ── Run all dbDelta ─────────────────────────────────
 
     dbDelta($sql_jobs);
@@ -517,6 +613,12 @@ KEY awaiting_idx (awaiting_direction)
     dbDelta($sql_dealers_ext);
     dbDelta($sql_quotes);
     dbDelta($sql_quote_lines);
+
+    dbDelta($sql_pur_vendors);
+    dbDelta($sql_pur_items);
+    dbDelta($sql_pur_requests);
+    dbDelta($sql_pur_orders);
+    dbDelta($sql_pur_order_lines);
 
     // ── Data migrations ─────────────────────────────────
 
