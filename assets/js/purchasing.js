@@ -280,8 +280,8 @@
     return state.demand.filter(function (d) {
       if (f.search) {
         var q = f.search.toLowerCase();
-        if (d.part_number.toLowerCase().indexOf(q) === -1 &&
-            d.description.toLowerCase().indexOf(q) === -1) return false;
+        if (String(d.part_number || '').toLowerCase().indexOf(q) === -1 &&
+            String(d.description || '').toLowerCase().indexOf(q) === -1) return false;
       }
       if (f.urgency !== 'all' && d.demand_level !== f.urgency) return false;
       if (f.vendor !== 'all' && (d.preferred_vendor_name || '') !== f.vendor) return false;
