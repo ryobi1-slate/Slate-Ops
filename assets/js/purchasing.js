@@ -1186,18 +1186,18 @@
         state.activeVendorId  = null;
         state.activePoId      = id;
         var needsLoad = !state.poLines.hasOwnProperty(id);
-        if (needsLoad) state.poLinesLoading = true;
+        state.poLinesLoading = needsLoad;
         render();
         if (needsLoad) {
           apiFetch('orders/' + id + '/lines')
             .then(function (lines) {
-              state.poLines[id]    = lines || [];
-              state.poLinesLoading = false;
+              state.poLines[id] = lines || [];
+              if (state.activePoId === id) state.poLinesLoading = false;
               render();
             })
             .catch(function () {
-              state.poLines[id]    = [];
-              state.poLinesLoading = false;
+              state.poLines[id] = [];
+              if (state.activePoId === id) state.poLinesLoading = false;
               render();
             });
         }
