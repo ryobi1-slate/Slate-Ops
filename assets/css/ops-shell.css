@@ -940,6 +940,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   padding: var(--slate-space-2xl);
   max-width: var(--slate-shell-maxwidth);
   box-sizing: border-box;
+  background: var(--slate-surface-page);
 }
 
 /* ─── 15. Card surface ──────────────────────────────────────────────

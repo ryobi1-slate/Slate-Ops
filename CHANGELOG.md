@@ -1,5 +1,12 @@
 # Slate Ops Changelog
 
+## 0.27.1 — Executive page: override React root sage tint via `.slate-portal`
+
+**Root cause:** The React app root wrapper applies `bg-background-light` (`#e1dfc8`, sage/warm-green tint) to itself. This wrapper sits between `#ops-view` and the Executive component's `.slate-portal` div, overriding the shell's `--slate-surface-page` background set on `.ops-content`. Purchasing pages bypass this (they use a separate vanilla JS bundle that doesn't go through the React root), which is why Purchasing shows the correct neutral background.
+
+**`assets/css/ops-shell.css`:**
+- `.slate-portal`: added `background: var(--slate-surface-page)` — directly overrides the React root's `bg-background-light` sage tint for the Executive component. Token-based, targeted to `.slate-portal` only.
+
 ## 0.26.8 — Executive page: match Purchasing page background
 
 **`assets/css/ops-shell.css`:**
