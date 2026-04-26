@@ -1204,6 +1204,14 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * .ops-cs-split-page wraps the whole CS page; .ops-cs-split-body is the row below
  * the header; .ops-cs-left/.ops-cs-right are the two columns.
  */
+
+/* Give #ops-view full height on the CS route so columns scroll independently */
+.ops-page-cs .ops-content > #ops-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .ops-cs-split-page {
   display: flex;
   flex-direction: column;
@@ -1252,7 +1260,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 /* Top border divider above delete/save row */
-.ops-cs-border-b-top {
+.ops-cs-border-t {
   border-top: 1px solid var(--slate-divider-soft);
   padding-top: var(--slate-space-md);
 }
@@ -1262,7 +1270,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   margin-bottom: 0 !important;
 }
 
-/* Right-panel row spacing: compact table cells */
+/* Page-wide row spacing: compact table cells for density */
 .ops-cs-split-page .ops-cs-row-hover td,
 .ops-cs-split-page .ops-cs-row-selected td {
   padding-top: var(--slate-space-sm) !important;
