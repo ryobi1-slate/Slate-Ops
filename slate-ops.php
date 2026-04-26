@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.26.8
+ * Version: 0.27.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.26.8');
+define('SLATE_OPS_VERSION', '0.27.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -35,6 +35,8 @@ require_once SLATE_OPS_PATH . 'includes/class-buffer-service.php';
 
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-rest.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-clickup.php';
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-purchasing.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-purchasing-rest.php';
 
 if ( is_admin() ) {
     require_once SLATE_OPS_PATH . 'includes/admin/class-clickup-import-admin.php';
@@ -48,6 +50,7 @@ add_action('init', ['Slate_Ops_Roles', 'register_roles_caps']);
 add_action('init', ['Slate_Ops_Install', 'maybe_upgrade']);
 add_action('init', ['Slate_Ops_Routes', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
+add_action('rest_api_init', ['Slate_Ops_Purchasing_REST', 'register_routes']);
 
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
@@ -70,6 +73,12 @@ add_action('wp_enqueue_scripts', function() {
     $ver_pur_js  = file_exists(SLATE_OPS_PATH . 'assets/js/purchasing.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/purchasing.js')   : SLATE_OPS_VERSION;
     wp_enqueue_style('slate-ops-purchasing',  SLATE_OPS_URL . 'assets/css/purchasing.css', ['slate-ops-shell'], $ver_pur_css);
     wp_enqueue_script('slate-ops-purchasing', SLATE_OPS_URL . 'assets/js/purchasing.js',   [],                  $ver_pur_js,  true);
+    wp_localize_script('slate-ops-purchasing', 'slateOpsPurchasing', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+    ]);
   } else {
     // All other /ops/* routes — React app, exactly as before.
     $ver_app_css = file_exists(SLATE_OPS_PATH . 'assets/react/app.css') ? filemtime(SLATE_OPS_PATH . 'assets/react/app.css') : SLATE_OPS_VERSION;
