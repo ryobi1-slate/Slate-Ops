@@ -95,6 +95,26 @@ class Slate_Ops_Purchasing {
     return $wpdb->get_row($wpdb->prepare("SELECT * FROM $t WHERE id = %d", (int) $id), ARRAY_A);
   }
 
+  public static function get_request_resolved($id) {
+    global $wpdb;
+    $tr = self::t('requests');
+    $tv = self::t('vendors');
+    $row = $wpdb->get_row(
+      $wpdb->prepare(
+        "SELECT r.*, v.name AS vendor_name_resolved
+         FROM $tr r
+         LEFT JOIN $tv v ON r.vendor_id = v.id
+         WHERE r.id = %d",
+        (int) $id
+      ),
+      ARRAY_A
+    );
+    if ($row) {
+      $row['requested_by_name'] = self::resolve_user_name($row['requested_by'] ?? null);
+    }
+    return $row;
+  }
+
   public static function create_request($data) {
     global $wpdb;
     $now = Slate_Ops_Utils::now_gmt();

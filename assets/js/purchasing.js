@@ -978,8 +978,8 @@
       ta.addEventListener('input', function () {
         state.draftNotes = ta.value;
         // Enable/disable save button without full re-render
-        var saveBtn = ta.closest('.pur-drawer-notes-section') &&
-                      ta.closest('.pur-drawer-notes-section').querySelector('[data-action="save-notes"]');
+        var section = ta.closest('.pur-drawer-notes-section');
+        var saveBtn = section ? section.querySelector('[data-action="save-notes"]') : null;
         if (saveBtn) {
           var changed = ta.value !== origNotes;
           saveBtn.disabled = !changed;
