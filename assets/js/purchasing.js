@@ -90,7 +90,7 @@
       if (!res.ok) {
         return res.json().then(function (body) {
           throw new Error(body.message || 'Request failed (' + res.status + ')');
-        }).catch(function () {
+        }, function () {
           throw new Error('Request failed (' + res.status + ')');
         });
       }
