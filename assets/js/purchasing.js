@@ -14,6 +14,7 @@
   var _cfg      = window.slateOpsPurchasing || {};
   var API_ROOT  = (_cfg.api && _cfg.api.root)  ? _cfg.api.root  : null;
   var API_NONCE = (_cfg.api && _cfg.api.nonce) ? _cfg.api.nonce : '';
+  var IS_ADMIN  = (_cfg.user && _cfg.user.is_admin) ? true : false;
 
   // ─── State (shape per SOT) ────────────────────────────────────────────────
   var state = {
@@ -34,11 +35,13 @@
       vendor:  'all',
     },
     activeRequestId: null,
-    activeVendorId:  null,
-    activePoId:      null,
-    poLines:         {},
-    poLinesLoading:  false,
-    draftNotes:      null,   // notes textarea value while drawer is open
+    activeVendorId:       null,
+    activePoId:           null,
+    poLines:              {},
+    poLinesLoading:       false,
+    draftNotes:           null,   // notes textarea value while drawer is open
+    integration:          null,
+    integrationSending:   false,
   };
 
   // Track which tabs have been loaded to avoid redundant fetches.
@@ -113,6 +116,7 @@
       apiFetch('requests'),
       apiFetch('vendors'),
       apiFetch('orders'),
+      apiFetch('integration/status'),
     ]).then(function (results) {
       var errors = [];
       function val(r, fallback) {
@@ -120,11 +124,12 @@
         errors.push(r.reason && r.reason.message ? r.reason.message : 'A request failed');
         return fallback;
       }
-      state.summary  = val(results[0], null);
-      state.demand   = val(results[1], []);
-      state.requests = val(results[2], []);
-      state.vendors  = val(results[3], []);
-      state.openPos  = val(results[4], []);
+      state.summary     = val(results[0], null);
+      state.demand      = val(results[1], []);
+      state.requests    = val(results[2], []);
+      state.vendors     = val(results[3], []);
+      state.openPos     = val(results[4], []);
+      state.integration = val(results[5], null);
       state.activity = (state.summary && state.summary.recent_activity) ? state.summary.recent_activity : [];
       state.loading  = false;
       _loaded.all    = true;
@@ -384,6 +389,57 @@
       })
       .catch(function (err) {
         state.error = err.message || 'Failed to save notes.';
+        render();
+      });
+  }
+
+  function handleSendTestEvent() {
+    state.integrationSending = true;
+    state.error = null;
+    render();
+    apiPost('integration/test-event', {})
+      .then(function (result) {
+        state.integrationSending = false;
+        state.notice = 'Test event sent: ' + (result.message || result.status);
+        if (state.integration) {
+          state.integration.last_test = {
+            status:  result.status,
+            message: result.message || '',
+            at:      result.at || null,
+          };
+        }
+        render();
+      })
+      .catch(function (err) {
+        state.integrationSending = false;
+        state.error = err.message || 'Failed to send test event.';
+        render();
+      });
+  }
+
+  function handleSaveIntegration() {
+    var formEl = document.getElementById('ops-view');
+    if (!formEl) return;
+    var data = {};
+    formEl.querySelectorAll('[data-integration-field]').forEach(function (input) {
+      var field = input.getAttribute('data-integration-field');
+      if (input.type === 'checkbox') {
+        data[field] = input.checked;
+      } else {
+        data[field] = input.value;
+      }
+    });
+    // Empty HMAC secret field = keep existing; omit the key so save_settings skips it.
+    if (!data.hmac_secret) delete data.hmac_secret;
+    state.error = null;
+    apiPost('integration/settings', data)
+      .then(function (result) {
+        state.integration = result;
+        state.notice = 'Integration settings saved.';
+        render();
+      })
+      .catch(function (err) {
+        state.error = err.message || 'Failed to save integration settings.';
         render();
       });
   }
@@ -927,64 +983,122 @@
 
   // ─── API Status tab ───────────────────────────────────────────────────────
   function renderAPIStatus() {
-    var rows = [
-      { label: 'Business Central',    value: 'Not Connected',    cls: 'pur-api-row-value--warn' },
-      { label: 'Power Automate',      value: 'Not Configured',   cls: 'pur-api-row-value--muted' },
-      { label: 'Flow URLs',           value: 'Not Configured',   cls: 'pur-api-row-value--muted' },
-      { label: 'Flow Secrets',        value: 'Not Configured',   cls: 'pur-api-row-value--muted' },
-      { label: 'Last Sync',           value: 'Never',            cls: 'pur-api-row-value--muted' },
-      { label: 'WP Purchasing Tables','value': 'Available',      cls: 'pur-api-row-value--ok' },
-    ];
+    var d = state.integration;
+
+    function checkRow(label, ok, detail) {
+      return '<div class="pur-api-row">' +
+        '<span class="pur-api-row-label">' + esc(label) + '</span>' +
+        '<span class="pur-api-row-value ' + (ok ? 'pur-api-row-value--ok' : 'pur-api-row-value--warn') + '">' +
+          esc(detail != null ? detail : (ok ? 'Configured' : 'Not Configured')) +
+        '</span>' +
+      '</div>';
+    }
+
+    var flows = d ? d.flows_configured : {};
+    var lastTest = d ? d.last_test : {};
+    var lastTestCls = !lastTest.status ? 'pur-api-row-value--muted'
+      : lastTest.status === 'success' ? 'pur-api-row-value--ok' : 'pur-api-row-value--warn';
+    var lastTestStr = !lastTest.status ? 'Never sent'
+      : (lastTest.status === 'success' ? '✓ ' : '✗ ') +
+        (lastTest.message || lastTest.status) +
+        (lastTest.at ? ' · ' + fmtDate(lastTest.at) : '');
 
     var statusCard = '<div class="pur-api-card">' +
-      '<div class="pur-api-card-title">Integration Status</div>' +
-      rows.map(function (r) {
-        return '<div class="pur-api-row">' +
-          '<span class="pur-api-row-label">' + esc(r.label) + '</span>' +
-          '<span class="pur-api-row-value ' + r.cls + '">' + esc(r.value) + '</span>' +
-        '</div>';
-      }).join('') +
+      '<div class="pur-api-card-title">Integration Readiness</div>' +
+      (d ? (
+        checkRow('Power Automate',       d.enabled,              d.enabled ? 'Enabled' : 'Disabled') +
+        checkRow('HMAC Secret',          d.hmac_configured) +
+        checkRow('PR Approved Flow',     flows.pr) +
+        checkRow('Vendor Sync Flow',     flows.vendor) +
+        checkRow('Item Sync Flow',       flows.item) +
+        checkRow('Open PO Sync Flow',    flows.po) +
+        checkRow('Demand Sync Flow',     flows.demand) +
+        '<div class="pur-api-row">' +
+          '<span class="pur-api-row-label">Last Test Event</span>' +
+          '<span class="pur-api-row-value ' + lastTestCls + '">' + esc(lastTestStr) + '</span>' +
+        '</div>' +
+        checkRow('Callback Receiver',    d.callback_available, d.callback_available ? 'Available' : 'Unavailable') +
+        checkRow('Business Central',     false, 'Not Connected (WordPress)')
+      ) : '<div class="pur-empty" style="padding:20px">Loading…</div>') +
     '</div>';
 
-    var entitiesCard = '<div class="pur-api-card">' +
-      '<div class="pur-api-card-title">BC Entities (Phase 2 — read confirmed)</div>' +
-      [
-        { entity: 'vendors',            note: 'Vendor master data'       },
-        { entity: 'items',              note: 'Parts catalog'             },
-        { entity: 'purchaseOrders',     note: 'PO headers'                },
-        { entity: 'purchaseOrderLines', note: 'PO line items'             },
-      ].map(function (e) {
-        return '<div class="pur-api-row">' +
-          '<span class="pur-api-row-label" style="font-family:var(--font-mono);font-size:12px;">' + esc(e.entity) + '</span>' +
-          '<span class="pur-api-row-value pur-api-row-value--muted">' + esc(e.note) + '</span>' +
-        '</div>';
-      }).join('') +
-    '</div>';
-
-    var infoCard = '<div class="pur-card">' +
-      '<div class="pur-card-header">' +
-        '<h2 class="pur-card-title">Power Automate / BC Integration</h2>' +
-        '<span class="pur-badge pur-badge--draft">Phase 2</span>' +
+    var archCard = '<div class="pur-api-card">' +
+      '<div class="pur-api-card-title">Architecture</div>' +
+      '<div class="pur-integration-arch">' +
+        '<span class="pur-arch-node">Slate Ops</span>' +
+        '<span class="material-symbols-outlined">arrow_forward</span>' +
+        '<span class="pur-arch-node">Power Automate</span>' +
+        '<span class="material-symbols-outlined">arrow_forward</span>' +
+        '<span class="pur-arch-node">Business Central</span>' +
       '</div>' +
-      '<div class="pur-card-body">' +
-        '<p class="pur-api-note">' +
-          'WordPress is the local purchasing layer in Phase 1. Business Central integration ' +
-          'will be added in Phase 2 via Power Automate flows. ' +
-          'Slate Ops will emit signed events to PA; PA will talk to BC. ' +
-          'No BC credentials are stored in this application.' +
+      '<p class="pur-api-note" style="margin-top:14px">' +
+        'Slate Ops emits HMAC-signed events to Power Automate flows. ' +
+        'Flows coordinate Business Central operations. ' +
+        'No BC credentials are stored in WordPress.' +
+      '</p>' +
+    '</div>';
+
+    if (!IS_ADMIN) {
+      return '<div class="pur-api-grid">' + statusCard + archCard + '</div>';
+    }
+
+    // Admin-only settings form
+    var urls = d ? d.flow_urls : {};
+
+    function flowField(label, fieldKey, urlKey) {
+      var val = urls[urlKey] || '';
+      return '<div class="pur-int-row">' +
+        '<label class="pur-int-label">' + esc(label) + '</label>' +
+        '<input type="url" class="pur-int-input" placeholder="https://prod-xx.logic.azure.com/…"' +
+          ' data-integration-field="' + esc(fieldKey) + '" value="' + esc(val) + '">' +
+      '</div>';
+    }
+
+    var testDisabled = !d || !d.hmac_configured || !d.enabled || state.integrationSending;
+    var testBtn = '<button class="pur-btn pur-btn--outline" data-action="send-test-event"' +
+      (testDisabled ? ' disabled' : '') + '>' +
+      (state.integrationSending
+        ? '<span class="material-symbols-outlined">sync</span>Sending…'
+        : '<span class="material-symbols-outlined">send</span>Send Test Event') +
+    '</button>';
+
+    var settingsCard = '<div class="pur-card">' +
+      '<div class="pur-card-header">' +
+        '<h2 class="pur-card-title">Integration Settings</h2>' +
+        '<span class="pur-badge pur-badge--draft">Admin Only</span>' +
+      '</div>' +
+      '<div class="pur-card-body pur-integration-form">' +
+        '<div class="pur-int-row">' +
+          '<label class="pur-int-label">Power Automate</label>' +
+          '<label class="pur-toggle">' +
+            '<input type="checkbox" data-integration-field="enabled"' + (d && d.enabled ? ' checked' : '') + '>' +
+            '<span>Enabled</span>' +
+          '</label>' +
+        '</div>' +
+        flowField('PR Approved Flow',  'flow_pr_url',     'pr') +
+        flowField('Vendor Sync Flow',  'flow_vendor_url', 'vendor') +
+        flowField('Item Sync Flow',    'flow_item_url',   'item') +
+        flowField('Open PO Sync Flow', 'flow_po_url',     'po') +
+        flowField('Demand Sync Flow',  'flow_demand_url', 'demand') +
+        '<div class="pur-int-row">' +
+          '<label class="pur-int-label">HMAC Secret</label>' +
+          '<input type="password" class="pur-int-input" autocomplete="new-password"' +
+            ' placeholder="' + (d && d.hmac_configured ? '••••••••' : 'Enter secret…') + '"' +
+            ' data-integration-field="hmac_secret">' +
+        '</div>' +
+        '<p class="pur-int-hint">' +
+          (d && d.hmac_configured
+            ? 'Secret is configured. Enter a new value to replace it, or leave blank to keep the current secret.'
+            : 'No secret configured. Enter a value to enable signing.') +
         '</p>' +
-        '<div class="pur-btn-row" style="margin-top:16px">' +
-          '<button class="pur-btn pur-btn--primary pur-btn--disabled" disabled>' +
-            '<span class="material-symbols-outlined">sync</span>Sync from BC' +
-          '</button>' +
-          '<button class="pur-btn pur-btn--outline pur-btn--disabled" disabled>' +
-            '<span class="material-symbols-outlined">send</span>Push Approved POs to BC' +
-          '</button>' +
+        '<div class="pur-int-row pur-int-row--actions">' +
+          '<button class="pur-btn pur-btn--primary" data-action="save-integration">Save Settings</button>' +
+          testBtn +
         '</div>' +
       '</div>' +
     '</div>';
 
-    return '<div class="pur-api-grid">' + statusCard + entitiesCard + '</div>' + infoCard;
+    return '<div class="pur-api-grid">' + statusCard + archCard + '</div>' + settingsCard;
   }
 
   // ─── Master render ────────────────────────────────────────────────────────
@@ -1217,6 +1331,16 @@
       btn.addEventListener('click', function () {
         handleSaveNotes(btn.getAttribute('data-request-id'));
       });
+    });
+
+    // Integration settings save
+    el.querySelectorAll('[data-action="save-integration"]').forEach(function (btn) {
+      btn.addEventListener('click', handleSaveIntegration);
+    });
+
+    // Send test event
+    el.querySelectorAll('[data-action="send-test-event"]').forEach(function (btn) {
+      btn.addEventListener('click', handleSendTestEvent);
     });
 
     // Set indeterminate state on select-all after binding

@@ -16,6 +16,10 @@ class Slate_Ops_Purchasing_REST {
     );
   }
 
+  public static function check_admin() {
+    return is_user_logged_in() && current_user_can(Slate_Ops_Utils::CAP_ADMIN);
+  }
+
   // ── Route registration ─────────────────────────────────────────────────────
 
   public static function register_routes() {
@@ -76,6 +80,33 @@ class Slate_Ops_Purchasing_REST {
       'methods'             => 'GET',
       'permission_callback' => $perm,
       'callback'            => [__CLASS__, 'h_list_order_lines'],
+    ]);
+
+    // Integration / PA readiness
+    $admin = [__CLASS__, 'check_admin'];
+
+    register_rest_route($ns, '/purchasing/integration/status', [
+      'methods'             => 'GET',
+      'permission_callback' => $perm,
+      'callback'            => [__CLASS__, 'h_integration_status'],
+    ]);
+
+    register_rest_route($ns, '/purchasing/integration/settings', [
+      'methods'             => 'POST',
+      'permission_callback' => $admin,
+      'callback'            => [__CLASS__, 'h_save_integration_settings'],
+    ]);
+
+    register_rest_route($ns, '/purchasing/integration/test-event', [
+      'methods'             => 'POST',
+      'permission_callback' => $admin,
+      'callback'            => [__CLASS__, 'h_send_test_event'],
+    ]);
+
+    register_rest_route($ns, '/purchasing/integration/callback', [
+      'methods'             => 'POST',
+      'permission_callback' => '__return_true',
+      'callback'            => [__CLASS__, 'h_integration_callback'],
     ]);
   }
 
@@ -146,6 +177,43 @@ class Slate_Ops_Purchasing_REST {
 
     return rest_ensure_response(Slate_Ops_Purchasing::get_request_resolved($id));
   }
+
+  // ── Integration / PA readiness handlers ───────────────────────────────────
+
+  public static function h_integration_status($req) {
+    return rest_ensure_response(Slate_Ops_PA_Events::get_status());
+  }
+
+  public static function h_save_integration_settings($req) {
+    $raw = $req->get_json_params() ?: [];
+    Slate_Ops_PA_Events::save_settings($raw);
+    return rest_ensure_response(Slate_Ops_PA_Events::get_status());
+  }
+
+  public static function h_send_test_event($req) {
+    $result = Slate_Ops_PA_Events::send_test_event();
+    if (is_wp_error($result)) return $result;
+    return rest_ensure_response($result);
+  }
+
+  public static function h_integration_callback($req) {
+    $body      = $req->get_body();
+    $signature = $req->get_header('x-slate-signature') ?? '';
+    $timestamp = $req->get_header('x-slate-timestamp') ?? '';
+    $event_type = $req->get_header('x-slate-event-type') ?? '';
+
+    if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp)) {
+      return new WP_Error('invalid_signature', 'Signature invalid or expired.', ['status' => 401]);
+    }
+    if ($event_type !== 'purchase.integration.test') {
+      return new WP_Error('unsupported_event', 'Only test events are accepted in this phase.', ['status' => 422]);
+    }
+
+    update_option('slate_ops_pa_last_callback_at', Slate_Ops_Utils::now_gmt());
+    return rest_ensure_response(['received' => true, 'event_type' => $event_type]);
+  }
+
+  // ── Purchase request handlers ──────────────────────────────────────────────
 
   public static function h_create_requests($req) {
     $raw   = $req->get_json_params();
