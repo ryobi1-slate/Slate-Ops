@@ -209,7 +209,7 @@ class Slate_Ops_Purchasing_REST {
       return new WP_Error('unsupported_event', 'Only test events are accepted in this phase.', ['status' => 422]);
     }
 
-    update_option('slate_ops_pa_last_callback_at', Slate_Ops_Utils::now_gmt());
+    update_option(Slate_Ops_PA_Events::OPT_LAST_CB, Slate_Ops_Utils::now_gmt());
     return rest_ensure_response(['received' => true, 'event_type' => $event_type]);
   }
 

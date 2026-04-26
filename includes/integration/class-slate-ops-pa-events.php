@@ -21,6 +21,7 @@ class Slate_Ops_PA_Events {
   const OPT_LAST_AT   = 'slate_ops_pa_last_test_event_at';
   const OPT_LAST_ST   = 'slate_ops_pa_last_test_event_status';
   const OPT_LAST_MSG  = 'slate_ops_pa_last_test_event_message';
+  const OPT_LAST_CB   = 'slate_ops_pa_last_callback_at';
 
   // ── HMAC ───────────────────────────────────────────────────────────────────
 
@@ -93,7 +94,7 @@ class Slate_Ops_PA_Events {
     }
 
     if (array_key_exists('hmac_secret', $data)) {
-      $secret = sanitize_text_field(trim((string) $data['hmac_secret']));
+      $secret = trim((string) $data['hmac_secret']);
       if ($secret !== '') {
         update_option(self::OPT_SECRET, $secret);
       } else {
@@ -172,13 +173,6 @@ class Slate_Ops_PA_Events {
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private static function uuid4() {
-    return sprintf(
-      '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-      mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-      mt_rand(0, 0xffff),
-      mt_rand(0, 0x0fff) | 0x4000,
-      mt_rand(0, 0x3fff) | 0x8000,
-      mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-    );
+    return wp_generate_uuid4();
   }
 }
