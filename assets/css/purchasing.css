@@ -1051,3 +1051,83 @@
   padding-bottom: 8px;
   border-bottom: 1px solid var(--slate-divider-soft);
 }
+
+/* ─── 14. Phase 5 — Integration settings form ─── */
+
+/* Architecture display */
+.pur-integration-arch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--slate-surface-tint);
+  border-radius: var(--slate-radius-md);
+  font-weight: 600;
+  font-size: var(--slate-text-sm);
+  flex-wrap: wrap;
+}
+
+.pur-integration-arch .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--slate-ink-muted);
+}
+
+.pur-arch-node { color: var(--slate-ink); }
+
+/* Integration settings form layout */
+.pur-integration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pur-int-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pur-int-row--actions {
+  padding-top: 6px;
+  gap: 10px;
+}
+
+.pur-int-label {
+  flex: 0 0 180px;
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  color: var(--slate-ink-muted);
+}
+
+.pur-int-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: var(--slate-text-sm);
+  font-family: var(--font-mono);
+  color: var(--slate-ink);
+  background: var(--slate-surface-tint);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  box-sizing: border-box;
+}
+
+.pur-int-input:focus {
+  outline: none;
+  border-color: var(--slate-sage);
+}
+
+.pur-int-hint {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+  padding-left: 192px;
+}
+
+.pur-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--slate-text-sm);
+  cursor: pointer;
+}
