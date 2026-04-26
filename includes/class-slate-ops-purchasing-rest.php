@@ -2,8 +2,8 @@
 if (!defined('ABSPATH')) exit;
 
 /**
- * Phase 1: read-only REST endpoints for the Purchasing workspace.
- * Write endpoints (create vendor, create request, update status) are Phase 2.
+ * Phase 2: read-only + purchase request creation endpoints.
+ * Status transition and vendor/PO write endpoints are Phase 3/4.
  */
 class Slate_Ops_Purchasing_REST {
 
@@ -41,9 +41,16 @@ class Slate_Ops_Purchasing_REST {
     ]);
 
     register_rest_route($ns, '/purchasing/requests', [
-      'methods'             => 'GET',
-      'permission_callback' => $perm,
-      'callback'            => [__CLASS__, 'h_list_requests'],
+      [
+        'methods'             => 'GET',
+        'permission_callback' => $perm,
+        'callback'            => [__CLASS__, 'h_list_requests'],
+      ],
+      [
+        'methods'             => 'POST',
+        'permission_callback' => $perm,
+        'callback'            => [__CLASS__, 'h_create_requests'],
+      ],
     ]);
 
     register_rest_route($ns, '/purchasing/orders', [
@@ -84,4 +91,40 @@ class Slate_Ops_Purchasing_REST {
   public static function h_list_order_lines($req) {
     return rest_ensure_response(Slate_Ops_Purchasing::list_order_lines((int) $req['id']));
   }
+
+  public static function h_create_requests($req) {
+    $raw   = $req->get_json_params();
+    $items = isset($raw['items']) && is_array($raw['items']) ? $raw['items'] : [];
+
+    if (empty($items)) {
+      return new WP_Error('invalid_items', 'No items provided.', ['status' => 400]);
+    }
+    if (count($items) > 50) {
+      return new WP_Error('too_many_items', 'Maximum 50 items per request.', ['status' => 400]);
+    }
+
+    $created = [];
+    foreach ($items as $item) {
+      $description = sanitize_text_field($item['item_description'] ?? '');
+      if (!$description) {
+        return new WP_Error('invalid_item', 'Item description is required.', ['status' => 400]);
+      }
+      $data = [
+        'item_id'          => !empty($item['item_id'])  ? (int) $item['item_id']  : null,
+        'item_description' => $description,
+        'vendor_id'        => !empty($item['vendor_id']) ? (int) $item['vendor_id'] : null,
+        'qty'              => max(1, (int) ($item['qty'] ?? 1)),
+        'unit_cost'        => max(0.0, (float) ($item['unit_cost'] ?? 0)),
+        'requested_by'     => get_current_user_id(),
+      ];
+      $id = Slate_Ops_Purchasing::create_request($data);
+      if (!$id) {
+        return new WP_Error('create_failed', 'Failed to save purchase request.', ['status' => 500]);
+      }
+      $created[] = Slate_Ops_Purchasing::get_request($id);
+    }
+
+    return rest_ensure_response(['created' => $created]);
+  }
 }
+
