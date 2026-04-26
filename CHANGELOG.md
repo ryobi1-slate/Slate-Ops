@@ -1,5 +1,30 @@
 # Slate Ops Changelog
 
+## 0.28.1 — CS page: split-view layout (jobs list + detail panel)
+
+**Layout refactor — CS only. No REST, logic, or permission changes.**
+
+**`assets/react/app.js`:**
+- CS root wrapper: changed from single-column scroll to `ops-cs-split-page` (flex column, 100% height).
+- Added `newMode` state (`useState(false)`) — drives "New Job" panel in the right column.
+- Header: retains eyebrow/title/desc + KPI stats; adds `+ New Job` button that opens the create form in the right panel without a modal.
+- Split body: `ops-cs-split-body` row flex below the header.
+  - Left (`ops-cs-left`): filters row + jobs table. Columns trimmed to Customer / SO# / VIN# / Status / Parts / Est. Hrs / Due for density. Row click selects job into right panel and clears newMode.
+  - Right (`ops-cs-right`): conditional panel — shows New Job create form, Job Detail edit form, or "Select a job to review details." empty state. No dashed boxes.
+- Create form moved from always-visible top block into right panel (triggered by `+ New Job`); closes on submit or `×` button.
+- Edit form moved from below-table block into right panel; shows when a row is selected; closes via `×` or after save.
+- Notes field in edit form changed to `<textarea>` (preserves newlines).
+- All existing create/edit/save/delete/filter/status logic preserved unchanged.
+
+**`assets/css/ops-shell.css`** — Section 22 (new):
+- `.ops-cs-split-page` — flex-column, 100% height, overflow hidden, `--slate-surface-page` background.
+- `.ops-cs-split-body` — row flex with gap/padding; fills remaining height.
+- `.ops-cs-left` — flex-1, scrollable.
+- `.ops-cs-right` — 360px fixed width, scrollable.
+- `.ops-cs-empty-panel` — centered empty state card.
+- `.ops-cs-border-b-top` — top divider for delete/save action row.
+- Split-page overrides: cards no longer forced `margin-bottom`; table rows use `--slate-space-sm` vertical padding in right panel.
+
 ## 0.27.2 — Phase 1 purchasing: live REST data, demand filters, correct status model
 
 **`includes/data/class-slate-ops-purchasing.php`:**
