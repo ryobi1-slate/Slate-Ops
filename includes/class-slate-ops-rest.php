@@ -2210,7 +2210,7 @@ return self::get_job(['id' => $job_id]);
       $row['my_job_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
         "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, UTC_TIMESTAMP()))), 0) / 60))
          FROM $seg
-         WHERE job_id = %d AND user_id = %d AND state = 'active'",
+         WHERE job_id = %d AND user_id = %d AND state = 'active' AND approval_status != 'voided'",
         (int)$row['job_id'], $user_id
       ));
 
@@ -2218,7 +2218,7 @@ return self::get_job(['id' => $job_id]);
       $row['job_total_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
         "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, UTC_TIMESTAMP()))), 0) / 60))
          FROM $seg
-         WHERE job_id = %d AND state = 'active'",
+         WHERE job_id = %d AND state = 'active' AND approval_status != 'voided'",
         (int)$row['job_id']
       ));
     }
