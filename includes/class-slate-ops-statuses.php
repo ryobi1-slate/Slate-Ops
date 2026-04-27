@@ -139,4 +139,40 @@ class Slate_Ops_Statuses {
     public static function is_canonical(string $status): bool {
         return in_array(strtoupper(trim($status)), self::all(), true);
     }
+
+    // ── Transition enforcement ────────────────────────────────────────
+
+    /**
+     * Returns the set of statuses each status may transition TO.
+     * ON_HOLD and DELAYED are pause states: any status can enter them,
+     * and they can exit to any canonical status.
+     * QUEUED is kept for backward-compat with the scheduler; it may
+     * return to READY_FOR_BUILD or start as IN_PROGRESS.
+     */
+    public static function allowed_transitions(): array {
+        $any = self::all();
+        return [
+            self::INTAKE           => [self::READY_FOR_BUILD],
+            self::READY_FOR_BUILD  => [self::IN_PROGRESS],
+            self::IN_PROGRESS      => [self::PENDING_QC],
+            self::PENDING_QC       => [self::IN_PROGRESS, self::READY_FOR_PICKUP],
+            self::READY_FOR_PICKUP => [self::COMPLETE],
+            self::COMPLETE         => [],
+            self::QUEUED           => [self::READY_FOR_BUILD, self::IN_PROGRESS],
+            self::DELAYED          => $any,
+            self::ON_HOLD          => $any,
+        ];
+    }
+
+    /**
+     * True if moving a job from $from to $to is a permitted transition.
+     * Idempotent moves (same → same) always pass.
+     * Any status may enter ON_HOLD or DELAYED (pause overrides).
+     */
+    public static function is_valid_transition(string $from, string $to): bool {
+        if ($from === $to) return true;
+        if ($to === self::ON_HOLD || $to === self::DELAYED) return true;
+        $map = self::allowed_transitions();
+        return in_array($to, $map[$from] ?? [], true);
+    }
 }
