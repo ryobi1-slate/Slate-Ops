@@ -2118,15 +2118,13 @@ return self::get_job(['id' => $job_id]);
 
     self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $now, 'Timer stopped');
 
-    // Compute elapsed seconds for the just-closed segment.
-    $elapsed_seconds = max(0, (int)$wpdb->get_var($wpdb->prepare(
-      "SELECT TIMESTAMPDIFF(SECOND, start_ts, end_ts) FROM $segments WHERE segment_id = %d",
-      (int)$open['segment_id']
-    )));
+    // Elapsed seconds for the just-closed segment — computed in PHP, no extra query.
+    $elapsed_seconds = max(0, strtotime($now) - strtotime($open['start_ts']));
 
     // Total approved minutes this user has logged on this job (all closed segments).
+    // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
     $total_approved_minutes = (int)$wpdb->get_var($wpdb->prepare(
-      "SELECT COALESCE(SUM(TIMESTAMPDIFF(MINUTE, start_ts, end_ts)), 0)
+      "SELECT ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60)
        FROM $segments
        WHERE job_id = %d AND user_id = %d AND end_ts IS NOT NULL
          AND approval_status = 'approved' AND state = 'active'",
@@ -2199,8 +2197,9 @@ return self::get_job(['id' => $job_id]);
 
     if ($row) {
       // Closed approved segments this user has previously logged on this job.
+      // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
       $row['prior_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
-        "SELECT COALESCE(SUM(TIMESTAMPDIFF(MINUTE, start_ts, end_ts)), 0)
+        "SELECT ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60)
          FROM $seg
          WHERE job_id = %d AND user_id = %d AND end_ts IS NOT NULL
            AND approval_status = 'approved' AND state = 'active'",
