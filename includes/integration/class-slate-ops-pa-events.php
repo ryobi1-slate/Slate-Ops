@@ -314,15 +314,29 @@ class Slate_Ops_PA_Events {
       return 0;
     }
 
+    // Collect all valid vendor numbers up front so we can pre-fetch existing
+    // rows in a single IN query instead of one SELECT per record (N+1).
+    $vendor_nos = [];
+    foreach ($records as $v) {
+      $vno = sanitize_text_field($v['vendorNo'] ?? '');
+      if ($vno !== '') $vendor_nos[] = $vno;
+    }
+    if (empty($vendor_nos)) return 0;
+
+    $placeholders = implode(',', array_fill(0, count($vendor_nos), '%s'));
+    $existing_rows = $wpdb->get_results(
+      $wpdb->prepare("SELECT id, bc_vendor_id FROM $t WHERE bc_vendor_id IN ($placeholders)", $vendor_nos),
+      ARRAY_A
+    );
+    $existing_map = [];
+    foreach ($existing_rows as $row) {
+      $existing_map[$row['bc_vendor_id']] = (int) $row['id'];
+    }
+
     $count = 0;
     foreach ($records as $v) {
       $vendor_no = sanitize_text_field($v['vendorNo'] ?? '');
-      if (!$vendor_no) continue;
-
-      $existing = $wpdb->get_row(
-        $wpdb->prepare("SELECT id FROM $t WHERE bc_vendor_id = %s LIMIT 1", $vendor_no),
-        ARRAY_A
-      );
+      if ($vendor_no === '') continue;
 
       // Accept both key names PA may send for minimum order amount.
       $min_order_raw = $v['minimumOrderAmount'] ?? $v['minOrderAmount'] ?? null;
@@ -340,12 +354,13 @@ class Slate_Ops_PA_Events {
         'updated_at'       => $now,
       ];
 
-      if ($existing) {
-        $wpdb->update($t, $data, ['id' => (int) $existing['id']]);
+      if (isset($existing_map[$vendor_no])) {
+        $result = $wpdb->update($t, $data, ['id' => $existing_map[$vendor_no]]);
       } else {
-        $wpdb->insert($t, array_merge($data, ['created_at' => $now]));
+        $result = $wpdb->insert($t, array_merge($data, ['created_at' => $now]));
       }
-      $count++;
+
+      if ($result !== false) $count++;
     }
 
     return $count;
