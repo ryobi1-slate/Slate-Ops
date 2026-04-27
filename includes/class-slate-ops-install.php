@@ -50,6 +50,7 @@ class Slate_Ops_Install {
     $pur_requests    = $wpdb->prefix . 'slate_ops_pur_requests';
     $pur_orders      = $wpdb->prefix . 'slate_ops_pur_orders';
     $pur_order_lines = $wpdb->prefix . 'slate_ops_pur_order_lines';
+    $pur_sync_log    = $wpdb->prefix . 'slate_ops_pur_sync_log';
 
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -593,6 +594,23 @@ KEY awaiting_idx (awaiting_direction)
       KEY item_idx (item_id)
     ) $charset_collate;";
 
+    $sql_pur_sync_log = "CREATE TABLE $pur_sync_log (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      integration_event_id VARCHAR(128) NOT NULL,
+      event_type VARCHAR(64) NOT NULL,
+      flow_id VARCHAR(128) NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'received',
+      message TEXT NULL,
+      received_at DATETIME NOT NULL,
+      processed_at DATETIME NULL,
+      payload_hash VARCHAR(64) NULL,
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY event_id_idx (integration_event_id),
+      KEY event_type_idx (event_type),
+      KEY status_idx (status)
+    ) $charset_collate;";
+
     // ── Run all dbDelta ─────────────────────────────────
 
     dbDelta($sql_jobs);
@@ -622,6 +640,7 @@ KEY awaiting_idx (awaiting_direction)
     dbDelta($sql_pur_requests);
     dbDelta($sql_pur_orders);
     dbDelta($sql_pur_order_lines);
+    dbDelta($sql_pur_sync_log);
 
     // ── Data migrations ─────────────────────────────────
 

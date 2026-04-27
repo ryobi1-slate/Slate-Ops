@@ -42,6 +42,7 @@
     draftNotes:           null,   // notes textarea value while drawer is open
     integration:          null,
     integrationSending:   false,
+    integrationSyncing:   null,   // feed name being synced, or null
   };
 
   // Track which tabs have been loaded to avoid redundant fetches.
@@ -440,6 +441,28 @@
       })
       .catch(function (err) {
         state.error = err.message || 'Failed to save integration settings.';
+        render();
+      });
+  }
+
+  function handleSyncRequest(feed) {
+    state.integrationSyncing = feed;
+    state.error = null;
+    render();
+    apiPost('integration/sync/' + feed, {})
+      .then(function (result) {
+        state.integrationSyncing = null;
+        var feedLabels = { vendor: 'Vendors', item: 'Items', po: 'Open POs', demand: 'Demand' };
+        state.notice = 'Sync request sent for ' + (feedLabels[feed] || feed) + ': ' + (result.message || result.status);
+        return apiFetch('integration/status');
+      })
+      .then(function (status) {
+        state.integration = status;
+        render();
+      })
+      .catch(function (err) {
+        state.integrationSyncing = null;
+        state.error = err.message || 'Failed to send sync request.';
         render();
       });
   }
@@ -982,6 +1005,8 @@
   }
 
   // ─── API Status tab ───────────────────────────────────────────────────────
+  var SYNC_FEED_LABELS = { vendor: 'Vendors', item: 'Items', po: 'Open POs', demand: 'Demand' };
+
   function renderAPIStatus() {
     var d = state.integration;
 
@@ -1033,13 +1058,69 @@
       '</div>' +
       '<p class="pur-api-note" style="margin-top:14px">' +
         'Slate Ops emits HMAC-signed events to Power Automate flows. ' +
-        'Flows coordinate Business Central operations. ' +
+        'Flows read from Business Central and POST synced data back to the callback endpoint. ' +
         'No BC credentials are stored in WordPress.' +
       '</p>' +
     '</div>';
 
+    // ── Sync status card ────────────────────────────────────────────────────
+    var syncFeeds  = ['vendor', 'item', 'po', 'demand'];
+    var syncStatus = d ? d.sync_status : null;
+    var syncAnyDisabled = !d || !d.enabled || !d.hmac_configured;
+
+    var syncRows = syncFeeds.map(function (feed) {
+      var fs        = syncStatus ? syncStatus[feed] : null;
+      var isSyncing = state.integrationSyncing === feed;
+      var statusCls, statusStr;
+      if (isSyncing) {
+        statusCls = 'pur-sync-status--pending';
+        statusStr = '⟳ Sending…';
+      } else if (!fs || !fs.status) {
+        statusCls = 'pur-sync-status--never';
+        statusStr = 'Never synced';
+      } else if (fs.status === 'success') {
+        statusCls = 'pur-sync-status--ok';
+        statusStr = '✓ ' + (fs.message || 'Synced');
+      } else if (fs.status === 'pending') {
+        statusCls = 'pur-sync-status--pending';
+        statusStr = '⟳ ' + (fs.message || 'Pending');
+      } else {
+        statusCls = 'pur-sync-status--error';
+        statusStr = '✗ ' + (fs.message || 'Error');
+      }
+      var lastAt = fs && fs.at ? fmtDate(fs.at)
+        : (fs && fs.requested_at ? 'Requested ' + fmtDate(fs.requested_at) : '—');
+
+      var syncBtn = IS_ADMIN
+        ? '<button class="pur-btn pur-btn--outline pur-sync-btn"' +
+            ' data-action="sync-request" data-feed="' + esc(feed) + '"' +
+            (syncAnyDisabled || !!state.integrationSyncing ? ' disabled' : '') + '>' +
+            (isSyncing
+              ? '<span class="material-symbols-outlined">sync</span>Syncing…'
+              : '<span class="material-symbols-outlined">sync</span>Sync ' + esc(SYNC_FEED_LABELS[feed] || feed)) +
+          '</button>'
+        : '';
+
+      return '<div class="pur-sync-row">' +
+        '<span class="pur-sync-feed">' + esc(SYNC_FEED_LABELS[feed] || feed) + '</span>' +
+        '<span class="pur-sync-status ' + statusCls + '">' + esc(statusStr) + '</span>' +
+        '<span class="pur-sync-time">' + esc(lastAt) + '</span>' +
+        syncBtn +
+      '</div>';
+    }).join('');
+
+    var syncCard = '<div class="pur-api-card pur-sync-card">' +
+      '<div class="pur-api-card-title">Sync Status' +
+      (IS_ADMIN ? '<span class="pur-sync-card-hint">Admin — manual triggers</span>' : '') +
+      '</div>' +
+      (syncAnyDisabled && IS_ADMIN
+        ? '<div class="pur-sync-disabled-note">Enable integration and configure HMAC to trigger syncs.</div>'
+        : '') +
+      '<div class="pur-sync-table">' + syncRows + '</div>' +
+    '</div>';
+
     if (!IS_ADMIN) {
-      return '<div class="pur-api-grid">' + statusCard + archCard + '</div>';
+      return '<div class="pur-api-grid">' + statusCard + archCard + '</div>' + syncCard;
     }
 
     // Admin-only settings form
@@ -1098,7 +1179,8 @@
       '</div>' +
     '</div>';
 
-    return '<div class="pur-api-grid">' + statusCard + archCard + '</div>' + settingsCard;
+    return '<div class="pur-api-grid">' + statusCard + archCard + '</div>' +
+      syncCard + settingsCard;
   }
 
   // ─── Master render ────────────────────────────────────────────────────────
@@ -1341,6 +1423,14 @@
     // Send test event
     el.querySelectorAll('[data-action="send-test-event"]').forEach(function (btn) {
       btn.addEventListener('click', handleSendTestEvent);
+    });
+
+    // Sync request buttons (admin only)
+    el.querySelectorAll('[data-action="sync-request"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var feed = btn.getAttribute('data-feed');
+        if (feed) handleSyncRequest(feed);
+      });
     });
 
     // Set indeterminate state on select-all after binding

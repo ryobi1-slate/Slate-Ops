@@ -1131,3 +1131,69 @@
   font-size: var(--slate-text-sm);
   cursor: pointer;
 }
+
+/* ─── 15. Phase 6 — Sync status ─── */
+
+.pur-sync-card { margin-top: 0; }
+
+.pur-sync-card-hint {
+  font-size: var(--slate-text-xs);
+  font-weight: 400;
+  color: var(--slate-ink-subtle);
+  margin-left: 10px;
+}
+
+.pur-sync-disabled-note {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+
+.pur-sync-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.pur-sync-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+  font-size: var(--slate-text-sm);
+}
+
+.pur-sync-row:last-child { border-bottom: none; }
+
+.pur-sync-feed {
+  font-weight: 600;
+  color: var(--slate-ink);
+}
+
+.pur-sync-status {
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+}
+
+.pur-sync-status--ok      { color: var(--slate-redwood); }
+.pur-sync-status--pending { color: var(--slate-arches-ink); }
+.pur-sync-status--error   { color: var(--slate-flag, #b91c1c); }
+.pur-sync-status--never   { color: var(--slate-ink-subtle); font-weight: 400; }
+
+.pur-sync-time {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+  text-align: right;
+}
+
+.pur-sync-btn {
+  padding: 4px 10px;
+  font-size: var(--slate-text-xs);
+  white-space: nowrap;
+}
+
+.pur-sync-btn .material-symbols-outlined {
+  font-size: 14px;
+}
