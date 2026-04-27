@@ -790,6 +790,14 @@
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
   }
 
+  function fmtMinutes(m) {
+    const mins = Math.max(0, Math.round(m));
+    if (!mins) return '0m';
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60), rem = mins % 60;
+    return rem ? `${h}h ${rem}m` : `${h}h`;
+  }
+
   async function loadSupervisor() {
     const [queuesResp, jobsResp] = await Promise.all([
       api.supervisorQueues(),
@@ -2344,16 +2352,19 @@ async function loadTech() {
   // Up Next card — simple, touch-friendly, one primary action.
   function upNextCard(job) {
     const est = estHoursStr(job);
+    const logged = job.actual_minutes > 0 ? fmtMinutes(job.actual_minutes) + ' logged' : '';
     const blocked = hasBlocker(job);
     const statusLabel = blocked ? 'Blocked'
       : (job.status === 'IN_PROGRESS' ? 'In progress'
       : (job.status === 'PENDING_QC'  ? 'Pending QC'
-      : (job.scheduled_start ? 'Scheduled' : 'Queued')));
+      : (job.scheduled_start ? 'Scheduled' : 'Ready')));
     const primary = job.status === 'IN_PROGRESS'
-      ? `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Resume</button>`
+      ? `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Resume Work</button>`
       : (job.status === 'PENDING_QC'
           ? `<button class="btn secondary btn-xl tech-card-cta" data-open-job="${job.job_id}">Open</button>`
-          : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start</button>`);
+          : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start Work</button>`);
+    const subParts = [est ? 'Est ' + est : '', logged, job.so_number ? escapeHtml(job.so_number) : ''].filter(Boolean);
+    const subLine = subParts.join(' · ');
     return `
       <div class="tech-up-card${blocked ? ' is-blocked' : ''}" data-open-job="${job.job_id}" role="button" tabindex="0">
         <div class="tech-up-body">
@@ -2362,7 +2373,7 @@ async function loadTech() {
             <span class="tech-up-status${blocked ? ' is-blocked' : ''}">${statusLabel}</span>
           </div>
           <div class="tech-up-meta">${escapeHtml(jobMeta(job) || ('#' + job.job_id))}</div>
-          ${est ? `<div class="tech-up-sub">Est ${est}${job.so_number ? ' · ' + escapeHtml(job.so_number) : ''}</div>` : (job.so_number ? `<div class="tech-up-sub">${escapeHtml(job.so_number)}</div>` : '')}
+          ${subLine ? `<div class="tech-up-sub">${subLine}</div>` : ''}
         </div>
         <div class="tech-up-action">${primary}</div>
       </div>
@@ -2410,9 +2421,15 @@ async function loadTech() {
 
       <div class="tech-strip" role="group" aria-label="Time">
         <div class="tech-strip-cell tech-strip-cell-lead">
-          <div class="tech-strip-label">Elapsed</div>
+          <div class="tech-strip-label">This session</div>
           <div class="tech-strip-val tech-strip-val-lg" id="live-timer">00:00:00</div>
         </div>
+        ${active.prior_minutes > 0 ? `
+          <div class="tech-strip-cell">
+            <div class="tech-strip-label">Total logged</div>
+            <div class="tech-strip-val">${fmtMinutes(active.prior_minutes)}</div>
+          </div>
+        ` : ''}
         ${estTargetStr ? `
           <div class="tech-strip-cell">
             <div class="tech-strip-label">Target</div>
@@ -2548,10 +2565,17 @@ async function loadTech() {
       stopBtn.disabled = true;
       stopBtn.textContent = 'Stopping…';
       try {
-        await api.timeStop();
+        const result = await api.timeStop();
         clearInterval(state.timerInterval);
+        if (result && result.elapsed_seconds > 0) {
+          const sesStr = fmtMinutes(Math.round(result.elapsed_seconds / 60));
+          const totStr = fmtMinutes(result.total_approved_minutes);
+          toast(`${sesStr} saved — ${totStr} total logged on this job`);
+        } else {
+          toast('Work stopped and logged');
+        }
         router();
-      } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop Job'; }
+      } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop Work & Log Labor'; }
     };
   }
 
