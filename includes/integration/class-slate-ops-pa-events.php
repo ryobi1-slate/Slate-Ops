@@ -358,6 +358,9 @@ class Slate_Ops_PA_Events {
         $result = $wpdb->update($t, $data, ['id' => $existing_map[$vendor_no]]);
       } else {
         $result = $wpdb->insert($t, array_merge($data, ['created_at' => $now]));
+        if ($result !== false) {
+          $existing_map[$vendor_no] = (int) $wpdb->insert_id;
+        }
       }
 
       if ($result !== false) $count++;
@@ -446,6 +449,9 @@ class Slate_Ops_PA_Events {
         $result = $wpdb->update($ti, $data, ['id' => $existing_map[$item_no]]);
       } else {
         $result = $wpdb->insert($ti, array_merge($data, ['created_at' => $now]));
+        if ($result !== false) {
+          $existing_map[$item_no] = (int) $wpdb->insert_id;
+        }
       }
 
       if ($result !== false) $count++;
