@@ -492,6 +492,23 @@ class Slate_Ops_PA_Events {
     }
   }
 
+  public static function process_po_received($payload) {
+    global $wpdb;
+    $to  = $wpdb->prefix . 'slate_ops_pur_orders';
+    $now = Slate_Ops_Utils::now_gmt();
+
+    $po_no = sanitize_text_field($payload['poNo'] ?? '');
+    if (!$po_no) return false;
+
+    $updated = $wpdb->update(
+      $to,
+      ['status' => 'received', 'updated_at' => $now],
+      ['bc_po_id' => $po_no]
+    );
+
+    return $updated !== false && $updated > 0;
+  }
+
   public static function process_sync_failed($payload) {
     $feed = sanitize_text_field($payload['feed'] ?? '');
     if (!$feed || !self::feed_config($feed)) return;

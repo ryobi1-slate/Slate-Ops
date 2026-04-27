@@ -216,6 +216,13 @@ class Slate_Ops_Purchasing_REST {
     'bc.sync.failed',
   ];
 
+  // PO status events — BC notifying WP of PO state changes (read-only for WP).
+  // Eligible for the unsigned sandbox bypass when no HMAC secret is configured.
+  // Purchase writeback events are NOT in this list and will always require HMAC.
+  const PO_STATUS_EVENTS = [
+    'bc.po.received',
+  ];
+
   public static function h_integration_callback($req) {
     $body       = $req->get_body();
     $signature  = $req->get_header('x-slate-signature') ?? '';
@@ -223,21 +230,26 @@ class Slate_Ops_Purchasing_REST {
     $event_type = $req->get_header('x-slate-event-type') ?? '';
     $flow_id    = $req->get_header('x-slate-flow-id') ?? '';
 
-    $hmac_configured = !empty(get_option(Slate_Ops_PA_Events::OPT_SECRET, ''));
-    $is_readonly_sync = in_array($event_type, self::READONLY_SYNC_EVENTS, true);
+    $hmac_configured   = !empty(get_option(Slate_Ops_PA_Events::OPT_SECRET, ''));
+    $unsigned_eligible = in_array($event_type, self::READONLY_SYNC_EVENTS, true) ||
+                         in_array($event_type, self::PO_STATUS_EVENTS, true);
 
     // Temporary sandbox bypass: when no HMAC secret is configured, allow
-    // read-only BC sync callbacks without signature verification. This lets
-    // developers test the sync pipeline before wiring up production secrets.
+    // read-only BC sync and PO status callbacks without signature verification.
+    // This lets developers test the pipeline before wiring up production secrets.
     // HMAC is always enforced once a secret is set, and purchase writeback
     // events are never eligible for this bypass.
-    if ($hmac_configured || !$is_readonly_sync) {
+    if ($hmac_configured || !$unsigned_eligible) {
       if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp)) {
         return new WP_Error('invalid_signature', 'Signature invalid or expired.', ['status' => 401]);
       }
     }
 
-    $allowed_events = array_merge(['purchase.integration.test'], self::READONLY_SYNC_EVENTS);
+    $allowed_events = array_merge(
+      ['purchase.integration.test'],
+      self::READONLY_SYNC_EVENTS,
+      self::PO_STATUS_EVENTS
+    );
     if (!in_array($event_type, $allowed_events, true)) {
       return new WP_Error('unsupported_event', 'Event type not accepted.', ['status' => 422]);
     }
@@ -296,6 +308,14 @@ class Slate_Ops_Purchasing_REST {
         Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'error',
           sanitize_text_field($payload['error'] ?? 'Sync failed'), $payload_hash);
         Slate_Ops_PA_Events::process_sync_failed($payload);
+        break;
+
+      case 'bc.po.received':
+        if (Slate_Ops_PA_Events::process_po_received($payload)) {
+          Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'PO marked as received', $payload_hash);
+        } else {
+          Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'error', 'PO not found or update failed', $payload_hash);
+        }
         break;
     }
 
