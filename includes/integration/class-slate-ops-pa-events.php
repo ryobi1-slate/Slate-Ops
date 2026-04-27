@@ -211,7 +211,7 @@ class Slate_Ops_PA_Events {
     $response = wp_remote_post($flow_url, [
       'headers' => $headers,
       'body'    => $body,
-      'timeout' => 15,
+      'timeout' => 60,
     ]);
 
     $now = Slate_Ops_Utils::now_gmt();
@@ -226,7 +226,16 @@ class Slate_Ops_PA_Events {
 
     $code   = (int) wp_remote_retrieve_response_code($response);
     $status = ($code >= 200 && $code < 300) ? 'pending' : 'error';
-    $msg    = 'HTTP ' . $code;
+    // 202 Accepted is the expected PA response for async flows — the actual
+    // data arrives later via the callback endpoint, so status stays 'pending'
+    // until the bc.*.synced callback is received.
+    if ($code === 202) {
+      $msg = 'Accepted — awaiting callback';
+    } elseif ($code >= 200 && $code < 300) {
+      $msg = 'HTTP ' . $code . ' — awaiting callback';
+    } else {
+      $msg = 'HTTP ' . $code;
+    }
     update_option(self::feed_sync_opt($feed, 'status'), $status);
     update_option(self::feed_sync_opt($feed, 'msg'),    $msg);
 
