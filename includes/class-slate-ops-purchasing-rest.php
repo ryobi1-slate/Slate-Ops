@@ -229,9 +229,17 @@ class Slate_Ops_Purchasing_REST {
       return new WP_Error('unsupported_event', 'Event type not accepted.', ['status' => 422]);
     }
 
-    $json         = json_decode($body, true);
+    $json = json_decode($body, true);
+    if (!is_array($json)) {
+      return new WP_Error('invalid_json', 'Request body is not valid JSON.', ['status' => 400]);
+    }
+
+    if ($event_type !== 'purchase.integration.test' && empty($json['eventId'])) {
+      return new WP_Error('missing_event_id', 'eventId is required for idempotency.', ['status' => 400]);
+    }
+
     $payload      = (isset($json['payload']) && is_array($json['payload'])) ? $json['payload'] : [];
-    $event_id     = isset($json['eventId']) ? sanitize_text_field($json['eventId']) : wp_generate_uuid4();
+    $event_id     = isset($json['eventId']) ? sanitize_text_field($json['eventId']) : '';
     $payload_hash = hash('sha256', $body);
     $now          = Slate_Ops_Utils::now_gmt();
 
@@ -246,26 +254,26 @@ class Slate_Ops_Purchasing_REST {
         break;
 
       case 'bc.vendor.synced':
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::process_vendor_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::record_feed_sync('vendor', $now, 'success', 'Synced');
         break;
 
       case 'bc.item.synced':
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::process_item_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::record_feed_sync('item', $now, 'success', 'Synced');
         break;
 
       case 'bc.openPo.synced':
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::process_po_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::record_feed_sync('po', $now, 'success', 'Synced');
         break;
 
       case 'bc.demand.synced':
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::process_item_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
         Slate_Ops_PA_Events::record_feed_sync('demand', $now, 'success', 'Synced');
         break;
 

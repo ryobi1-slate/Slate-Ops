@@ -394,7 +394,8 @@ class Slate_Ops_PA_Events {
       if ($ts) $ordered_at = gmdate('Y-m-d H:i:s', $ts);
     }
     if (!empty($payload['expectedDate'])) {
-      $expected_date = sanitize_text_field($payload['expectedDate']);
+      $ts_exp = strtotime($payload['expectedDate']);
+      if ($ts_exp) $expected_date = gmdate('Y-m-d', $ts_exp);
     }
 
     $existing = $wpdb->get_row(
@@ -424,10 +425,12 @@ class Slate_Ops_PA_Events {
 
     if (!$po_id) return;
 
-    $wpdb->delete($tl, ['po_id' => $po_id]);
     $lines = isset($payload['lines']) && is_array($payload['lines']) ? $payload['lines'] : [];
+    $wpdb->query('START TRANSACTION');
+    $wpdb->delete($tl, ['po_id' => $po_id]);
+    $ok = true;
     foreach ($lines as $line) {
-      $wpdb->insert($tl, [
+      $result = $wpdb->insert($tl, [
         'po_id'            => $po_id,
         'item_description' => sanitize_text_field($line['itemDescription'] ?? ''),
         'qty_ordered'      => max(0, (int) ($line['qtyOrdered']            ?? 0)),
@@ -436,6 +439,12 @@ class Slate_Ops_PA_Events {
         'created_at'       => $now,
         'updated_at'       => $now,
       ]);
+      if ($result === false) { $ok = false; break; }
+    }
+    if ($ok) {
+      $wpdb->query('COMMIT');
+    } else {
+      $wpdb->query('ROLLBACK');
     }
   }
 
