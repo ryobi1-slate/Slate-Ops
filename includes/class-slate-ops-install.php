@@ -532,6 +532,7 @@ KEY awaiting_idx (awaiting_direction)
       demand_level VARCHAR(10) NOT NULL DEFAULT 'low',
       forecasted_need INT NOT NULL DEFAULT 0,
       suggested_order INT NOT NULL DEFAULT 0,
+      blocked TINYINT(1) NOT NULL DEFAULT 0,
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL,
       PRIMARY KEY (id),
