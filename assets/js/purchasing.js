@@ -1066,11 +1066,15 @@
     // ── Sync status card ────────────────────────────────────────────────────
     var syncFeeds  = ['vendor', 'item', 'po', 'demand'];
     var syncStatus = d ? d.sync_status : null;
-    var syncAnyDisabled = !d || !d.enabled || !d.hmac_configured;
+    var flows      = d ? (d.flows_configured || {}) : {};
+    // Per-feed map from feed key → flows_configured key (all match 1:1 for sync feeds)
+    var paNotEnabled = !d || !d.enabled;
+    var unsignedMode = d && d.enabled && !d.hmac_configured;
 
     var syncRows = syncFeeds.map(function (feed) {
-      var fs        = syncStatus ? syncStatus[feed] : null;
-      var isSyncing = state.integrationSyncing === feed;
+      var fs          = syncStatus ? syncStatus[feed] : null;
+      var isSyncing   = state.integrationSyncing === feed;
+      var feedDisabled = paNotEnabled || !flows[feed];
       var statusCls, statusStr;
       if (isSyncing) {
         statusCls = 'pur-sync-status--pending';
@@ -1094,7 +1098,7 @@
       var syncBtn = IS_ADMIN
         ? '<button class="pur-btn pur-btn--outline pur-sync-btn"' +
             ' data-action="sync-request" data-feed="' + esc(feed) + '"' +
-            (syncAnyDisabled || !!state.integrationSyncing ? ' disabled' : '') + '>' +
+            (feedDisabled || !!state.integrationSyncing ? ' disabled' : '') + '>' +
             (isSyncing
               ? '<span class="material-symbols-outlined">sync</span>Syncing…'
               : '<span class="material-symbols-outlined">sync</span>Sync ' + esc(SYNC_FEED_LABELS[feed] || feed)) +
@@ -1113,8 +1117,14 @@
       '<div class="pur-api-card-title">Sync Status' +
       (IS_ADMIN ? '<span class="pur-sync-card-hint">Admin — manual triggers</span>' : '') +
       '</div>' +
-      (syncAnyDisabled && IS_ADMIN
-        ? '<div class="pur-sync-disabled-note">Enable integration and configure HMAC to trigger syncs.</div>'
+      (unsignedMode
+        ? '<div class="pur-sync-unsigned-warning">' +
+            '<span class="material-symbols-outlined">warning</span>' +
+            'Unsigned sandbox callback mode active. Configure an HMAC secret before going to production.' +
+          '</div>'
+        : '') +
+      (paNotEnabled && IS_ADMIN
+        ? '<div class="pur-sync-disabled-note">Enable Power Automate to trigger syncs.</div>'
         : '') +
       '<div class="pur-sync-table">' + syncRows + '</div>' +
     '</div>';

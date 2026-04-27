@@ -185,11 +185,7 @@ class Slate_Ops_PA_Events {
       return new WP_Error('no_flow_url', 'No flow URL configured for feed: ' . $feed, ['status' => 400]);
     }
 
-    $secret = get_option(self::OPT_SECRET, '');
-    if (!$secret) {
-      return new WP_Error('no_secret', 'HMAC secret is not configured.', ['status' => 400]);
-    }
-
+    $secret    = get_option(self::OPT_SECRET, '');
     $event_id  = self::uuid4();
     $timestamp = (string) time();
     $body = wp_json_encode([
@@ -201,14 +197,18 @@ class Slate_Ops_PA_Events {
       'payload'      => ['feed' => $feed],
     ]);
 
+    // Sign when a secret is configured; omit signature headers for sandbox
+    // testing where no secret is set (read-only sync only).
+    $headers = ['Content-Type' => 'application/json'];
+    if ($secret) {
+      $headers['X-Slate-Signature'] = self::sign($body, $timestamp, $secret);
+      $headers['X-Slate-Timestamp'] = $timestamp;
+    }
+    $headers['X-Slate-Event-Type'] = $cfg['event'];
+    $headers['X-Slate-Flow-Id']    = $event_id;
+
     $response = wp_remote_post($flow_url, [
-      'headers' => [
-        'Content-Type'       => 'application/json',
-        'X-Slate-Signature'  => self::sign($body, $timestamp, $secret),
-        'X-Slate-Timestamp'  => $timestamp,
-        'X-Slate-Event-Type' => $cfg['event'],
-        'X-Slate-Flow-Id'    => $event_id,
-      ],
+      'headers' => $headers,
       'body'    => $body,
       'timeout' => 15,
     ]);

@@ -1150,6 +1150,20 @@
   border-bottom: 1px solid var(--slate-divider-soft);
 }
 
+.pur-sync-unsigned-warning {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  color: var(--slate-arches-ink);
+  background: var(--slate-arches-wash);
+  border-bottom: 1px solid var(--slate-arches);
+}
+
+.pur-sync-unsigned-warning .material-symbols-outlined { font-size: 15px; }
+
 .pur-sync-table {
   display: flex;
   flex-direction: column;
