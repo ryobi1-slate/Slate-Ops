@@ -206,6 +206,16 @@ class Slate_Ops_Purchasing_REST {
     return rest_ensure_response($result);
   }
 
+  // Read-only BC sync event types — inbound from Power Automate, no WP writes outside purchasing tables.
+  // Purchase writeback events (future Phase) are NOT in this list and will always require HMAC.
+  const READONLY_SYNC_EVENTS = [
+    'bc.vendor.synced',
+    'bc.item.synced',
+    'bc.openPo.synced',
+    'bc.demand.synced',
+    'bc.sync.failed',
+  ];
+
   public static function h_integration_callback($req) {
     $body       = $req->get_body();
     $signature  = $req->get_header('x-slate-signature') ?? '';
@@ -213,18 +223,21 @@ class Slate_Ops_Purchasing_REST {
     $event_type = $req->get_header('x-slate-event-type') ?? '';
     $flow_id    = $req->get_header('x-slate-flow-id') ?? '';
 
-    if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp)) {
-      return new WP_Error('invalid_signature', 'Signature invalid or expired.', ['status' => 401]);
+    $hmac_configured = !empty(get_option(Slate_Ops_PA_Events::OPT_SECRET, ''));
+    $is_readonly_sync = in_array($event_type, self::READONLY_SYNC_EVENTS, true);
+
+    // Temporary sandbox bypass: when no HMAC secret is configured, allow
+    // read-only BC sync callbacks without signature verification. This lets
+    // developers test the sync pipeline before wiring up production secrets.
+    // HMAC is always enforced once a secret is set, and purchase writeback
+    // events are never eligible for this bypass.
+    if ($hmac_configured || !$is_readonly_sync) {
+      if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp)) {
+        return new WP_Error('invalid_signature', 'Signature invalid or expired.', ['status' => 401]);
+      }
     }
 
-    $allowed_events = [
-      'purchase.integration.test',
-      'bc.vendor.synced',
-      'bc.item.synced',
-      'bc.openPo.synced',
-      'bc.demand.synced',
-      'bc.sync.failed',
-    ];
+    $allowed_events = array_merge(['purchase.integration.test'], self::READONLY_SYNC_EVENTS);
     if (!in_array($event_type, $allowed_events, true)) {
       return new WP_Error('unsupported_event', 'Event type not accepted.', ['status' => 422]);
     }

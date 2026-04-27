@@ -445,6 +445,20 @@
       });
   }
 
+  function handleClearHmacSecret() {
+    state.error = null;
+    apiPost('integration/settings', { clear_hmac_secret: true })
+      .then(function (result) {
+        state.integration = result;
+        state.notice = 'HMAC secret cleared.';
+        render();
+      })
+      .catch(function (err) {
+        state.error = err.message || 'Failed to clear HMAC secret.';
+        render();
+      });
+  }
+
   function handleSyncRequest(feed) {
     state.integrationSyncing = feed;
     state.error = null;
@@ -1066,11 +1080,15 @@
     // ── Sync status card ────────────────────────────────────────────────────
     var syncFeeds  = ['vendor', 'item', 'po', 'demand'];
     var syncStatus = d ? d.sync_status : null;
-    var syncAnyDisabled = !d || !d.enabled || !d.hmac_configured;
+    var flows      = d ? (d.flows_configured || {}) : {};
+    // Per-feed map from feed key → flows_configured key (all match 1:1 for sync feeds)
+    var paNotEnabled = !d || !d.enabled;
+    var unsignedMode = d && d.enabled && !d.hmac_configured;
 
     var syncRows = syncFeeds.map(function (feed) {
-      var fs        = syncStatus ? syncStatus[feed] : null;
-      var isSyncing = state.integrationSyncing === feed;
+      var fs          = syncStatus ? syncStatus[feed] : null;
+      var isSyncing   = state.integrationSyncing === feed;
+      var feedDisabled = paNotEnabled || !flows[feed];
       var statusCls, statusStr;
       if (isSyncing) {
         statusCls = 'pur-sync-status--pending';
@@ -1094,7 +1112,7 @@
       var syncBtn = IS_ADMIN
         ? '<button class="pur-btn pur-btn--outline pur-sync-btn"' +
             ' data-action="sync-request" data-feed="' + esc(feed) + '"' +
-            (syncAnyDisabled || !!state.integrationSyncing ? ' disabled' : '') + '>' +
+            (feedDisabled || !!state.integrationSyncing ? ' disabled' : '') + '>' +
             (isSyncing
               ? '<span class="material-symbols-outlined">sync</span>Syncing…'
               : '<span class="material-symbols-outlined">sync</span>Sync ' + esc(SYNC_FEED_LABELS[feed] || feed)) +
@@ -1113,8 +1131,14 @@
       '<div class="pur-api-card-title">Sync Status' +
       (IS_ADMIN ? '<span class="pur-sync-card-hint">Admin — manual triggers</span>' : '') +
       '</div>' +
-      (syncAnyDisabled && IS_ADMIN
-        ? '<div class="pur-sync-disabled-note">Enable integration and configure HMAC to trigger syncs.</div>'
+      (unsignedMode
+        ? '<div class="pur-sync-unsigned-warning">' +
+            '<span class="material-symbols-outlined">warning</span>' +
+            'Unsigned sandbox callback mode active. Configure an HMAC secret before going to production.' +
+          '</div>'
+        : '') +
+      (paNotEnabled && IS_ADMIN
+        ? '<div class="pur-sync-disabled-note">Enable Power Automate to trigger syncs.</div>'
         : '') +
       '<div class="pur-sync-table">' + syncRows + '</div>' +
     '</div>';
@@ -1166,10 +1190,15 @@
           '<input type="password" class="pur-int-input" autocomplete="new-password"' +
             ' placeholder="' + (d && d.hmac_configured ? '••••••••' : 'Enter secret…') + '"' +
             ' data-integration-field="hmac_secret">' +
+          (d && d.hmac_configured
+            ? '<button class="pur-btn pur-btn--outline pur-int-clear-btn" data-action="clear-hmac-secret">' +
+                '<span class="material-symbols-outlined">delete</span>Clear' +
+              '</button>'
+            : '') +
         '</div>' +
         '<p class="pur-int-hint">' +
           (d && d.hmac_configured
-            ? 'Secret is configured. Enter a new value to replace it, or leave blank to keep the current secret.'
+            ? 'Secret is configured. Enter a new value to replace it, or leave blank to keep the current secret. Use Clear to remove it entirely.'
             : 'No secret configured. Enter a value to enable signing.') +
         '</p>' +
         '<div class="pur-int-row pur-int-row--actions">' +
@@ -1418,6 +1447,11 @@
     // Integration settings save
     el.querySelectorAll('[data-action="save-integration"]').forEach(function (btn) {
       btn.addEventListener('click', handleSaveIntegration);
+    });
+
+    // Clear HMAC secret
+    el.querySelectorAll('[data-action="clear-hmac-secret"]').forEach(function (btn) {
+      btn.addEventListener('click', handleClearHmacSecret);
     });
 
     // Send test event
