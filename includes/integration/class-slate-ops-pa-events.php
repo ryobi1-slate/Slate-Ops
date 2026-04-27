@@ -498,13 +498,15 @@ class Slate_Ops_PA_Events {
     $now = Slate_Ops_Utils::now_gmt();
 
     $po_no = sanitize_text_field($payload['poNo'] ?? '');
-    if (!$po_no) return;
+    if (!$po_no) return false;
 
-    $wpdb->update(
+    $updated = $wpdb->update(
       $to,
       ['status' => 'received', 'updated_at' => $now],
       ['bc_po_id' => $po_no]
     );
+
+    return $updated !== false && $updated > 0;
   }
 
   public static function process_sync_failed($payload) {

@@ -311,8 +311,11 @@ class Slate_Ops_Purchasing_REST {
         break;
 
       case 'bc.po.received':
-        Slate_Ops_PA_Events::process_po_received($payload);
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'PO received by BC', $payload_hash);
+        if (Slate_Ops_PA_Events::process_po_received($payload)) {
+          Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'PO marked as received', $payload_hash);
+        } else {
+          Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'error', 'PO not found or update failed', $payload_hash);
+        }
         break;
     }
 
