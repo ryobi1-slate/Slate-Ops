@@ -992,6 +992,53 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   cursor: not-allowed;
 }
 
+/* ─── 16. Tech screen: job labor progress gauge ─────────────────────
+ * Compact build-progress block shown inside the Active Labor card,
+ * below the elapsed timer, above the action buttons.
+ * Job-costing visibility only — not payroll.
+ */
+.slate-job-progress {
+  margin: 10px 16px 0;
+}
+.slate-job-progress__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.slate-job-progress__label {
+  color: var(--slate-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.slate-job-progress__value {
+  color: var(--slate-ink);
+  font-weight: 500;
+}
+.slate-job-progress__percent {
+  color: var(--slate-ink-muted);
+  margin-left: 4px;
+}
+.slate-progress-bar {
+  height: 6px;
+  background: var(--slate-sand);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.slate-progress-bar__fill {
+  height: 100%;
+  background: var(--sage);
+  transition: width 120ms ease;
+}
+.slate-progress-bar__fill.warn {
+  background: var(--arches);
+}
+.slate-progress-bar__fill.over {
+  background: var(--slate-flag);
+}
+
 /* ─── 14. Portal page container ─────────────────────────────────────
  * Full-page scroll wrapper for /ops/* views. Mirrors Dealer Portal layout.
  */
