@@ -267,9 +267,11 @@ class Slate_Ops_Purchasing_REST {
         break;
 
       case 'bc.vendor.synced':
-        Slate_Ops_PA_Events::process_vendor_sync($payload);
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
-        Slate_Ops_PA_Events::record_feed_sync('vendor', $now, 'success', 'Synced');
+        $vendor_count = Slate_Ops_PA_Events::process_vendor_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success',
+          'Processed ' . $vendor_count . ' vendor(s)', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('vendor', $now, 'success',
+          'Synced ' . $vendor_count . ' vendor(s)');
         break;
 
       case 'bc.item.synced':

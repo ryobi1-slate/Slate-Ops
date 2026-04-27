@@ -304,32 +304,66 @@ class Slate_Ops_PA_Events {
     $t   = $wpdb->prefix . 'slate_ops_pur_vendors';
     $now = Slate_Ops_Utils::now_gmt();
 
-    $vendor_no = sanitize_text_field($payload['vendorNo'] ?? '');
-    if (!$vendor_no) return;
+    // Support both a single-vendor payload {vendorNo, name, ...} and a batch
+    // payload {vendors: [{vendorNo, ...}, ...]} — PA typically sends a batch.
+    if (isset($payload['vendors']) && is_array($payload['vendors'])) {
+      $records = $payload['vendors'];
+    } elseif (!empty($payload['vendorNo'])) {
+      $records = [$payload];
+    } else {
+      return 0;
+    }
 
-    $existing = $wpdb->get_row(
-      $wpdb->prepare("SELECT id FROM $t WHERE bc_vendor_id = %s LIMIT 1", $vendor_no),
+    // Collect all valid vendor numbers up front so we can pre-fetch existing
+    // rows in a single IN query instead of one SELECT per record (N+1).
+    $vendor_nos = [];
+    foreach ($records as $v) {
+      $vno = sanitize_text_field($v['vendorNo'] ?? '');
+      if ($vno !== '') $vendor_nos[] = $vno;
+    }
+    if (empty($vendor_nos)) return 0;
+
+    $placeholders = implode(',', array_fill(0, count($vendor_nos), '%s'));
+    $existing_rows = $wpdb->get_results(
+      $wpdb->prepare("SELECT id, bc_vendor_id FROM $t WHERE bc_vendor_id IN ($placeholders)", $vendor_nos),
       ARRAY_A
     );
-
-    $data = [
-      'bc_vendor_id'     => $vendor_no,
-      'name'             => sanitize_text_field($payload['name']          ?? ''),
-      'contact_email'    => sanitize_email($payload['email']              ?? ''),
-      'contact_phone'    => sanitize_text_field($payload['phone']         ?? ''),
-      'payment_terms'    => sanitize_text_field($payload['paymentTerms']  ?? ''),
-      'freight_terms'    => sanitize_text_field($payload['freightTerms']  ?? ''),
-      'lead_time_days'   => max(0, (int) ($payload['leadTimeDays']        ?? 0)),
-      'min_order_amount' => isset($payload['minOrderAmount']) ? max(0.0, (float) $payload['minOrderAmount']) : null,
-      'status'           => sanitize_text_field($payload['status']        ?? 'active'),
-      'updated_at'       => $now,
-    ];
-
-    if ($existing) {
-      $wpdb->update($t, $data, ['id' => (int) $existing['id']]);
-    } else {
-      $wpdb->insert($t, array_merge($data, ['created_at' => $now]));
+    $existing_map = [];
+    foreach ($existing_rows as $row) {
+      $existing_map[$row['bc_vendor_id']] = (int) $row['id'];
     }
+
+    $count = 0;
+    foreach ($records as $v) {
+      $vendor_no = sanitize_text_field($v['vendorNo'] ?? '');
+      if ($vendor_no === '') continue;
+
+      // Accept both key names PA may send for minimum order amount.
+      $min_order_raw = $v['minimumOrderAmount'] ?? $v['minOrderAmount'] ?? null;
+
+      $data = [
+        'bc_vendor_id'     => $vendor_no,
+        'name'             => sanitize_text_field($v['name']         ?? ''),
+        'contact_email'    => sanitize_email($v['email']             ?? ''),
+        'contact_phone'    => sanitize_text_field($v['phone']        ?? ''),
+        'payment_terms'    => sanitize_text_field($v['paymentTerms'] ?? ''),
+        'freight_terms'    => sanitize_text_field($v['freightTerms'] ?? ''),
+        'lead_time_days'   => max(0, (int) ($v['leadTimeDays']       ?? 0)),
+        'min_order_amount' => isset($min_order_raw) ? max(0.0, (float) $min_order_raw) : null,
+        'status'           => sanitize_text_field($v['status']       ?? 'active'),
+        'updated_at'       => $now,
+      ];
+
+      if (isset($existing_map[$vendor_no])) {
+        $result = $wpdb->update($t, $data, ['id' => $existing_map[$vendor_no]]);
+      } else {
+        $result = $wpdb->insert($t, array_merge($data, ['created_at' => $now]));
+      }
+
+      if ($result !== false) $count++;
+    }
+
+    return $count;
   }
 
   public static function process_item_sync($payload) {
