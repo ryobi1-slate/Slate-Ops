@@ -933,6 +933,64 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   cursor: not-allowed;
 }
 
+/* ─── 15. Tech screen: slate-work-btn system ────────────────────────
+ * Base + variant classes for the Tech page work-action buttons.
+ * Base sets shape/layout; variants add color.
+ * Active-card buttons keep Tailwind flex-col/py-5 for icon-above-text.
+ * Up Next button uses row layout from the base.
+ */
+.ops-page-tech #ops-view .slate-work-btn {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.ops-page-tech #ops-view .slate-work-btn--start {
+  background-color: var(--slate-redwood);
+  color: var(--white);
+}
+.ops-page-tech #ops-view .slate-work-btn--start:hover:not([disabled]) {
+  background-color: #1a4d39;
+}
+.ops-page-tech #ops-view .slate-work-btn--resume {
+  background-color: var(--sage);
+  color: var(--white);
+}
+.ops-page-tech #ops-view .slate-work-btn--resume:hover:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .slate-work-btn--stop {
+  background-color: var(--slate-flag);
+  color: var(--white);
+}
+.ops-page-tech #ops-view .slate-work-btn--stop:hover:not([disabled]) {
+  background-color: var(--slate-flag-ink);
+}
+.ops-page-tech #ops-view .slate-work-btn--secondary {
+  background-color: var(--surface-card);
+  color: var(--sage);
+  border-color: var(--border-md);
+}
+.ops-page-tech #ops-view .slate-work-btn--secondary:hover:not([disabled]) {
+  background-color: var(--sand);
+}
+.ops-page-tech #ops-view .slate-work-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* ─── 14. Portal page container ─────────────────────────────────────
  * Full-page scroll wrapper for /ops/* views. Mirrors Dealer Portal layout.
  */
