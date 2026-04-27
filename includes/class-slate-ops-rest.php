@@ -2112,16 +2112,31 @@ return self::get_job(['id' => $job_id]);
 
     $now = Slate_Ops_Utils::now_gmt();
     $wpdb->update($segments, [
-      'end_ts' => $now,
+      'end_ts'     => $now,
       'updated_at' => $now,
     ], ['segment_id' => (int)$open['segment_id']]);
 
     self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $now, 'Timer stopped');
 
+    // Elapsed seconds for the just-closed segment — computed in PHP, no extra query.
+    $elapsed_seconds = max(0, strtotime($now) - strtotime($open['start_ts']));
+
+    // Total approved minutes this user has logged on this job (all closed segments).
+    // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
+    $total_approved_minutes = (int)$wpdb->get_var($wpdb->prepare(
+      "SELECT ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60)
+       FROM $segments
+       WHERE job_id = %d AND user_id = %d AND end_ts IS NOT NULL
+         AND approval_status = 'approved' AND state = 'active'",
+      (int)$open['job_id'], $user_id
+    ));
+
     return [
-      'segment_id' => (int)$open['segment_id'],
-      'job_id'     => (int)$open['job_id'],
-      'stopped_at' => $now,
+      'segment_id'             => (int)$open['segment_id'],
+      'job_id'                 => (int)$open['job_id'],
+      'stopped_at'             => $now,
+      'elapsed_seconds'        => $elapsed_seconds,
+      'total_approved_minutes' => $total_approved_minutes,
     ];
   }
 
@@ -2167,8 +2182,9 @@ return self::get_job(['id' => $job_id]);
 
   public static function time_active($req) {
     global $wpdb;
-    $seg = $wpdb->prefix . 'slate_ops_time_segments';
-    $jt  = $wpdb->prefix . 'slate_ops_jobs';
+    $seg     = $wpdb->prefix . 'slate_ops_time_segments';
+    $jt      = $wpdb->prefix . 'slate_ops_jobs';
+    $user_id = get_current_user_id();
     $row = $wpdb->get_row($wpdb->prepare(
       "SELECT s.*, j.so_number, j.customer_name, j.vin, j.status AS job_status,
               j.estimated_minutes, j.work_center, j.dealer_name
@@ -2176,8 +2192,21 @@ return self::get_job(['id' => $job_id]);
        JOIN $jt j ON j.job_id = s.job_id
        WHERE s.user_id = %d AND s.end_ts IS NULL AND s.state = 'active'
        ORDER BY s.start_ts DESC LIMIT 1",
-      get_current_user_id()
+      $user_id
     ), ARRAY_A);
+
+    if ($row) {
+      // Closed approved segments this user has previously logged on this job.
+      // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
+      $row['prior_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
+        "SELECT ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60)
+         FROM $seg
+         WHERE job_id = %d AND user_id = %d AND end_ts IS NOT NULL
+           AND approval_status = 'approved' AND state = 'active'",
+        (int)$row['job_id'], $user_id
+      ));
+    }
+
     return ['active' => $row ?: null];
   }
 
