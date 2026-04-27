@@ -74,6 +74,7 @@
   --slate-arches-wash:     #FDF2DF;
 
   --slate-redwood:         #0F3A2A;
+  --slate-redwood-dark:    #1a4d39;
   --slate-redwood-wash:    #E4EEE9;
 
   --slate-flag:            #B22222;
@@ -962,7 +963,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   color: var(--white);
 }
 .ops-page-tech #ops-view .slate-work-btn--start:hover:not([disabled]) {
-  background-color: #1a4d39;
+  background-color: var(--slate-redwood-dark);
 }
 .ops-page-tech #ops-view .slate-work-btn--resume {
   background-color: var(--sage);
