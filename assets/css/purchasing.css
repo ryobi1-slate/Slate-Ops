@@ -1124,6 +1124,15 @@
   padding-left: 192px;
 }
 
+.pur-int-clear-btn {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  font-size: var(--slate-text-xs);
+  white-space: nowrap;
+}
+
+.pur-int-clear-btn .material-symbols-outlined { font-size: 14px; }
+
 .pur-toggle {
   display: inline-flex;
   align-items: center;

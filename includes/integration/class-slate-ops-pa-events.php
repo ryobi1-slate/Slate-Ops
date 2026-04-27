@@ -95,13 +95,14 @@ class Slate_Ops_PA_Events {
       }
     }
 
-    if (array_key_exists('hmac_secret', $data)) {
+    if (!empty($data['clear_hmac_secret'])) {
+      delete_option(self::OPT_SECRET);
+    } elseif (array_key_exists('hmac_secret', $data)) {
       $secret = trim((string) $data['hmac_secret']);
       if ($secret !== '') {
         update_option(self::OPT_SECRET, $secret);
-      } else {
-        delete_option(self::OPT_SECRET);
       }
+      // blank input = keep existing secret; use clear_hmac_secret to explicitly remove it
     }
   }
 

@@ -445,6 +445,20 @@
       });
   }
 
+  function handleClearHmacSecret() {
+    state.error = null;
+    apiPost('integration/settings', { clear_hmac_secret: true })
+      .then(function (result) {
+        state.integration = result;
+        state.notice = 'HMAC secret cleared.';
+        render();
+      })
+      .catch(function (err) {
+        state.error = err.message || 'Failed to clear HMAC secret.';
+        render();
+      });
+  }
+
   function handleSyncRequest(feed) {
     state.integrationSyncing = feed;
     state.error = null;
@@ -1176,10 +1190,15 @@
           '<input type="password" class="pur-int-input" autocomplete="new-password"' +
             ' placeholder="' + (d && d.hmac_configured ? '••••••••' : 'Enter secret…') + '"' +
             ' data-integration-field="hmac_secret">' +
+          (d && d.hmac_configured
+            ? '<button class="pur-btn pur-btn--outline pur-int-clear-btn" data-action="clear-hmac-secret">' +
+                '<span class="material-symbols-outlined">delete</span>Clear' +
+              '</button>'
+            : '') +
         '</div>' +
         '<p class="pur-int-hint">' +
           (d && d.hmac_configured
-            ? 'Secret is configured. Enter a new value to replace it, or leave blank to keep the current secret.'
+            ? 'Secret is configured. Enter a new value to replace it, or leave blank to keep the current secret. Use Clear to remove it entirely.'
             : 'No secret configured. Enter a value to enable signing.') +
         '</p>' +
         '<div class="pur-int-row pur-int-row--actions">' +
@@ -1428,6 +1447,11 @@
     // Integration settings save
     el.querySelectorAll('[data-action="save-integration"]').forEach(function (btn) {
       btn.addEventListener('click', handleSaveIntegration);
+    });
+
+    // Clear HMAC secret
+    el.querySelectorAll('[data-action="clear-hmac-secret"]').forEach(function (btn) {
+      btn.addEventListener('click', handleClearHmacSecret);
     });
 
     // Send test event
