@@ -108,6 +108,12 @@ class Slate_Ops_Purchasing_REST {
       'permission_callback' => '__return_true',
       'callback'            => [__CLASS__, 'h_integration_callback'],
     ]);
+
+    register_rest_route($ns, '/purchasing/integration/sync/(?P<feed>[a-z]+)', [
+      'methods'             => 'POST',
+      'permission_callback' => $admin,
+      'callback'            => [__CLASS__, 'h_sync_request'],
+    ]);
   }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -201,20 +207,95 @@ class Slate_Ops_Purchasing_REST {
   }
 
   public static function h_integration_callback($req) {
-    $body      = $req->get_body();
-    $signature = $req->get_header('x-slate-signature') ?? '';
-    $timestamp = $req->get_header('x-slate-timestamp') ?? '';
+    $body       = $req->get_body();
+    $signature  = $req->get_header('x-slate-signature') ?? '';
+    $timestamp  = $req->get_header('x-slate-timestamp') ?? '';
     $event_type = $req->get_header('x-slate-event-type') ?? '';
+    $flow_id    = $req->get_header('x-slate-flow-id') ?? '';
 
     if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp)) {
       return new WP_Error('invalid_signature', 'Signature invalid or expired.', ['status' => 401]);
     }
-    if ($event_type !== 'purchase.integration.test') {
-      return new WP_Error('unsupported_event', 'Only test events are accepted in this phase.', ['status' => 422]);
+
+    $allowed_events = [
+      'purchase.integration.test',
+      'bc.vendor.synced',
+      'bc.item.synced',
+      'bc.openPo.synced',
+      'bc.demand.synced',
+      'bc.sync.failed',
+    ];
+    if (!in_array($event_type, $allowed_events, true)) {
+      return new WP_Error('unsupported_event', 'Event type not accepted.', ['status' => 422]);
     }
 
-    update_option(Slate_Ops_PA_Events::OPT_LAST_CB, Slate_Ops_Utils::now_gmt());
+    $json = json_decode($body, true);
+    if (!is_array($json)) {
+      return new WP_Error('invalid_json', 'Request body is not valid JSON.', ['status' => 400]);
+    }
+
+    if ($event_type !== 'purchase.integration.test' && empty($json['eventId'])) {
+      return new WP_Error('missing_event_id', 'eventId is required for idempotency.', ['status' => 400]);
+    }
+
+    $payload      = (isset($json['payload']) && is_array($json['payload'])) ? $json['payload'] : [];
+    $event_id     = isset($json['eventId']) ? sanitize_text_field($json['eventId']) : '';
+    $payload_hash = hash('sha256', $body);
+    $now          = Slate_Ops_Utils::now_gmt();
+
+    if ($event_type !== 'purchase.integration.test' &&
+        Slate_Ops_PA_Events::is_duplicate_event($event_id)) {
+      return rest_ensure_response(['received' => true, 'event_type' => $event_type, 'duplicate' => true]);
+    }
+
+    switch ($event_type) {
+      case 'purchase.integration.test':
+        update_option(Slate_Ops_PA_Events::OPT_LAST_CB, $now);
+        break;
+
+      case 'bc.vendor.synced':
+        Slate_Ops_PA_Events::process_vendor_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('vendor', $now, 'success', 'Synced');
+        break;
+
+      case 'bc.item.synced':
+        Slate_Ops_PA_Events::process_item_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('item', $now, 'success', 'Synced');
+        break;
+
+      case 'bc.openPo.synced':
+        Slate_Ops_PA_Events::process_po_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('po', $now, 'success', 'Synced');
+        break;
+
+      case 'bc.demand.synced':
+        Slate_Ops_PA_Events::process_item_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('demand', $now, 'success', 'Synced');
+        break;
+
+      case 'bc.sync.failed':
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'error',
+          sanitize_text_field($payload['error'] ?? 'Sync failed'), $payload_hash);
+        Slate_Ops_PA_Events::process_sync_failed($payload);
+        break;
+    }
+
     return rest_ensure_response(['received' => true, 'event_type' => $event_type]);
+  }
+
+  public static function h_sync_request($req) {
+    $feed    = sanitize_key($req['feed']);
+    $allowed = ['vendor', 'item', 'po', 'demand'];
+    if (!in_array($feed, $allowed, true)) {
+      return new WP_Error('invalid_feed', 'Unknown feed. Allowed: vendor, item, po, demand.', ['status' => 400]);
+    }
+    $result = Slate_Ops_PA_Events::send_sync_request($feed);
+    if (is_wp_error($result)) return $result;
+    return rest_ensure_response($result);
   }
 
   // ── Purchase request handlers ──────────────────────────────────────────────
