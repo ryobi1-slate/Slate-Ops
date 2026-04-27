@@ -1251,6 +1251,27 @@ foreach ($rows as &$r) {
       if (array_key_exists('status', $body)) {
         $ns = strtoupper(sanitize_text_field((string)($body['status'] ?? '')));
         if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
+          $cur = (string)($job['status'] ?? '');
+          if (!Slate_Ops_Statuses::is_valid_transition($cur, $ns)) {
+            return new WP_Error(
+              'invalid_transition',
+              sprintf(
+                'Cannot move job from %s to %s.',
+                Slate_Ops_Statuses::label($cur),
+                Slate_Ops_Statuses::label($ns)
+              ),
+              ['status' => 422]
+            );
+          }
+          // Gate: IN_PROGRESS requires assigned tech (check merged state).
+          if ($ns === Slate_Ops_Statuses::IN_PROGRESS) {
+            $future_uid = array_key_exists('assigned_user_id', $body)
+              ? (int)($body['assigned_user_id'] ?? 0)
+              : (int)($job['assigned_user_id'] ?? 0);
+            if (!$future_uid) {
+              return new WP_Error('not_ready_for_progress', 'Cannot start job: no tech has been assigned.', ['status' => 422]);
+            }
+          }
           $audits[] = ['status', $job['status'], $ns];
           $update['status']            = $ns;
           $update['status_updated_at'] = $now;
@@ -1797,6 +1818,38 @@ $priority = (int)($body['priority'] ?? 0);
 
 $now = Slate_Ops_Utils::now_gmt();
 
+// Fetch job once for all guards below.
+$current_job = self::job_by_id($job_id);
+if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+$current_status = (string)($current_job['status'] ?? '');
+
+// Centralized transition guard — blocks all invalid status jumps.
+if (!Slate_Ops_Statuses::is_valid_transition($current_status, $new_status)) {
+  return new WP_Error(
+    'invalid_transition',
+    sprintf(
+      'Cannot move job from %s to %s.',
+      Slate_Ops_Statuses::label($current_status),
+      Slate_Ops_Statuses::label($new_status)
+    ),
+    ['status' => 422]
+  );
+}
+
+// Gate: READY_FOR_BUILD requires SO#, customer info, estimated time, and ready parts.
+if ($new_status === Slate_Ops_Statuses::READY_FOR_BUILD) {
+  $gate = self::check_ready_for_build_gate($current_job, ['status' => $new_status]);
+  if ($gate) return $gate;
+}
+
+// Gate: IN_PROGRESS requires an assigned tech.
+if ($new_status === Slate_Ops_Statuses::IN_PROGRESS) {
+  if (empty($current_job['assigned_user_id'])) {
+    return new WP_Error('not_ready_for_progress', 'Cannot start job: no tech has been assigned.', ['status' => 422]);
+  }
+}
+
 $update = [
   'status' => $new_status,
   'status_detail' => $detail ?: null,
@@ -1812,32 +1865,6 @@ if (!empty($delay_reason)) {
 // Priority 1-5
 if ($priority >= 1 && $priority <= 5) {
   $update['priority'] = $priority;
-}
-
-// Guard: COMPLETE requires job to be READY_FOR_PICKUP (idempotent if already COMPLETE).
-if ($new_status === Slate_Ops_Statuses::COMPLETE) {
-  $current_job = self::job_by_id($job_id);
-  if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
-  if ($current_job['status'] !== Slate_Ops_Statuses::COMPLETE && $current_job['status'] !== Slate_Ops_Statuses::READY_FOR_PICKUP) {
-    return new WP_Error('invalid_state', 'Job must be Ready for Pickup to mark complete', ['status' => 422]);
-  }
-}
-
-// Guard: PENDING_QC requires job to be IN_PROGRESS (matches submit_qc behavior).
-if ($new_status === 'PENDING_QC') {
-  $current_job = self::job_by_id($job_id);
-  if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
-  if ($current_job['status'] !== 'IN_PROGRESS') {
-    return new WP_Error('invalid_state', 'Job must be In Progress to submit for QC', ['status' => 422]);
-  }
-}
-
-// Readiness gate: block transition to READY_FOR_BUILD if requirements unmet.
-if ($new_status === 'READY_FOR_BUILD') {
-  $current_job = self::job_by_id($job_id);
-  if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
-  $gate = self::check_ready_for_build_gate($current_job, ['status' => $new_status]);
-  if ($gate) return $gate;
 }
 
 $wpdb->update($t, $update, ['job_id' => $job_id]);
@@ -2009,8 +2036,8 @@ return self::get_job(['id' => $job_id]);
 
     $user_id = get_current_user_id();
 
-    // Job-status guard: only QUEUED or IN_PROGRESS jobs can be started.
-    if (!in_array($job['status'], ['QUEUED', 'IN_PROGRESS'], true)) {
+    // Job-status guard: only READY_FOR_BUILD, QUEUED, or IN_PROGRESS jobs can be started.
+    if (!in_array($job['status'], ['READY_FOR_BUILD', 'QUEUED', 'IN_PROGRESS'], true)) {
       return new WP_Error('invalid_status', 'Job cannot be started in its current status', ['status' => 422]);
     }
 

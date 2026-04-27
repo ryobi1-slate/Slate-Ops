@@ -2272,11 +2272,11 @@ async function loadSchedule(){
 async function loadTech() {
   const [activeResp, myJobsResp] = await Promise.all([
     api.timeActive(),
-    api.jobs('?assigned_me=1&limit=100'),
+    api.jobs('?assigned_me=1&limit=100&status_in=READY_FOR_BUILD,IN_PROGRESS,ON_HOLD'),
   ]);
   const active  = activeResp.active;
   const allMyJobs = myJobsResp.jobs || [];
-  const myJobs  = allMyJobs.filter(j => ['QUEUED','IN_PROGRESS','PENDING_QC','ON_HOLD'].includes(j.status));
+  const myJobs  = allMyJobs.filter(j => ['READY_FOR_BUILD','IN_PROGRESS','ON_HOLD'].includes(j.status));
 
   const activeJobId = active ? parseInt(active.job_id, 10) : 0;
   // Full job record for the active segment (so we can read blocker/notes fields)
@@ -2288,7 +2288,7 @@ async function loadTech() {
   const queue = myJobs
     .filter(j => j.job_id !== activeJobId)
     .sort((a, b) => {
-      const pri = s => ({ IN_PROGRESS: 0, QUEUED: 1, ON_HOLD: 2, PENDING_QC: 3 })[s] ?? 9;
+      const pri = s => ({ IN_PROGRESS: 0, READY_FOR_BUILD: 1, ON_HOLD: 2 })[s] ?? 9;
       const dp = pri(a.status) - pri(b.status);
       if (dp !== 0) return dp;
       const as = a.scheduled_start || '9999';
