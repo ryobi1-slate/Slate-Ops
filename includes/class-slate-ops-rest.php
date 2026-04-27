@@ -2205,6 +2205,22 @@ return self::get_job(['id' => $job_id]);
            AND approval_status = 'approved' AND state = 'active'",
         (int)$row['job_id'], $user_id
       ));
+
+      // Labor gauge: total minutes this user has logged on this job (all segments, incl. active).
+      $row['my_job_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
+        "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, UTC_TIMESTAMP()))), 0) / 60))
+         FROM $seg
+         WHERE job_id = %d AND user_id = %d AND state = 'active'",
+        (int)$row['job_id'], $user_id
+      ));
+
+      // Labor gauge: total minutes all users have logged on this job (all segments, incl. active).
+      $row['job_total_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
+        "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, UTC_TIMESTAMP()))), 0) / 60))
+         FROM $seg
+         WHERE job_id = %d AND state = 'active'",
+        (int)$row['job_id']
+      ));
     }
 
     return ['active' => $row ?: null];
