@@ -1383,3 +1383,11 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   padding-top: var(--slate-space-sm) !important;
   padding-bottom: var(--slate-space-sm) !important;
 }
+
+.ops-page-tech #ops-view .ops-tech-logo,
+.ops-page-tech #ops-view .slate-header-brand img,
+.ops-page-tech #ops-view img[src*="Slate-Logo-White-CMYK.png"] {
+  width: 82px;
+  height: auto;
+  display: block;
+}
