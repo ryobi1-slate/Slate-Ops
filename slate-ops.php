@@ -8,7 +8,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.38.15');
+define('SLATE_OPS_VERSION', '0.38.16');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -113,7 +113,7 @@ add_action('wp_enqueue_scripts', function() {
         'white'   => '#ffffff',
       ],
       'logos' => [
-        'white' => esc_url_raw(SLATE_OPS_URL . 'assets/logos/Slate_logo_white_no_background.svg'),
+        'white' => esc_url_raw(SLATE_OPS_URL . 'assets/logos/Slate-Logo-White-CMYK.png'),
       ],
       'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
     ]);
