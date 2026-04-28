@@ -996,6 +996,7 @@ $t = $wpdb->prefix . 'slate_ops_jobs';
 $status = $req->get_param('status');
 $status_in = $req->get_param('status_in');
 $ready_only = (int)$req->get_param('ready_only');
+$helpable = (int)$req->get_param('helpable');
 
 $q = $req->get_param('q');
 $so_missing = (int)$req->get_param('so_missing');
@@ -1032,6 +1033,19 @@ if ($ready_only === 1) {
 
 if ($so_missing === 1) {
   $where .= " AND (so_number IS NULL OR so_number = '')";
+}
+
+// Help queue scope:
+// - force in-progress only
+// - require SO#
+// - exclude blocked parts statuses when present
+if ($helpable === 1) {
+  $where .= " AND status = %s";
+  $params[] = 'IN_PROGRESS';
+  $where .= " AND (so_number IS NOT NULL AND so_number <> '')";
+  $where .= " AND (parts_status IS NULL OR parts_status = '' OR (UPPER(parts_status) <> %s AND UPPER(parts_status) <> %s))";
+  $params[] = 'HOLD';
+  $params[] = 'NOT_READY';
 }
 
 if ((int)$req->get_param('assigned_me') === 1) {
