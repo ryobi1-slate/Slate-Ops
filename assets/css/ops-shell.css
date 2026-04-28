@@ -866,16 +866,17 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * theme can never tint the help button or job cards.
  */
 .ops-page-tech #ops-view .ops-tech-help-btn {
-  background-color: var(--surface-card);
+  background: #fff;
   color: var(--sage);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  border: 1px solid rgba(15, 52, 42, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(15, 52, 42, 0.08);
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
 }
 .ops-page-tech #ops-view .ops-tech-help-btn:hover {
-  background-color: var(--sand);
+  border-color: rgba(15, 52, 42, 0.18);
 }
 .ops-page-tech #ops-view .ops-tech-card {
   background-color: var(--surface-card);
@@ -1381,4 +1382,12 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-cs-split-page .ops-cs-row-selected td {
   padding-top: var(--slate-space-sm) !important;
   padding-bottom: var(--slate-space-sm) !important;
+}
+
+.ops-page-tech #ops-view .ops-tech-logo,
+.ops-page-tech #ops-view .slate-header-brand img,
+.ops-page-tech #ops-view img[src*="Slate-Logo-White-CMYK.png"] {
+  width: 82px;
+  height: auto;
+  display: block;
 }
