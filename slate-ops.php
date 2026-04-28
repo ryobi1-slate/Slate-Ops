@@ -113,7 +113,7 @@ add_action('wp_enqueue_scripts', function() {
         'white'   => '#ffffff',
       ],
       'logos' => [
-        'white' => esc_url(SLATE_OPS_URL . 'assets/logos/slate-logo-white.svg'),
+        'white' => esc_url_raw(SLATE_OPS_URL . 'assets/logos/slate-logo-white.svg'),
       ],
       'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
     ]);
