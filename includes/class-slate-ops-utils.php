@@ -54,6 +54,27 @@ class Slate_Ops_Utils {
     return ['NOT_READY', 'PARTIAL', 'READY', 'HOLD'];
   }
 
+  /**
+   * Valid block_reason values when job_status === BLOCKED.
+   */
+  public static function cs_block_reasons() {
+    return ['PARTS', 'ENGINEERING', 'CUSTOMER', 'LABOR', 'OTHER'];
+  }
+
+  /**
+   * Valid hold_reason values when job_status === ON_HOLD.
+   */
+  public static function cs_hold_reasons() {
+    return ['CUSTOMER_CHANGE', 'BILLING', 'ESCALATION', 'SCOPE_REVIEW', 'VENDOR_DISPUTE', 'OTHER'];
+  }
+
+  /**
+   * Valid cancel_reason values when job_status === CANCELLED.
+   */
+  public static function cs_cancel_reasons() {
+    return ['CUSTOMER_CANCELED', 'DEAL_FELL_THROUGH', 'DUPLICATE', 'SCOPE_ABSORBED', 'NO_SHOW', 'PRICING', 'OTHER'];
+  }
+
   public static function dealer_list() {
     $default_dealers = [
       'Northwest Fleet',

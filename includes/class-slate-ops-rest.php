@@ -1079,9 +1079,11 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
                job_type, parts_status, status, status_detail, status_updated_at, delay_reason, priority, priority_score,
                assigned_user_id, work_center, estimated_minutes, constraint_minutes_required,
                scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes,
-               scheduler_locked, hold_reason, schedule_notes, scheduling_flag,
-               scheduled_start, scheduled_finish, requested_date, promised_date, target_ship_date,
-               clickup_task_id, clickup_estimate_ms, dealer_status, queue_order, created_at, updated_at
+               scheduler_locked, hold_reason, hold_note, schedule_notes, scheduling_flag,
+               scheduled_start, scheduled_finish, scheduled_week, requested_date, promised_date, target_ship_date,
+               block_reason, block_note, cancel_reason, cancel_note,
+               scope_summary, sales_person, notes, queue_order,
+               clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
         FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
 
 $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
@@ -1260,12 +1262,29 @@ foreach ($rows as &$r) {
       }
     }
 
-    // CS + supervisor: Job Status and Lead Tech (per CS MVP rules).
+    // CS + supervisor: Job Status and Lead Tech (per CS v2 rules).
     if ($is_cs || $is_supervisor) {
       if (array_key_exists('status', $body)) {
         $ns = strtoupper(sanitize_text_field((string)($body['status'] ?? '')));
         if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
           $cur = (string)($job['status'] ?? '');
+
+          // CS v2: CS users may not manually set IN_PROGRESS, QC, or COMPLETE.
+          // Those states come from Tech/QC workflow actions only.
+          $cs_restricted = [
+            Slate_Ops_Statuses::IN_PROGRESS,
+            Slate_Ops_Statuses::QC,
+            Slate_Ops_Statuses::COMPLETE,
+            Slate_Ops_Statuses::PENDING_QC, // legacy alias
+          ];
+          if ($is_cs && !$is_supervisor && in_array($ns, $cs_restricted, true)) {
+            return new WP_Error(
+              'cs_restricted_status',
+              Slate_Ops_Statuses::label($ns) . ' is set by the Tech/QC workflow and cannot be selected by CS.',
+              ['status' => 403]
+            );
+          }
+
           if (!Slate_Ops_Statuses::is_valid_transition($cur, $ns)) {
             return new WP_Error(
               'invalid_transition',
@@ -1277,15 +1296,57 @@ foreach ($rows as &$r) {
               ['status' => 422]
             );
           }
-          // Gate: IN_PROGRESS requires assigned tech (check merged state).
-          if ($ns === Slate_Ops_Statuses::IN_PROGRESS) {
-            $future_uid = array_key_exists('assigned_user_id', $body)
-              ? (int)($body['assigned_user_id'] ?? 0)
-              : (int)($job['assigned_user_id'] ?? 0);
-            if (!$future_uid) {
-              return new WP_Error('not_ready_for_progress', 'Cannot start job: no tech has been assigned.', ['status' => 422]);
+
+          // v2: BLOCKED requires block_reason + block_note
+          if ($ns === Slate_Ops_Statuses::BLOCKED) {
+            $br = strtoupper(sanitize_key((string)($body['block_reason'] ?? '')));
+            $bn = trim(sanitize_textarea_field((string)($body['block_note'] ?? '')));
+            if (!$br || !in_array($br, Slate_Ops_Utils::cs_block_reasons(), true)) {
+              return self::validation_error('block_reason', 'block_reason_required', 'Block reason is required when setting status to Blocked.');
+            }
+            if (!$bn) {
+              return self::validation_error('block_note', 'block_note_required', 'Block note is required when setting status to Blocked.');
+            }
+            $update['block_reason'] = $br;
+            $update['block_note']   = $bn;
+          }
+
+          // v2: ON_HOLD requires hold_reason + hold_note
+          if ($ns === Slate_Ops_Statuses::ON_HOLD) {
+            $hr = strtoupper(sanitize_key((string)($body['hold_reason'] ?? '')));
+            $hn = trim(sanitize_textarea_field((string)($body['hold_note'] ?? '')));
+            if (!$hr || !in_array($hr, Slate_Ops_Utils::cs_hold_reasons(), true)) {
+              return self::validation_error('hold_reason', 'hold_reason_required', 'Hold reason is required when setting status to On Hold.');
+            }
+            if (!$hn) {
+              return self::validation_error('hold_note', 'hold_note_required', 'Hold note is required when setting status to On Hold.');
+            }
+            $update['hold_reason'] = $hr;
+            $update['hold_note']   = $hn;
+          }
+
+          // v2: CANCELLED requires cancel_reason + cancel_note
+          if ($ns === Slate_Ops_Statuses::CANCELLED) {
+            $cr = strtoupper(sanitize_key((string)($body['cancel_reason'] ?? '')));
+            $cn = trim(sanitize_textarea_field((string)($body['cancel_note'] ?? '')));
+            if (!$cr || !in_array($cr, Slate_Ops_Utils::cs_cancel_reasons(), true)) {
+              return self::validation_error('cancel_reason', 'cancel_reason_required', 'Cancel reason is required when setting status to Cancelled.');
+            }
+            if (!$cn) {
+              return self::validation_error('cancel_note', 'cancel_note_required', 'Cancel note is required when setting status to Cancelled.');
+            }
+            $update['cancel_reason'] = $cr;
+            $update['cancel_note']   = $cn;
+          }
+
+          // v2: SCHEDULED requires scheduled_week
+          if ($ns === Slate_Ops_Statuses::SCHEDULED) {
+            $sw = sanitize_text_field((string)($body['scheduled_week'] ?? ''));
+            if ($sw !== '') {
+              $update['scheduled_week'] = $sw;
             }
           }
+
           $audits[] = ['status', $job['status'], $ns];
           $update['status']            = $ns;
           $update['status_updated_at'] = $now;
@@ -1298,6 +1359,26 @@ foreach ($rows as &$r) {
         if ($store !== (int)($job['assigned_user_id'] ?? 0)) {
           $audits[] = ['assigned_user_id', $job['assigned_user_id'], $store];
           $update['assigned_user_id'] = $store;
+        }
+      }
+
+      // v2: accept scheduled_week standalone (without status change)
+      if (array_key_exists('scheduled_week', $body)) {
+        $sw = sanitize_text_field((string)($body['scheduled_week'] ?? ''));
+        $store = $sw ?: null;
+        if ($store !== ($job['scheduled_week'] ?? null)) {
+          $audits[] = ['scheduled_week', $job['scheduled_week'] ?? null, $store];
+          $update['scheduled_week'] = $store;
+        }
+      }
+
+      // v2: accept job_description mapped to scope_summary
+      if (array_key_exists('job_description', $body)) {
+        $jd    = sanitize_textarea_field((string)($body['job_description'] ?? ''));
+        $store = $jd ?: null;
+        if ($store !== ($job['scope_summary'] ?? null)) {
+          $audits[] = ['scope_summary', $job['scope_summary'] ?? null, $store];
+          $update['scope_summary'] = $store;
         }
       }
     }
@@ -1426,11 +1507,16 @@ foreach ($rows as &$r) {
     $data    = array_merge($job, $update);
     $missing = [];
 
-    if (empty(trim((string)($data['customer_name'] ?? '')))) {
-      $missing[] = 'customer name';
+    // customer or dealer name required
+    if (empty(trim((string)($data['customer_name'] ?? ''))) && empty(trim((string)($data['dealer_name'] ?? '')))) {
+      $missing[] = 'customer or dealer name';
     }
     if (empty(trim((string)($data['so_number'] ?? '')))) {
       $missing[] = 'SO#';
+    }
+    // job description mapped to scope_summary
+    if (empty(trim((string)($data['scope_summary'] ?? '')))) {
+      $missing[] = 'job description';
     }
     if (empty((int)($data['estimated_minutes'] ?? 0))) {
       $missing[] = 'estimated hours';
@@ -1438,9 +1524,9 @@ foreach ($rows as &$r) {
 
     $ps = strtoupper((string)($data['parts_status'] ?? 'NOT_READY'));
     if ($ps === 'NOT_READY') {
-      $missing[] = 'parts are Not Ready';
+      $missing[] = 'parts not ready (update parts status first)';
     } elseif ($ps === 'HOLD') {
-      $missing[] = 'parts are On Hold';
+      $missing[] = 'parts are on hold';
     }
 
     if (!empty($missing)) {
@@ -1563,6 +1649,8 @@ foreach ($rows as &$r) {
     if ($notes !== '' && $notes_type === 'parts' && stripos($notes, 'Parts:') !== 0) {
       $notes = 'Parts: ' . $notes;
     }
+    // job_description maps to scope_summary
+    $scope_summary = sanitize_textarea_field($body['job_description'] ?? '');
 
     $queue_order = self::parse_queue_order($body, 'queue_order');
     if ($queue_order instanceof WP_Error) return $queue_order;
@@ -1586,6 +1674,7 @@ foreach ($rows as &$r) {
       'requested_date' => $requested_date ?: null,
       'sales_person' => $sales_person ?: null,
       'notes' => $notes ?: null,
+      'scope_summary' => $scope_summary ?: null,
       'queue_order' => $queue_order,
       'dealer_status' => 'waiting',
       'created_by' => get_current_user_id(),
@@ -1851,7 +1940,7 @@ if (!Slate_Ops_Statuses::is_valid_transition($current_status, $new_status)) {
   );
 }
 
-// Gate: READY_FOR_BUILD requires SO#, customer info, estimated time, and ready parts.
+// Gate: READY_FOR_BUILD requires SO#, customer info, job description, estimated time, and ready parts.
 if ($new_status === Slate_Ops_Statuses::READY_FOR_BUILD) {
   $gate = self::check_ready_for_build_gate($current_job, ['status' => $new_status]);
   if ($gate) return $gate;
@@ -1871,7 +1960,49 @@ $update = [
   'updated_at' => $now,
 ];
 
-// Only set delay_reason when provided (and typically for DELAYED)
+// v2: BLOCKED requires block_reason + block_note
+if ($new_status === Slate_Ops_Statuses::BLOCKED) {
+  $br = strtoupper(sanitize_key($body['block_reason'] ?? ''));
+  $bn = trim(sanitize_textarea_field($body['block_note'] ?? ''));
+  if (!$br || !in_array($br, Slate_Ops_Utils::cs_block_reasons(), true)) {
+    return self::validation_error('block_reason', 'block_reason_required', 'Block reason is required when setting status to Blocked.');
+  }
+  if (!$bn) {
+    return self::validation_error('block_note', 'block_note_required', 'Block note is required when setting status to Blocked.');
+  }
+  $update['block_reason'] = $br;
+  $update['block_note']   = $bn;
+}
+
+// v2: ON_HOLD requires hold_reason + hold_note
+if ($new_status === Slate_Ops_Statuses::ON_HOLD) {
+  $hr = strtoupper(sanitize_key($body['hold_reason'] ?? ''));
+  $hn = trim(sanitize_textarea_field($body['hold_note'] ?? ''));
+  if (!$hr || !in_array($hr, Slate_Ops_Utils::cs_hold_reasons(), true)) {
+    return self::validation_error('hold_reason', 'hold_reason_required', 'Hold reason is required when setting status to On Hold.');
+  }
+  if (!$hn) {
+    return self::validation_error('hold_note', 'hold_note_required', 'Hold note is required when setting status to On Hold.');
+  }
+  $update['hold_reason'] = $hr;
+  $update['hold_note']   = $hn;
+}
+
+// v2: CANCELLED requires cancel_reason + cancel_note
+if ($new_status === Slate_Ops_Statuses::CANCELLED) {
+  $cr = strtoupper(sanitize_key($body['cancel_reason'] ?? ''));
+  $cn = trim(sanitize_textarea_field($body['cancel_note'] ?? ''));
+  if (!$cr || !in_array($cr, Slate_Ops_Utils::cs_cancel_reasons(), true)) {
+    return self::validation_error('cancel_reason', 'cancel_reason_required', 'Cancel reason is required when setting status to Cancelled.');
+  }
+  if (!$cn) {
+    return self::validation_error('cancel_note', 'cancel_note_required', 'Cancel note is required when setting status to Cancelled.');
+  }
+  $update['cancel_reason'] = $cr;
+  $update['cancel_note']   = $cn;
+}
+
+// Legacy delay_reason passthrough
 if (!empty($delay_reason)) {
   $update['delay_reason'] = $delay_reason;
 }
@@ -1951,14 +2082,14 @@ return self::get_job(['id' => $job_id]);
       'created_at'  => $now,
     ]);
 
-    // Transition job to PENDING_QC.
+    // Transition job to QC (v2; was PENDING_QC).
     $wpdb->update($t, [
-      'status'            => 'PENDING_QC',
+      'status'            => Slate_Ops_Statuses::QC,
       'status_updated_at' => $now,
       'updated_at'        => $now,
     ], ['job_id' => $job_id]);
 
-    self::audit('job', $job_id, 'update', 'status', $job['status'], 'PENDING_QC', 'QC submitted: ' . $notes);
+    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::QC, 'QC submitted: ' . $notes);
 
     $updated = self::job_by_id($job_id);
     self::maybe_push_dealer_portal_status($updated);
@@ -1988,8 +2119,8 @@ return self::get_job(['id' => $job_id]);
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-    if ($job['status'] !== 'PENDING_QC') {
-      return new WP_Error('invalid_state', 'Job must be Pending QC to review', ['status' => 422]);
+    if (!in_array($job['status'], [Slate_Ops_Statuses::QC, Slate_Ops_Statuses::PENDING_QC], true)) {
+      return new WP_Error('invalid_state', 'Job must be in QC to review', ['status' => 422]);
     }
 
     $user_id = get_current_user_id();
@@ -2010,10 +2141,10 @@ return self::get_job(['id' => $job_id]);
     }
 
     if ($decision === 'PASS') {
-      $new_status = Slate_Ops_Statuses::READY_FOR_PICKUP;
-      $audit_note = 'QC passed — ready for pickup';
+      $new_status = Slate_Ops_Statuses::COMPLETE;
+      $audit_note = 'QC passed — job complete';
     } else {
-      $new_status = 'IN_PROGRESS';
+      $new_status = Slate_Ops_Statuses::IN_PROGRESS;
       $audit_note = 'QC failed: ' . $notes;
     }
 
@@ -2024,7 +2155,7 @@ return self::get_job(['id' => $job_id]);
     ], ['job_id' => $job_id]);
 
     $action = $decision === 'PASS' ? 'qc_approved' : 'qc_failed';
-    self::audit('job', $job_id, $action, 'status', 'PENDING_QC', $new_status, $audit_note);
+    self::audit('job', $job_id, $action, 'status', Slate_Ops_Statuses::QC, $new_status, $audit_note);
 
     // If failed, also add a note so the tech can see the reason.
     if ($decision === 'FAIL' && trim($notes)) {
@@ -2050,8 +2181,13 @@ return self::get_job(['id' => $job_id]);
 
     $user_id = get_current_user_id();
 
-    // Job-status guard: only READY_FOR_BUILD, QUEUED, or IN_PROGRESS jobs can be started.
-    if (!in_array($job['status'], ['READY_FOR_BUILD', 'QUEUED', 'IN_PROGRESS'], true)) {
+    // Job-status guard: only schedulable/active-state jobs can be started.
+    $startable = [
+      Slate_Ops_Statuses::READY_FOR_BUILD, Slate_Ops_Statuses::SCHEDULED,
+      Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::BLOCKED,
+      Slate_Ops_Statuses::QUEUED, // legacy alias
+    ];
+    if (!in_array($job['status'], $startable, true)) {
       return new WP_Error('invalid_status', 'Job cannot be started in its current status', ['status' => 422]);
     }
 
@@ -2096,7 +2232,7 @@ return self::get_job(['id' => $job_id]);
     self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'user_id'=>$user_id]), 'Timer started');
 
     // Set job to IN_PROGRESS if needed (inline update to avoid REST req context issues).
-    if (!in_array($job['status'], ['IN_PROGRESS','PENDING_QC','COMPLETE'], true)) {
+    if (!in_array($job['status'], ['IN_PROGRESS','QC','PENDING_QC','COMPLETE'], true)) {
       $t    = $wpdb->prefix . 'slate_ops_jobs';
       $now2 = Slate_Ops_Utils::now_gmt();
       $wpdb->update($t, [
@@ -2823,8 +2959,8 @@ self::maybe_push_dealer_portal_status($job);
     $body = $req->get_json_params() ?: [];
     $note = sanitize_text_field($body['note'] ?? '');
 
-    // Return to QUEUED if it had a scheduled_start, otherwise READY_FOR_BUILD.
-    $new_status = !empty($job['scheduled_start']) ? 'QUEUED' : 'READY_FOR_BUILD';
+    // Return to SCHEDULED if it had a scheduled_start, otherwise READY_FOR_BUILD.
+    $new_status = !empty($job['scheduled_start']) ? Slate_Ops_Statuses::SCHEDULED : Slate_Ops_Statuses::READY_FOR_BUILD;
 
     $wpdb->update($t, [
       'delay_reason'    => null,
@@ -3003,12 +3139,12 @@ self::maybe_push_dealer_portal_status($job);
     $ov = $wpdb->get_row(
       "SELECT
          COUNT(*) AS active_jobs,
-         SUM(status = 'IN_PROGRESS')      AS in_progress,
-         SUM(status = 'PENDING_QC')       AS pending_qc,
-         SUM(status = 'READY_FOR_PICKUP') AS ready_for_pickup,
-         COALESCE(SUM(COALESCE(estimated_minutes,0)),0) AS total_estimated_minutes
+         SUM(status = 'IN_PROGRESS')                       AS in_progress,
+         SUM(status IN ('QC','PENDING_QC'))                AS pending_qc,
+         SUM(status IN ('BLOCKED','DELAYED'))              AS blocked,
+         COALESCE(SUM(COALESCE(estimated_minutes,0)),0)    AS total_estimated_minutes
        FROM $jobs_t
-       WHERE status != 'COMPLETE' AND archived_at IS NULL",
+       WHERE status NOT IN ('COMPLETE','CANCELLED') AND archived_at IS NULL",
       ARRAY_A
     );
 
@@ -3026,8 +3162,9 @@ self::maybe_push_dealer_portal_status($job);
     $overview = [
       'active_jobs'              => (int)($ov['active_jobs']       ?? 0),
       'in_progress'              => (int)($ov['in_progress']        ?? 0),
-      'pending_qc'               => (int)($ov['pending_qc']         ?? 0),
-      'ready_for_pickup'         => (int)($ov['ready_for_pickup']   ?? 0),
+      'pending_qc'               => (int)($ov['pending_qc']         ?? 0), // kept for backward compat, maps to QC
+      'qc'                       => (int)($ov['pending_qc']         ?? 0),
+      'blocked'                  => (int)($ov['blocked']            ?? 0),
       'total_estimated_minutes'  => $total_est,
       'total_logged_minutes'     => $total_logged,
       'variance_minutes'         => $total_logged - $total_est,
@@ -3161,8 +3298,13 @@ self::maybe_push_dealer_portal_status($job);
     foreach ($status_rows as $r) $status_map[$r['status']] = (int)$r['cnt'];
 
     $bottlenecks = [];
-    foreach (['READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','READY_FOR_PICKUP','ON_HOLD','DELAYED'] as $st) {
-      $bottlenecks[] = ['status' => $st, 'count' => $status_map[$st] ?? 0];
+    foreach (['READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','QC','BLOCKED','ON_HOLD','CANCELLED'] as $st) {
+      // Merge legacy aliases into v2 counts
+      $cnt = $status_map[$st] ?? 0;
+      if ($st === 'SCHEDULED') $cnt += ($status_map['QUEUED'] ?? 0);
+      if ($st === 'QC')        $cnt += ($status_map['PENDING_QC'] ?? 0);
+      if ($st === 'BLOCKED')   $cnt += ($status_map['DELAYED'] ?? 0);
+      $bottlenecks[] = ['status' => $st, 'count' => $cnt];
     }
 
     return rest_ensure_response([

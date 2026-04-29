@@ -1967,3 +1967,322 @@ body.slate-ops{ background: var(--p0-canvas); }
   .cs-queue-actions{ width:100%; justify-content:flex-start; }
   .cs-queue-so-wrap{ min-width:0; width:100%; }
 }
+
+/* =============================================================
+   CS Page v2 — Status System v2.0 styles
+   ============================================================= */
+
+/* v2 status badge classes */
+.badge.intake        { background:rgba(0,0,0,0.06); border-color:rgba(0,0,0,0.12); color:rgba(0,0,0,0.55); }
+.badge.needs-so      { background:rgba(214,139,25,0.12); border-color:rgba(214,139,25,0.25); color:#8b4a10; }
+.badge.scheduled     { background:rgba(15,23,42,0.05); border-color:var(--ui-border); color:var(--ui-muted); }
+.badge.progress      { background:rgba(214,139,25,0.10); border-color:rgba(214,139,25,0.22); color:#8b4a10; }
+.badge.qc            { background:rgba(99,60,166,0.10); border-color:rgba(99,60,166,0.20); color:#5b3a9e; }
+.badge.blocked       { background:rgba(220,38,38,0.10); border-color:rgba(220,38,38,0.20); color:#b91c1c; }
+.badge.hold          { background:rgba(220,38,38,0.07); border-color:rgba(220,38,38,0.14); color:#9e2020; }
+.badge.complete      { background:rgba(64,79,75,0.10); border-color:rgba(64,79,75,0.18); color:var(--sage); }
+.badge.cancelled     { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.10); color:rgba(0,0,0,0.40); }
+
+/* Parts status badges */
+.badge-parts {
+  display:inline-block;
+  padding:2px 7px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  border:1px solid transparent;
+}
+.badge-parts.parts-ready      { background:rgba(64,79,75,0.10); border-color:rgba(64,79,75,0.18); color:var(--sage); }
+.badge-parts.parts-partial    { background:rgba(214,139,25,0.10); border-color:rgba(214,139,25,0.22); color:#8b4a10; }
+.badge-parts.parts-hold       { background:rgba(220,38,38,0.08); border-color:rgba(220,38,38,0.16); color:#b91c1c; }
+.badge-parts.parts-not-ready  { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.10); color:rgba(0,0,0,0.50); }
+
+/* v2 KPI — warning variant */
+.cs-kpi-card-warn .cs-kpi-value { color:#b91c1c; }
+
+/* v2 KPI row: 4 columns */
+.cs-kpi-row { grid-template-columns: repeat(4, minmax(0,1fr)); }
+@media (max-width:900px){ .cs-kpi-row{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:600px){ .cs-kpi-row{ grid-template-columns:1fr; } }
+
+/* CS filter bar */
+.cs-list-card { padding:0; overflow:hidden; }
+.cs-filter-bar {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-bottom:1px solid rgba(47,62,57,0.10);
+  flex-wrap:wrap;
+  background:#fff;
+}
+.cs-filter-tabs { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
+.cs-filter-tab {
+  padding:5px 11px;
+  border-radius:6px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  background:transparent;
+  border:1px solid transparent;
+  color:rgba(0,0,0,0.55);
+  cursor:pointer;
+  transition:all 0.12s;
+}
+.cs-filter-tab:hover { background:rgba(47,62,57,0.06); color:rgba(0,0,0,0.75); }
+.cs-filter-tab.active { background:rgba(47,62,57,0.10); border-color:rgba(47,62,57,0.20); color:var(--sage); }
+.cs-filter-count {
+  display:inline-block;
+  background:rgba(47,62,57,0.15);
+  border-radius:999px;
+  padding:0 5px;
+  font-size:10px;
+  font-weight:800;
+}
+.cs-parts-filter { width:120px; font-size:12px; padding:4px 8px; }
+
+/* CS job list header */
+.cs-job-list-header {
+  display:grid;
+  grid-template-columns: minmax(0,1fr) 120px 48px 64px 80px;
+  gap:8px;
+  padding:6px 14px;
+  border-bottom:1px solid rgba(47,62,57,0.08);
+  background:#fcfbf7;
+}
+.cs-col-hd {
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:0.10em;
+  text-transform:uppercase;
+  color:rgba(0,0,0,0.40);
+}
+.cs-col-hd-main { }
+
+/* CS job rows */
+.cs-job-list { display:flex; flex-direction:column; }
+.cs-job-row {
+  display:grid;
+  grid-template-columns: minmax(0,1fr) 120px 48px 64px 80px;
+  gap:8px;
+  padding:10px 14px;
+  align-items:center;
+  border-bottom:1px solid rgba(47,62,57,0.07);
+  cursor:pointer;
+  transition:background 0.1s;
+}
+.cs-job-row:hover  { background:rgba(47,62,57,0.04); }
+.cs-job-row:focus  { outline:2px solid var(--sage); outline-offset:-2px; }
+.cs-job-main { min-width:0; }
+.cs-job-title {
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  font-size:13px;
+  font-weight:700;
+  color:rgba(0,0,0,0.85);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cs-job-so { color:rgba(0,0,0,0.55); font-size:12px; }
+.cs-job-customer { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.cs-job-meta { margin-top:3px; font-size:11px; color:rgba(0,0,0,0.45); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cs-job-badges { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.cs-job-cols { display:contents; }
+.cs-col-val { font-size:11px; color:rgba(0,0,0,0.55); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Days-in-status badge */
+.cs-days-badge {
+  display:inline-block;
+  font-size:10px;
+  font-weight:700;
+  padding:1px 5px;
+  border-radius:4px;
+  background:rgba(0,0,0,0.06);
+  color:rgba(0,0,0,0.45);
+  letter-spacing:0;
+  text-transform:none;
+}
+.cs-days-badge.cs-days-warn { background:rgba(220,38,38,0.10); color:#b91c1c; }
+
+/* CS drawer placeholder */
+.cs-drawer-placeholder {
+  min-height:200px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.cs-drawer-hint {
+  text-align:center;
+  color:rgba(0,0,0,0.35);
+  font-size:13px;
+}
+.cs-drawer-hint-icon { font-size:28px; opacity:0.3; margin-bottom:8px; }
+
+/* CS Drawer */
+.cs-drawer {
+  background:#fff;
+  border-radius:12px;
+  border:1px solid rgba(47,62,57,0.12);
+  box-shadow:0 2px 12px rgba(0,0,0,0.06);
+  display:flex;
+  flex-direction:column;
+  max-height:calc(100vh - 120px);
+  position:sticky;
+  top:18px;
+}
+
+.cs-drawer-header {
+  padding:14px 16px 10px;
+  border-bottom:1px solid rgba(47,62,57,0.10);
+  background:#fcfbf7;
+  border-radius:12px 12px 0 0;
+  flex-shrink:0;
+}
+.cs-drawer-header-top {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+.cs-drawer-header-title {
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:rgba(0,0,0,0.55);
+}
+.cs-drawer-close {
+  background:none;
+  border:none;
+  cursor:pointer;
+  font-size:16px;
+  color:rgba(0,0,0,0.40);
+  padding:2px 6px;
+  border-radius:4px;
+  line-height:1;
+}
+.cs-drawer-close:hover { background:rgba(0,0,0,0.07); color:rgba(0,0,0,0.7); }
+.cs-drawer-header-meta {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+  font-size:12px;
+}
+.cs-drawer-meta-name { font-weight:700; color:rgba(0,0,0,0.80); }
+.cs-drawer-meta-sep  { color:rgba(0,0,0,0.25); }
+.cs-drawer-meta-so   { color:rgba(0,0,0,0.55); }
+
+.cs-drawer-body {
+  flex:1;
+  overflow-y:auto;
+  padding:12px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* Drawer sections */
+.cs-drawer-section {
+  border:1px solid rgba(47,62,57,0.10);
+  border-radius:8px;
+  padding:12px;
+  background:#fcfbf7;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.cs-drawer-section-title {
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:rgba(0,0,0,0.45);
+  margin-bottom:2px;
+}
+
+/* 2-column grid inside drawer */
+.cs-drawer-grid-2 {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+@media (max-width:440px){ .cs-drawer-grid-2{ grid-template-columns:1fr; } }
+
+.cs-drawer-field {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.cs-drawer-field label {
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:rgba(0,0,0,0.50);
+}
+.cs-drawer-field .input,
+.cs-drawer-field .select { font-size:13px; }
+.cs-drawer-field .req { color:#dc2626; }
+
+/* Reason group (BLOCKED / ON_HOLD / CANCELLED) */
+.cs-reason-group {
+  margin-top:2px;
+  padding:10px;
+  border:1px solid rgba(220,38,38,0.20);
+  border-radius:6px;
+  background:rgba(220,38,38,0.03);
+}
+
+/* Drawer error */
+.cs-drawer-error {
+  background:rgba(220,38,38,0.08);
+  border:1px solid rgba(220,38,38,0.20);
+  border-radius:6px;
+  padding:10px 12px;
+  font-size:13px;
+  color:#b91c1c;
+}
+
+/* Drawer footer */
+.cs-drawer-footer {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 16px;
+  border-top:1px solid rgba(47,62,57,0.10);
+  background:#fcfbf7;
+  border-radius:0 0 12px 12px;
+  flex-shrink:0;
+}
+.cs-drawer-footer .btn:last-child { margin-left:auto; }
+.btn-destructive {
+  background:transparent;
+  border:1px solid rgba(220,38,38,0.25);
+  color:rgba(220,38,38,0.65);
+}
+.btn-destructive:hover {
+  background:rgba(220,38,38,0.08);
+  border-color:rgba(220,38,38,0.40);
+  color:#b91c1c;
+}
+
+/* CS page responsive */
+@media (max-width:1100px){
+  .cs-layout{ grid-template-columns:1fr; }
+  .cs-drawer { position:static; max-height:none; }
+}
+@media (max-width:700px){
+  .cs-job-list-header { display:none; }
+  .cs-job-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+  .cs-job-badges { grid-column:2; grid-row:1/3; align-items:flex-start; }
+  .cs-job-cols { display:none; }
+}
