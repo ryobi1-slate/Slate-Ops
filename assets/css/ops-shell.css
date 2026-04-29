@@ -724,10 +724,9 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 
 /* v2 status badges */
 .ops-badge-status-needs-so   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-.ops-badge-status-scheduled  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
 .ops-badge-status-blocked    { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
 .ops-badge-status-qc         { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-.ops-badge-status-cancelled  { background-color: var(--slate-surface-raised); color: var(--slate-ink-muted); }
+.ops-badge-status-cancelled  { background-color: var(--slate-surface-tint); color: var(--slate-ink-muted); }
 
 /* Parts status badge — hold is distinct from not-ready */
 .ops-badge-hold { background-color: var(--slate-arches-wash); color: var(--slate-arches-ink); }
