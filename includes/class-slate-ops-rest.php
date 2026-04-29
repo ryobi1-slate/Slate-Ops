@@ -1297,54 +1297,43 @@ foreach ($rows as &$r) {
             );
           }
 
-          // v2: BLOCKED requires block_reason + block_note
+          // Gate: IN_PROGRESS requires assigned tech (check merged state).
+          if ($ns === Slate_Ops_Statuses::IN_PROGRESS) {
+            $future_uid = array_key_exists('assigned_user_id', $body)
+              ? (int)($body['assigned_user_id'] ?? 0)
+              : (int)($job['assigned_user_id'] ?? 0);
+            if (!$future_uid) {
+              return new WP_Error('not_ready_for_progress', 'Cannot start job: no tech has been assigned.', ['status' => 422]);
+            }
+          }
+
+          // v2: BLOCKED / ON_HOLD / CANCELLED each require reason + note.
           if ($ns === Slate_Ops_Statuses::BLOCKED) {
-            $br = strtoupper(sanitize_key((string)($body['block_reason'] ?? '')));
-            $bn = trim(sanitize_textarea_field((string)($body['block_note'] ?? '')));
-            if (!$br || !in_array($br, Slate_Ops_Utils::cs_block_reasons(), true)) {
-              return self::validation_error('block_reason', 'block_reason_required', 'Block reason is required when setting status to Blocked.');
-            }
-            if (!$bn) {
-              return self::validation_error('block_note', 'block_note_required', 'Block note is required when setting status to Blocked.');
-            }
-            $update['block_reason'] = $br;
-            $update['block_note']   = $bn;
+            $err = self::validate_reason_fields($body, 'block_reason', 'block_note', Slate_Ops_Utils::cs_block_reasons(),
+              'Block reason is required when setting status to Blocked.',
+              'Block note is required when setting status to Blocked.', $update);
+            if ($err) return $err;
           }
-
-          // v2: ON_HOLD requires hold_reason + hold_note
           if ($ns === Slate_Ops_Statuses::ON_HOLD) {
-            $hr = strtoupper(sanitize_key((string)($body['hold_reason'] ?? '')));
-            $hn = trim(sanitize_textarea_field((string)($body['hold_note'] ?? '')));
-            if (!$hr || !in_array($hr, Slate_Ops_Utils::cs_hold_reasons(), true)) {
-              return self::validation_error('hold_reason', 'hold_reason_required', 'Hold reason is required when setting status to On Hold.');
-            }
-            if (!$hn) {
-              return self::validation_error('hold_note', 'hold_note_required', 'Hold note is required when setting status to On Hold.');
-            }
-            $update['hold_reason'] = $hr;
-            $update['hold_note']   = $hn;
+            $err = self::validate_reason_fields($body, 'hold_reason', 'hold_note', Slate_Ops_Utils::cs_hold_reasons(),
+              'Hold reason is required when setting status to On Hold.',
+              'Hold note is required when setting status to On Hold.', $update);
+            if ($err) return $err;
           }
-
-          // v2: CANCELLED requires cancel_reason + cancel_note
           if ($ns === Slate_Ops_Statuses::CANCELLED) {
-            $cr = strtoupper(sanitize_key((string)($body['cancel_reason'] ?? '')));
-            $cn = trim(sanitize_textarea_field((string)($body['cancel_note'] ?? '')));
-            if (!$cr || !in_array($cr, Slate_Ops_Utils::cs_cancel_reasons(), true)) {
-              return self::validation_error('cancel_reason', 'cancel_reason_required', 'Cancel reason is required when setting status to Cancelled.');
-            }
-            if (!$cn) {
-              return self::validation_error('cancel_note', 'cancel_note_required', 'Cancel note is required when setting status to Cancelled.');
-            }
-            $update['cancel_reason'] = $cr;
-            $update['cancel_note']   = $cn;
+            $err = self::validate_reason_fields($body, 'cancel_reason', 'cancel_note', Slate_Ops_Utils::cs_cancel_reasons(),
+              'Cancel reason is required when setting status to Cancelled.',
+              'Cancel note is required when setting status to Cancelled.', $update);
+            if ($err) return $err;
           }
 
           // v2: SCHEDULED requires scheduled_week
           if ($ns === Slate_Ops_Statuses::SCHEDULED) {
             $sw = sanitize_text_field((string)($body['scheduled_week'] ?? ''));
-            if ($sw !== '') {
-              $update['scheduled_week'] = $sw;
+            if (empty($sw)) {
+              return self::validation_error('scheduled_week', 'scheduled_week_required', 'Scheduled week is required when setting status to Scheduled.');
             }
+            $update['scheduled_week'] = $sw;
           }
 
           $audits[] = ['status', $job['status'], $ns];
@@ -2547,6 +2536,24 @@ return self::get_job(['id' => $job_id]);
   }
 
   // Helpers
+  private static function validate_reason_fields(
+    array $body, string $reason_key, string $note_key,
+    array $allowed, string $reason_msg, string $note_msg,
+    array &$update
+  ): ?WP_Error {
+    $r = strtoupper(sanitize_key((string)($body[$reason_key] ?? '')));
+    $n = trim(sanitize_textarea_field((string)($body[$note_key] ?? '')));
+    if (!$r || !in_array($r, $allowed, true)) {
+      return self::validation_error($reason_key, $reason_key . '_required', $reason_msg);
+    }
+    if (!$n) {
+      return self::validation_error($note_key, $note_key . '_required', $note_msg);
+    }
+    $update[$reason_key] = $r;
+    $update[$note_key]   = $n;
+    return null;
+  }
+
   private static function validation_error($field, $code, $message, $status = 400) {
     return new WP_Error($code, $message, [
       'status' => (int) $status,

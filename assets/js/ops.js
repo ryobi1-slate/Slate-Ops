@@ -135,6 +135,7 @@
     const s = (status||'').toUpperCase();
     if (s === 'COMPLETE' || s === 'READY_FOR_PICKUP') return 'complete';
     if (s === 'CANCELLED') return 'cancelled';
+    if (s === 'NEEDS_SO') return 'needs-so';
     if (s === 'IN_PROGRESS') return 'progress';
     if (s === 'QC' || s === 'PENDING_QC') return 'qc';
     if (s === 'BLOCKED' || s === 'DELAYED') return 'blocked';
@@ -1717,7 +1718,7 @@ async function openCSDrawer(jobId, isNew, context) {
             <label>Block Reason <span class="req">*</span></label>
             <select class="select" id="cs-f-block-reason" name="block_reason">
               <option value="">Select…</option>
-              ${['PARTS','ENGINEERING','CUSTOMER','LABOR','OTHER'].map(r => `<option value="${r}"${br===r?' selected':''}>${r.replaceAll('_',' ')}</option>`).join('')}
+              ${BLOCK_REASONS.map(r => `<option value="${r}"${br===r?' selected':''}>${r.replaceAll('_',' ')}</option>`).join('')}
             </select>
           </div>
           <div class="cs-drawer-field">
@@ -1734,7 +1735,7 @@ async function openCSDrawer(jobId, isNew, context) {
             <label>Hold Reason <span class="req">*</span></label>
             <select class="select" id="cs-f-hold-reason" name="hold_reason">
               <option value="">Select…</option>
-              ${['CUSTOMER_CHANGE','BILLING','ESCALATION','SCOPE_REVIEW','VENDOR_DISPUTE','OTHER'].map(r => `<option value="${r}"${hr===r?' selected':''}>${r.replaceAll('_',' ')}</option>`).join('')}
+              ${HOLD_REASONS.map(r => `<option value="${r}"${hr===r?' selected':''}>${r.replaceAll('_',' ')}</option>`).join('')}
             </select>
           </div>
           <div class="cs-drawer-field">
@@ -1751,7 +1752,7 @@ async function openCSDrawer(jobId, isNew, context) {
             <label>Cancel Reason <span class="req">*</span></label>
             <select class="select" id="cs-f-cancel-reason" name="cancel_reason">
               <option value="">Select…</option>
-              ${['CUSTOMER_CANCELED','DEAL_FELL_THROUGH','DUPLICATE','SCOPE_ABSORBED','NO_SHOW','PRICING','OTHER'].map(r => `<option value="${r}"${cr===r?' selected':''}>${r.replaceAll('_',' ')}</option>`).join('')}
+              ${CANCEL_REASONS.map(r => `<option value="${r}"${cr===r?' selected':''}>${r.replaceAll('_',' ')}</option>`).join('')}
             </select>
           </div>
           <div class="cs-drawer-field">
