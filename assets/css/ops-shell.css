@@ -722,6 +722,15 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-status-ready-for-pickup { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
 .ops-badge-status-delayed          { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
 
+/* v2 status badges */
+.ops-badge-status-needs-so   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+.ops-badge-status-blocked    { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
+.ops-badge-status-qc         { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+.ops-badge-status-cancelled  { background-color: var(--slate-surface-tint); color: var(--slate-ink-muted); }
+
+/* Parts status badge — hold is distinct from not-ready */
+.ops-badge-hold { background-color: var(--slate-arches-wash); color: var(--slate-arches-ink); }
+
 /* Inline text link (Reset filters) */
 .ops-cs-reset-link { color: var(--slate-ink-muted); }
 .ops-cs-reset-link:hover { color: var(--slate-arches); }
@@ -741,7 +750,9 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-ready,
 .ops-badge-partial,
 .ops-badge-not-ready,
+.ops-badge-hold,
 .ops-badge-status-intake,
+.ops-badge-status-needs-so,
 .ops-badge-status-scheduled,
 .ops-badge-status-inprogress,
 .ops-badge-status-complete,
@@ -750,7 +761,10 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-status-ready-for-build,
 .ops-badge-status-queued,
 .ops-badge-status-ready-for-pickup,
-.ops-badge-status-delayed {
+.ops-badge-status-delayed,
+.ops-badge-status-blocked,
+.ops-badge-status-qc,
+.ops-badge-status-cancelled {
   border-radius: 999px !important;
   padding-left: 10px !important;
   padding-right: 10px !important;
