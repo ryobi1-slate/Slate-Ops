@@ -29,6 +29,37 @@ class Slate_Ops_Utils {
   const CAP_VIEW_EXECUTIVE  = 'slate_ops_view_executive';
   const CAP_VIEW_MONITOR    = 'slate_ops_view_monitor';
 
+  // ── Canonical capability name list ──────────────────────────────────────
+
+  /**
+   * Returns every Slate Ops capability name as a plain array of strings.
+   * Used by the role installer (to avoid duplication) and by the debug
+   * endpoint (to avoid hardcoded lists in business logic).
+   */
+  public static function all_cap_names() {
+    return [
+      self::CAP_ACCESS,
+      self::CAP_ADMIN,
+      self::CAP_SUPERVISOR,
+      self::CAP_CS,
+      self::CAP_TECH,
+      self::CAP_VIEWER,
+      self::CAP_MANAGE_SETTINGS,
+      self::CAP_MANAGE_USERS,
+      self::CAP_CREATE_JOBS,
+      self::CAP_EDIT_JOBS,
+      self::CAP_DELETE_JOBS,
+      self::CAP_SCHEDULE_JOBS,
+      self::CAP_ASSIGN_JOBS,
+      self::CAP_UPDATE_STATUS,
+      self::CAP_TIME_TRACKING,
+      self::CAP_SUBMIT_QC,
+      self::CAP_REVIEW_QC,
+      self::CAP_VIEW_EXECUTIVE,
+      self::CAP_VIEW_MONITOR,
+    ];
+  }
+
   // ── Centralized permission helpers ───────────────────────────────────────
 
   /** Any authenticated ops user (includes viewer). */

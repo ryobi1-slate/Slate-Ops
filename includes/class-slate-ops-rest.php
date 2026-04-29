@@ -976,20 +976,30 @@ return ['ok' => true, 'id' => $id];
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   public static function me($req) {
-    $user  = wp_get_current_user();
-    $roles = array_values((array) $user->roles);
-    $caps  = Slate_Ops_Utils::current_user_caps_summary();
+    $user          = wp_get_current_user();
+    $roles         = array_values((array) $user->roles);
+    $caps          = Slate_Ops_Utils::current_user_caps_summary();
+    $allowed_pages = Slate_Ops_Utils::user_allowed_pages();
 
     return new WP_REST_Response([
+      // ── New top-level shape ────────────────────────────────────────────
       'user_id'       => $user->ID,
       'display_name'  => $user->display_name,
       'roles'         => $roles,
       'capabilities'  => $caps,
-      'allowed_pages' => Slate_Ops_Utils::user_allowed_pages(),
+      'allowed_pages' => $allowed_pages,
       'is_admin'      => $caps['admin'],
       'is_supervisor' => $caps['supervisor'],
       'is_cs'         => $caps['cs'],
       'is_tech'       => $caps['tech'],
+      // ── Backward-compat user{} envelope (old shape) ───────────────────
+      'user'          => [
+        'id'            => $user->ID,
+        'name'          => $user->display_name,
+        'caps'          => $caps,
+        'roles'         => $roles,
+        'allowed_pages' => $allowed_pages,
+      ],
     ], 200);
   }
 
@@ -998,32 +1008,10 @@ return ['ok' => true, 'id' => $id];
     $roles = array_values((array) $user->roles);
     $caps  = Slate_Ops_Utils::current_user_caps_summary();
 
-    // Collect all slate_ops_* caps the user actually has (raw WP check).
-    $all_ops_caps = [];
-    $ops_cap_names = [
-      Slate_Ops_Utils::CAP_ACCESS,
-      Slate_Ops_Utils::CAP_ADMIN,
-      Slate_Ops_Utils::CAP_SUPERVISOR,
-      Slate_Ops_Utils::CAP_CS,
-      Slate_Ops_Utils::CAP_CS_LEGACY,
-      Slate_Ops_Utils::CAP_TECH,
-      Slate_Ops_Utils::CAP_VIEWER,
-      Slate_Ops_Utils::CAP_MANAGE_SETTINGS,
-      Slate_Ops_Utils::CAP_MANAGE_USERS,
-      Slate_Ops_Utils::CAP_CREATE_JOBS,
-      Slate_Ops_Utils::CAP_EDIT_JOBS,
-      Slate_Ops_Utils::CAP_DELETE_JOBS,
-      Slate_Ops_Utils::CAP_SCHEDULE_JOBS,
-      Slate_Ops_Utils::CAP_ASSIGN_JOBS,
-      Slate_Ops_Utils::CAP_UPDATE_STATUS,
-      Slate_Ops_Utils::CAP_TIME_TRACKING,
-      Slate_Ops_Utils::CAP_SUBMIT_QC,
-      Slate_Ops_Utils::CAP_REVIEW_QC,
-      Slate_Ops_Utils::CAP_VIEW_EXECUTIVE,
-      Slate_Ops_Utils::CAP_VIEW_MONITOR,
-    ];
-    foreach ($ops_cap_names as $c) {
-      $all_ops_caps[$c] = (bool) current_user_can($c);
+    // Raw check against every known ops cap (including legacy).
+    $raw_caps = [];
+    foreach (array_merge(Slate_Ops_Utils::all_cap_names(), [Slate_Ops_Utils::CAP_CS_LEGACY]) as $c) {
+      $raw_caps[$c] = (bool) current_user_can($c);
     }
 
     return new WP_REST_Response([
@@ -1032,7 +1020,7 @@ return ['ok' => true, 'id' => $id];
       'display_name'  => $user->display_name,
       'roles'         => $roles,
       'caps_summary'  => $caps,
-      'raw_caps'      => $all_ops_caps,
+      'raw_caps'      => $raw_caps,
       'allowed_pages' => Slate_Ops_Utils::user_allowed_pages(),
     ], 200);
   }

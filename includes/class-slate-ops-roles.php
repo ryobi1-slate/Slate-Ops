@@ -110,17 +110,29 @@ class Slate_Ops_Roles {
 
   /**
    * The complete set of Slate Ops capabilities (for administrator grant).
+   * Uses the canonical list from Slate_Ops_Utils to avoid duplication.
    */
   private static function all_caps() {
     $caps = [];
-    foreach (self::role_definitions() as $def) {
-      foreach ($def['caps'] as $cap => $grant) {
-        if ($grant && $cap !== 'read') {
-          $caps[$cap] = true;
-        }
-      }
+    foreach (Slate_Ops_Utils::all_cap_names() as $cap) {
+      $caps[$cap] = true;
     }
     return $caps;
+  }
+
+  /**
+   * Version-gated installer for `init` hook.
+   *
+   * Skips the full repair on every request once the current plugin version
+   * has already been installed. admin_init still calls install() directly
+   * for self-healing without the version gate.
+   */
+  public static function maybe_install() {
+    if (get_option('slate_ops_roles_version') === SLATE_OPS_VERSION) {
+      return;
+    }
+    self::install();
+    update_option('slate_ops_roles_version', SLATE_OPS_VERSION);
   }
 
   /**
