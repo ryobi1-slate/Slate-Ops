@@ -104,9 +104,17 @@ scheduling_flag VARCHAR(20) NULL,
 
 scheduled_start DATETIME NULL,
 scheduled_finish DATETIME NULL,
+scheduled_week VARCHAR(20) NULL,
 requested_date DATE NULL,
 promised_date DATE NULL,
 target_ship_date DATE NULL,
+
+-- v2 status reason fields
+block_reason VARCHAR(30) NULL,
+block_note TEXT NULL,
+hold_note TEXT NULL,
+cancel_reason VARCHAR(30) NULL,
+cancel_note TEXT NULL,
 
 -- Intake fields
 customer_expectations TEXT NULL,
@@ -647,13 +655,15 @@ KEY awaiting_idx (awaiting_direction)
     // Backfill primary_owner_id from assigned_user_id for existing jobs.
     $wpdb->query("UPDATE $jobs SET primary_owner_id = assigned_user_id WHERE primary_owner_id IS NULL AND assigned_user_id IS NOT NULL");
 
-    // Migrate legacy status values to the canonical set.
+    // Migrate legacy status values to v2 canonical set.
     // Earliest legacy values go first so later passes pick them up.
-    $wpdb->query("UPDATE $jobs SET status = 'INTAKE'           WHERE status IN ('UNSCHEDULED','PENDING_INTAKE','NEEDS_SO','RETURNED_TO_CS')");
+    $wpdb->query("UPDATE $jobs SET status = 'INTAKE'           WHERE status IN ('UNSCHEDULED','PENDING_INTAKE','RETURNED_TO_CS')");
+    $wpdb->query("UPDATE $jobs SET status = 'NEEDS_SO'         WHERE status = 'NEEDS_SO'"); // idempotent — keeps existing
     $wpdb->query("UPDATE $jobs SET status = 'READY_FOR_BUILD'  WHERE status IN ('READY_FOR_SCHEDULING','APPROVED_FOR_SCHEDULING','READY_TO_SCHEDULE','READY_FOR_SUPERVISOR_REVIEW')");
-    $wpdb->query("UPDATE $jobs SET status = 'QUEUED'           WHERE status = 'SCHEDULED'");
-    $wpdb->query("UPDATE $jobs SET status = 'READY_FOR_PICKUP' WHERE status IN ('COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
-    $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status = 'COMPLETED'");
+    $wpdb->query("UPDATE $jobs SET status = 'SCHEDULED'        WHERE status IN ('QUEUED','SCHEDULED')");
+    $wpdb->query("UPDATE $jobs SET status = 'BLOCKED'          WHERE status = 'DELAYED'");
+    $wpdb->query("UPDATE $jobs SET status = 'QC'               WHERE status = 'PENDING_QC'");
+    $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status IN ('COMPLETE','COMPLETED','READY_FOR_PICKUP','COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
     // Migrate scheduling_status column to match canonical job status values.
     $wpdb->query("UPDATE $jobs SET scheduling_status = 'READY_FOR_BUILD' WHERE scheduling_status = 'APPROVED_FOR_SCHEDULING'");
 

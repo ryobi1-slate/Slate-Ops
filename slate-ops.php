@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.38.14
+ * Version: 0.40.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.38.18');
+define('SLATE_OPS_VERSION', '0.40.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -45,9 +45,13 @@ if ( is_admin() ) {
 }
 
 register_activation_hook(__FILE__, ['Slate_Ops_Install', 'activate']);
+register_activation_hook(__FILE__, ['Slate_Ops_Roles', 'install']);
 register_deactivation_hook(__FILE__, ['Slate_Ops_Install', 'deactivate']);
 
-add_action('init', ['Slate_Ops_Roles', 'register_roles_caps']);
+// Version-gated: runs full repair only when SLATE_OPS_VERSION changes.
+add_action('init',       ['Slate_Ops_Roles', 'maybe_install']);
+// Self-healing: always runs on admin_init so manual role edits are corrected.
+add_action('admin_init', ['Slate_Ops_Roles', 'install']);
 add_action('init', ['Slate_Ops_Install', 'maybe_upgrade']);
 add_action('init', ['Slate_Ops_Routes', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
@@ -84,25 +88,30 @@ add_action('wp_enqueue_scripts', function() {
       ],
     ]);
   } else {
-    // All other /ops/* routes — React app, exactly as before.
-    $ver_app_css = file_exists(SLATE_OPS_PATH . 'assets/react/app.css') ? filemtime(SLATE_OPS_PATH . 'assets/react/app.css') : SLATE_OPS_VERSION;
-    $ver_app_js  = file_exists(SLATE_OPS_PATH . 'assets/react/app.js')  ? filemtime(SLATE_OPS_PATH . 'assets/react/app.js')  : SLATE_OPS_VERSION;
+    // All other /ops/* routes — React app.
+    $ver_app_css  = file_exists(SLATE_OPS_PATH . 'assets/react/app.css')       ? filemtime(SLATE_OPS_PATH . 'assets/react/app.css')       : SLATE_OPS_VERSION;
+    $ver_app_js   = file_exists(SLATE_OPS_PATH . 'assets/react/app.js')        ? filemtime(SLATE_OPS_PATH . 'assets/react/app.js')        : SLATE_OPS_VERSION;
+    $ver_guard_js = file_exists(SLATE_OPS_PATH . 'assets/js/ops-access-guard.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-access-guard.js') : SLATE_OPS_VERSION;
 
     wp_enqueue_style('slate-ops-react',  SLATE_OPS_URL . 'assets/react/app.css', ['slate-ops-shell'], $ver_app_css);
-    wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js',  ['wp-element'],      $ver_app_js,  true);
+
+    // Guard script loads first (before React) so it can intercept disallowed routes.
+    wp_enqueue_script('slate-ops-guard', SLATE_OPS_URL . 'assets/js/ops-access-guard.js', [], $ver_guard_js, false);
+    wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element', 'slate-ops-guard'], $ver_app_js, true);
 
     $current_user = wp_get_current_user();
 
-    wp_localize_script('slate-ops-react', 'slateOpsSettings', [
+    wp_localize_script('slate-ops-guard', 'slateOpsSettings', [
       'api' => [
         'root'  => esc_url_raw(rest_url('slate-ops/v1')),
         'nonce' => wp_create_nonce('wp_rest'),
       ],
       'user' => [
-        'id'    => get_current_user_id(),
-        'name'  => $current_user->display_name,
-        'caps'  => Slate_Ops_Utils::current_user_caps_summary(),
-        'roles' => array_values((array) $current_user->roles),
+        'id'            => get_current_user_id(),
+        'name'          => $current_user->display_name,
+        'caps'          => Slate_Ops_Utils::current_user_caps_summary(),
+        'roles'         => array_values((array) $current_user->roles),
+        'allowed_pages' => Slate_Ops_Utils::user_allowed_pages(),
       ],
       'colors' => [
         'sage'    => '#404f4b',

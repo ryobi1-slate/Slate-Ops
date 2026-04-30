@@ -74,7 +74,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'permission_callback' => [__CLASS__, 'perm_manage_settings'],
           'callback' => [__CLASS__, 'update_settings'],
         ],
       ]);
@@ -99,7 +99,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_create_jobs'],
           'callback' => [__CLASS__, 'create_job_manual'],
         ],
       ]);
@@ -112,67 +112,67 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'PATCH',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_edit_jobs'],
           'callback' => [__CLASS__, 'edit_job'],
         ],
         [
           'methods' => 'DELETE',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_delete_jobs'],
           'callback' => [__CLASS__, 'delete_job'],
         ],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/notes', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'permission_callback' => [__CLASS__, 'perm_update_status'],
         'callback' => [__CLASS__, 'add_note'],
       ]);
 
       register_rest_route($ns, '/users/(?P<id>\d+)/role', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'permission_callback' => [__CLASS__, 'perm_manage_users'],
         'callback' => [__CLASS__, 'update_user_role'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/so', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_edit_jobs'],
         'callback' => [__CLASS__, 'set_so'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/assign', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback' => [__CLASS__, 'assign_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/schedule', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback' => [__CLASS__, 'schedule_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/release', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback' => [__CLASS__, 'release_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/status', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'permission_callback' => [__CLASS__, 'perm_update_status'],
         'callback' => [__CLASS__, 'set_status'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/submit', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_submit_qc'],
         'callback' => [__CLASS__, 'submit_qc'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/review', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_review_qc'],
         'callback' => [__CLASS__, 'review_qc'],
       ]);
 
@@ -194,6 +194,7 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'time_stop'],
       ]);
 
+
       register_rest_route($ns, '/time/daily-summary', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
@@ -205,6 +206,7 @@ class Slate_Ops_REST {
         'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
         'callback' => [__CLASS__, 'time_correction_request'],
       ]);
+
 
       register_rest_route($ns, '/supervisor/queues', [
         'methods' => 'GET',
@@ -224,7 +226,7 @@ class Slate_Ops_REST {
       // Phase 0: bulk schedule update — saves [{job_id, scheduled_start, scheduled_finish, assigned_user_id, work_center}]
       register_rest_route($ns, '/schedule/bulk', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback'            => [__CLASS__, 'bulk_schedule'],
       ]);
 
@@ -283,7 +285,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods'             => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
           'callback'            => [__CLASS__, 'update_buffer_settings'],
         ],
       ]);
@@ -291,25 +293,25 @@ class Slate_Ops_REST {
       // ── Job scheduler actions ─────────────────────────────────────
       register_rest_route($ns, '/jobs/(?P<id>\d+)/lock', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'lock_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/unlock', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'unlock_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/hold', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'hold_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/unhold', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'unhold_job'],
       ]);
 
@@ -377,8 +379,15 @@ class Slate_Ops_REST {
       // ── Executive dashboard ─────────────────────────────────────────
       register_rest_route($ns, '/executive/labor-summary', [
         'methods'             => 'GET',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_view_executive'],
         'callback'            => [__CLASS__, 'executive_labor_summary'],
+      ]);
+
+      // ── Debug (admin only) ───────────────────────────────────────────
+      register_rest_route($ns, '/debug/permissions', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'callback'            => [__CLASS__, 'debug_permissions'],
       ]);
     }
   }
@@ -870,37 +879,150 @@ return ['ok' => true, 'id' => $id];
     return self::duplicate_bom_with_lines(intval($req['id']), $new_bom_no, $new_name, 'revise');
   }
 
-public static function perm_ops() {
-    return Slate_Ops_Utils::require_ops_access();
-  }
-  public static function perm_tech_or_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_TECH) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_admin_or_supervisor() {
-    return self::perm_supervisor_or_admin();
-  }
-  public static function perm_cs_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_cs_or_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_admin() {
-    return is_user_logged_in() && current_user_can(Slate_Ops_Utils::CAP_ADMIN);
+  // ── Permission callbacks ─────────────────────────────────────────────────
+  // All call into Slate_Ops_Utils centralized helpers. Names are kept stable
+  // because they are referenced in route registration above.
+
+  /** Any authenticated ops user (viewer, tech, cs, supervisor, admin). */
+  public static function perm_ops() {
+    return Slate_Ops_Utils::can_access();
   }
 
-  // Handlers
+  /** Requires slate_ops_update_status (tech, cs, supervisor, admin). */
+  public static function perm_update_status() {
+    return Slate_Ops_Utils::can_update_status();
+  }
+
+  /** Requires slate_ops_time_tracking (tech, supervisor, admin). */
+  public static function perm_tech_or_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_time_tracking();
+  }
+
+  /** Requires slate_ops_supervisor or slate_ops_admin. */
+  public static function perm_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_supervisor_or_admin();
+  }
+
+  /** Alias kept for backward compatibility. */
+  public static function perm_admin_or_supervisor() {
+    return Slate_Ops_Utils::can_supervisor_or_admin();
+  }
+
+  /** Requires slate_ops_create_jobs (CS, supervisor, admin). */
+  public static function perm_create_jobs() {
+    return Slate_Ops_Utils::can_create_jobs();
+  }
+
+  /** Requires slate_ops_edit_jobs (CS, supervisor, admin). */
+  public static function perm_edit_jobs() {
+    return Slate_Ops_Utils::can_edit_jobs();
+  }
+
+  /** Requires slate_ops_delete_jobs (CS, supervisor, admin). */
+  public static function perm_delete_jobs() {
+    return Slate_Ops_Utils::can_delete_jobs();
+  }
+
+  /** Requires slate_ops_schedule_jobs (CS, supervisor, admin). */
+  public static function perm_schedule_jobs() {
+    return Slate_Ops_Utils::can_schedule_jobs();
+  }
+
+  /** Requires slate_ops_assign_jobs (supervisor, admin). */
+  public static function perm_assign_jobs() {
+    return Slate_Ops_Utils::can_assign_jobs();
+  }
+
+  /** Requires slate_ops_submit_qc (tech, supervisor, admin). */
+  public static function perm_submit_qc() {
+    return Slate_Ops_Utils::can_submit_qc();
+  }
+
+  /** Requires slate_ops_review_qc (supervisor, admin). */
+  public static function perm_review_qc() {
+    return Slate_Ops_Utils::can_review_qc();
+  }
+
+  /** Requires slate_ops_view_executive (supervisor, admin). */
+  public static function perm_view_executive() {
+    return Slate_Ops_Utils::can_view_executive();
+  }
+
+  /** Requires slate_ops_manage_settings (admin). */
+  public static function perm_manage_settings() {
+    return Slate_Ops_Utils::can_manage_settings();
+  }
+
+  /** Requires slate_ops_manage_users (admin). */
+  public static function perm_manage_users() {
+    return Slate_Ops_Utils::can_manage_users();
+  }
+
+  /** CS or above (slate_ops_cs / legacy, supervisor, admin). */
+  public static function perm_cs_or_admin() {
+    return Slate_Ops_Utils::can_cs_or_above();
+  }
+
+  /** CS or above (slate_ops_cs / legacy, supervisor, admin). */
+  public static function perm_cs_or_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_cs_or_above();
+  }
+
+  /** Requires slate_ops_admin. */
+  public static function perm_admin() {
+    return Slate_Ops_Utils::is_admin();
+  }
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
   public static function me($req) {
-    return [
-      'user' => [
-        'id' => get_current_user_id(),
-        'name' => wp_get_current_user()->display_name,
-        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+    $user          = wp_get_current_user();
+    $roles         = array_values((array) $user->roles);
+    $caps          = Slate_Ops_Utils::current_user_caps_summary();
+    $allowed_pages = Slate_Ops_Utils::user_allowed_pages();
+
+    return new WP_REST_Response([
+      // ── New top-level shape ────────────────────────────────────────────
+      'user_id'       => $user->ID,
+      'display_name'  => $user->display_name,
+      'roles'         => $roles,
+      'capabilities'  => $caps,
+      'allowed_pages' => $allowed_pages,
+      'is_admin'      => $caps['admin'],
+      'is_supervisor' => $caps['supervisor'],
+      'is_cs'         => $caps['cs'],
+      'is_tech'       => $caps['tech'],
+      // ── Backward-compat user{} envelope (old shape) ───────────────────
+      'user'          => [
+        'id'            => $user->ID,
+        'name'          => $user->display_name,
+        'caps'          => $caps,
+        'roles'         => $roles,
+        'allowed_pages' => $allowed_pages,
       ],
-    ];
+    ], 200);
+  }
+
+  public static function debug_permissions($req) {
+    $user  = wp_get_current_user();
+    $roles = array_values((array) $user->roles);
+    $caps  = Slate_Ops_Utils::current_user_caps_summary();
+
+    // Raw check against every known ops cap (including legacy).
+    $raw_caps = [];
+    foreach (array_merge(Slate_Ops_Utils::all_cap_names(), [Slate_Ops_Utils::CAP_CS_LEGACY]) as $c) {
+      $raw_caps[$c] = (bool) current_user_can($c);
+    }
+
+    return new WP_REST_Response([
+      'user_id'       => $user->ID,
+      'user_login'    => $user->user_login,
+      'display_name'  => $user->display_name,
+      'roles'         => $roles,
+      'caps_summary'  => $caps,
+      'raw_caps'      => $raw_caps,
+      'allowed_pages' => Slate_Ops_Utils::user_allowed_pages(),
+    ], 200);
   }
 
   public static function get_settings($req) {
@@ -1079,9 +1201,11 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
                job_type, parts_status, status, status_detail, status_updated_at, delay_reason, priority, priority_score,
                assigned_user_id, work_center, estimated_minutes, constraint_minutes_required,
                scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes,
-               scheduler_locked, hold_reason, schedule_notes, scheduling_flag,
-               scheduled_start, scheduled_finish, requested_date, promised_date, target_ship_date,
-               clickup_task_id, clickup_estimate_ms, dealer_status, queue_order, created_at, updated_at
+               scheduler_locked, hold_reason, hold_note, schedule_notes, scheduling_flag,
+               scheduled_start, scheduled_finish, scheduled_week, requested_date, promised_date, target_ship_date,
+               block_reason, block_note, cancel_reason, cancel_note,
+               scope_summary, sales_person, notes, queue_order,
+               clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
         FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
 
 $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
@@ -1260,12 +1384,29 @@ foreach ($rows as &$r) {
       }
     }
 
-    // CS + supervisor: Job Status and Lead Tech (per CS MVP rules).
+    // CS + supervisor: Job Status and Lead Tech (per CS v2 rules).
     if ($is_cs || $is_supervisor) {
       if (array_key_exists('status', $body)) {
         $ns = strtoupper(sanitize_text_field((string)($body['status'] ?? '')));
         if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
           $cur = (string)($job['status'] ?? '');
+
+          // CS v2: CS users may not manually set IN_PROGRESS, QC, or COMPLETE.
+          // Those states come from Tech/QC workflow actions only.
+          $cs_restricted = [
+            Slate_Ops_Statuses::IN_PROGRESS,
+            Slate_Ops_Statuses::QC,
+            Slate_Ops_Statuses::COMPLETE,
+            Slate_Ops_Statuses::PENDING_QC, // legacy alias
+          ];
+          if ($is_cs && !$is_supervisor && in_array($ns, $cs_restricted, true)) {
+            return new WP_Error(
+              'cs_restricted_status',
+              Slate_Ops_Statuses::label($ns) . ' is set by the Tech/QC workflow and cannot be selected by CS.',
+              ['status' => 403]
+            );
+          }
+
           if (!Slate_Ops_Statuses::is_valid_transition($cur, $ns)) {
             return new WP_Error(
               'invalid_transition',
@@ -1277,6 +1418,7 @@ foreach ($rows as &$r) {
               ['status' => 422]
             );
           }
+
           // Gate: IN_PROGRESS requires assigned tech (check merged state).
           if ($ns === Slate_Ops_Statuses::IN_PROGRESS) {
             $future_uid = array_key_exists('assigned_user_id', $body)
@@ -1286,6 +1428,36 @@ foreach ($rows as &$r) {
               return new WP_Error('not_ready_for_progress', 'Cannot start job: no tech has been assigned.', ['status' => 422]);
             }
           }
+
+          // v2: BLOCKED / ON_HOLD / CANCELLED each require reason + note.
+          if ($ns === Slate_Ops_Statuses::BLOCKED) {
+            $err = self::validate_reason_fields($body, 'block_reason', 'block_note', Slate_Ops_Utils::cs_block_reasons(),
+              'Block reason is required when setting status to Blocked.',
+              'Block note is required when setting status to Blocked.', $update);
+            if ($err) return $err;
+          }
+          if ($ns === Slate_Ops_Statuses::ON_HOLD) {
+            $err = self::validate_reason_fields($body, 'hold_reason', 'hold_note', Slate_Ops_Utils::cs_hold_reasons(),
+              'Hold reason is required when setting status to On Hold.',
+              'Hold note is required when setting status to On Hold.', $update);
+            if ($err) return $err;
+          }
+          if ($ns === Slate_Ops_Statuses::CANCELLED) {
+            $err = self::validate_reason_fields($body, 'cancel_reason', 'cancel_note', Slate_Ops_Utils::cs_cancel_reasons(),
+              'Cancel reason is required when setting status to Cancelled.',
+              'Cancel note is required when setting status to Cancelled.', $update);
+            if ($err) return $err;
+          }
+
+          // v2: SCHEDULED requires scheduled_week
+          if ($ns === Slate_Ops_Statuses::SCHEDULED) {
+            $sw = sanitize_text_field((string)($body['scheduled_week'] ?? ''));
+            if (empty($sw)) {
+              return self::validation_error('scheduled_week', 'scheduled_week_required', 'Scheduled week is required when setting status to Scheduled.');
+            }
+            $update['scheduled_week'] = $sw;
+          }
+
           $audits[] = ['status', $job['status'], $ns];
           $update['status']            = $ns;
           $update['status_updated_at'] = $now;
@@ -1298,6 +1470,26 @@ foreach ($rows as &$r) {
         if ($store !== (int)($job['assigned_user_id'] ?? 0)) {
           $audits[] = ['assigned_user_id', $job['assigned_user_id'], $store];
           $update['assigned_user_id'] = $store;
+        }
+      }
+
+      // v2: accept scheduled_week standalone (without status change)
+      if (array_key_exists('scheduled_week', $body)) {
+        $sw = sanitize_text_field((string)($body['scheduled_week'] ?? ''));
+        $store = $sw ?: null;
+        if ($store !== ($job['scheduled_week'] ?? null)) {
+          $audits[] = ['scheduled_week', $job['scheduled_week'] ?? null, $store];
+          $update['scheduled_week'] = $store;
+        }
+      }
+
+      // v2: accept job_description mapped to scope_summary
+      if (array_key_exists('job_description', $body)) {
+        $jd    = sanitize_textarea_field((string)($body['job_description'] ?? ''));
+        $store = $jd ?: null;
+        if ($store !== ($job['scope_summary'] ?? null)) {
+          $audits[] = ['scope_summary', $job['scope_summary'] ?? null, $store];
+          $update['scope_summary'] = $store;
         }
       }
     }
@@ -1426,11 +1618,16 @@ foreach ($rows as &$r) {
     $data    = array_merge($job, $update);
     $missing = [];
 
-    if (empty(trim((string)($data['customer_name'] ?? '')))) {
-      $missing[] = 'customer name';
+    // customer or dealer name required
+    if (empty(trim((string)($data['customer_name'] ?? ''))) && empty(trim((string)($data['dealer_name'] ?? '')))) {
+      $missing[] = 'customer or dealer name';
     }
     if (empty(trim((string)($data['so_number'] ?? '')))) {
       $missing[] = 'SO#';
+    }
+    // job description mapped to scope_summary
+    if (empty(trim((string)($data['scope_summary'] ?? '')))) {
+      $missing[] = 'job description';
     }
     if (empty((int)($data['estimated_minutes'] ?? 0))) {
       $missing[] = 'estimated hours';
@@ -1438,9 +1635,9 @@ foreach ($rows as &$r) {
 
     $ps = strtoupper((string)($data['parts_status'] ?? 'NOT_READY'));
     if ($ps === 'NOT_READY') {
-      $missing[] = 'parts are Not Ready';
+      $missing[] = 'parts not ready (update parts status first)';
     } elseif ($ps === 'HOLD') {
-      $missing[] = 'parts are On Hold';
+      $missing[] = 'parts are on hold';
     }
 
     if (!empty($missing)) {
@@ -1563,6 +1760,8 @@ foreach ($rows as &$r) {
     if ($notes !== '' && $notes_type === 'parts' && stripos($notes, 'Parts:') !== 0) {
       $notes = 'Parts: ' . $notes;
     }
+    // job_description maps to scope_summary
+    $scope_summary = sanitize_textarea_field($body['job_description'] ?? '');
 
     $queue_order = self::parse_queue_order($body, 'queue_order');
     if ($queue_order instanceof WP_Error) return $queue_order;
@@ -1586,6 +1785,7 @@ foreach ($rows as &$r) {
       'requested_date' => $requested_date ?: null,
       'sales_person' => $sales_person ?: null,
       'notes' => $notes ?: null,
+      'scope_summary' => $scope_summary ?: null,
       'queue_order' => $queue_order,
       'dealer_status' => 'waiting',
       'created_by' => get_current_user_id(),
@@ -1851,7 +2051,7 @@ if (!Slate_Ops_Statuses::is_valid_transition($current_status, $new_status)) {
   );
 }
 
-// Gate: READY_FOR_BUILD requires SO#, customer info, estimated time, and ready parts.
+// Gate: READY_FOR_BUILD requires SO#, customer info, job description, estimated time, and ready parts.
 if ($new_status === Slate_Ops_Statuses::READY_FOR_BUILD) {
   $gate = self::check_ready_for_build_gate($current_job, ['status' => $new_status]);
   if ($gate) return $gate;
@@ -1871,7 +2071,49 @@ $update = [
   'updated_at' => $now,
 ];
 
-// Only set delay_reason when provided (and typically for DELAYED)
+// v2: BLOCKED requires block_reason + block_note
+if ($new_status === Slate_Ops_Statuses::BLOCKED) {
+  $br = strtoupper(sanitize_key($body['block_reason'] ?? ''));
+  $bn = trim(sanitize_textarea_field($body['block_note'] ?? ''));
+  if (!$br || !in_array($br, Slate_Ops_Utils::cs_block_reasons(), true)) {
+    return self::validation_error('block_reason', 'block_reason_required', 'Block reason is required when setting status to Blocked.');
+  }
+  if (!$bn) {
+    return self::validation_error('block_note', 'block_note_required', 'Block note is required when setting status to Blocked.');
+  }
+  $update['block_reason'] = $br;
+  $update['block_note']   = $bn;
+}
+
+// v2: ON_HOLD requires hold_reason + hold_note
+if ($new_status === Slate_Ops_Statuses::ON_HOLD) {
+  $hr = strtoupper(sanitize_key($body['hold_reason'] ?? ''));
+  $hn = trim(sanitize_textarea_field($body['hold_note'] ?? ''));
+  if (!$hr || !in_array($hr, Slate_Ops_Utils::cs_hold_reasons(), true)) {
+    return self::validation_error('hold_reason', 'hold_reason_required', 'Hold reason is required when setting status to On Hold.');
+  }
+  if (!$hn) {
+    return self::validation_error('hold_note', 'hold_note_required', 'Hold note is required when setting status to On Hold.');
+  }
+  $update['hold_reason'] = $hr;
+  $update['hold_note']   = $hn;
+}
+
+// v2: CANCELLED requires cancel_reason + cancel_note
+if ($new_status === Slate_Ops_Statuses::CANCELLED) {
+  $cr = strtoupper(sanitize_key($body['cancel_reason'] ?? ''));
+  $cn = trim(sanitize_textarea_field($body['cancel_note'] ?? ''));
+  if (!$cr || !in_array($cr, Slate_Ops_Utils::cs_cancel_reasons(), true)) {
+    return self::validation_error('cancel_reason', 'cancel_reason_required', 'Cancel reason is required when setting status to Cancelled.');
+  }
+  if (!$cn) {
+    return self::validation_error('cancel_note', 'cancel_note_required', 'Cancel note is required when setting status to Cancelled.');
+  }
+  $update['cancel_reason'] = $cr;
+  $update['cancel_note']   = $cn;
+}
+
+// Legacy delay_reason passthrough
 if (!empty($delay_reason)) {
   $update['delay_reason'] = $delay_reason;
 }
@@ -1951,14 +2193,14 @@ return self::get_job(['id' => $job_id]);
       'created_at'  => $now,
     ]);
 
-    // Transition job to PENDING_QC.
+    // Transition job to QC (v2; was PENDING_QC).
     $wpdb->update($t, [
-      'status'            => 'PENDING_QC',
+      'status'            => Slate_Ops_Statuses::QC,
       'status_updated_at' => $now,
       'updated_at'        => $now,
     ], ['job_id' => $job_id]);
 
-    self::audit('job', $job_id, 'update', 'status', $job['status'], 'PENDING_QC', 'QC submitted: ' . $notes);
+    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::QC, 'QC submitted: ' . $notes);
 
     $updated = self::job_by_id($job_id);
     self::maybe_push_dealer_portal_status($updated);
@@ -1988,8 +2230,8 @@ return self::get_job(['id' => $job_id]);
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-    if ($job['status'] !== 'PENDING_QC') {
-      return new WP_Error('invalid_state', 'Job must be Pending QC to review', ['status' => 422]);
+    if (!in_array($job['status'], [Slate_Ops_Statuses::QC, Slate_Ops_Statuses::PENDING_QC], true)) {
+      return new WP_Error('invalid_state', 'Job must be in QC to review', ['status' => 422]);
     }
 
     $user_id = get_current_user_id();
@@ -2010,10 +2252,10 @@ return self::get_job(['id' => $job_id]);
     }
 
     if ($decision === 'PASS') {
-      $new_status = Slate_Ops_Statuses::READY_FOR_PICKUP;
-      $audit_note = 'QC passed — ready for pickup';
+      $new_status = Slate_Ops_Statuses::COMPLETE;
+      $audit_note = 'QC passed — job complete';
     } else {
-      $new_status = 'IN_PROGRESS';
+      $new_status = Slate_Ops_Statuses::IN_PROGRESS;
       $audit_note = 'QC failed: ' . $notes;
     }
 
@@ -2024,7 +2266,7 @@ return self::get_job(['id' => $job_id]);
     ], ['job_id' => $job_id]);
 
     $action = $decision === 'PASS' ? 'qc_approved' : 'qc_failed';
-    self::audit('job', $job_id, $action, 'status', 'PENDING_QC', $new_status, $audit_note);
+    self::audit('job', $job_id, $action, 'status', Slate_Ops_Statuses::QC, $new_status, $audit_note);
 
     // If failed, also add a note so the tech can see the reason.
     if ($decision === 'FAIL' && trim($notes)) {
@@ -2050,8 +2292,13 @@ return self::get_job(['id' => $job_id]);
 
     $user_id = get_current_user_id();
 
-    // Job-status guard: only READY_FOR_BUILD, QUEUED, or IN_PROGRESS jobs can be started.
-    if (!in_array($job['status'], ['READY_FOR_BUILD', 'QUEUED', 'IN_PROGRESS'], true)) {
+    // Job-status guard: only schedulable/active-state jobs can be started.
+    $startable = [
+      Slate_Ops_Statuses::READY_FOR_BUILD, Slate_Ops_Statuses::SCHEDULED,
+      Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::BLOCKED,
+      Slate_Ops_Statuses::QUEUED, // legacy alias
+    ];
+    if (!in_array($job['status'], $startable, true)) {
       return new WP_Error('invalid_status', 'Job cannot be started in its current status', ['status' => 422]);
     }
 
@@ -2096,7 +2343,7 @@ return self::get_job(['id' => $job_id]);
     self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'user_id'=>$user_id]), 'Timer started');
 
     // Set job to IN_PROGRESS if needed (inline update to avoid REST req context issues).
-    if (!in_array($job['status'], ['IN_PROGRESS','PENDING_QC','COMPLETE'], true)) {
+    if (!in_array($job['status'], ['IN_PROGRESS','QC','PENDING_QC','COMPLETE'], true)) {
       $t    = $wpdb->prefix . 'slate_ops_jobs';
       $now2 = Slate_Ops_Utils::now_gmt();
       $wpdb->update($t, [
@@ -2411,6 +2658,24 @@ return self::get_job(['id' => $job_id]);
   }
 
   // Helpers
+  private static function validate_reason_fields(
+    array $body, string $reason_key, string $note_key,
+    array $allowed, string $reason_msg, string $note_msg,
+    array &$update
+  ): ?WP_Error {
+    $r = strtoupper(sanitize_key((string)($body[$reason_key] ?? '')));
+    $n = trim(sanitize_textarea_field((string)($body[$note_key] ?? '')));
+    if (!$r || !in_array($r, $allowed, true)) {
+      return self::validation_error($reason_key, $reason_key . '_required', $reason_msg);
+    }
+    if (!$n) {
+      return self::validation_error($note_key, $note_key . '_required', $note_msg);
+    }
+    $update[$reason_key] = $r;
+    $update[$note_key]   = $n;
+    return null;
+  }
+
   private static function validation_error($field, $code, $message, $status = 400) {
     return new WP_Error($code, $message, [
       'status' => (int) $status,
@@ -2823,8 +3088,8 @@ self::maybe_push_dealer_portal_status($job);
     $body = $req->get_json_params() ?: [];
     $note = sanitize_text_field($body['note'] ?? '');
 
-    // Return to QUEUED if it had a scheduled_start, otherwise READY_FOR_BUILD.
-    $new_status = !empty($job['scheduled_start']) ? 'QUEUED' : 'READY_FOR_BUILD';
+    // Return to SCHEDULED if it had a scheduled_start, otherwise READY_FOR_BUILD.
+    $new_status = !empty($job['scheduled_start']) ? Slate_Ops_Statuses::SCHEDULED : Slate_Ops_Statuses::READY_FOR_BUILD;
 
     $wpdb->update($t, [
       'delay_reason'    => null,
@@ -3003,12 +3268,12 @@ self::maybe_push_dealer_portal_status($job);
     $ov = $wpdb->get_row(
       "SELECT
          COUNT(*) AS active_jobs,
-         SUM(status = 'IN_PROGRESS')      AS in_progress,
-         SUM(status = 'PENDING_QC')       AS pending_qc,
-         SUM(status = 'READY_FOR_PICKUP') AS ready_for_pickup,
-         COALESCE(SUM(COALESCE(estimated_minutes,0)),0) AS total_estimated_minutes
+         SUM(status = 'IN_PROGRESS')                       AS in_progress,
+         SUM(status IN ('QC','PENDING_QC'))                AS pending_qc,
+         SUM(status IN ('BLOCKED','DELAYED'))              AS blocked,
+         COALESCE(SUM(COALESCE(estimated_minutes,0)),0)    AS total_estimated_minutes
        FROM $jobs_t
-       WHERE status != 'COMPLETE' AND archived_at IS NULL",
+       WHERE status NOT IN ('COMPLETE','CANCELLED') AND archived_at IS NULL",
       ARRAY_A
     );
 
@@ -3026,8 +3291,9 @@ self::maybe_push_dealer_portal_status($job);
     $overview = [
       'active_jobs'              => (int)($ov['active_jobs']       ?? 0),
       'in_progress'              => (int)($ov['in_progress']        ?? 0),
-      'pending_qc'               => (int)($ov['pending_qc']         ?? 0),
-      'ready_for_pickup'         => (int)($ov['ready_for_pickup']   ?? 0),
+      'pending_qc'               => (int)($ov['pending_qc']         ?? 0), // kept for backward compat, maps to QC
+      'qc'                       => (int)($ov['pending_qc']         ?? 0),
+      'blocked'                  => (int)($ov['blocked']            ?? 0),
       'total_estimated_minutes'  => $total_est,
       'total_logged_minutes'     => $total_logged,
       'variance_minutes'         => $total_logged - $total_est,
@@ -3161,8 +3427,13 @@ self::maybe_push_dealer_portal_status($job);
     foreach ($status_rows as $r) $status_map[$r['status']] = (int)$r['cnt'];
 
     $bottlenecks = [];
-    foreach (['READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','READY_FOR_PICKUP','ON_HOLD','DELAYED'] as $st) {
-      $bottlenecks[] = ['status' => $st, 'count' => $status_map[$st] ?? 0];
+    foreach (['READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','QC','BLOCKED','ON_HOLD','CANCELLED'] as $st) {
+      // Merge legacy aliases into v2 counts
+      $cnt = $status_map[$st] ?? 0;
+      if ($st === 'SCHEDULED') $cnt += ($status_map['QUEUED'] ?? 0);
+      if ($st === 'QC')        $cnt += ($status_map['PENDING_QC'] ?? 0);
+      if ($st === 'BLOCKED')   $cnt += ($status_map['DELAYED'] ?? 0);
+      $bottlenecks[] = ['status' => $st, 'count' => $cnt];
     }
 
     return rest_ensure_response([

@@ -722,6 +722,15 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-status-ready-for-pickup { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
 .ops-badge-status-delayed          { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
 
+/* v2 status badges */
+.ops-badge-status-needs-so   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+.ops-badge-status-blocked    { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
+.ops-badge-status-qc         { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+.ops-badge-status-cancelled  { background-color: var(--slate-surface-tint); color: var(--slate-ink-muted); }
+
+/* Parts status badge — hold is distinct from not-ready */
+.ops-badge-hold { background-color: var(--slate-arches-wash); color: var(--slate-arches-ink); }
+
 /* Inline text link (Reset filters) */
 .ops-cs-reset-link { color: var(--slate-ink-muted); }
 .ops-cs-reset-link:hover { color: var(--slate-arches); }
@@ -741,7 +750,9 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-ready,
 .ops-badge-partial,
 .ops-badge-not-ready,
+.ops-badge-hold,
 .ops-badge-status-intake,
+.ops-badge-status-needs-so,
 .ops-badge-status-scheduled,
 .ops-badge-status-inprogress,
 .ops-badge-status-complete,
@@ -750,7 +761,10 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-badge-status-ready-for-build,
 .ops-badge-status-queued,
 .ops-badge-status-ready-for-pickup,
-.ops-badge-status-delayed {
+.ops-badge-status-delayed,
+.ops-badge-status-blocked,
+.ops-badge-status-qc,
+.ops-badge-status-cancelled {
   border-radius: 999px !important;
   padding-left: 10px !important;
   padding-right: 10px !important;
@@ -1390,4 +1404,46 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   width: 82px;
   height: auto;
   display: block;
+}
+
+/* ─── Non-Tech UI Consistency Pass ───────────────────────────────────────────
+ * Apply purchasing-like styling to specific ops pages via their body classes.
+ * DO NOT apply these styles to .ops-page-tech, .ops-page-jobs, or .ops-page-supervisor.
+ */
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-\[\#EAE8DC\] {
+  background-color: var(--slate-surface-page) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-white.shadow-sm {
+  box-shadow: none !important;
+  border: var(--slate-border) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .divide-slate-100 > * + * {
+  border-color: var(--slate-divider-soft) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .border-slate-100 {
+  border-color: var(--slate-divider-soft) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-\[\#d86b19\] {
+  background-color: var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .hover\:bg-\[\#c05e14\]:hover {
+  background-color: var(--slate-sage-ink) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .border-\[\#d86b19\] {
+  border-color: var(--slate-divider) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .text-\[\#d86b19\] {
+  color: var(--slate-sage) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .hover\:bg-orange-50:hover {
+  background-color: var(--slate-sage-wash) !important;
 }
