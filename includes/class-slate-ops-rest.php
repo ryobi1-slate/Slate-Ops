@@ -74,7 +74,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'permission_callback' => [__CLASS__, 'perm_manage_settings'],
           'callback' => [__CLASS__, 'update_settings'],
         ],
       ]);
@@ -99,7 +99,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_create_jobs'],
           'callback' => [__CLASS__, 'create_job_manual'],
         ],
       ]);
@@ -112,67 +112,67 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'PATCH',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_edit_jobs'],
           'callback' => [__CLASS__, 'edit_job'],
         ],
         [
           'methods' => 'DELETE',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_delete_jobs'],
           'callback' => [__CLASS__, 'delete_job'],
         ],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/notes', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'permission_callback' => [__CLASS__, 'perm_update_status'],
         'callback' => [__CLASS__, 'add_note'],
       ]);
 
       register_rest_route($ns, '/users/(?P<id>\d+)/role', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'permission_callback' => [__CLASS__, 'perm_manage_users'],
         'callback' => [__CLASS__, 'update_user_role'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/so', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_edit_jobs'],
         'callback' => [__CLASS__, 'set_so'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/assign', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback' => [__CLASS__, 'assign_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/schedule', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback' => [__CLASS__, 'schedule_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/release', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback' => [__CLASS__, 'release_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/status', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'permission_callback' => [__CLASS__, 'perm_update_status'],
         'callback' => [__CLASS__, 'set_status'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/submit', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_submit_qc'],
         'callback' => [__CLASS__, 'submit_qc'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/review', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_review_qc'],
         'callback' => [__CLASS__, 'review_qc'],
       ]);
 
@@ -194,6 +194,7 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'time_stop'],
       ]);
 
+
       register_rest_route($ns, '/time/daily-summary', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
@@ -205,6 +206,7 @@ class Slate_Ops_REST {
         'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
         'callback' => [__CLASS__, 'time_correction_request'],
       ]);
+
 
       register_rest_route($ns, '/supervisor/queues', [
         'methods' => 'GET',
@@ -224,7 +226,7 @@ class Slate_Ops_REST {
       // Phase 0: bulk schedule update — saves [{job_id, scheduled_start, scheduled_finish, assigned_user_id, work_center}]
       register_rest_route($ns, '/schedule/bulk', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback'            => [__CLASS__, 'bulk_schedule'],
       ]);
 
@@ -283,7 +285,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods'             => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
           'callback'            => [__CLASS__, 'update_buffer_settings'],
         ],
       ]);
@@ -291,25 +293,25 @@ class Slate_Ops_REST {
       // ── Job scheduler actions ─────────────────────────────────────
       register_rest_route($ns, '/jobs/(?P<id>\d+)/lock', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'lock_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/unlock', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'unlock_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/hold', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'hold_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/unhold', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'unhold_job'],
       ]);
 
@@ -377,8 +379,15 @@ class Slate_Ops_REST {
       // ── Executive dashboard ─────────────────────────────────────────
       register_rest_route($ns, '/executive/labor-summary', [
         'methods'             => 'GET',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_view_executive'],
         'callback'            => [__CLASS__, 'executive_labor_summary'],
+      ]);
+
+      // ── Debug (admin only) ───────────────────────────────────────────
+      register_rest_route($ns, '/debug/permissions', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'callback'            => [__CLASS__, 'debug_permissions'],
       ]);
     }
   }
@@ -870,37 +879,150 @@ return ['ok' => true, 'id' => $id];
     return self::duplicate_bom_with_lines(intval($req['id']), $new_bom_no, $new_name, 'revise');
   }
 
-public static function perm_ops() {
-    return Slate_Ops_Utils::require_ops_access();
-  }
-  public static function perm_tech_or_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_TECH) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_admin_or_supervisor() {
-    return self::perm_supervisor_or_admin();
-  }
-  public static function perm_cs_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_cs_or_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_admin() {
-    return is_user_logged_in() && current_user_can(Slate_Ops_Utils::CAP_ADMIN);
+  // ── Permission callbacks ─────────────────────────────────────────────────
+  // All call into Slate_Ops_Utils centralized helpers. Names are kept stable
+  // because they are referenced in route registration above.
+
+  /** Any authenticated ops user (viewer, tech, cs, supervisor, admin). */
+  public static function perm_ops() {
+    return Slate_Ops_Utils::can_access();
   }
 
-  // Handlers
+  /** Requires slate_ops_update_status (tech, cs, supervisor, admin). */
+  public static function perm_update_status() {
+    return Slate_Ops_Utils::can_update_status();
+  }
+
+  /** Requires slate_ops_time_tracking (tech, supervisor, admin). */
+  public static function perm_tech_or_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_time_tracking();
+  }
+
+  /** Requires slate_ops_supervisor or slate_ops_admin. */
+  public static function perm_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_supervisor_or_admin();
+  }
+
+  /** Alias kept for backward compatibility. */
+  public static function perm_admin_or_supervisor() {
+    return Slate_Ops_Utils::can_supervisor_or_admin();
+  }
+
+  /** Requires slate_ops_create_jobs (CS, supervisor, admin). */
+  public static function perm_create_jobs() {
+    return Slate_Ops_Utils::can_create_jobs();
+  }
+
+  /** Requires slate_ops_edit_jobs (CS, supervisor, admin). */
+  public static function perm_edit_jobs() {
+    return Slate_Ops_Utils::can_edit_jobs();
+  }
+
+  /** Requires slate_ops_delete_jobs (CS, supervisor, admin). */
+  public static function perm_delete_jobs() {
+    return Slate_Ops_Utils::can_delete_jobs();
+  }
+
+  /** Requires slate_ops_schedule_jobs (CS, supervisor, admin). */
+  public static function perm_schedule_jobs() {
+    return Slate_Ops_Utils::can_schedule_jobs();
+  }
+
+  /** Requires slate_ops_assign_jobs (supervisor, admin). */
+  public static function perm_assign_jobs() {
+    return Slate_Ops_Utils::can_assign_jobs();
+  }
+
+  /** Requires slate_ops_submit_qc (tech, supervisor, admin). */
+  public static function perm_submit_qc() {
+    return Slate_Ops_Utils::can_submit_qc();
+  }
+
+  /** Requires slate_ops_review_qc (supervisor, admin). */
+  public static function perm_review_qc() {
+    return Slate_Ops_Utils::can_review_qc();
+  }
+
+  /** Requires slate_ops_view_executive (supervisor, admin). */
+  public static function perm_view_executive() {
+    return Slate_Ops_Utils::can_view_executive();
+  }
+
+  /** Requires slate_ops_manage_settings (admin). */
+  public static function perm_manage_settings() {
+    return Slate_Ops_Utils::can_manage_settings();
+  }
+
+  /** Requires slate_ops_manage_users (admin). */
+  public static function perm_manage_users() {
+    return Slate_Ops_Utils::can_manage_users();
+  }
+
+  /** CS or above (slate_ops_cs / legacy, supervisor, admin). */
+  public static function perm_cs_or_admin() {
+    return Slate_Ops_Utils::can_cs_or_above();
+  }
+
+  /** CS or above (slate_ops_cs / legacy, supervisor, admin). */
+  public static function perm_cs_or_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_cs_or_above();
+  }
+
+  /** Requires slate_ops_admin. */
+  public static function perm_admin() {
+    return Slate_Ops_Utils::is_admin();
+  }
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
   public static function me($req) {
-    return [
-      'user' => [
-        'id' => get_current_user_id(),
-        'name' => wp_get_current_user()->display_name,
-        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+    $user          = wp_get_current_user();
+    $roles         = array_values((array) $user->roles);
+    $caps          = Slate_Ops_Utils::current_user_caps_summary();
+    $allowed_pages = Slate_Ops_Utils::user_allowed_pages();
+
+    return new WP_REST_Response([
+      // ── New top-level shape ────────────────────────────────────────────
+      'user_id'       => $user->ID,
+      'display_name'  => $user->display_name,
+      'roles'         => $roles,
+      'capabilities'  => $caps,
+      'allowed_pages' => $allowed_pages,
+      'is_admin'      => $caps['admin'],
+      'is_supervisor' => $caps['supervisor'],
+      'is_cs'         => $caps['cs'],
+      'is_tech'       => $caps['tech'],
+      // ── Backward-compat user{} envelope (old shape) ───────────────────
+      'user'          => [
+        'id'            => $user->ID,
+        'name'          => $user->display_name,
+        'caps'          => $caps,
+        'roles'         => $roles,
+        'allowed_pages' => $allowed_pages,
       ],
-    ];
+    ], 200);
+  }
+
+  public static function debug_permissions($req) {
+    $user  = wp_get_current_user();
+    $roles = array_values((array) $user->roles);
+    $caps  = Slate_Ops_Utils::current_user_caps_summary();
+
+    // Raw check against every known ops cap (including legacy).
+    $raw_caps = [];
+    foreach (array_merge(Slate_Ops_Utils::all_cap_names(), [Slate_Ops_Utils::CAP_CS_LEGACY]) as $c) {
+      $raw_caps[$c] = (bool) current_user_can($c);
+    }
+
+    return new WP_REST_Response([
+      'user_id'       => $user->ID,
+      'user_login'    => $user->user_login,
+      'display_name'  => $user->display_name,
+      'roles'         => $roles,
+      'caps_summary'  => $caps,
+      'raw_caps'      => $raw_caps,
+      'allowed_pages' => Slate_Ops_Utils::user_allowed_pages(),
+    ], 200);
   }
 
   public static function get_settings($req) {
