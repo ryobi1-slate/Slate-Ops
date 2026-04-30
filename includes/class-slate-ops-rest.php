@@ -2046,11 +2046,22 @@ return self::get_job(['id' => $job_id]);
   public static function block_job($req) {
     global $wpdb;
     $job_id  = intval($req['id']);
+    $body    = $req->get_json_params() ?: [];
     $user_id = get_current_user_id();
     $now     = Slate_Ops_Utils::now_gmt();
     $t       = $wpdb->prefix . 'slate_ops_jobs';
 
     if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
+
+    $br = strtoupper(sanitize_key($body['block_reason'] ?? ''));
+    $bn = trim(sanitize_textarea_field($body['block_note'] ?? ''));
+
+    if (!$br || !in_array($br, Slate_Ops_Utils::cs_block_reasons(), true)) {
+      return new WP_Error('block_reason_required', 'Block reason is required.', ['status' => 422]);
+    }
+    if (!$bn) {
+      return new WP_Error('block_note_required', 'Block note is required.', ['status' => 422]);
+    }
 
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
@@ -2064,13 +2075,14 @@ return self::get_job(['id' => $job_id]);
 
     $wpdb->update($t, [
       'status'            => Slate_Ops_Statuses::BLOCKED,
-      'block_reason'      => 'OTHER',
-      'block_note'        => 'Blocked by technician',
+      'block_reason'      => $br,
+      'block_note'        => $bn,
       'status_updated_at' => $now,
       'updated_at'        => $now,
     ], ['job_id' => $job_id]);
 
-    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::BLOCKED, 'Blocked by technician');
+    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::BLOCKED,
+      'Blocked by technician: [' . $br . '] ' . $bn);
 
     $updated = self::job_by_id($job_id);
     self::maybe_push_dealer_portal_status($updated);
