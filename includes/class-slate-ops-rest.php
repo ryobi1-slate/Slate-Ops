@@ -3,6 +3,36 @@ if (!defined('ABSPATH')) exit;
 
 class Slate_Ops_REST {
 
+  private const OPS_CANONICAL_ROLES = [
+    'slate_ops_admin',
+    'slate_ops_supervisor',
+    'slate_ops_cs',
+    'slate_ops_tech',
+    'slate_ops_viewer',
+  ];
+
+  private const OPS_LEGACY_ROLE_MAP = [
+    'slate_shop_supervisor'  => 'slate_ops_supervisor',
+    'slate_customer_service' => 'slate_ops_cs',
+    'slate_tech'             => 'slate_ops_tech',
+  ];
+
+  private const OPS_ALIAS_MAP = [
+    'admin'      => 'slate_ops_admin',
+    'supervisor' => 'slate_ops_supervisor',
+    'cs'         => 'slate_ops_cs',
+    'tech'       => 'slate_ops_tech',
+    'viewer'     => 'slate_ops_viewer',
+  ];
+
+  private const OPS_DISPLAY_MAP = [
+    'slate_ops_admin'      => 'Admin',
+    'slate_ops_supervisor' => 'Supervisor',
+    'slate_ops_cs'         => 'CS',
+    'slate_ops_tech'       => 'Tech',
+    'slate_ops_viewer'     => 'Viewer',
+  ];
+
   private static function scheduler_debug_enabled() {
     return defined('SLATE_OPS_DEBUG_SCHEDULER') && SLATE_OPS_DEBUG_SCHEDULER;
   }
@@ -2453,33 +2483,29 @@ return self::get_job(['id' => $job_id]);
    * their actual WP roles — not inferred from capabilities. WP administrator
    * caps would otherwise mask the assigned Ops role.
    * Legacy role slugs are normalised to their canonical equivalents.
+   *
+   * Accepts a WP_User object or a user ID to avoid redundant DB queries when
+   * called in a loop.
    */
-  private static function get_ops_role_from_user($user_id) {
-    $user = new WP_User((int) $user_id);
+  private static function get_ops_role_from_user($user) {
+    if (!$user instanceof WP_User) {
+      $user = new WP_User((int) $user);
+    }
     if (!$user->exists()) {
       return '';
     }
 
-    $canonical = [
-      'slate_ops_admin',
-      'slate_ops_supervisor',
-      'slate_ops_cs',
-      'slate_ops_tech',
-      'slate_ops_viewer',
-    ];
-
-    $legacy_map = [
-      'slate_shop_supervisor'  => 'slate_ops_supervisor',
-      'slate_customer_service' => 'slate_ops_cs',
-      'slate_tech'             => 'slate_ops_tech',
-    ];
-
-    foreach ($user->roles as $role) {
-      if (in_array($role, $canonical, true)) {
+    // Scan the fixed canonical hierarchy first so the result is deterministic
+    // even when stale legacy roles are still present on the user.
+    foreach (self::OPS_CANONICAL_ROLES as $role) {
+      if (in_array($role, $user->roles, true)) {
         return $role;
       }
-      if (isset($legacy_map[$role])) {
-        return $legacy_map[$role];
+    }
+
+    foreach (self::OPS_LEGACY_ROLE_MAP as $legacy => $mapped) {
+      if (in_array($legacy, $user->roles, true)) {
+        return $mapped;
       }
     }
 
@@ -2488,14 +2514,13 @@ return self::get_job(['id' => $job_id]);
 
   public static function users($req) {
     $users = get_users([
-      'fields' => ['ID','display_name','user_email'],
       'orderby' => 'display_name',
       'order' => 'ASC',
       'number' => 500,
     ]);
     $out = [];
     foreach ($users as $u) {
-      $out[] = ['id' => (int)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email, 'ops_role' => self::get_ops_role_from_user($u->ID)];
+      $out[] = ['id' => (int)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email, 'ops_role' => self::get_ops_role_from_user($u)];
     }
     return ['users' => $out];
   }
@@ -2514,29 +2539,12 @@ return self::get_job(['id' => $job_id]);
     $body     = $req->get_json_params();
     $new_role = sanitize_key($body['role'] ?? '');
 
-    // Short aliases accepted for backward compatibility.
-    $alias_map = [
-      'admin'      => 'slate_ops_admin',
-      'supervisor' => 'slate_ops_supervisor',
-      'cs'         => 'slate_ops_cs',
-      'tech'       => 'slate_ops_tech',
-      'viewer'     => 'slate_ops_viewer',
-    ];
-
-    $allowed = [
-      'slate_ops_admin',
-      'slate_ops_supervisor',
-      'slate_ops_cs',
-      'slate_ops_tech',
-      'slate_ops_viewer',
-    ];
-
-    // Resolve alias to canonical slug.
-    if (isset($alias_map[$new_role])) {
-      $new_role = $alias_map[$new_role];
+    // Resolve short alias to canonical slug.
+    if (isset(self::OPS_ALIAS_MAP[$new_role])) {
+      $new_role = self::OPS_ALIAS_MAP[$new_role];
     }
 
-    if ($new_role && !in_array($new_role, $allowed, true)) {
+    if ($new_role && !in_array($new_role, self::OPS_CANONICAL_ROLES, true)) {
       return new WP_Error('invalid_role', 'Invalid role', ['status' => 400]);
     }
 
@@ -2548,11 +2556,7 @@ return self::get_job(['id' => $job_id]);
     // Remove all canonical and legacy Slate Ops roles before assigning the new
     // one. WP administrator is intentionally excluded so site admins keep their
     // access while their Ops role is updated.
-    $slate_roles = array_merge($allowed, [
-      'slate_shop_supervisor',
-      'slate_customer_service',
-      'slate_tech',
-    ]);
+    $slate_roles = array_merge(self::OPS_CANONICAL_ROLES, array_keys(self::OPS_LEGACY_ROLE_MAP));
     foreach ($slate_roles as $r) {
       $user->remove_role($r);
     }
@@ -2566,15 +2570,7 @@ return self::get_job(['id' => $job_id]);
     // Reload to reflect the just-committed role state.
     $user = new WP_User($user_id);
 
-    $display_map = [
-      'slate_ops_admin'      => 'Admin',
-      'slate_ops_supervisor' => 'Supervisor',
-      'slate_ops_cs'         => 'CS',
-      'slate_ops_tech'       => 'Tech',
-      'slate_ops_viewer'     => 'Viewer',
-    ];
-
-    $ops_role = self::get_ops_role_from_user($user_id);
+    $ops_role = self::get_ops_role_from_user($user);
 
     return [
       'ok'           => true,
@@ -2582,7 +2578,7 @@ return self::get_job(['id' => $job_id]);
       'roles'        => $user->roles,
       'capabilities' => array_keys(array_filter($user->allcaps)),
       'ops_role'     => $ops_role,
-      'display_role' => $display_map[$ops_role] ?? '',
+      'display_role' => self::OPS_DISPLAY_MAP[$ops_role] ?? '',
     ];
   }
 
