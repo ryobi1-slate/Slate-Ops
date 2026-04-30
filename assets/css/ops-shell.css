@@ -1405,3 +1405,45 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   height: auto;
   display: block;
 }
+
+/* ─── Non-Tech UI Consistency Pass ───────────────────────────────────────────
+ * Apply purchasing-like styling to specific ops pages via their body classes.
+ * DO NOT apply these styles to .ops-page-tech, .ops-page-jobs, or .ops-page-supervisor.
+ */
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-\[\#EAE8DC\] {
+  background-color: var(--slate-surface-page) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-white.shadow-sm {
+  box-shadow: none !important;
+  border: var(--slate-border) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .divide-slate-100 > * + * {
+  border-color: var(--slate-divider-soft) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .border-slate-100 {
+  border-color: var(--slate-divider-soft) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-\[\#d86b19\] {
+  background-color: var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .hover\:bg-\[\#c05e14\]:hover {
+  background-color: var(--slate-sage-ink) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .border-\[\#d86b19\] {
+  border-color: var(--slate-divider) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .text-\[\#d86b19\] {
+  color: var(--slate-sage) !important;
+}
+
+:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .hover\:bg-orange-50:hover {
+  background-color: var(--slate-sage-wash) !important;
+}
