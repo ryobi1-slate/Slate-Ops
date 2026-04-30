@@ -56,9 +56,16 @@
 
       document.body.appendChild(overlay);
 
+      var modal    = overlay.querySelector('.ops-pw-modal');
       var reasonEl = overlay.querySelector('#ops-pw-reason');
       var noteEl   = overlay.querySelector('#ops-pw-note');
       var errEl    = overlay.querySelector('#ops-pw-err');
+      var cancelEl = overlay.querySelector('#ops-pw-cancel');
+      var submitEl = overlay.querySelector('#ops-pw-submit');
+
+      // Focus trap: collect focusable elements within the modal.
+      var FOCUSABLE = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
+      function getFocusable() { return Array.prototype.slice.call(modal.querySelectorAll(FOCUSABLE)); }
 
       function done(result) {
         overlay.remove();
@@ -67,14 +74,27 @@
       }
 
       function onKey(e) {
-        if (e.key === 'Escape') done(null);
+        if (e.key === 'Escape') { done(null); return; }
+        if (e.key !== 'Tab') return;
+
+        var focusable = getFocusable();
+        if (!focusable.length) { e.preventDefault(); return; }
+
+        var first = focusable[0];
+        var last  = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+        }
       }
 
-      overlay.querySelector('#ops-pw-cancel').addEventListener('click', function () { done(null); });
+      cancelEl.addEventListener('click', function () { done(null); });
       overlay.addEventListener('click', function (e) { if (e.target === overlay) done(null); });
       document.addEventListener('keydown', onKey);
 
-      overlay.querySelector('#ops-pw-submit').addEventListener('click', function () {
+      submitEl.addEventListener('click', function () {
         var reason = reasonEl.value;
         if (!reason) {
           errEl.hidden = false;

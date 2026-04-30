@@ -1457,7 +1457,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   transition: border-color .15s;
 }
 .ops-pw-select:focus,
-.ops-pw-textarea:focus { border-color: #404f4b; box-shadow: 0 0 0 2px rgba(64,79,75,.15); }
+.ops-pw-textarea:focus { border-color: var(--sage); box-shadow: 0 0 0 2px rgba(47,62,57,.15); }
 .ops-pw-textarea { resize: vertical; min-height: 72px; }
 .ops-pw-field-err {
   font-size: .78rem;
@@ -1485,10 +1485,10 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 .ops-pw-btn--cancel:hover { background: #e2e8f0; }
 .ops-pw-btn--primary {
-  background: #404f4b;
+  background: var(--sage);
   color: #fff;
 }
-.ops-pw-btn--primary:hover { background: #2f3b37; }
+.ops-pw-btn--primary:hover { background: var(--sage-mid); }
 
 /* ─── Success toast ────────────────────────────────────────────────────────── */
 .ops-toast {
