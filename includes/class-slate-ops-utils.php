@@ -212,11 +212,7 @@ class Slate_Ops_Utils {
     if (current_user_can(self::CAP_TECH)) {
       $pages[] = 'tech';
     }
-    // Schedule: CS/supervisor/admin can write; tech can view read-only.
-    if (
-      current_user_can(self::CAP_SCHEDULE_JOBS) ||
-      current_user_can(self::CAP_TECH)
-    ) {
+    if (current_user_can(self::CAP_SCHEDULE_JOBS)) {
       $pages[] = 'schedule';
     }
     if (current_user_can(self::CAP_ADMIN)) {
