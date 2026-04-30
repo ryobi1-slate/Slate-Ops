@@ -61,7 +61,7 @@ if (!function_exists('ops_nav_link')) {
       ops_nav_link('/ops/settings', '/settings', 'settings',       'Settings');
     endif;
     if (in_array('monitor', $allowed, true)) :
-      ops_nav_link('/ops/monitor',  '/monitor',  'monitor',        'Monitor');
+      ops_nav_link(home_url('/slate-ops-monitor/'), '/monitor', 'monitor', 'Monitor');
     endif;
     ?>
   </nav>

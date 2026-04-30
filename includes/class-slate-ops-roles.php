@@ -38,6 +38,7 @@ class Slate_Ops_Roles {
           $C::CAP_UPDATE_STATUS => true,
           $C::CAP_TIME_TRACKING => true,
           $C::CAP_SUBMIT_QC     => true,
+          $C::CAP_VIEW_MONITOR  => true,
           'read'                => true,
         ],
       ],
@@ -53,6 +54,7 @@ class Slate_Ops_Roles {
           $C::CAP_EDIT_JOBS     => true,
           $C::CAP_DELETE_JOBS   => true,
           $C::CAP_SCHEDULE_JOBS => true,
+          $C::CAP_VIEW_MONITOR  => true,
           'read'                => true,
         ],
       ],
@@ -201,6 +203,7 @@ class Slate_Ops_Roles {
         $C::CAP_UPDATE_STATUS => true,
         $C::CAP_TIME_TRACKING => true,
         $C::CAP_SUBMIT_QC     => true,
+        $C::CAP_VIEW_MONITOR  => true,
       ],
       'slate_shop_supervisor' => [
         $C::CAP_ACCESS          => true,
@@ -227,6 +230,7 @@ class Slate_Ops_Roles {
         $C::CAP_EDIT_JOBS     => true,
         $C::CAP_DELETE_JOBS   => true,
         $C::CAP_SCHEDULE_JOBS => true,
+        $C::CAP_VIEW_MONITOR  => true,
       ],
     ];
 
