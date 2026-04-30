@@ -104,7 +104,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'permission_callback' => [__CLASS__, 'perm_manage_settings'],
           'callback' => [__CLASS__, 'update_settings'],
         ],
       ]);
@@ -129,7 +129,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_create_jobs'],
           'callback' => [__CLASS__, 'create_job_manual'],
         ],
       ]);
@@ -142,68 +142,74 @@ class Slate_Ops_REST {
         ],
         [
           'methods' => 'PATCH',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_edit_jobs'],
           'callback' => [__CLASS__, 'edit_job'],
         ],
         [
           'methods' => 'DELETE',
-          'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+          'permission_callback' => [__CLASS__, 'perm_delete_jobs'],
           'callback' => [__CLASS__, 'delete_job'],
         ],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/notes', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'permission_callback' => [__CLASS__, 'perm_update_status'],
         'callback' => [__CLASS__, 'add_note'],
       ]);
 
       register_rest_route($ns, '/users/(?P<id>\d+)/role', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'permission_callback' => [__CLASS__, 'perm_manage_users'],
         'callback' => [__CLASS__, 'update_user_role'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/so', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_edit_jobs'],
         'callback' => [__CLASS__, 'set_so'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/assign', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback' => [__CLASS__, 'assign_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/schedule', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback' => [__CLASS__, 'schedule_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/release', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback' => [__CLASS__, 'release_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/status', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_ops'],
+        'permission_callback' => [__CLASS__, 'perm_update_status'],
         'callback' => [__CLASS__, 'set_status'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/submit', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_submit_qc'],
         'callback' => [__CLASS__, 'submit_qc'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/review', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
         'callback' => [__CLASS__, 'review_qc'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/block', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'block_job'],
       ]);
 
       register_rest_route($ns, '/time/active', [
@@ -224,6 +230,7 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'time_stop'],
       ]);
 
+
       register_rest_route($ns, '/time/daily-summary', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
@@ -235,6 +242,7 @@ class Slate_Ops_REST {
         'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
         'callback' => [__CLASS__, 'time_correction_request'],
       ]);
+
 
       register_rest_route($ns, '/supervisor/queues', [
         'methods' => 'GET',
@@ -254,7 +262,7 @@ class Slate_Ops_REST {
       // Phase 0: bulk schedule update — saves [{job_id, scheduled_start, scheduled_finish, assigned_user_id, work_center}]
       register_rest_route($ns, '/schedule/bulk', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_schedule_jobs'],
         'callback'            => [__CLASS__, 'bulk_schedule'],
       ]);
 
@@ -313,7 +321,7 @@ class Slate_Ops_REST {
         ],
         [
           'methods'             => 'POST',
-          'permission_callback' => [__CLASS__, 'perm_admin_or_supervisor'],
+          'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
           'callback'            => [__CLASS__, 'update_buffer_settings'],
         ],
       ]);
@@ -321,25 +329,25 @@ class Slate_Ops_REST {
       // ── Job scheduler actions ─────────────────────────────────────
       register_rest_route($ns, '/jobs/(?P<id>\d+)/lock', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'lock_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/unlock', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'unlock_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/hold', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'hold_job'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/unhold', [
         'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
         'callback'            => [__CLASS__, 'unhold_job'],
       ]);
 
@@ -407,8 +415,15 @@ class Slate_Ops_REST {
       // ── Executive dashboard ─────────────────────────────────────────
       register_rest_route($ns, '/executive/labor-summary', [
         'methods'             => 'GET',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_view_executive'],
         'callback'            => [__CLASS__, 'executive_labor_summary'],
+      ]);
+
+      // ── Debug (admin only) ───────────────────────────────────────────
+      register_rest_route($ns, '/debug/permissions', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'callback'            => [__CLASS__, 'debug_permissions'],
       ]);
     }
   }
@@ -900,37 +915,150 @@ return ['ok' => true, 'id' => $id];
     return self::duplicate_bom_with_lines(intval($req['id']), $new_bom_no, $new_name, 'revise');
   }
 
-public static function perm_ops() {
-    return Slate_Ops_Utils::require_ops_access();
-  }
-  public static function perm_tech_or_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_TECH) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_admin_or_supervisor() {
-    return self::perm_supervisor_or_admin();
-  }
-  public static function perm_cs_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_cs_or_supervisor_or_admin() {
-    return is_user_logged_in() && (current_user_can(Slate_Ops_Utils::CAP_CS) || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) || current_user_can(Slate_Ops_Utils::CAP_ADMIN));
-  }
-  public static function perm_admin() {
-    return is_user_logged_in() && current_user_can(Slate_Ops_Utils::CAP_ADMIN);
+  // ── Permission callbacks ─────────────────────────────────────────────────
+  // All call into Slate_Ops_Utils centralized helpers. Names are kept stable
+  // because they are referenced in route registration above.
+
+  /** Any authenticated ops user (viewer, tech, cs, supervisor, admin). */
+  public static function perm_ops() {
+    return Slate_Ops_Utils::can_access();
   }
 
-  // Handlers
+  /** Requires slate_ops_update_status (tech, cs, supervisor, admin). */
+  public static function perm_update_status() {
+    return Slate_Ops_Utils::can_update_status();
+  }
+
+  /** Requires slate_ops_time_tracking (tech, supervisor, admin). */
+  public static function perm_tech_or_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_time_tracking();
+  }
+
+  /** Requires slate_ops_supervisor or slate_ops_admin. */
+  public static function perm_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_supervisor_or_admin();
+  }
+
+  /** Alias kept for backward compatibility. */
+  public static function perm_admin_or_supervisor() {
+    return Slate_Ops_Utils::can_supervisor_or_admin();
+  }
+
+  /** Requires slate_ops_create_jobs (CS, supervisor, admin). */
+  public static function perm_create_jobs() {
+    return Slate_Ops_Utils::can_create_jobs();
+  }
+
+  /** Requires slate_ops_edit_jobs (CS, supervisor, admin). */
+  public static function perm_edit_jobs() {
+    return Slate_Ops_Utils::can_edit_jobs();
+  }
+
+  /** Requires slate_ops_delete_jobs (CS, supervisor, admin). */
+  public static function perm_delete_jobs() {
+    return Slate_Ops_Utils::can_delete_jobs();
+  }
+
+  /** Requires slate_ops_schedule_jobs (CS, supervisor, admin). */
+  public static function perm_schedule_jobs() {
+    return Slate_Ops_Utils::can_schedule_jobs();
+  }
+
+  /** Requires slate_ops_assign_jobs (supervisor, admin). */
+  public static function perm_assign_jobs() {
+    return Slate_Ops_Utils::can_assign_jobs();
+  }
+
+  /** Requires slate_ops_submit_qc (tech, supervisor, admin). */
+  public static function perm_submit_qc() {
+    return Slate_Ops_Utils::can_submit_qc();
+  }
+
+  /** Requires slate_ops_review_qc (supervisor, admin). */
+  public static function perm_review_qc() {
+    return Slate_Ops_Utils::can_review_qc();
+  }
+
+  /** Requires slate_ops_view_executive (supervisor, admin). */
+  public static function perm_view_executive() {
+    return Slate_Ops_Utils::can_view_executive();
+  }
+
+  /** Requires slate_ops_manage_settings (admin). */
+  public static function perm_manage_settings() {
+    return Slate_Ops_Utils::can_manage_settings();
+  }
+
+  /** Requires slate_ops_manage_users (admin). */
+  public static function perm_manage_users() {
+    return Slate_Ops_Utils::can_manage_users();
+  }
+
+  /** CS or above (slate_ops_cs / legacy, supervisor, admin). */
+  public static function perm_cs_or_admin() {
+    return Slate_Ops_Utils::can_cs_or_above();
+  }
+
+  /** CS or above (slate_ops_cs / legacy, supervisor, admin). */
+  public static function perm_cs_or_supervisor_or_admin() {
+    return Slate_Ops_Utils::can_cs_or_above();
+  }
+
+  /** Requires slate_ops_admin. */
+  public static function perm_admin() {
+    return Slate_Ops_Utils::is_admin();
+  }
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
   public static function me($req) {
-    return [
-      'user' => [
-        'id' => get_current_user_id(),
-        'name' => wp_get_current_user()->display_name,
-        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+    $user          = wp_get_current_user();
+    $roles         = array_values((array) $user->roles);
+    $caps          = Slate_Ops_Utils::current_user_caps_summary();
+    $allowed_pages = Slate_Ops_Utils::user_allowed_pages();
+
+    return new WP_REST_Response([
+      // ── New top-level shape ────────────────────────────────────────────
+      'user_id'       => $user->ID,
+      'display_name'  => $user->display_name,
+      'roles'         => $roles,
+      'capabilities'  => $caps,
+      'allowed_pages' => $allowed_pages,
+      'is_admin'      => $caps['admin'],
+      'is_supervisor' => $caps['supervisor'],
+      'is_cs'         => $caps['cs'],
+      'is_tech'       => $caps['tech'],
+      // ── Backward-compat user{} envelope (old shape) ───────────────────
+      'user'          => [
+        'id'            => $user->ID,
+        'name'          => $user->display_name,
+        'caps'          => $caps,
+        'roles'         => $roles,
+        'allowed_pages' => $allowed_pages,
       ],
-    ];
+    ], 200);
+  }
+
+  public static function debug_permissions($req) {
+    $user  = wp_get_current_user();
+    $roles = array_values((array) $user->roles);
+    $caps  = Slate_Ops_Utils::current_user_caps_summary();
+
+    // Raw check against every known ops cap (including legacy).
+    $raw_caps = [];
+    foreach (array_merge(Slate_Ops_Utils::all_cap_names(), [Slate_Ops_Utils::CAP_CS_LEGACY]) as $c) {
+      $raw_caps[$c] = (bool) current_user_can($c);
+    }
+
+    return new WP_REST_Response([
+      'user_id'       => $user->ID,
+      'user_login'    => $user->user_login,
+      'display_name'  => $user->display_name,
+      'roles'         => $roles,
+      'caps_summary'  => $caps,
+      'raw_caps'      => $raw_caps,
+      'allowed_pages' => Slate_Ops_Utils::user_allowed_pages(),
+    ], 200);
   }
 
   public static function get_settings($req) {
@@ -2063,6 +2191,58 @@ return self::get_job(['id' => $job_id]);
   }
 
   /**
+   * Tech blocks their active job without a formal CS block reason.
+   * POST /jobs/{id}/block
+   * Stops the active timer and sets status to BLOCKED.
+   */
+  public static function block_job($req) {
+    global $wpdb;
+    $job_id  = intval($req['id']);
+    $body    = $req->get_json_params() ?: [];
+    $user_id = get_current_user_id();
+    $now     = Slate_Ops_Utils::now_gmt();
+    $t       = $wpdb->prefix . 'slate_ops_jobs';
+
+    if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
+
+    $br = strtoupper(sanitize_key($body['block_reason'] ?? ''));
+    $bn = trim(sanitize_textarea_field($body['block_note'] ?? ''));
+
+    if (!$br || !in_array($br, Slate_Ops_Utils::cs_block_reasons(), true)) {
+      return new WP_Error('block_reason_required', 'Block reason is required.', ['status' => 422]);
+    }
+    if (!$bn) {
+      return new WP_Error('block_note_required', 'Block note is required.', ['status' => 422]);
+    }
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    if ($job['status'] !== Slate_Ops_Statuses::IN_PROGRESS) {
+      return new WP_Error('invalid_state', 'Only in-progress jobs can be blocked', ['status' => 422]);
+    }
+
+    // Stop any active timer for this user on this job.
+    self::stop_active_timer_for_job($user_id, $job_id);
+
+    $wpdb->update($t, [
+      'status'            => Slate_Ops_Statuses::BLOCKED,
+      'block_reason'      => $br,
+      'block_note'        => $bn,
+      'status_updated_at' => $now,
+      'updated_at'        => $now,
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::BLOCKED,
+      'Blocked by technician: [' . $br . '] ' . $bn);
+
+    $updated = self::job_by_id($job_id);
+    self::maybe_push_dealer_portal_status($updated);
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  /**
    * Tech submits job for QC review.
    * POST /jobs/{id}/qc/submit  { notes }
    */
@@ -2073,7 +2253,6 @@ return self::get_job(['id' => $job_id]);
     $notes  = sanitize_textarea_field($body['notes'] ?? '');
 
     if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
-    if (!trim($notes)) return new WP_Error('bad_request', 'Notes are required when submitting for QC', ['status' => 400]);
 
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
@@ -2199,6 +2378,11 @@ return self::get_job(['id' => $job_id]);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
     $user_id = get_current_user_id();
+    $now = Slate_Ops_Utils::now_gmt();
+    $shift_state = self::get_shift_window_state($now);
+    if (!$shift_state['within_shift']) {
+      return new WP_Error('outside_shift', 'Outside scheduled shift. Supervisor approval required for overtime.', ['status' => 403]);
+    }
 
     // Job-status guard: only schedulable/active-state jobs can be started.
     $startable = [
@@ -2231,7 +2415,6 @@ return self::get_job(['id' => $job_id]);
       $reason = null;
     }
 
-    $now = Slate_Ops_Utils::now_gmt();
     $wpdb->insert($segments, [
       'job_id' => $job_id,
       'user_id' => $user_id,
@@ -2280,15 +2463,20 @@ return self::get_job(['id' => $job_id]);
     }
 
     $now = Slate_Ops_Utils::now_gmt();
+    $shift_state = self::get_shift_window_state($now);
+    $effective_stop = $now;
+    if (!$shift_state['within_shift'] && $shift_state['after_shift_end'] && strtotime($open['start_ts']) < strtotime($shift_state['shift_end_ts'])) {
+      $effective_stop = $shift_state['shift_end_ts'];
+    }
     $wpdb->update($segments, [
-      'end_ts'     => $now,
+      'end_ts'     => $effective_stop,
       'updated_at' => $now,
     ], ['segment_id' => (int)$open['segment_id']]);
 
-    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $now, 'Timer stopped');
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, $effective_stop !== $now ? 'Timer stopped (capped at shift end)' : 'Timer stopped');
 
     // Elapsed seconds for the just-closed segment — computed in PHP, no extra query.
-    $elapsed_seconds = max(0, strtotime($now) - strtotime($open['start_ts']));
+    $elapsed_seconds = max(0, strtotime($effective_stop) - strtotime($open['start_ts']));
 
     // Total approved minutes this user has logged on this job (all closed segments).
     // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
@@ -2303,7 +2491,7 @@ return self::get_job(['id' => $job_id]);
     return [
       'segment_id'             => (int)$open['segment_id'],
       'job_id'                 => (int)$open['job_id'],
-      'stopped_at'             => $now,
+      'stopped_at'             => $effective_stop,
       'elapsed_seconds'        => $elapsed_seconds,
       'total_approved_minutes' => $total_approved_minutes,
     ];
@@ -2365,6 +2553,19 @@ return self::get_job(['id' => $job_id]);
     ), ARRAY_A);
 
     if ($row) {
+      $now = Slate_Ops_Utils::now_gmt();
+      $shift_state = self::get_shift_window_state($now);
+      if (!$shift_state['within_shift'] && $shift_state['after_shift_end'] && strtotime($row['start_ts']) < strtotime($shift_state['shift_end_ts'])) {
+        $effective_stop = $shift_state['shift_end_ts'];
+        $wpdb->update($seg, [
+          'end_ts'     => $effective_stop,
+          'updated_at' => $now,
+        ], ['segment_id' => (int)$row['segment_id']]);
+        self::audit('segment', (int)$row['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer auto-stopped at shift end.');
+        self::audit('job', (int)$row['job_id'], 'note', null, null, null, 'Timer auto-stopped at shift end.');
+        return ['active' => null, 'auto_stopped' => true, 'message' => 'Timer stopped at shift end. Start work again when your next shift begins.'];
+      }
+
       // Closed approved segments this user has previously logged on this job.
       // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
       $row['prior_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
@@ -2433,17 +2634,23 @@ return self::get_job(['id' => $job_id]);
     ), ARRAY_A);
 
     $raw_minutes = 0;
+    $shift_for_day = self::get_shift_window_state(gmdate('Y-m-d H:i:s', strtotime($date . ' 12:00:00')));
+    $shift_start_ts = strtotime($shift_for_day['shift_start_ts']);
+    $shift_end_ts = strtotime($shift_for_day['shift_end_ts']);
     $segments_out = [];
     foreach ($rows as $r) {
+      $seg_start = strtotime($r['start_ts']);
+      $seg_end = $r['end_ts'] ? strtotime($r['end_ts']) : time();
+      $bounded_start = max($seg_start, $shift_start_ts);
+      $bounded_end = min($seg_end, $shift_end_ts);
+      $in_shift_seconds = max(0, $bounded_end - $bounded_start);
+      $mins = (int) ceil($in_shift_seconds / 60);
+
       if ($r['end_ts']) {
-        $mins = (int) ceil(
-          (strtotime($r['end_ts']) - strtotime($r['start_ts'])) / 60
-        );
         $raw_minutes += $mins;
         $r['duration_minutes'] = $mins;
       } else {
-        // Open segment — count up to now
-        $mins = (int) ceil((time() - strtotime($r['start_ts'])) / 60);
+        // Open segment — count up to now (inside configured shift window)
         $raw_minutes += $mins;
         $r['duration_minutes'] = $mins;
         $r['is_open'] = true;
@@ -2622,6 +2829,74 @@ return self::get_job(['id' => $job_id]);
     $update[$reason_key] = $r;
     $update[$note_key]   = $n;
     return null;
+  }
+
+  /**
+   * Shift config placeholder keys for future approvals:
+   * overtime_approved, overtime_approved_by, overtime_approved_at
+   */
+    /**
+   * Shift config placeholder keys for future approvals:
+   * overtime_approved, overtime_approved_by, overtime_approved_at
+   */
+  private static function get_shift_window_state($now_gmt) {
+    global $wpdb;
+
+    $settings_t = $wpdb->prefix . 'slate_ops_settings';
+    $cfg = $wpdb->get_row("SELECT shift_start, shift_end FROM $settings_t WHERE id=1", ARRAY_A);
+
+    $shift_start = sanitize_text_field($cfg['shift_start'] ?? '07:00:00');
+    $shift_end   = sanitize_text_field($cfg['shift_end'] ?? '15:30:00');
+
+    $utc_tz  = new DateTimeZone('UTC');
+    $site_tz = wp_timezone();
+
+    $now_utc = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', (string) $now_gmt, $utc_tz);
+    if (!$now_utc) {
+      $now_utc = new DateTimeImmutable('now', $utc_tz);
+    }
+
+    $now_local  = $now_utc->setTimezone($site_tz);
+    $local_date = $now_local->format('Y-m-d');
+
+    $shift_start_local = DateTimeImmutable::createFromFormat(
+      'Y-m-d H:i:s',
+      $local_date . ' ' . $shift_start,
+      $site_tz
+    );
+
+    $shift_end_local = DateTimeImmutable::createFromFormat(
+      'Y-m-d H:i:s',
+      $local_date . ' ' . $shift_end,
+      $site_tz
+    );
+
+    if (!$shift_start_local || !$shift_end_local) {
+      $shift_start_local = new DateTimeImmutable($local_date . ' 07:00:00', $site_tz);
+      $shift_end_local   = new DateTimeImmutable($local_date . ' 15:30:00', $site_tz);
+    }
+
+    // Overnight shift support, for example 22:00 -> 06:00.
+    if ($shift_end_local <= $shift_start_local) {
+      $shift_end_local = $shift_end_local->modify('+1 day');
+
+      // If current local time is after midnight but before shift start,
+      // the active shift started the previous local day.
+      if ($now_local < $shift_start_local) {
+        $shift_start_local = $shift_start_local->modify('-1 day');
+        $shift_end_local   = $shift_end_local->modify('-1 day');
+      }
+    }
+
+    $shift_start_utc = $shift_start_local->setTimezone($utc_tz);
+    $shift_end_utc   = $shift_end_local->setTimezone($utc_tz);
+
+    return [
+      'within_shift'    => $now_utc >= $shift_start_utc && $now_utc <= $shift_end_utc,
+      'after_shift_end' => $now_utc > $shift_end_utc,
+      'shift_start_ts'  => $shift_start_utc->format('Y-m-d H:i:s'),
+      'shift_end_ts'    => $shift_end_utc->format('Y-m-d H:i:s'),
+    ];
   }
 
   private static function validation_error($field, $code, $message, $status = 400) {

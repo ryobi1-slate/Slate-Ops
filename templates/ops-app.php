@@ -22,12 +22,14 @@ $caps = Slate_Ops_Utils::current_user_caps_summary();
 $role_class = $caps['admin']      ? 'ops-role-admin'
   : ($caps['supervisor']          ? 'ops-role-supervisor'
   : ($caps['cs']                  ? 'ops-role-cs'
-  : ($caps['tech']                ? 'ops-role-tech' : '')));
+  : ($caps['tech']                ? 'ops-role-tech'
+  : ($caps['viewer']              ? 'ops-role-viewer' : ''))));
 
 $role_label = $caps['admin']      ? 'Admin'
   : ($caps['supervisor']          ? 'Supervisor'
   : ($caps['cs']                  ? 'Customer Service'
-  : ($caps['tech']                ? 'Technician' : '')));
+  : ($caps['tech']                ? 'Technician'
+  : ($caps['viewer']              ? 'Viewer' : ''))));
 
 $user = wp_get_current_user();
 
