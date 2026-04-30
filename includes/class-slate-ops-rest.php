@@ -2348,6 +2348,11 @@ return self::get_job(['id' => $job_id]);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
     $user_id = get_current_user_id();
+    $now = Slate_Ops_Utils::now_gmt();
+    $shift_state = self::get_shift_window_state($now);
+    if (!$shift_state['within_shift']) {
+      return new WP_Error('outside_shift', 'Outside scheduled shift. Supervisor approval required for overtime.', ['status' => 403]);
+    }
 
     // Job-status guard: only schedulable/active-state jobs can be started.
     $startable = [
@@ -2380,7 +2385,6 @@ return self::get_job(['id' => $job_id]);
       $reason = null;
     }
 
-    $now = Slate_Ops_Utils::now_gmt();
     $wpdb->insert($segments, [
       'job_id' => $job_id,
       'user_id' => $user_id,
@@ -2429,15 +2433,20 @@ return self::get_job(['id' => $job_id]);
     }
 
     $now = Slate_Ops_Utils::now_gmt();
+    $shift_state = self::get_shift_window_state($now);
+    $effective_stop = $now;
+    if (!$shift_state['within_shift'] && $shift_state['after_shift_end'] && strtotime($open['start_ts']) < strtotime($shift_state['shift_end_ts'])) {
+      $effective_stop = $shift_state['shift_end_ts'];
+    }
     $wpdb->update($segments, [
-      'end_ts'     => $now,
+      'end_ts'     => $effective_stop,
       'updated_at' => $now,
     ], ['segment_id' => (int)$open['segment_id']]);
 
-    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $now, 'Timer stopped');
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, $effective_stop !== $now ? 'Timer stopped (capped at shift end)' : 'Timer stopped');
 
     // Elapsed seconds for the just-closed segment — computed in PHP, no extra query.
-    $elapsed_seconds = max(0, strtotime($now) - strtotime($open['start_ts']));
+    $elapsed_seconds = max(0, strtotime($effective_stop) - strtotime($open['start_ts']));
 
     // Total approved minutes this user has logged on this job (all closed segments).
     // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
@@ -2452,7 +2461,7 @@ return self::get_job(['id' => $job_id]);
     return [
       'segment_id'             => (int)$open['segment_id'],
       'job_id'                 => (int)$open['job_id'],
-      'stopped_at'             => $now,
+      'stopped_at'             => $effective_stop,
       'elapsed_seconds'        => $elapsed_seconds,
       'total_approved_minutes' => $total_approved_minutes,
     ];
@@ -2514,6 +2523,19 @@ return self::get_job(['id' => $job_id]);
     ), ARRAY_A);
 
     if ($row) {
+      $now = Slate_Ops_Utils::now_gmt();
+      $shift_state = self::get_shift_window_state($now);
+      if (!$shift_state['within_shift'] && $shift_state['after_shift_end'] && strtotime($row['start_ts']) < strtotime($shift_state['shift_end_ts'])) {
+        $effective_stop = $shift_state['shift_end_ts'];
+        $wpdb->update($seg, [
+          'end_ts'     => $effective_stop,
+          'updated_at' => $now,
+        ], ['segment_id' => (int)$row['segment_id']]);
+        self::audit('segment', (int)$row['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer auto-stopped at shift end.');
+        self::audit('job', (int)$row['job_id'], 'note', null, null, null, 'Timer auto-stopped at shift end.');
+        return ['active' => null, 'auto_stopped' => true, 'message' => 'Timer stopped at shift end. Start work again when your next shift begins.'];
+      }
+
       // Closed approved segments this user has previously logged on this job.
       // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
       $row['prior_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
@@ -2582,17 +2604,23 @@ return self::get_job(['id' => $job_id]);
     ), ARRAY_A);
 
     $raw_minutes = 0;
+    $shift_for_day = self::get_shift_window_state(gmdate('Y-m-d H:i:s', strtotime($date . ' 12:00:00')));
+    $shift_start_ts = strtotime($shift_for_day['shift_start_ts']);
+    $shift_end_ts = strtotime($shift_for_day['shift_end_ts']);
     $segments_out = [];
     foreach ($rows as $r) {
+      $seg_start = strtotime($r['start_ts']);
+      $seg_end = $r['end_ts'] ? strtotime($r['end_ts']) : time();
+      $bounded_start = max($seg_start, $shift_start_ts);
+      $bounded_end = min($seg_end, $shift_end_ts);
+      $in_shift_seconds = max(0, $bounded_end - $bounded_start);
+      $mins = (int) ceil($in_shift_seconds / 60);
+
       if ($r['end_ts']) {
-        $mins = (int) ceil(
-          (strtotime($r['end_ts']) - strtotime($r['start_ts'])) / 60
-        );
         $raw_minutes += $mins;
         $r['duration_minutes'] = $mins;
       } else {
-        // Open segment — count up to now
-        $mins = (int) ceil((time() - strtotime($r['start_ts'])) / 60);
+        // Open segment — count up to now (inside configured shift window)
         $raw_minutes += $mins;
         $r['duration_minutes'] = $mins;
         $r['is_open'] = true;
@@ -2731,6 +2759,30 @@ return self::get_job(['id' => $job_id]);
     $update[$reason_key] = $r;
     $update[$note_key]   = $n;
     return null;
+  }
+
+  /**
+   * Shift config placeholder keys for future approvals:
+   * overtime_approved, overtime_approved_by, overtime_approved_at
+   */
+  private static function get_shift_window_state($now_gmt) {
+    global $wpdb;
+    $settings_t = $wpdb->prefix . 'slate_ops_settings';
+    $cfg = $wpdb->get_row("SELECT shift_start, shift_end FROM $settings_t WHERE id=1", ARRAY_A);
+    $shift_start = sanitize_text_field($cfg['shift_start'] ?? '07:00:00');
+    $shift_end   = sanitize_text_field($cfg['shift_end'] ?? '15:30:00');
+
+    $today = wp_date('Y-m-d', strtotime($now_gmt));
+    $start_ts = gmdate('Y-m-d H:i:s', strtotime($today . ' ' . $shift_start));
+    $end_ts   = gmdate('Y-m-d H:i:s', strtotime($today . ' ' . $shift_end));
+    $within = strtotime($now_gmt) >= strtotime($start_ts) && strtotime($now_gmt) <= strtotime($end_ts);
+
+    return [
+      'within_shift'    => $within,
+      'after_shift_end' => strtotime($now_gmt) > strtotime($end_ts),
+      'shift_start_ts'  => $start_ts,
+      'shift_end_ts'    => $end_ts,
+    ];
   }
 
   private static function validation_error($field, $code, $message, $status = 400) {
