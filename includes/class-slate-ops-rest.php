@@ -172,8 +172,14 @@ class Slate_Ops_REST {
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/review', [
         'methods' => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
         'callback' => [__CLASS__, 'review_qc'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/block', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_tech_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'block_job'],
       ]);
 
       register_rest_route($ns, '/time/active', [
@@ -2033,6 +2039,46 @@ return self::get_job(['id' => $job_id]);
   }
 
   /**
+   * Tech blocks their active job without a formal CS block reason.
+   * POST /jobs/{id}/block
+   * Stops the active timer and sets status to BLOCKED.
+   */
+  public static function block_job($req) {
+    global $wpdb;
+    $job_id  = intval($req['id']);
+    $user_id = get_current_user_id();
+    $now     = Slate_Ops_Utils::now_gmt();
+    $t       = $wpdb->prefix . 'slate_ops_jobs';
+
+    if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
+
+    $job = self::job_by_id($job_id);
+    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
+
+    if ($job['status'] !== Slate_Ops_Statuses::IN_PROGRESS) {
+      return new WP_Error('invalid_state', 'Only in-progress jobs can be blocked', ['status' => 422]);
+    }
+
+    // Stop any active timer for this user on this job.
+    self::stop_active_timer_for_job($user_id, $job_id);
+
+    $wpdb->update($t, [
+      'status'            => Slate_Ops_Statuses::BLOCKED,
+      'block_reason'      => 'OTHER',
+      'block_note'        => 'Blocked by technician',
+      'status_updated_at' => $now,
+      'updated_at'        => $now,
+    ], ['job_id' => $job_id]);
+
+    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::BLOCKED, 'Blocked by technician');
+
+    $updated = self::job_by_id($job_id);
+    self::maybe_push_dealer_portal_status($updated);
+
+    return self::get_job(['id' => $job_id]);
+  }
+
+  /**
    * Tech submits job for QC review.
    * POST /jobs/{id}/qc/submit  { notes }
    */
@@ -2043,7 +2089,6 @@ return self::get_job(['id' => $job_id]);
     $notes  = sanitize_textarea_field($body['notes'] ?? '');
 
     if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
-    if (!trim($notes)) return new WP_Error('bad_request', 'Notes are required when submitting for QC', ['status' => 400]);
 
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
