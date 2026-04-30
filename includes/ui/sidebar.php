@@ -36,29 +36,34 @@ if (!function_exists('ops_nav_link')) {
 
   <nav class="ops-nav">
     <?php
+    $allowed = Slate_Ops_Utils::user_allowed_pages();
     $is_admin = current_user_can(Slate_Ops_Utils::CAP_ADMIN);
-    $is_exec  = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR);
-    $is_cs    = current_user_can(Slate_Ops_Utils::CAP_CS);
-    $is_tech  = current_user_can(Slate_Ops_Utils::CAP_TECH);
-    ?>
 
-    <?php if ($is_admin || $is_exec) : ?>
-      <?php ops_nav_link('/ops/exec',       '/exec',       'dashboard',      'Executive'); ?>
-      <?php ops_nav_link('/ops/cs',         '/cs',         'person',         'CS'); ?>
-      <?php ops_nav_link('/ops/tech',       '/tech',       'build',          'Tech'); ?>
-      <?php ops_nav_link('/ops/schedule',   '/schedule',   'calendar_month', 'Schedule'); ?>
-      <?php ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart',  'Purchasing'); ?>
-      <?php ops_nav_link('/ops/admin',      '/admin',      'shield',         'Admin'); ?>
-      <?php ops_nav_link('/ops/settings',   '/settings',   'settings',       'Settings'); ?>
-    <?php elseif ($is_cs) : ?>
-      <?php ops_nav_link('/ops/cs',       '/cs',       'person',         'CS'); ?>
-      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule'); ?>
-    <?php elseif ($is_tech) : ?>
-      <?php ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech'); ?>
-      <?php ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule'); ?>
-    <?php else : ?>
-      <?php ops_nav_link('/ops/exec', '/exec', 'dashboard', 'Executive'); ?>
-    <?php endif; ?>
+    if (in_array('executive', $allowed, true)) :
+      ops_nav_link('/ops/exec',     '/exec',     'dashboard',      'Executive');
+    endif;
+    if (in_array('cs', $allowed, true)) :
+      ops_nav_link('/ops/cs',       '/cs',       'person',         'CS');
+    endif;
+    if (in_array('tech', $allowed, true)) :
+      ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech');
+    endif;
+    if (in_array('schedule', $allowed, true)) :
+      ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule');
+    endif;
+    if ($is_admin) :
+      ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
+    endif;
+    if (in_array('admin', $allowed, true)) :
+      ops_nav_link('/ops/admin',    '/admin',    'shield',         'Admin');
+    endif;
+    if (in_array('settings', $allowed, true)) :
+      ops_nav_link('/ops/settings', '/settings', 'settings',       'Settings');
+    endif;
+    if (in_array('monitor', $allowed, true)) :
+      ops_nav_link('/ops/monitor',  '/monitor',  'monitor',        'Monitor');
+    endif;
+    ?>
   </nav>
 
   <div class="ops-sidebar-footer">
