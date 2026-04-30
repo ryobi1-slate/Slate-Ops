@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.40.0
+ * Version: 0.41.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.40.0');
+define('SLATE_OPS_VERSION', '0.41.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -97,7 +97,12 @@ add_action('wp_enqueue_scripts', function() {
 
     // Guard script loads first (before React) so it can intercept disallowed routes.
     wp_enqueue_script('slate-ops-guard', SLATE_OPS_URL . 'assets/js/ops-access-guard.js', [], $ver_guard_js, false);
-    wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element', 'slate-ops-guard'], $ver_app_js, true);
+
+    // Pause Work modal + success toast helper (footer, before React).
+    $ver_pw_js = file_exists(SLATE_OPS_PATH . 'assets/js/ops-pause-work.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-pause-work.js') : SLATE_OPS_VERSION;
+    wp_enqueue_script('slate-ops-pause-work', SLATE_OPS_URL . 'assets/js/ops-pause-work.js', [], $ver_pw_js, true);
+
+    wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element', 'slate-ops-guard', 'slate-ops-pause-work'], $ver_app_js, true);
 
     $current_user = wp_get_current_user();
 

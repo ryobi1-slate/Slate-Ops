@@ -1406,44 +1406,105 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   display: block;
 }
 
-/* ─── Non-Tech UI Consistency Pass ───────────────────────────────────────────
- * Apply purchasing-like styling to specific ops pages via their body classes.
- * DO NOT apply these styles to .ops-page-tech, .ops-page-jobs, or .ops-page-supervisor.
- */
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-\[\#EAE8DC\] {
-  background-color: var(--slate-surface-page) !important;
+/* ─── Pause Work modal ─────────────────────────────────────────────────────── */
+.ops-pw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
 }
+.ops-pw-modal {
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.75rem 1.75rem 1.5rem;
+  width: min(420px, 92vw);
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+.ops-pw-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 .35rem;
+}
+.ops-pw-body {
+  font-size: .875rem;
+  color: #64748b;
+  margin: 0 0 1.25rem;
+}
+.ops-pw-field { margin-bottom: 1rem; }
+.ops-pw-label {
+  display: block;
+  font-size: .8125rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: .35rem;
+}
+.ops-pw-optional { font-weight: 400; color: #94a3b8; }
+.ops-pw-select,
+.ops-pw-textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: .5rem;
+  padding: .5rem .75rem;
+  font-size: .875rem;
+  color: #1e293b;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color .15s;
+}
+.ops-pw-select:focus,
+.ops-pw-textarea:focus { border-color: var(--sage); box-shadow: 0 0 0 2px rgba(47,62,57,.15); }
+.ops-pw-textarea { resize: vertical; min-height: 72px; }
+.ops-pw-field-err {
+  font-size: .78rem;
+  color: #ef4444;
+  margin-top: .3rem;
+}
+.ops-pw-actions {
+  display: flex;
+  gap: .75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+.ops-pw-btn {
+  font-size: .875rem;
+  font-weight: 600;
+  padding: .55rem 1.25rem;
+  border-radius: .5rem;
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+}
+.ops-pw-btn--cancel {
+  background: #f1f5f9;
+  color: #374151;
+}
+.ops-pw-btn--cancel:hover { background: #e2e8f0; }
+.ops-pw-btn--primary {
+  background: var(--sage);
+  color: #fff;
+}
+.ops-pw-btn--primary:hover { background: var(--sage-mid); }
 
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-white.shadow-sm {
-  box-shadow: none !important;
-  border: var(--slate-border) !important;
+/* ─── Success toast ────────────────────────────────────────────────────────── */
+.ops-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #166534;
+  color: #fff;
+  font-size: .875rem;
+  font-weight: 600;
+  padding: .7rem 1.4rem;
+  border-radius: 2rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  z-index: 10000;
+  white-space: nowrap;
+  transition: opacity .3s;
 }
-
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .divide-slate-100 > * + * {
-  border-color: var(--slate-divider-soft) !important;
-}
-
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .border-slate-100 {
-  border-color: var(--slate-divider-soft) !important;
-}
-
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .bg-\[\#d86b19\] {
-  background-color: var(--slate-sage) !important;
-  color: var(--slate-surface) !important;
-}
-
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .hover\:bg-\[\#c05e14\]:hover {
-  background-color: var(--slate-sage-ink) !important;
-}
-
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .border-\[\#d86b19\] {
-  border-color: var(--slate-divider) !important;
-}
-
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .text-\[\#d86b19\] {
-  color: var(--slate-sage) !important;
-}
-
-:is(.ops-page-cs, .ops-page-exec, .ops-page-schedule, .ops-page-admin, .ops-page-settings) .hover\:bg-orange-50:hover {
-  background-color: var(--slate-sage-wash) !important;
-}
+.ops-toast--out { opacity: 0; }
