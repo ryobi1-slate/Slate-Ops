@@ -2765,23 +2765,67 @@ return self::get_job(['id' => $job_id]);
    * Shift config placeholder keys for future approvals:
    * overtime_approved, overtime_approved_by, overtime_approved_at
    */
+    /**
+   * Shift config placeholder keys for future approvals:
+   * overtime_approved, overtime_approved_by, overtime_approved_at
+   */
   private static function get_shift_window_state($now_gmt) {
     global $wpdb;
+
     $settings_t = $wpdb->prefix . 'slate_ops_settings';
     $cfg = $wpdb->get_row("SELECT shift_start, shift_end FROM $settings_t WHERE id=1", ARRAY_A);
+
     $shift_start = sanitize_text_field($cfg['shift_start'] ?? '07:00:00');
     $shift_end   = sanitize_text_field($cfg['shift_end'] ?? '15:30:00');
 
-    $today = wp_date('Y-m-d', strtotime($now_gmt));
-    $start_ts = gmdate('Y-m-d H:i:s', strtotime($today . ' ' . $shift_start));
-    $end_ts   = gmdate('Y-m-d H:i:s', strtotime($today . ' ' . $shift_end));
-    $within = strtotime($now_gmt) >= strtotime($start_ts) && strtotime($now_gmt) <= strtotime($end_ts);
+    $utc_tz  = new DateTimeZone('UTC');
+    $site_tz = wp_timezone();
+
+    $now_utc = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', (string) $now_gmt, $utc_tz);
+    if (!$now_utc) {
+      $now_utc = new DateTimeImmutable('now', $utc_tz);
+    }
+
+    $now_local  = $now_utc->setTimezone($site_tz);
+    $local_date = $now_local->format('Y-m-d');
+
+    $shift_start_local = DateTimeImmutable::createFromFormat(
+      'Y-m-d H:i:s',
+      $local_date . ' ' . $shift_start,
+      $site_tz
+    );
+
+    $shift_end_local = DateTimeImmutable::createFromFormat(
+      'Y-m-d H:i:s',
+      $local_date . ' ' . $shift_end,
+      $site_tz
+    );
+
+    if (!$shift_start_local || !$shift_end_local) {
+      $shift_start_local = new DateTimeImmutable($local_date . ' 07:00:00', $site_tz);
+      $shift_end_local   = new DateTimeImmutable($local_date . ' 15:30:00', $site_tz);
+    }
+
+    // Overnight shift support, for example 22:00 -> 06:00.
+    if ($shift_end_local <= $shift_start_local) {
+      $shift_end_local = $shift_end_local->modify('+1 day');
+
+      // If current local time is after midnight but before shift start,
+      // the active shift started the previous local day.
+      if ($now_local < $shift_start_local) {
+        $shift_start_local = $shift_start_local->modify('-1 day');
+        $shift_end_local   = $shift_end_local->modify('-1 day');
+      }
+    }
+
+    $shift_start_utc = $shift_start_local->setTimezone($utc_tz);
+    $shift_end_utc   = $shift_end_local->setTimezone($utc_tz);
 
     return [
-      'within_shift'    => $within,
-      'after_shift_end' => strtotime($now_gmt) > strtotime($end_ts),
-      'shift_start_ts'  => $start_ts,
-      'shift_end_ts'    => $end_ts,
+      'within_shift'    => $now_utc >= $shift_start_utc && $now_utc <= $shift_end_utc,
+      'after_shift_end' => $now_utc > $shift_end_utc,
+      'shift_start_ts'  => $shift_start_utc->format('Y-m-d H:i:s'),
+      'shift_end_ts'    => $shift_end_utc->format('Y-m-d H:i:s'),
     ];
   }
 
