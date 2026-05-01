@@ -2560,6 +2560,7 @@ async function loadTech() {
 
       <div class="tech-actions">
         <button class="btn danger tech-stop" id="stop-active">Stop Work &amp; Log Labor</button>
+        <button class="btn tech-finish" id="finish-active">Finish Work</button>
         <div class="tech-actions-sub">
           <button class="btn secondary" id="submit-qc-active">Submit for QC</button>
           <button class="btn secondary" id="note-toggle">+ Note</button>
@@ -2696,6 +2697,29 @@ async function loadTech() {
         }
         router();
       } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop Work & Log Labor'; }
+    };
+  }
+
+  // Finish Work — stop the timer, then mark the job COMPLETE.
+  // Manual signoff happens outside the system; CS handles next steps.
+  const finishBtn = document.getElementById('finish-active');
+  if (finishBtn) {
+    finishBtn.onclick = async () => {
+      if (!activeJobId) return;
+      finishBtn.disabled = true;
+      const original = finishBtn.textContent;
+      finishBtn.textContent = 'Finishing…';
+      try {
+        await api.timeStop();
+        clearInterval(state.timerInterval);
+        await api.setStatus(activeJobId, 'COMPLETE', 'Work finished by technician. Manual signoff routed to CS.');
+        toast('Work finished — job marked Complete');
+        router();
+      } catch(e) {
+        alert(e.message);
+        finishBtn.disabled = false;
+        finishBtn.textContent = original;
+      }
     };
   }
 
