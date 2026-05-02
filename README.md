@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "experimentalDecorators": true,
+    "experimental Decorators": true,
     "useDefineForClassFields": false,
     "module": "ESNext",
     "lib": [
