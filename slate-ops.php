@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.39.4
+ * Version: 0.39.5
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.39.4');
+define('SLATE_OPS_VERSION', '0.39.5');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -144,6 +144,48 @@ add_filter('show_admin_bar', function($show) {
   if (Slate_Ops_Routes::is_ops_request()) return false;
   return $show;
 });
+
+/**
+ * Phase 0 login routing.
+ *
+ * Sends Slate Ops users to their workspace landing page after login. Dealer
+ * and other non-ops users fall through to whatever WordPress would have
+ * returned (typically /dashboard/ from the dealer portal).
+ *
+ * Admins explicitly requesting wp-admin are allowed through so they can
+ * reach the WP admin when they intend to.
+ */
+add_filter('login_redirect', function($redirect_to, $requested_redirect_to, $user) {
+  if (is_wp_error($user) || !($user instanceof WP_User)) {
+    return $redirect_to;
+  }
+
+  $requested = is_string($requested_redirect_to) ? $requested_redirect_to : '';
+  if ($requested !== '' && strpos($requested, '/wp-admin') !== false
+      && user_can($user, Slate_Ops_Utils::CAP_ADMIN)) {
+    return $redirect_to;
+  }
+
+  $is_admin      = user_can($user, Slate_Ops_Utils::CAP_ADMIN);
+  $is_supervisor = user_can($user, Slate_Ops_Utils::CAP_SUPERVISOR);
+  $is_cs         = user_can($user, Slate_Ops_Utils::CAP_CS)
+                || user_can($user, Slate_Ops_Utils::CAP_CS_LEGACY);
+  $is_tech       = user_can($user, Slate_Ops_Utils::CAP_TECH);
+  $is_viewer     = user_can($user, Slate_Ops_Utils::CAP_VIEWER)
+                || user_can($user, Slate_Ops_Utils::CAP_VIEW_MONITOR);
+
+  if ($is_admin || $is_supervisor || $is_cs) {
+    return esc_url_raw(home_url('/ops/cs'));
+  }
+  if ($is_tech) {
+    return esc_url_raw(home_url('/ops/tech'));
+  }
+  if ($is_viewer) {
+    return esc_url_raw(home_url('/slate-ops-monitor/'));
+  }
+
+  return $redirect_to;
+}, 10, 3);
 
 /**
  * Integration point: Dealer Portal quote approved.
