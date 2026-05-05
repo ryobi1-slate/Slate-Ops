@@ -103,7 +103,7 @@
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   function load(tbody, filters) {
-    tbody.innerHTML = '<tr><td colspan="11" class="sotr-loading">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="sotr-loading">Loading…</td></tr>';
 
     var base   = settings.api.root.replace(/\/$/, '') + '/executive/time-segments';
     var params = [];
@@ -121,11 +121,11 @@
         if (data && Array.isArray(data.segments)) {
           tbody.innerHTML = renderRows(data.segments);
         } else {
-          tbody.innerHTML = '<tr><td colspan="11" class="sotr-error">Unexpected response from server.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="12" class="sotr-error">Unexpected response from server.</td></tr>';
         }
       })
       .catch(function (err) {
-        tbody.innerHTML = '<tr><td colspan="11" class="sotr-error">Error: ' + esc(String(err)) + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="sotr-error">Error: ' + esc(String(err)) + '</td></tr>';
       });
   }
 

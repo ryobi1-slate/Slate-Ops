@@ -3745,6 +3745,7 @@ self::maybe_push_dealer_portal_status($job);
         SELECT 1 FROM {$audit_t} a
         WHERE a.entity_type = 'segment'
           AND a.entity_id   = s.segment_id
+          AND a.action      = 'note'
           AND a.note        = 'Timer started outside scheduled shift.'
       ) AS outside_shift
     FROM {$segs_t} s
