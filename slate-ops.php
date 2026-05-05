@@ -160,13 +160,13 @@ add_filter('login_redirect', function($redirect_to, $requested_redirect_to, $use
     return $redirect_to;
   }
 
+  $is_admin = user_can($user, Slate_Ops_Utils::CAP_ADMIN);
+
   $requested = is_string($requested_redirect_to) ? $requested_redirect_to : '';
-  if ($requested !== '' && strpos($requested, '/wp-admin') !== false
-      && user_can($user, Slate_Ops_Utils::CAP_ADMIN)) {
+  if ($requested !== '' && stripos($requested, 'wp-admin') !== false && $is_admin) {
     return $redirect_to;
   }
 
-  $is_admin      = user_can($user, Slate_Ops_Utils::CAP_ADMIN);
   $is_supervisor = user_can($user, Slate_Ops_Utils::CAP_SUPERVISOR);
   $is_cs         = user_can($user, Slate_Ops_Utils::CAP_CS)
                 || user_can($user, Slate_Ops_Utils::CAP_CS_LEGACY);
