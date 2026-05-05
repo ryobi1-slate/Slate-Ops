@@ -2480,6 +2480,7 @@ return self::get_job(['id' => $job_id]);
     $effective_stop = $now;
     $wpdb->update($segments, [
       'end_ts'     => $effective_stop,
+      'state'      => 'closed',
       'updated_at' => $now,
     ], ['segment_id' => (int)$open['segment_id']]);
 
@@ -2494,7 +2495,7 @@ return self::get_job(['id' => $job_id]);
       "SELECT ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60)
        FROM $segments
        WHERE job_id = %d AND user_id = %d AND end_ts IS NOT NULL
-         AND approval_status = 'approved' AND state = 'active'",
+         AND approval_status = 'approved'",
       (int)$open['job_id'], $user_id
     ));
 
@@ -2573,7 +2574,7 @@ return self::get_job(['id' => $job_id]);
         "SELECT ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60)
          FROM $seg
          WHERE job_id = %d AND user_id = %d AND end_ts IS NOT NULL
-           AND approval_status = 'approved' AND state = 'active'",
+           AND approval_status = 'approved'",
         (int)$row['job_id'], $user_id
       ));
 
@@ -2581,7 +2582,7 @@ return self::get_job(['id' => $job_id]);
       $row['my_job_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
         "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, UTC_TIMESTAMP()))), 0) / 60))
          FROM $seg
-         WHERE job_id = %d AND user_id = %d AND state = 'active' AND approval_status != 'voided'",
+         WHERE job_id = %d AND user_id = %d AND approval_status != 'voided'",
         (int)$row['job_id'], $user_id
       ));
 
@@ -2589,7 +2590,7 @@ return self::get_job(['id' => $job_id]);
       $row['job_total_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
         "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, UTC_TIMESTAMP()))), 0) / 60))
          FROM $seg
-         WHERE job_id = %d AND state = 'active' AND approval_status != 'voided'",
+         WHERE job_id = %d AND approval_status != 'voided'",
         (int)$row['job_id']
       ));
     }
@@ -2628,7 +2629,6 @@ return self::get_job(['id' => $job_id]);
        FROM $segments s
        LEFT JOIN $jobs_t j ON j.job_id = s.job_id
        WHERE s.user_id = %d
-         AND s.state = 'active'
          AND DATE(s.start_ts) = %s
        ORDER BY s.start_ts ASC",
       $user_id, $date
@@ -2797,14 +2797,14 @@ return self::get_job(['id' => $job_id]);
 
     // Pending corrections
     $pending = $wpdb->get_results("SELECT s.segment_id, s.job_id, s.user_id, s.start_ts, s.end_ts, s.note, s.source, s.approval_status
-      FROM $segments s WHERE s.approval_status='pending' AND s.state='active' ORDER BY s.created_at DESC LIMIT 100", ARRAY_A);
+      FROM $segments s WHERE s.approval_status='pending' ORDER BY s.created_at DESC LIMIT 100", ARRAY_A);
 
     // Unassigned segments: tech != assigned_user_id and assigned_user_id not null
     $unassigned = $wpdb->get_results("SELECT s.segment_id, s.job_id, s.user_id, s.start_ts, s.end_ts, s.reason, s.note
       FROM $segments s
       JOIN $jobs j ON j.job_id = s.job_id
       WHERE j.assigned_user_id IS NOT NULL AND j.assigned_user_id <> s.user_id
-        AND s.state='active' AND s.end_ts IS NOT NULL
+        AND s.end_ts IS NOT NULL
       ORDER BY s.end_ts DESC LIMIT 200", ARRAY_A);
 
     return [
@@ -2939,12 +2939,12 @@ if ($row) {
 
     $rows = $wpdb->get_results($wpdb->prepare("
       SELECT user_id,
-        SUM(CASE WHEN approval_status='approved' AND state='active' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as approved_minutes,
-        SUM(CASE WHEN approval_status='pending' AND state='active' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as pending_minutes,
+        SUM(CASE WHEN approval_status='approved' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as approved_minutes,
+        SUM(CASE WHEN approval_status='pending' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as pending_minutes,
         COUNT(*) as segment_count,
         MAX(COALESCE(end_ts, start_ts)) as last_activity
       FROM $segments
-      WHERE job_id=%d AND state='active'
+      WHERE job_id=%d
       GROUP BY user_id
       ORDER BY approved_minutes DESC, pending_minutes DESC
     ", $job_id), ARRAY_A);
@@ -3507,8 +3507,7 @@ self::maybe_push_dealer_portal_status($job);
        FROM $segs_t s
        JOIN $jobs_t j ON j.job_id = s.job_id
        WHERE j.status != 'COMPLETE'
-         AND j.archived_at IS NULL
-         AND s.state = 'active'"
+         AND j.archived_at IS NULL"
     );
 
     $total_est = (int)($ov['total_estimated_minutes'] ?? 0);
@@ -3525,12 +3524,11 @@ self::maybe_push_dealer_portal_status($job);
     ];
 
     // ── Tech performance ──────────────────────────────────────────────
-    // Logged minutes per tech (all active segments, any job)
+    // Logged minutes per tech (all segments, any job)
     $tech_logged_rows = $wpdb->get_results(
       "SELECT user_id,
               COALESCE(SUM(TIMESTAMPDIFF(MINUTE, start_ts, COALESCE(end_ts, NOW()))),0) AS logged_minutes
        FROM $segs_t
-       WHERE state = 'active'
        GROUP BY user_id",
       ARRAY_A
     );
@@ -3587,7 +3585,7 @@ self::maybe_push_dealer_portal_status($job);
               COALESCE(j.estimated_minutes,0) AS estimated_minutes,
               COALESCE(SUM(TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, NOW()))),0) AS logged_minutes
        FROM $jobs_t j
-       LEFT JOIN $segs_t s ON s.job_id = j.job_id AND s.state = 'active'
+       LEFT JOIN $segs_t s ON s.job_id = j.job_id
        WHERE j.archived_at IS NULL
        GROUP BY j.job_id
        ORDER BY j.status, j.so_number",
@@ -3622,13 +3620,13 @@ self::maybe_push_dealer_portal_status($job);
     $jobs_with_logged = (int)$wpdb->get_var(
       "SELECT COUNT(DISTINCT j.job_id)
        FROM $jobs_t j
-       JOIN $segs_t s ON s.job_id = j.job_id AND s.state = 'active'
+       JOIN $segs_t s ON s.job_id = j.job_id
        WHERE j.status != 'COMPLETE' AND j.archived_at IS NULL"
     );
 
     $total_raw_all = (int)$wpdb->get_var(
       "SELECT COALESCE(SUM(TIMESTAMPDIFF(MINUTE, start_ts, COALESCE(end_ts, NOW()))),0)
-       FROM $segs_t WHERE state = 'active'"
+       FROM $segs_t"
     );
 
     $total_active = (int)($lc['total_active'] ?? 0);

@@ -683,6 +683,8 @@ KEY awaiting_idx (awaiting_direction)
 
     Slate_Ops_Purchasing::maybe_seed();
 
+    self::migrate_close_state_v1();
+
     update_option('slate_ops_version', SLATE_OPS_VERSION);
 
     if ($flush_rewrites) {
@@ -694,5 +696,39 @@ KEY awaiting_idx (awaiting_direction)
 
   public static function deactivate() {
     flush_rewrite_rules();
+  }
+
+  /**
+   * One-shot, version-gated migration: closed time segments (end_ts IS NOT NULL)
+   * were historically left with state='active' because /time/stop never wrote
+   * the state column. Flips them to state='closed' so sum queries that no
+   * longer carry the bug-masking state='active' predicate keep returning
+   * correct totals.
+   *
+   * Idempotent: gated by an option flag and the WHERE clause finds zero
+   * candidates after first run regardless.
+   */
+  private static function migrate_close_state_v1() {
+    $option_key = 'slate_ops_migration_close_state_v1';
+    if (get_option($option_key) === 'done') {
+      return;
+    }
+
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+
+    $rows = $wpdb->query(
+      "UPDATE $segments
+         SET state = 'closed'
+       WHERE end_ts IS NOT NULL
+         AND state = 'active'"
+    );
+
+    error_log(sprintf(
+      '[slate_ops] migration_close_state_v1: updated %d time segment rows',
+      (int) $rows
+    ));
+
+    update_option($option_key, 'done');
   }
 }
