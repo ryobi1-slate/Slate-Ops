@@ -87,6 +87,27 @@ class Slate_Ops_REST {
   }
 
   public static function register_routes() {
+    // TEMPORARY ONE-SHOT — remove after one successful production run.
+    // Manual trigger for migrate_close_state_v1; the version-gated install
+    // hook is not firing in production. Idempotent via the SQL WHERE clause.
+    // Auth deliberately open: cookie-auth on the manage_options check is
+    // returning 401 in production, and this endpoint is throwaway. The SQL
+    // is convergent with PR #251's intent and is being removed shortly.
+    register_rest_route('slate-ops/v1', '/admin/run-state-migration', [
+      'methods'             => 'POST',
+      'permission_callback' => '__return_true',
+      'callback'            => [__CLASS__, 'run_state_migration'],
+    ]);
+
+    // Admin diagnostic: lists time segments with abnormally long durations
+    // (closed segments where end_ts - start_ts exceeds the suspect threshold).
+    // Read-only. Used to scope a quarantine pass on historical bad data.
+    register_rest_route('slate-ops/v1', '/admin/diagnostic-time-rollup', [
+      'methods'             => 'GET',
+      'permission_callback' => function () { return current_user_can('manage_options'); },
+      'callback'            => [__CLASS__, 'diagnostic_time_rollup'],
+    ]);
+
     $namespaces = ['slate-ops/v1', 'upfitops/v1'];
 
     foreach ($namespaces as $ns) {
@@ -3783,5 +3804,90 @@ self::maybe_push_dealer_portal_status($job);
       'count'    => count($segments),
       'segments' => $segments,
     ]);
+  }
+
+  /**
+   * TEMPORARY ONE-SHOT — remove after one successful production run.
+   *
+   * Manually triggers the close-state migration that should have run via
+   * Slate_Ops_Install::migrate_close_state_v1() on the 0.40.0 upgrade hook
+   * but did not fire in production.
+   *
+   * Idempotent: the WHERE clause matches zero rows on a second run. No
+   * version gate, no option flag — just the SQL.
+   */
+  public static function run_state_migration($req) {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+
+    $wpdb->query(
+      "UPDATE $segments
+         SET state = 'closed'
+       WHERE end_ts IS NOT NULL
+         AND state = 'active'"
+    );
+    $rows_updated = (int) $wpdb->rows_affected;
+
+    $remaining = (int) $wpdb->get_var(
+      "SELECT COUNT(*) FROM $segments WHERE state = 'active' AND end_ts IS NOT NULL"
+    );
+
+    return [
+      'rows_updated'                  => $rows_updated,
+      'remaining_active_with_end_ts'  => $remaining,
+    ];
+  }
+
+  /**
+   * Read-only diagnostic: closed time segments whose duration exceeds the
+   * suspect threshold (8 hours). Used to size and target a quarantine pass
+   * on historical bad rows (PR3).
+   *
+   * GET /wp-json/slate-ops/v1/admin/diagnostic-time-rollup
+   */
+  public static function diagnostic_time_rollup($req) {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $jobs     = $wpdb->prefix . 'slate_ops_jobs';
+
+    $threshold_minutes = 480;
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT s.segment_id,
+              s.job_id,
+              s.user_id,
+              s.start_ts,
+              s.end_ts,
+              TIMESTAMPDIFF(MINUTE, s.start_ts, s.end_ts) AS duration_minutes,
+              s.source,
+              s.approval_status,
+              j.so_number
+       FROM $segments s
+       LEFT JOIN $jobs j ON j.job_id = s.job_id
+       WHERE s.end_ts IS NOT NULL
+         AND TIMESTAMPDIFF(MINUTE, s.start_ts, s.end_ts) > %d
+       ORDER BY duration_minutes DESC",
+      $threshold_minutes
+    ), ARRAY_A);
+
+    $segments_out = array_map(function ($r) {
+      return [
+        'segment_id'       => (int) $r['segment_id'],
+        'job_id'           => (int) $r['job_id'],
+        'user_id'          => (int) $r['user_id'],
+        'start_ts'         => $r['start_ts'],
+        'end_ts'           => $r['end_ts'],
+        'duration_minutes' => (int) $r['duration_minutes'],
+        'source'           => $r['source'],
+        'approval_status'  => $r['approval_status'],
+        'so_number'        => $r['so_number'],
+      ];
+    }, $rows ?: []);
+
+    return [
+      'threshold_minutes' => $threshold_minutes,
+      'count'             => count($segments_out),
+      'segments'          => $segments_out,
+    ];
   }
 }
