@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.39.5
+ * Version: 0.39.6
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.39.5');
+define('SLATE_OPS_VERSION', '0.39.6');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -105,6 +105,20 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element', 'slate-ops-guard', 'slate-ops-pause-work'], $ver_app_js, true);
 
     $current_user = wp_get_current_user();
+
+    // Phase 0: Tech Time Records panel, only on the executive page.
+    if ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0) {
+      $ver_tr_js = file_exists(SLATE_OPS_PATH . 'assets/js/ops-exec-time-records.js')
+        ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-exec-time-records.js')
+        : SLATE_OPS_VERSION;
+      wp_enqueue_script(
+        'slate-ops-exec-time-records',
+        SLATE_OPS_URL . 'assets/js/ops-exec-time-records.js',
+        ['slate-ops-react'],
+        $ver_tr_js,
+        true
+      );
+    }
 
     wp_localize_script('slate-ops-guard', 'slateOpsSettings', [
       'api' => [

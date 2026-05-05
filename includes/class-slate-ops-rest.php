@@ -419,6 +419,12 @@ class Slate_Ops_REST {
         'callback'            => [__CLASS__, 'executive_labor_summary'],
       ]);
 
+      register_rest_route($ns, '/executive/time-segments', [
+        'methods'             => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_view_executive'],
+        'callback'            => [__CLASS__, 'executive_time_segments'],
+      ]);
+
       // ── Debug (admin only) ───────────────────────────────────────────
       register_rest_route($ns, '/debug/permissions', [
         'methods'             => 'GET',
@@ -3665,6 +3671,115 @@ self::maybe_push_dealer_portal_status($job);
       'job_performance'  => $job_performance,
       'labor_capture'    => $labor_capture,
       'bottlenecks'      => $bottlenecks,
+    ]);
+  }
+
+  /**
+   * GET /executive/time-segments
+   * Phase 0 validation: read-only view of raw time segment rows.
+   * Admin/Supervisor only (perm_view_executive). No write operations.
+   *
+   * Query params:
+   *   limit      int     1–200, default 50
+   *   state      string  active|closed (omit = all)
+   *   date_range string  today|7|30 (omit = all)
+   *   user_id    int     filter to a specific tech
+   *   q          string  search against SO#, customer_name, or job_id
+   */
+  public static function executive_time_segments($req) {
+    global $wpdb;
+    $segs_t  = $wpdb->prefix . 'slate_ops_time_segments';
+    $jobs_t  = $wpdb->prefix . 'slate_ops_jobs';
+    $users_t = $wpdb->users;
+
+    $limit      = min(200, max(1, (int) ($req->get_param('limit') ?: 50)));
+    $state      = sanitize_key((string) ($req->get_param('state') ?: ''));
+    $date_range = sanitize_text_field((string) ($req->get_param('date_range') ?: ''));
+    $user_id    = (int) ($req->get_param('user_id') ?: 0);
+    $q          = sanitize_text_field((string) ($req->get_param('q') ?: ''));
+
+    $where  = [];
+    $params = [];
+
+    if (in_array($state, ['active', 'closed'], true)) {
+      $where[]  = 's.state = %s';
+      $params[] = $state;
+    }
+
+    if ($date_range === 'today') {
+      $where[] = 'DATE(s.start_ts) = DATE(UTC_TIMESTAMP())';
+    } elseif ($date_range === '7') {
+      $where[] = 's.start_ts >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)';
+    } elseif ($date_range === '30') {
+      $where[] = 's.start_ts >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)';
+    }
+
+    if ($user_id > 0) {
+      $where[]  = 's.user_id = %d';
+      $params[] = $user_id;
+    }
+
+    if ($q !== '') {
+      $like     = '%' . $wpdb->esc_like($q) . '%';
+      $where[]  = '(j.so_number LIKE %s OR j.customer_name LIKE %s OR CAST(s.job_id AS CHAR) LIKE %s)';
+      $params[] = $like;
+      $params[] = $like;
+      $params[] = $like;
+    }
+
+    $where_sql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+    $params[]  = $limit;
+
+    $sql = "SELECT
+      s.segment_id,
+      s.job_id,
+      COALESCE(j.so_number, '')      AS so_number,
+      COALESCE(j.customer_name, '')  AS customer_name,
+      COALESCE(j.status, '')         AS job_status,
+      s.user_id,
+      COALESCE(u.display_name, '')   AS tech_name,
+      s.start_ts,
+      s.end_ts,
+      TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, UTC_TIMESTAMP())) AS duration_minutes,
+      s.state,
+      s.reason,
+      LEFT(COALESCE(s.note, ''), 80) AS note_preview,
+      s.approval_status
+    FROM {$segs_t} s
+    LEFT JOIN {$users_t} u ON u.ID = s.user_id
+    LEFT JOIN {$jobs_t}  j ON j.job_id = s.job_id
+    {$where_sql}
+    ORDER BY s.segment_id DESC
+    LIMIT %d";
+
+    $rows = $wpdb->get_results($wpdb->prepare($sql, ...$params), ARRAY_A);
+    if ($rows === null) {
+      return new WP_Error('db_error', 'Database error fetching time segments', ['status' => 500]);
+    }
+
+    $segments = array_map(function ($r) {
+      return [
+        'segment_id'       => (int) $r['segment_id'],
+        'job_id'           => (int) $r['job_id'],
+        'so_number'        => $r['so_number'],
+        'customer_name'    => $r['customer_name'],
+        'job_status'       => $r['job_status'],
+        'user_id'          => (int) $r['user_id'],
+        'tech_name'        => $r['tech_name'],
+        'start_ts'         => $r['start_ts'],
+        'end_ts'           => $r['end_ts'],
+        'duration_minutes' => $r['duration_minutes'] !== null ? (int) $r['duration_minutes'] : null,
+        'state'            => $r['state'],
+        'reason'           => $r['reason'],
+        'note_preview'     => $r['note_preview'],
+        'approval_status'  => $r['approval_status'],
+      ];
+    }, $rows);
+
+    return rest_ensure_response([
+      'ok'       => true,
+      'count'    => count($segments),
+      'segments' => $segments,
     ]);
   }
 }
