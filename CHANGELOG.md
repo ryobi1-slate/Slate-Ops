@@ -1,5 +1,25 @@
 # Slate Ops Changelog
 
+## 0.47.0 — By Tech view on CS page; CS table enhancements (Phase 0)
+
+**`assets/react/app.js`:**
+- CS filter bar: added All Jobs / By Tech view toggle.
+- By Tech view: groups SCHEDULED / IN_PROGRESS / BLOCKED / QC jobs by assigned tech (alpha, Unassigned last). Sort within group: IN_PROGRESS → BLOCKED → SCHEDULED (queue_priority asc) → QC; due date then created_at as tie-breakers. Columns: PRI / Status / SO# / Customer / Est.Hrs / Due / Notes.
+- Due column: compact M/D format (e.g. 4/30) — year omitted for table density.
+- Notes column: single-line ellipsis preview; native title shows full text.
+- Status badge hover: context-aware tooltip per status (BLOCKED/ON_HOLD include reason+note).
+- Parts badge hover: plain-language description per parts state.
+
+**`assets/css/ops-shell.css`:**
+- Added `.ops-cs-notes-cell` (max-width 220px, single-line ellipsis) applied to inner div wrapper for reliable truncation across all table layouts.
+
+**`includes/class-slate-ops-rest.php` / `includes/class-slate-ops-install.php` / `includes/class-slate-ops-utils.php`:**
+- `queue_priority` field (1=Next … 4=Low, default 3): DB migration, REST GET/PATCH/CREATE, PHP 7.4-compatible return type, SQL ORDER BY queue_priority ASC.
+- Fixed `cs_hold_reasons()` missing `WAITING_ON_VAN` (caused false "Hold reason required" error).
+- PHP 8.0 union type `int|WP_Error` replaced with docblock for WordPress 7.4 compat.
+
+_Note: changelog entries for 0.29.0–0.46.1 were not recorded in this file; see git log for details._
+
 ## 0.28.2 — Fix: blank CS page (split-body bracket imbalance)
 
 **`assets/react/app.js`:**
