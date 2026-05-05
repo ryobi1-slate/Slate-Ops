@@ -1252,20 +1252,28 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
 
 $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
 
-// Actual minutes (sum of closed segments) in one query
+// Actual minutes per job (closed segments) + live actuals (incl. open
+// timers, excluding voided). Both aggregates computed in a single scan.
 $ids = array_map(function($r){ return (int)$r['job_id']; }, $rows);
 $actual_map = [];
+$live_map = [];
 if (!empty($ids)) {
   $seg = $wpdb->prefix . 'slate_ops_time_segments';
   $in = implode(',', array_fill(0, count($ids), '%d'));
-  $qsql = "SELECT job_id, SUM(TIMESTAMPDIFF(MINUTE, start_ts, end_ts)) AS actual_minutes
+  $qsql = "SELECT job_id,
+                  SUM(TIMESTAMPDIFF(MINUTE, start_ts, end_ts)) AS actual_minutes,
+                  COALESCE(SUM(CASE WHEN approval_status != 'voided'
+                                    THEN TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, NOW()))
+                                    ELSE 0 END) / 60, 0) AS live_minutes
            FROM $seg
-           WHERE end_ts IS NOT NULL AND job_id IN ($in)
+           WHERE job_id IN ($in)
            GROUP BY job_id";
   $prep = $wpdb->prepare($qsql, $ids);
   $totals = $wpdb->get_results($prep, ARRAY_A);
   foreach ($totals as $trow) {
-    $actual_map[(int)$trow['job_id']] = (int)($trow['actual_minutes'] ?? 0);
+    $jid = (int) $trow['job_id'];
+    $actual_map[$jid] = (int) ($trow['actual_minutes'] ?? 0);
+    $live_map[$jid]   = (int) round((float) ($trow['live_minutes'] ?? 0));
   }
 }
 
@@ -1276,7 +1284,8 @@ foreach ($rows as &$r) {
   if (empty($r['created_from'])) $r['created_from'] = $r['source'] ?: 'manual';
   if (empty($r['status_updated_at'])) $r['status_updated_at'] = $r['updated_at'] ?: $r['created_at'];
 
-  $r['actual_minutes'] = $actual_map[(int)$r['job_id']] ?? 0;
+  $r['actual_minutes']      = $actual_map[(int)$r['job_id']] ?? 0;
+  $r['actual_minutes_live'] = $live_map[(int)$r['job_id']] ?? 0;
 }
 
 	return ['jobs' => $rows];
