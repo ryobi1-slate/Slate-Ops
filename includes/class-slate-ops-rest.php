@@ -3686,6 +3686,7 @@ self::maybe_push_dealer_portal_status($job);
     $segs_t  = $wpdb->prefix . 'slate_ops_time_segments';
     $jobs_t  = $wpdb->prefix . 'slate_ops_jobs';
     $users_t = $wpdb->users;
+    $audit_t = $wpdb->prefix . 'slate_ops_audit_log';
 
     $limit      = min(200, max(1, (int) ($req->get_param('limit') ?: 50)));
     $state      = sanitize_key((string) ($req->get_param('state') ?: ''));
@@ -3739,7 +3740,14 @@ self::maybe_push_dealer_portal_status($job);
       s.state,
       s.reason,
       LEFT(COALESCE(s.note, ''), 80) AS note_preview,
-      s.approval_status
+      s.approval_status,
+      EXISTS (
+        SELECT 1 FROM {$audit_t} a
+        WHERE a.entity_type = 'segment'
+          AND a.entity_id   = s.segment_id
+          AND a.action      = 'note'
+          AND a.note        = 'Timer started outside scheduled shift.'
+      ) AS outside_shift
     FROM {$segs_t} s
     LEFT JOIN {$users_t} u ON u.ID = s.user_id
     LEFT JOIN {$jobs_t}  j ON j.job_id = s.job_id
@@ -3768,6 +3776,7 @@ self::maybe_push_dealer_portal_status($job);
         'reason'           => $r['reason'],
         'note_preview'     => $r['note_preview'],
         'approval_status'  => $r['approval_status'],
+        'outside_shift'    => (bool) $r['outside_shift'],
       ];
     }, $rows);
 

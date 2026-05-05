@@ -43,6 +43,7 @@
     '.sotr-badge--voided{background:var(--slate-flag-wash,#f8e5e5);color:var(--slate-flag,#b22222)}',
     '.sotr-loading,.sotr-empty,.sotr-error{padding:2rem;text-align:center;font-size:.85rem;color:var(--slate-ink-muted,#5a5e5c)}',
     '.sotr-error{color:var(--slate-flag,#b22222)}',
+    '.sotr-badge--outside{background:var(--slate-arches-wash,#fdf2df);color:var(--slate-arches-ink,#b07212)}',
   ].join('');
   document.head.appendChild(style);
 
@@ -77,9 +78,12 @@
   // ── Render ─────────────────────────────────────────────────────────────────
   function renderRows(segments) {
     if (!segments.length) {
-      return '<tr><td colspan="11" class="sotr-empty">No time segments found for these filters.</td></tr>';
+      return '<tr><td colspan="12" class="sotr-empty">No time segments found for these filters.</td></tr>';
     }
     return segments.map(function (s) {
+      var shiftCell = s.outside_shift
+        ? '<span class="sotr-badge sotr-badge--outside">Outside</span>'
+        : '—';
       return '<tr>'
         + '<td class="sotr-mono">' + esc(s.segment_id) + '</td>'
         + '<td class="sotr-mono">' + esc(s.so_number || ('#' + s.job_id)) + '</td>'
@@ -92,13 +96,14 @@
         + '<td>' + esc(s.reason || '—') + '</td>'
         + '<td>' + (s.note_preview ? esc(s.note_preview) : '—') + '</td>'
         + '<td><span class="' + badgeApproval(s.approval_status) + '">' + esc(s.approval_status || '—') + '</span></td>'
+        + '<td>' + shiftCell + '</td>'
         + '</tr>';
     }).join('');
   }
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   function load(tbody, filters) {
-    tbody.innerHTML = '<tr><td colspan="11" class="sotr-loading">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="sotr-loading">Loading…</td></tr>';
 
     var base   = settings.api.root.replace(/\/$/, '') + '/executive/time-segments';
     var params = [];
@@ -116,11 +121,11 @@
         if (data && Array.isArray(data.segments)) {
           tbody.innerHTML = renderRows(data.segments);
         } else {
-          tbody.innerHTML = '<tr><td colspan="11" class="sotr-error">Unexpected response from server.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="12" class="sotr-error">Unexpected response from server.</td></tr>';
         }
       })
       .catch(function (err) {
-        tbody.innerHTML = '<tr><td colspan="11" class="sotr-error">Error: ' + esc(String(err)) + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="sotr-error">Error: ' + esc(String(err)) + '</td></tr>';
       });
   }
 
@@ -158,7 +163,7 @@
       +     '<thead><tr>'
       +       '<th>Seg</th><th>Job / SO#</th><th>Customer</th><th>Tech</th>'
       +       '<th>Start</th><th>End</th><th>Min</th><th>State</th>'
-      +       '<th>Reason</th><th>Note</th><th>Approval</th>'
+      +       '<th>Reason</th><th>Note</th><th>Approval</th><th>Shift</th>'
       +     '</tr></thead>'
       +     '<tbody id="sotr-tbody"></tbody>'
       +   '</table>'
