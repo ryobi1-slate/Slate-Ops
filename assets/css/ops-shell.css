@@ -1508,3 +1508,19 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   transition: opacity .3s;
 }
 .ops-toast--out { opacity: 0; }
+
+/* ─── Exec page: align background with purchasing shell ────────────────────
+ * The React bundle mounts a root div with Tailwind's bg-background-light
+ * (#e1dfc8 — sandy canvas) into #ops-view. Inside it, a flex-row <main>
+ * holds div.slate-portal, which is a flex item without flex-grow. Without
+ * the rules below, the sandy color bleeds in as side gutters because
+ * .slate-portal doesn't fill the full width of its flex parent.
+ */
+.ops-page-exec #ops-view .bg-background-light {
+  background-color: var(--slate-surface-page);
+}
+
+.ops-page-exec .slate-portal {
+  flex: 1;
+  min-width: 0;
+}
