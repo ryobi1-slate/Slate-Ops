@@ -1246,9 +1246,9 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
                scheduler_locked, hold_reason, hold_note, schedule_notes, scheduling_flag,
                scheduled_start, scheduled_finish, scheduled_week, requested_date, promised_date, target_ship_date,
                block_reason, block_note, cancel_reason, cancel_note,
-               scope_summary, sales_person, notes, queue_order,
+               scope_summary, sales_person, notes, queue_order, queue_priority,
                clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
-        FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
+        FROM $t WHERE $where ORDER BY queue_priority ASC, updated_at DESC LIMIT $limit";
 
 $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
 
@@ -1432,6 +1432,17 @@ foreach ($rows as &$r) {
       if ($qo !== (isset($job['queue_order']) ? (int)$job['queue_order'] : null)) {
         $audits[] = ['queue_order', $job['queue_order'] ?? null, $qo];
         $update['queue_order'] = $qo;
+      }
+    }
+
+    // Queue priority (CS / supervisor): 1=Next, 2=High, 3=Normal, 4=Low
+    if (($is_cs || $is_supervisor) && array_key_exists('queue_priority', $body)) {
+      $qp = self::parse_queue_priority($body);
+      if ($qp instanceof WP_Error) return $qp;
+      $cur_qp = isset($job['queue_priority']) ? (int)$job['queue_priority'] : 3;
+      if ($qp !== $cur_qp) {
+        $audits[] = ['queue_priority', $cur_qp, $qp];
+        $update['queue_priority'] = $qp;
       }
     }
 
@@ -1649,6 +1660,25 @@ foreach ($rows as &$r) {
   }
 
   /**
+   * Parse and validate a queue_priority value (1=Next, 2=High, 3=Normal, 4=Low).
+   * Missing or null values default to 3 (Normal).
+   *
+   * @param array $body Decoded request body.
+   * @return int|WP_Error Validated priority integer or validation error.
+   */
+  private static function parse_queue_priority(array $body) {
+    $raw = $body['queue_priority'] ?? null;
+    if ($raw === null || $raw === '') {
+      return 3;
+    }
+    $val = (int) $raw;
+    if ($val < 1 || $val > 4) {
+      return self::validation_error('queue_priority', 'invalid_queue_priority', 'Queue priority must be 1 (Next), 2 (High), 3 (Normal), or 4 (Low).');
+    }
+    return $val;
+  }
+
+  /**
    * Gate: block moving a job to READY_FOR_BUILD when required fields are missing
    * or parts are in a blocking state (NOT_READY / HOLD).
    *
@@ -1811,8 +1841,10 @@ foreach ($rows as &$r) {
     // job_description maps to scope_summary
     $scope_summary = sanitize_textarea_field($body['job_description'] ?? '');
 
-    $queue_order = self::parse_queue_order($body, 'queue_order');
+    $queue_order    = self::parse_queue_order($body, 'queue_order');
     if ($queue_order instanceof WP_Error) return $queue_order;
+    $queue_priority = self::parse_queue_priority($body);
+    if ($queue_priority instanceof WP_Error) return $queue_priority;
 
     $now = Slate_Ops_Utils::now_gmt();
     $inserted = $wpdb->insert($t, [
@@ -1834,8 +1866,9 @@ foreach ($rows as &$r) {
       'sales_person' => $sales_person ?: null,
       'notes' => $notes ?: null,
       'scope_summary' => $scope_summary ?: null,
-      'queue_order' => $queue_order,
-      'dealer_status' => 'waiting',
+      'queue_order'    => $queue_order,
+      'queue_priority' => $queue_priority,
+      'dealer_status'  => 'waiting',
       'created_by' => get_current_user_id(),
       'created_at' => $now,
       'updated_at' => $now,
