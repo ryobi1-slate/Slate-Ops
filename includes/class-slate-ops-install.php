@@ -684,6 +684,7 @@ KEY awaiting_idx (awaiting_direction)
     Slate_Ops_Purchasing::maybe_seed();
 
     self::migrate_close_state_v1();
+    self::migrate_rollup_v1();
 
     update_option('slate_ops_version', SLATE_OPS_VERSION);
 
@@ -730,5 +731,90 @@ KEY awaiting_idx (awaiting_direction)
     ));
 
     update_option($option_key, 'done');
+  }
+
+  /**
+   * One-shot, version-gated migration: quarantines historical time segments
+   * with absurdly long durations (from stuck timers eventually closed by
+   * hand) and seeds wp_slate_ops_jobs.actual_minutes_approved /
+   * actual_minutes_pending for every job.
+   *
+   * Order is mandatory: quarantine FIRST, backfill SECOND. The backfill
+   * filters on approval_status != 'voided', so quarantined rows are
+   * correctly excluded from the rollup.
+   *
+   * Idempotent: option-flag gated; quarantine WHERE excludes already-voided
+   * rows; backfill writes are deterministic and converge.
+   */
+  private static function migrate_rollup_v1() {
+    $option_key = 'slate_ops_migration_rollup_v1';
+    if (get_option($option_key) === 'done') {
+      return;
+    }
+
+    $result = self::run_rollup_migration_steps();
+
+    error_log(sprintf(
+      '[slate_ops] migration_rollup_v1: quarantined=%d jobs_backfilled=%d remaining_suspect=%d',
+      $result['quarantined'],
+      $result['jobs_backfilled'],
+      $result['remaining_suspect']
+    ));
+
+    update_option($option_key, 'done');
+  }
+
+  /**
+   * Steps shared by the version-gated migration and the manual-trigger
+   * REST endpoint. Public so Slate_Ops_REST::run_rollup_migration() can
+   * invoke it without duplicating the logic.
+   *
+   * Threshold: 720 minutes (12 hours). Picked from the diagnostic output
+   * showing two confirmed bad segments (segment_id 35 at 1524 min and
+   * segment_id 37 at 4323 min, both on job 13).
+   *
+   * @return array{ quarantined: int, jobs_backfilled: int, remaining_suspect: int }
+   */
+  public static function run_rollup_migration_steps() {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $jobs     = $wpdb->prefix . 'slate_ops_jobs';
+
+    // STEP 1 — Quarantine bad segments. Must run before STEP 4 so the
+    // rollup excludes them via the approval_status != 'voided' filter.
+    $wpdb->query(
+      "UPDATE $segments
+         SET approval_status = 'voided',
+             voided_by = 0,
+             voided_at = NOW(),
+             void_reason = CONCAT('migration:duration_exceeds_threshold:', TIMESTAMPDIFF(MINUTE, start_ts, end_ts), 'min')
+       WHERE end_ts IS NOT NULL
+         AND state = 'closed'
+         AND approval_status != 'voided'
+         AND TIMESTAMPDIFF(MINUTE, start_ts, end_ts) > 720"
+    );
+    $quarantined = (int) $wpdb->rows_affected;
+
+    // STEP 4 — Backfill the rollup for every job.
+    $job_ids = $wpdb->get_col("SELECT job_id FROM $jobs");
+    foreach ($job_ids as $jid) {
+      Slate_Ops_Jobs::recompute_actuals((int) $jid);
+    }
+    $jobs_backfilled = count($job_ids);
+
+    // Verify quarantine pass cleared the suspect set.
+    $remaining_suspect = (int) $wpdb->get_var(
+      "SELECT COUNT(*) FROM $segments
+       WHERE end_ts IS NOT NULL
+         AND state = 'closed'
+         AND approval_status != 'voided'
+         AND TIMESTAMPDIFF(MINUTE, start_ts, end_ts) > 720"
+    );
+
+    return [
+      'quarantined'       => $quarantined,
+      'jobs_backfilled'   => $jobs_backfilled,
+      'remaining_suspect' => $remaining_suspect,
+    ];
   }
 }

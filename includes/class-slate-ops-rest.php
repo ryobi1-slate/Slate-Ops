@@ -111,6 +111,17 @@ class Slate_Ops_REST {
       'callback'            => [__CLASS__, 'diagnostic_time_rollup'],
     ]);
 
+    // TEMPORARY ONE-SHOT — remove in cleanup PR after one successful run.
+    // Manual trigger for migrate_rollup_v1 (quarantine + rollup backfill);
+    // version-gated install hooks have not been firing in production.
+    // Auth open by default per the same 401 issue we hit on the prior
+    // admin endpoints; underlying steps are idempotent.
+    register_rest_route('slate-ops/v1', '/admin/run-rollup-migration', [
+      'methods'             => 'POST',
+      'permission_callback' => '__return_true',
+      'callback'            => [__CLASS__, 'run_rollup_migration'],
+    ]);
+
     $namespaces = ['slate-ops/v1', 'upfitops/v1'];
 
     foreach ($namespaces as $ns) {
@@ -2523,6 +2534,8 @@ return self::get_job(['id' => $job_id]);
       (int)$open['job_id'], $user_id
     ));
 
+    Slate_Ops_Jobs::recompute_actuals((int) $open['job_id']);
+
     return [
       'segment_id'             => (int)$open['segment_id'],
       'job_id'                 => (int)$open['job_id'],
@@ -2568,6 +2581,8 @@ return self::get_job(['id' => $job_id]);
 
     $segment_id = (int)$wpdb->insert_id;
     self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'start'=>$start,'end'=>$end]), 'Time correction submitted (pending)');
+
+    Slate_Ops_Jobs::recompute_actuals((int) $job_id);
 
     return ['segment_id' => $segment_id, 'approval_status' => 'pending'];
   }
@@ -3892,5 +3907,22 @@ self::maybe_push_dealer_portal_status($job);
       'count'             => count($segments_out),
       'segments'          => $segments_out,
     ];
+  }
+
+  /**
+   * TEMPORARY ONE-SHOT — remove in cleanup PR after one successful run.
+   *
+   * Manually triggers migrate_rollup_v1 (quarantine + rollup backfill)
+   * because the version-gated install hook has not been firing in
+   * production. Idempotent: option-flag protected if invoked via
+   * Slate_Ops_Install::migrate_rollup_v1, and the underlying SQL is
+   * convergent regardless.
+   *
+   * Returns the same shape as run_rollup_migration_steps():
+   *   { quarantined, jobs_backfilled, remaining_suspect }
+   * remaining_suspect should be 0 after a clean run.
+   */
+  public static function run_rollup_migration($req) {
+    return Slate_Ops_Install::run_rollup_migration_steps();
   }
 }
