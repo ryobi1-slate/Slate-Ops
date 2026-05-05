@@ -694,6 +694,14 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-cs-row-selected { background-color: var(--slate-arches-wash); }
 .ops-cs-row-hover:hover { background-color: var(--slate-surface-tint); }
 
+/* Notes preview column: single-line ellipsis, fixed max-width */
+.ops-cs-notes-cell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Input fields */
 .ops-cs-input { border: 1px solid var(--slate-divider); background-color: var(--slate-surface); }
 .ops-cs-input::placeholder { color: var(--slate-ink-placeholder); }
