@@ -265,7 +265,7 @@ class Slate_Ops_Utils {
   }
 
   public static function cs_hold_reasons() {
-    return ['CUSTOMER_CHANGE', 'BILLING', 'ESCALATION', 'SCOPE_REVIEW', 'VENDOR_DISPUTE', 'OTHER'];
+    return ['CUSTOMER_CHANGE', 'BILLING', 'ESCALATION', 'SCOPE_REVIEW', 'VENDOR_DISPUTE', 'WAITING_ON_VAN', 'OTHER'];
   }
 
   public static function cs_cancel_reasons() {
