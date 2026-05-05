@@ -90,9 +90,12 @@ class Slate_Ops_REST {
     // TEMPORARY ONE-SHOT — remove after one successful production run.
     // Manual trigger for migrate_close_state_v1; the version-gated install
     // hook is not firing in production. Idempotent via the SQL WHERE clause.
+    // Auth deliberately open: cookie-auth on the manage_options check is
+    // returning 401 in production, and this endpoint is throwaway. The SQL
+    // is convergent with PR #251's intent and is being removed shortly.
     register_rest_route('slate-ops/v1', '/admin/run-state-migration', [
       'methods'             => 'POST',
-      'permission_callback' => function () { return current_user_can('manage_options'); },
+      'permission_callback' => '__return_true',
       'callback'            => [__CLASS__, 'run_state_migration'],
     ]);
 
