@@ -1248,7 +1248,7 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
                block_reason, block_note, cancel_reason, cancel_note,
                scope_summary, sales_person, notes, queue_order, queue_priority,
                clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
-        FROM $t WHERE $where ORDER BY updated_at DESC LIMIT $limit";
+        FROM $t WHERE $where ORDER BY queue_priority ASC, updated_at DESC LIMIT $limit";
 
 $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
 
@@ -1662,8 +1662,11 @@ foreach ($rows as &$r) {
   /**
    * Parse and validate a queue_priority value (1=Next, 2=High, 3=Normal, 4=Low).
    * Missing or null values default to 3 (Normal).
+   *
+   * @param array $body Decoded request body.
+   * @return int|WP_Error Validated priority integer or validation error.
    */
-  private static function parse_queue_priority(array $body): int|WP_Error {
+  private static function parse_queue_priority(array $body) {
     $raw = $body['queue_priority'] ?? null;
     if ($raw === null || $raw === '') {
       return 3;
