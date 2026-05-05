@@ -161,4 +161,54 @@ class Slate_Ops_Jobs {
 
     return $result !== false;
   }
+
+  /**
+   * Recompute and persist the cached labor rollup for one job.
+   *
+   * Sums approved/pending minutes from non-voided closed segments and
+   * writes the result to wp_slate_ops_jobs.actual_minutes_approved /
+   * actual_minutes_pending.
+   *
+   * Idempotent: deterministic over the segment data; safe to call any
+   * number of times. Cheap (one job's segments, indexed on job_idx).
+   *
+   * Wired into write paths that mutate segments:
+   *   - Slate_Ops_REST::time_stop()
+   *   - Slate_Ops_REST::time_correction_request()
+   * NOTE: any future endpoint that voids, approves, edits, or otherwise
+   * mutates a segment MUST also call this for the affected job_id.
+   *
+   * @return array{ approved: int, pending: int }
+   */
+  public static function recompute_actuals( int $job_id ): array {
+    global $wpdb;
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+
+    $row = $wpdb->get_row( $wpdb->prepare(
+      "SELECT
+         COALESCE(SUM(CASE WHEN approval_status='approved'
+                           THEN TIMESTAMPDIFF(SECOND, start_ts, end_ts) END), 0)/60 AS approved,
+         COALESCE(SUM(CASE WHEN approval_status='pending'
+                           THEN TIMESTAMPDIFF(SECOND, start_ts, end_ts) END), 0)/60 AS pending
+       FROM $segments
+       WHERE job_id = %d
+         AND end_ts IS NOT NULL
+         AND approval_status != 'voided'",
+      $job_id
+    ), ARRAY_A );
+
+    $approved = (int) round( (float) ( $row['approved'] ?? 0 ) );
+    $pending  = (int) round( (float) ( $row['pending']  ?? 0 ) );
+
+    $wpdb->update(
+      self::table(),
+      [
+        'actual_minutes_approved' => $approved,
+        'actual_minutes_pending'  => $pending,
+      ],
+      [ 'job_id' => $job_id ]
+    );
+
+    return [ 'approved' => $approved, 'pending' => $pending ];
+  }
 }
