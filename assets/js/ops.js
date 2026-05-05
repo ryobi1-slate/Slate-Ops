@@ -1270,15 +1270,24 @@ async function loadCreateJobInto(selector){
 // ── CS v2 helpers ────────────────────────────────────────────────────────────
 
 const CS_ACTIVE_STATUSES = ['INTAKE','NEEDS_SO','READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','BLOCKED','QC','ON_HOLD','QUEUED','PENDING_QC','DELAYED'];
-const CS_SETTABLE_STATUSES = ['INTAKE','NEEDS_SO','READY_FOR_BUILD','SCHEDULED','BLOCKED','ON_HOLD','CANCELLED'];
+// Phase 0: NEEDS_SO removed from CS_SETTABLE_STATUSES — hidden from CS dropdown until SO workflow is re-enabled.
+const CS_SETTABLE_STATUSES = ['INTAKE','READY_FOR_BUILD','SCHEDULED','BLOCKED','ON_HOLD','CANCELLED'];
 const CS_READONLY_STATUSES = ['IN_PROGRESS','QC','COMPLETE','PENDING_QC','READY_FOR_PICKUP'];
 
 const BLOCK_REASONS  = ['PARTS','ENGINEERING','CUSTOMER','LABOR','OTHER'];
-const HOLD_REASONS   = ['CUSTOMER_CHANGE','BILLING','ESCALATION','SCOPE_REVIEW','VENDOR_DISPUTE','OTHER'];
+const HOLD_REASONS   = ['CUSTOMER_CHANGE','BILLING','ESCALATION','SCOPE_REVIEW','VENDOR_DISPUTE','WAITING_ON_VAN','OTHER'];
 const CANCEL_REASONS = ['CUSTOMER_CANCELED','DEAL_FELL_THROUGH','DUPLICATE','SCOPE_ABSORBED','NO_SHOW','PRICING','OTHER'];
 
 function partsLabel(ps) {
-  return {NOT_READY:'Not Ready',PARTIAL:'Partial',READY:'Ready',HOLD:'Hold',ORDERED:'Ordered',ARRIVED:'Arrived'}[ps] || (ps||'—');
+  return {NOT_READY:'Not Ready',PARTIAL:'Partial',READY:'Ready',HOLD:'Parts Hold',ORDERED:'Ordered',ARRIVED:'Arrived'}[ps] || (ps||'—');
+}
+
+// CS-specific status label: QC displays as "Ready for Closeout" on CS page only.
+function fmtStatusCS(s) {
+  if (!s) return '';
+  const upper = s.toUpperCase();
+  if (upper === 'QC' || upper === 'PENDING_QC') return 'Ready for Closeout';
+  return fmtStatus(s);
 }
 function partsBadgeClass(ps) {
   const s = (ps||'').toUpperCase();
@@ -1340,11 +1349,10 @@ async function loadCS() {
   const salesList  = settingsResp.sales_people || [];
   const userList   = usersResp.users || [];
 
-  // v2 KPI counts
-  const kpiNeedsSO    = allJobs.filter(j => ['INTAKE','NEEDS_SO'].includes((j.status||'').toUpperCase()) && !j.so_number).length;
+  // Phase 0 KPI counts: Intake / Ready for Build / Ready for Closeout (QC)
+  const kpiIntake     = allJobs.filter(j => (j.status||'').toUpperCase() === 'INTAKE').length;
   const kpiRFB        = allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length;
-  const kpiActive     = allJobs.filter(j => CS_ACTIVE_STATUSES.includes((j.status||'').toUpperCase())).length;
-  const kpiBlocked    = allJobs.filter(j => ['BLOCKED','DELAYED'].includes((j.status||'').toUpperCase())).length;
+  const kpiQC         = allJobs.filter(j => ['QC','PENDING_QC'].includes((j.status||'').toUpperCase())).length;
 
   let activeFilter  = 'all_active';
   let partsFilter   = '';
@@ -1355,7 +1363,6 @@ async function loadCS() {
     const vin6   = (j.vin || j.vin_last8 || '').slice(-6) || '—';
     const so     = j.so_number || '—';
     const estH   = j.estimated_minutes ? (j.estimated_minutes / 60).toFixed(1) + 'h' : '—';
-    const sw     = j.scheduled_week || '—';
     const due    = j.requested_date ? j.requested_date.split(' ')[0] : '—';
     const tech   = j.assigned_name || '—';
     const days   = daysInStatus(j.status_updated_at);
@@ -1376,12 +1383,11 @@ async function loadCS() {
           </div>
         </div>
         <div class="cs-job-badges">
-          <span class="badge ${badgeClass(j.status)}">${fmtStatus(j.status)}</span>
+          <span class="badge ${badgeClass(j.status)}">${fmtStatusCS(j.status)}</span>
           ${j.parts_status ? `<span class="badge-parts ${partsBadgeClass(j.parts_status)}">${partsLabel(j.parts_status)}</span>` : ''}
         </div>
         <div class="cs-job-cols">
           <span class="cs-col-val" title="Est. hours">${estH}</span>
-          <span class="cs-col-val cs-col-week" title="Scheduled week">${sw}</span>
           <span class="cs-col-val cs-col-due" title="Due date">${due}</span>
         </div>
       </article>
@@ -1398,14 +1404,13 @@ async function loadCS() {
       : filtered;
 
     const filters = [
-      {id:'all_active',   label:'All Active',      count: allJobs.filter(j => CS_ACTIVE_STATUSES.includes((j.status||'').toUpperCase())).length},
-      {id:'needs_so',     label:'Needs SO',         count: allJobs.filter(j => ['INTAKE','NEEDS_SO'].includes((j.status||'').toUpperCase()) && !j.so_number).length},
-      {id:'ready_for_build', label:'Ready for Build', count: allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length},
-      {id:'scheduled',    label:'Scheduled',        count: allJobs.filter(j => ['SCHEDULED','QUEUED'].includes((j.status||'').toUpperCase())).length},
-      {id:'blocked',      label:'Blocked',          count: allJobs.filter(j => ['BLOCKED','DELAYED'].includes((j.status||'').toUpperCase())).length},
-      {id:'on_hold',      label:'On Hold',          count: allJobs.filter(j => (j.status||'').toUpperCase() === 'ON_HOLD').length},
-      {id:'complete',     label:'Complete',         count: allJobs.filter(j => ['COMPLETE','READY_FOR_PICKUP'].includes((j.status||'').toUpperCase())).length},
-      {id:'cancelled',    label:'Cancelled',        count: allJobs.filter(j => (j.status||'').toUpperCase() === 'CANCELLED').length},
+      {id:'all_active',   label:'All Active',         count: allJobs.filter(j => CS_ACTIVE_STATUSES.includes((j.status||'').toUpperCase())).length},
+      {id:'ready_for_build', label:'Ready for Build',  count: allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length},
+      {id:'scheduled',    label:'Scheduled',           count: allJobs.filter(j => ['SCHEDULED','QUEUED'].includes((j.status||'').toUpperCase())).length},
+      {id:'blocked',      label:'Blocked',             count: allJobs.filter(j => ['BLOCKED','DELAYED'].includes((j.status||'').toUpperCase())).length},
+      {id:'on_hold',      label:'On Hold',             count: allJobs.filter(j => (j.status||'').toUpperCase() === 'ON_HOLD').length},
+      {id:'complete',     label:'Complete',            count: allJobs.filter(j => ['COMPLETE','READY_FOR_PICKUP'].includes((j.status||'').toUpperCase())).length},
+      {id:'cancelled',    label:'Cancelled',           count: allJobs.filter(j => (j.status||'').toUpperCase() === 'CANCELLED').length},
     ];
     const filterTabs = filters.map(f =>
       `<button class="cs-filter-tab${activeFilter === f.id ? ' active' : ''}" data-filter="${f.id}">${f.label}${f.count > 0 ? ` <span class="cs-filter-count">${f.count}</span>` : ''}</button>`
@@ -1433,20 +1438,16 @@ async function loadCS() {
         </div>
         <div class="cs-kpi-row">
           <div class="cs-kpi-card">
-            <div class="cs-kpi-label">Active Jobs</div>
-            <div class="cs-kpi-value">${kpiActive}</div>
-          </div>
-          <div class="cs-kpi-card">
-            <div class="cs-kpi-label">Needs SO</div>
-            <div class="cs-kpi-value">${kpiNeedsSO}</div>
+            <div class="cs-kpi-label">Intake</div>
+            <div class="cs-kpi-value">${kpiIntake}</div>
           </div>
           <div class="cs-kpi-card">
             <div class="cs-kpi-label">Ready for Build</div>
             <div class="cs-kpi-value">${kpiRFB}</div>
           </div>
-          <div class="cs-kpi-card cs-kpi-card-warn">
-            <div class="cs-kpi-label">Blocked</div>
-            <div class="cs-kpi-value">${kpiBlocked}</div>
+          <div class="cs-kpi-card">
+            <div class="cs-kpi-label">Ready for Closeout</div>
+            <div class="cs-kpi-value">${kpiQC}</div>
           </div>
         </div>
       </div>
@@ -1462,7 +1463,6 @@ async function loadCS() {
               <span class="cs-col-hd cs-col-hd-main">Job</span>
               <span class="cs-col-hd">Status</span>
               <span class="cs-col-hd">Est</span>
-              <span class="cs-col-hd">Week</span>
               <span class="cs-col-hd">Due</span>
             </div>
             <div class="cs-job-list" id="cs-job-list">${rows}</div>
@@ -1575,9 +1575,9 @@ async function openCSDrawer(jobId, isNew, context) {
 
   // CS-settable status options (or read-only badge for locked statuses)
   const statusField = isReadonlyStatus
-    ? `<div style="padding:8px 0;"><span class="badge ${badgeClass(jStatus)}" style="font-size:13px;">${fmtStatus(jStatus)}</span> <span class="muted" style="font-size:11px;">(set by Tech/QC workflow)</span></div>`
+    ? `<div style="padding:8px 0;"><span class="badge ${badgeClass(jStatus)}" style="font-size:13px;">${fmtStatusCS(jStatus)}</span> <span class="muted" style="font-size:11px;">(set by Tech/QC workflow)</span></div>`
     : `<select class="select" id="cs-drawer-status" name="status">
-        ${CS_SETTABLE_STATUSES.map(s => `<option value="${s}"${jStatus===s?' selected':''}>${fmtStatus(s)}</option>`).join('')}
+        ${CS_SETTABLE_STATUSES.map(s => `<option value="${s}"${jStatus===s?' selected':''}>${fmtStatusCS(s)}</option>`).join('')}
        </select>`;
 
   // Parts status options (v2)
@@ -1598,7 +1598,7 @@ async function openCSDrawer(jobId, isNew, context) {
           <span class="cs-drawer-meta-sep">·</span>
           <span class="mono cs-drawer-meta-so">${escapeHtml(job.so_number||'No SO#')}</span>
           ${vin ? `<span class="cs-drawer-meta-sep">·</span><span class="mono">${escapeHtml(vin.slice(-8))}</span>` : ''}
-          <span class="badge ${badgeClass(jStatus)}" style="font-size:11px;">${fmtStatus(jStatus)}</span>
+          <span class="badge ${badgeClass(jStatus)}" style="font-size:11px;">${fmtStatusCS(jStatus)}</span>
           ${job.parts_status ? `<span class="badge-parts ${partsBadgeClass(job.parts_status)}" style="font-size:11px;">${partsLabel(job.parts_status)}</span>` : ''}
         </div>` : ''}
       </div>
@@ -1655,16 +1655,11 @@ async function openCSDrawer(jobId, isNew, context) {
               <input class="input mono" id="cs-f-hours" name="estimated_hours" type="number" min="0.25" step="0.25" value="${escapeAttr(estH)}" placeholder="e.g. 4.0" />
             </div>
           </div>
-          <div class="cs-drawer-grid-2">
-            <div class="cs-drawer-field">
-              <label>Scheduled Week</label>
-              <input class="input" id="cs-f-week" name="scheduled_week" value="${escapeAttr(job ? job.scheduled_week||'' : '')}" placeholder="e.g. 2024-W15" />
-            </div>
-            <div class="cs-drawer-field">
-              <label>Due Date</label>
-              <input class="input" id="cs-f-due" name="requested_date" type="date" value="${escapeAttr(due)}" />
-            </div>
+          <div class="cs-drawer-field">
+            <label>Due Date</label>
+            <input class="input" id="cs-f-due" name="requested_date" type="date" value="${escapeAttr(due)}" />
           </div>
+          <!-- Phase 0: Scheduled Week hidden from CS. Field preserved in backend and Scheduler page. -->
         </div>
 
         <div class="cs-drawer-section">
@@ -2400,11 +2395,12 @@ async function loadSchedule(){
 async function loadTech() {
   const [activeResp, myJobsResp] = await Promise.all([
     api.timeActive(),
-    api.jobs('?assigned_me=1&limit=100&status_in=READY_FOR_BUILD,IN_PROGRESS,ON_HOLD'),
+    // Phase 0: Tech queue shows SCHEDULED, IN_PROGRESS, BLOCKED, QC. READY_FOR_BUILD stays in CS queue only.
+    api.jobs('?assigned_me=1&limit=100&status_in=SCHEDULED,IN_PROGRESS,BLOCKED,QC'),
   ]);
   const active  = activeResp.active;
   const allMyJobs = myJobsResp.jobs || [];
-  const myJobs  = allMyJobs.filter(j => ['READY_FOR_BUILD','IN_PROGRESS','ON_HOLD'].includes(j.status));
+  const myJobs  = allMyJobs.filter(j => ['SCHEDULED','IN_PROGRESS','BLOCKED','QC'].includes((j.status||'').toUpperCase()));
 
   const activeJobId = active ? parseInt(active.job_id, 10) : 0;
   // Full job record for the active segment (so we can read blocker/notes fields)
@@ -2416,7 +2412,7 @@ async function loadTech() {
   const queue = myJobs
     .filter(j => j.job_id !== activeJobId)
     .sort((a, b) => {
-      const pri = s => ({ IN_PROGRESS: 0, READY_FOR_BUILD: 1, ON_HOLD: 2 })[s] ?? 9;
+      const pri = s => ({ IN_PROGRESS: 0, SCHEDULED: 1, BLOCKED: 2, QC: 3 })[(s||'').toUpperCase()] ?? 9;
       const dp = pri(a.status) - pri(b.status);
       if (dp !== 0) return dp;
       const as = a.scheduled_start || '9999';
@@ -2474,13 +2470,14 @@ async function loadTech() {
     const est = estHoursStr(job);
     const logged = job.actual_minutes > 0 ? fmtMinutes(job.actual_minutes) + ' logged' : '';
     const blocked = hasBlocker(job);
+    const jst = (job.status||'').toUpperCase();
     const statusLabel = blocked ? 'Blocked'
-      : (job.status === 'IN_PROGRESS' ? 'In progress'
-      : (job.status === 'PENDING_QC'  ? 'Pending QC'
-      : (job.scheduled_start ? 'Scheduled' : 'Ready')));
-    const primary = job.status === 'IN_PROGRESS'
+      : (jst === 'IN_PROGRESS' ? 'In progress'
+      : (jst === 'QC' || jst === 'PENDING_QC' ? 'Work Complete - Awaiting CS Closeout'
+      : (jst === 'SCHEDULED' ? 'Scheduled' : 'Ready')));
+    const primary = jst === 'IN_PROGRESS'
       ? `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Resume Work</button>`
-      : (job.status === 'PENDING_QC'
+      : (jst === 'QC' || jst === 'PENDING_QC'
           ? `<button class="btn secondary btn-xl tech-card-cta" data-open-job="${job.job_id}">Open</button>`
           : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start Work</button>`);
     const subParts = [est ? 'Est ' + est : '', logged, job.so_number ? escapeHtml(job.so_number) : ''].filter(Boolean);
