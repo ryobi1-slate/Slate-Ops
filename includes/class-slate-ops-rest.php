@@ -3707,11 +3707,11 @@ self::maybe_push_dealer_portal_status($job);
     }
 
     if ($date_range === 'today') {
-      $where[] = 'DATE(s.start_ts) = CURDATE()';
+      $where[] = 'DATE(s.start_ts) = DATE(UTC_TIMESTAMP())';
     } elseif ($date_range === '7') {
-      $where[] = 's.start_ts >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+      $where[] = 's.start_ts >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)';
     } elseif ($date_range === '30') {
-      $where[] = 's.start_ts >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+      $where[] = 's.start_ts >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)';
     }
 
     if ($user_id > 0) {
@@ -3740,7 +3740,7 @@ self::maybe_push_dealer_portal_status($job);
       COALESCE(u.display_name, '')   AS tech_name,
       s.start_ts,
       s.end_ts,
-      TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, NOW())) AS duration_minutes,
+      TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, UTC_TIMESTAMP())) AS duration_minutes,
       s.state,
       s.reason,
       LEFT(COALESCE(s.note, ''), 80) AS note_preview,

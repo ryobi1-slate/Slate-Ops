@@ -108,7 +108,10 @@
     var url = base + (params.length ? '?' + params.join('&') : '');
 
     fetch(url, { headers: { 'X-WP-Nonce': settings.api.nonce } })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
       .then(function (data) {
         if (data && Array.isArray(data.segments)) {
           tbody.innerHTML = renderRows(data.segments);
