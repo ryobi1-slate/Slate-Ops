@@ -14,6 +14,22 @@ class Slate_Ops_Install {
     }
 
     self::run_install(false);
+    self::add_missing_columns();
+  }
+
+  /**
+   * Safe ALTER TABLE additions for columns introduced after initial install.
+   * Uses SHOW COLUMNS to avoid duplicate-column errors on re-runs.
+   */
+  private static function add_missing_columns() {
+    global $wpdb;
+    $jobs = $wpdb->prefix . 'slate_ops_jobs';
+
+    $cols = $wpdb->get_col("SHOW COLUMNS FROM `{$jobs}`", 0);
+
+    if (!in_array('queue_priority', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_priority` TINYINT UNSIGNED NOT NULL DEFAULT 3 AFTER `queue_order`");
+    }
   }
 
   private static function run_install($flush_rewrites = false) {
@@ -136,6 +152,9 @@ notes TEXT NULL,
 
 -- Manual queue ordering for Tech Up Next
 queue_order INT UNSIGNED NULL,
+
+-- Phase 0: CS-controlled priority for Tech queue ordering (1=Next, 2=High, 3=Normal, 4=Low)
+queue_priority TINYINT UNSIGNED NOT NULL DEFAULT 3,
 
 -- ClickUp
 clickup_task_id VARCHAR(64) NULL,
