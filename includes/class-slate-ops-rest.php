@@ -1500,13 +1500,10 @@ foreach ($rows as &$r) {
             if ($err) return $err;
           }
 
-          // v2: SCHEDULED requires scheduled_week
-          if ($ns === Slate_Ops_Statuses::SCHEDULED) {
-            $sw = sanitize_text_field((string)($body['scheduled_week'] ?? ''));
-            if (empty($sw)) {
-              return self::validation_error('scheduled_week', 'scheduled_week_required', 'Scheduled week is required when setting status to Scheduled.');
-            }
-            $update['scheduled_week'] = $sw;
+          // Phase 0: scheduled_week is hidden from CS and not required until Scheduler capacity workflow is enabled.
+          // Accept scheduled_week if provided (e.g. from Scheduler page), but do not require it for SCHEDULED status.
+          if ($ns === Slate_Ops_Statuses::SCHEDULED && !empty($body['scheduled_week'])) {
+            $update['scheduled_week'] = sanitize_text_field((string)$body['scheduled_week']);
           }
 
           $audits[] = ['status', $job['status'], $ns];
