@@ -1516,7 +1516,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * the rules below, the sandy color bleeds in as side gutters because
  * .slate-portal doesn't fill the full width of its flex parent.
  */
-.ops-page-exec #ops-view > div {
+.ops-page-exec #ops-view .bg-background-light {
   background-color: var(--slate-surface-page);
 }
 
