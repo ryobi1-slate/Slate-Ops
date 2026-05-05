@@ -2386,9 +2386,10 @@ return self::get_job(['id' => $job_id]);
     $user_id = get_current_user_id();
     $now = Slate_Ops_Utils::now_gmt();
     $shift_state = self::get_shift_window_state($now);
-    if (!$shift_state['within_shift']) {
-      return new WP_Error('outside_shift', 'Outside scheduled shift. Supervisor approval required for overtime.', ['status' => 403]);
-    }
+    // Phase 0: outside-shift starts are allowed. We log an audit note below
+    // for supervisor visibility but do not block — there is no overtime
+    // approval workflow yet, so blocking would leave techs with no path.
+    $outside_shift = empty($shift_state['within_shift']);
 
     // Job-status guard: only schedulable/active-state jobs can be started.
     $startable = [
@@ -2439,6 +2440,11 @@ return self::get_job(['id' => $job_id]);
     $segment_id = (int)$wpdb->insert_id;
     self::audit('segment', $segment_id, 'create', null, null, wp_json_encode(['job_id'=>$job_id,'user_id'=>$user_id]), 'Timer started');
 
+    if ($outside_shift) {
+      self::audit('segment', $segment_id, 'note', null, null, null, 'Timer started outside scheduled shift.');
+      self::audit('job', $job_id, 'note', null, null, null, 'Timer started outside scheduled shift.');
+    }
+
     // Set job to IN_PROGRESS if needed (inline update to avoid REST req context issues).
     if (!in_array($job['status'], ['IN_PROGRESS','QC','PENDING_QC','COMPLETE'], true)) {
       $t    = $wpdb->prefix . 'slate_ops_jobs';
@@ -2469,17 +2475,15 @@ return self::get_job(['id' => $job_id]);
     }
 
     $now = Slate_Ops_Utils::now_gmt();
-    $shift_state = self::get_shift_window_state($now);
+    // Phase 0: shift-end capping disabled. Record the actual stop time so
+    // outside-shift work is visible to supervisors during validation.
     $effective_stop = $now;
-    if (!$shift_state['within_shift'] && $shift_state['after_shift_end'] && strtotime($open['start_ts']) < strtotime($shift_state['shift_end_ts'])) {
-      $effective_stop = $shift_state['shift_end_ts'];
-    }
     $wpdb->update($segments, [
       'end_ts'     => $effective_stop,
       'updated_at' => $now,
     ], ['segment_id' => (int)$open['segment_id']]);
 
-    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, $effective_stop !== $now ? 'Timer stopped (capped at shift end)' : 'Timer stopped');
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer stopped');
 
     // Elapsed seconds for the just-closed segment — computed in PHP, no extra query.
     $elapsed_seconds = max(0, strtotime($effective_stop) - strtotime($open['start_ts']));
@@ -2559,18 +2563,9 @@ return self::get_job(['id' => $job_id]);
     ), ARRAY_A);
 
     if ($row) {
-      $now = Slate_Ops_Utils::now_gmt();
-      $shift_state = self::get_shift_window_state($now);
-      if (!$shift_state['within_shift'] && $shift_state['after_shift_end'] && strtotime($row['start_ts']) < strtotime($shift_state['shift_end_ts'])) {
-        $effective_stop = $shift_state['shift_end_ts'];
-        $wpdb->update($seg, [
-          'end_ts'     => $effective_stop,
-          'updated_at' => $now,
-        ], ['segment_id' => (int)$row['segment_id']]);
-        self::audit('segment', (int)$row['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer auto-stopped at shift end.');
-        self::audit('job', (int)$row['job_id'], 'note', null, null, null, 'Timer auto-stopped at shift end.');
-        return ['active' => null, 'auto_stopped' => true, 'message' => 'Timer stopped at shift end. Start work again when your next shift begins.'];
-      }
+      // Phase 0: shift-end auto-stop disabled. Active timers remain active
+      // past the configured shift end so techs can finish work during
+      // validation. Outside-shift starts are logged in time_start().
 
       // Closed approved segments this user has previously logged on this job.
       // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
