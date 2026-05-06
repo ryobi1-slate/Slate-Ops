@@ -1878,3 +1878,15 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background: var(--slate-sage-wash) !important;
   outline: none;
 }
+
+/* Admin: Page Access by Role panel (PR #286). Scoped to admin route only. */
+.ops-page-admin #ops-page-access-list label {
+  color: var(--slate-ink);
+}
+.ops-page-admin #ops-page-access-save {
+  background-color: var(--slate-sage) !important;
+}
+.ops-page-admin #ops-page-access-save:hover,
+.ops-page-admin #ops-page-access-save:focus-visible {
+  background-color: var(--slate-sage-ink) !important;
+}
