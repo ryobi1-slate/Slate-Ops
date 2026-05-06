@@ -37,12 +37,34 @@ $user = wp_get_current_user();
 $_ops_path  = Slate_Ops_Routes::current_path(); // e.g. "tech", "cs", "schedule/…"
 $_ops_route = strtok($_ops_path, '/');           // first segment only
 $page_class = $_ops_route ? 'ops-page-' . sanitize_html_class($_ops_route) : '';
+$route_map = [
+  ''            => 'executive',
+  'exec'        => 'executive',
+  'cs'          => 'cs',
+  'tech'        => 'tech',
+  'schedule'    => 'schedule',
+  'purchasing'  => 'purchasing',
+  'admin'       => 'admin',
+  'settings'    => 'settings',
+  'monitor'     => 'monitor',
+];
+$page_slug = $route_map[$_ops_route] ?? null;
+$is_blocked = $page_slug && !slate_ops_current_user_can_access_ops_page($page_slug);
 
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
 $shell_part = 'open';
 include SLATE_OPS_PATH . 'includes/ui/layout-shell.php';
 
-// #ops-view is empty — React app (app.js) mounts and renders all content at runtime.
+if ($is_blocked) : ?>
+  <section style="display:grid;place-items:center;height:100%;padding:32px;">
+    <div style="max-width:520px;text-align:center;background:#fff;border:1px solid #D9D5C7;border-radius:10px;padding:28px;">
+      <h1 style="margin:0 0 8px;font-size:24px;">Access Denied</h1>
+      <p style="margin:0;color:#5E646B;">You do not have permission to view this Slate Ops page.</p>
+    </div>
+  </section>
+<?php endif; ?>
+
+<?php // #ops-view is empty — React app (app.js) mounts and renders all content at runtime.
 
 // Close layout shell (outputs </section></div></body></html>)
 $shell_part = 'close';
