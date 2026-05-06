@@ -1345,6 +1345,15 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--slate-surface-page);
 }
 
+/* CS shell tone alignment with Purchasing: keep lighter page-surface sand */
+.ops-page-cs .ops-content,
+.ops-page-cs .ops-body,
+.ops-page-cs .ops-cs-split-page,
+.ops-page-cs .ops-cs-left,
+.ops-page-cs .ops-cs-right {
+  background-color: var(--slate-surface-page) !important;
+}
+
 .ops-cs-split-page {
   display: flex;
   flex-direction: column;
@@ -1778,4 +1787,13 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--slate-surface-tint) !important;
   border-color: var(--slate-divider) !important;
   color: var(--slate-ink-placeholder) !important;
+}
+
+/* CS control toggle buttons: keep green-accented states (no pink/red accents) */
+.ops-page-cs .ops-cs-border-b .ops-cs-input > button {
+  border-color: var(--slate-sage) !important;
+}
+.ops-page-cs .ops-cs-border-b .ops-cs-input > button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(47,62,57,.22);
 }
