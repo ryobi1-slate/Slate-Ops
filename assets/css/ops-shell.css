@@ -1341,6 +1341,8 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   display: flex;
   flex-direction: column;
   max-width: none;
+  width: 100%;
+  background-color: var(--slate-surface-page);
 }
 
 .ops-cs-split-page {
@@ -1349,25 +1351,27 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   height: 100%;
   overflow: hidden;
   background-color: var(--slate-surface-page);
+  width: 100%;
+  max-width: min(1680px, calc(100vw - 180px));
+  margin: 0 auto 0 var(--slate-space-lg);
+  padding: var(--slate-space-lg) var(--slate-space-lg) var(--slate-space-2xl);
+  box-sizing: border-box;
 }
 
 .ops-cs-split-page .ops-page-header {
   flex-shrink: 0;
-  padding-left: var(--slate-space-2xl);
-  padding-right: var(--slate-space-2xl);
-  padding-top: var(--slate-space-xl);
-  padding-bottom: var(--slate-space-lg);
+  padding: 0 0 var(--slate-space-lg);
   margin-bottom: 0;
 }
 
 .ops-cs-split-body {
   display: grid;
-  grid-template-columns: minmax(720px, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 420px);
   flex: 1;
   min-height: 0;
-  gap: var(--slate-space-md);
-  padding: var(--slate-space-lg) var(--slate-space-xl) var(--slate-space-2xl);
-  overflow-x: auto;
+  gap: var(--slate-space-lg);
+  padding: 0;
+  overflow-x: visible;
   overflow-y: hidden;
 }
 
@@ -1410,6 +1414,8 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 /* Control bar — no wrapping; search grows, selects fixed width */
 .ops-cs-left .ops-cs-border-b {
   flex-wrap: nowrap !important;
+  align-items: center;
+  gap: 8px !important;
 }
 .ops-cs-left .ops-cs-border-b input[type="text"] {
   flex: 1 1 auto !important;
@@ -1419,6 +1425,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-cs-left .ops-cs-border-b select {
   flex-shrink: 0;
   width: 150px !important;
+  height: 32px;
 }
 
 
@@ -1433,7 +1440,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .ops-cs-th {
-  padding: var(--slate-space-compact) 10px;
+  padding: 6px 10px;
   font-size: var(--slate-text-micro);
   font-weight: var(--slate-weight-medium);
   text-transform: uppercase;
@@ -1458,7 +1465,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .ops-cs-td {
-  padding: var(--slate-space-compact) 10px;
+  padding: 7px 10px;
   font-size: var(--slate-text-sm);
   color: var(--slate-ink-muted);
   vertical-align: middle;
@@ -1496,9 +1503,9 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   display: inline-block;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   line-height: 1;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: var(--slate-radius-full);
   text-transform: uppercase;
   white-space: nowrap;
@@ -1512,9 +1519,9 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   color: var(--white);
 }
 .ops-cs-pri--normal {
-  background-color: var(--slate-sage-wash);
-  color: var(--slate-sage-ink);
-  border: var(--slate-border);
+  background-color: var(--slate-surface-tint);
+  color: var(--slate-ink-subtle);
+  border: 1px solid var(--slate-divider-soft);
 }
 .ops-cs-pri--low {
   background-color: var(--slate-surface-tint);
@@ -1533,6 +1540,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
+  min-height: 20px;
   padding: 3px 8px;
   border-radius: 999px;
   text-transform: uppercase;
@@ -1587,6 +1595,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
+  min-height: 20px;
   padding: 3px 8px;
   border-radius: 999px;
   text-transform: uppercase;
@@ -1721,4 +1730,52 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-page-exec .slate-portal {
   flex: 1;
   min-width: 0;
+}
+
+
+/* CS detail panel polish */
+.ops-cs-right .ops-cs-input { min-height: 34px; }
+.ops-cs-right textarea.ops-cs-input { min-height: 72px; }
+.ops-cs-right .flex-1.overflow-y-auto.p-4.flex.flex-col.gap-3 { gap: 10px !important; }
+.ops-cs-right .flex.items-center.justify-between.pt-3.pb-3.px-4.border-t.ops-cs-border-t.bg-white.sticky.bottom-0 {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.ops-cs-right .flex.items-center.justify-between.pt-3.pb-3.px-4.border-t.ops-cs-border-t.bg-white.sticky.bottom-0 > div {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+
+/* CS-only button polish: green primary/secondary states */
+.ops-page-cs .ops-btn-arches-solid {
+  background-color: var(--slate-sage) !important;
+  border: 1px solid var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
+}
+.ops-page-cs .ops-btn-arches-solid:hover {
+  background-color: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .ops-btn-arches {
+  background-color: var(--slate-surface) !important;
+  border: 1px solid var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .ops-btn-arches:hover {
+  background-color: var(--slate-sage-wash) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .ops-btn-arches-solid:focus-visible,
+.ops-page-cs .ops-btn-arches:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(47,62,57,.22);
+}
+.ops-page-cs .ops-btn-arches-solid:disabled,
+.ops-page-cs .ops-btn-arches:disabled {
+  background-color: var(--slate-surface-tint) !important;
+  border-color: var(--slate-divider) !important;
+  color: var(--slate-ink-placeholder) !important;
 }
