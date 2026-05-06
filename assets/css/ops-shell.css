@@ -1824,3 +1824,29 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   outline: none;
   box-shadow: 0 0 0 2px rgba(47,62,57,.22);
 }
+
+/* CS KPI: enforce divider between Ready for Build and Ready for Closeout. */
+.ops-page-cs .ops-cs-divide > :nth-child(3) {
+  border-left: 1px solid var(--slate-divider-soft);
+}
+
+/* CS detail header close (×) next to Unsaved: green outlined, not pink/red/gray. */
+.ops-page-cs .ops-cs-right .flex.items-center.gap-2.shrink-0.ml-2 > button {
+  color: var(--slate-sage-ink) !important;
+  border: 1px solid var(--slate-sage) !important;
+  background: var(--slate-surface) !important;
+  border-radius: var(--slate-radius-sm);
+  width: 24px;
+  height: 24px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ops-page-cs .ops-cs-right .flex.items-center.gap-2.shrink-0.ml-2 > button:hover,
+.ops-page-cs .ops-cs-right .flex.items-center.gap-2.shrink-0.ml-2 > button:focus-visible {
+  color: var(--slate-sage) !important;
+  border-color: var(--slate-sage-ink) !important;
+  background: var(--slate-sage-wash) !important;
+  outline: none;
+}
