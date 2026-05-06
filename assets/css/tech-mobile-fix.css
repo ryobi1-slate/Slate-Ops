@@ -1,0 +1,119 @@
+/*
+ * Tech mobile scroll fix
+ * Loaded only on /ops/tech routes.
+ * Fixes the Help on Another Job expanded-state scroll lock on phones.
+ */
+
+@media (max-width: 900px) {
+  html,
+  body.slate-ops {
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  body.slate-ops .ops-shell {
+    min-height: 100dvh;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  body.slate-ops .ops-shell-body,
+  body.slate-ops .ops-body {
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  body.slate-ops .ops-content {
+    min-height: calc(100dvh - 68px);
+    height: auto;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  body.slate-ops .ops-content > #ops-view {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
+    box-sizing: border-box;
+    padding-bottom: calc(116px + env(safe-area-inset-bottom));
+  }
+
+  /* Tailwind utility overrides inside the Tech route only. The React bundle
+     can create fixed-height wrappers; those wrappers must grow with the
+     expanded Help list instead of trapping the viewport. */
+  body.slate-ops .ops-content .h-screen,
+  body.slate-ops .ops-content .min-h-screen,
+  body.slate-ops .ops-content [class~="h-screen"],
+  body.slate-ops .ops-content [class~="min-h-screen"] {
+    min-height: 100dvh !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  body.slate-ops .ops-content .overflow-hidden,
+  body.slate-ops .ops-content [class~="overflow-hidden"] {
+    overflow: visible !important;
+  }
+
+  body.slate-ops .ops-content .overflow-y-auto,
+  body.slate-ops .ops-content [class~="overflow-y-auto"] {
+    overflow-y: visible !important;
+    max-height: none !important;
+  }
+
+  body.slate-ops .ops-content *,
+  body.slate-ops .ops-content *::before,
+  body.slate-ops .ops-content *::after {
+    box-sizing: border-box;
+  }
+
+  body.slate-ops .ops-content button {
+    touch-action: manipulation;
+  }
+
+  /* Keep help cards reachable and prevent long names/order numbers from
+     creating side scroll on smaller Android screens. */
+  body.slate-ops .ops-content [class*="rounded"],
+  body.slate-ops .ops-content [class*="card"] {
+    max-width: 100%;
+  }
+
+  body.slate-ops .ops-content [class*="grid"],
+  body.slate-ops .ops-content [class*="flex"] {
+    min-width: 0;
+  }
+
+  body.slate-ops .ops-content p,
+  body.slate-ops .ops-content h1,
+  body.slate-ops .ops-content h2,
+  body.slate-ops .ops-content h3,
+  body.slate-ops .ops-content span,
+  body.slate-ops .ops-content div {
+    overflow-wrap: anywhere;
+  }
+
+  /* Reduce the top cards just enough to expose more of the Help list without
+     changing timer or job logic. */
+  body.slate-ops .ops-content .py-12 {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+
+  body.slate-ops .ops-content .p-8 {
+    padding: 1.25rem !important;
+  }
+
+  body.slate-ops .ops-content .gap-8 {
+    gap: 1rem !important;
+  }
+
+  body.slate-ops .ops-content .mb-8 {
+    margin-bottom: 1rem !important;
+  }
+}
