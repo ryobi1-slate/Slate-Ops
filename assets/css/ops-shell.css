@@ -865,16 +865,48 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * On mobile the Ops sidebar is hidden — the tech panel is self-contained.
  */
 .ops-page-tech .ops-header  { display: none; }
-.ops-page-tech .ops-content {
-  padding: 0;
+
+/* Tech route uses normal document/body scrolling — not a nested .ops-content
+ * scroller. Android Chrome / Firefox were trapping the viewport when the
+ * "Help on Another Job" list expanded inside the nested scroll container.
+ * Unlock the whole chain (shell → shell-body → body → content → #ops-view →
+ * React wrappers) so the document is the single scroller on every device. */
+/* Body is the document scroll container on Tech (root scroll container).
+ * Inner shell wrappers stay overflow: visible so nothing nested can trap
+ * a touch drag on Android. */
+body.slate-ops.ops-page-tech {
+  height: auto;
+  max-height: none;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  touch-action: pan-y pinch-zoom;
-  -webkit-overflow-scrolling: touch;
+}
+
+body.slate-ops.ops-page-tech .ops-shell-body,
+body.slate-ops.ops-page-tech .ops-body {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
+  height: auto;
+  max-height: none;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+.ops-page-tech .ops-content {
+  padding: 0;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
 }
 .ops-page-tech .ops-content > #ops-view {
-  min-height: 100%;
   height: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -888,8 +920,23 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   overflow: visible;
 }
 
-.ops-page-tech #ops-view [class~="overflow-y-auto"],
-.ops-page-tech #ops-view [class~="overflow-hidden"] {
+/* Tailwind utility overrides — applied at all viewport sizes so desktop
+ * Tech doesn't re-trap scrolling when the React bundle renders wrappers
+ * with h-screen / min-h-screen / overflow-hidden / overflow-y-auto. */
+.ops-page-tech #ops-view .h-screen,
+.ops-page-tech #ops-view .min-h-screen,
+.ops-page-tech #ops-view [class~="h-screen"],
+.ops-page-tech #ops-view [class~="min-h-screen"] {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.ops-page-tech #ops-view .overflow-hidden,
+.ops-page-tech #ops-view .overflow-y-auto,
+.ops-page-tech #ops-view [class~="overflow-hidden"],
+.ops-page-tech #ops-view [class~="overflow-y-auto"] {
+  overflow: visible;
   max-height: none;
 }
 @media (max-width: 900px) {
