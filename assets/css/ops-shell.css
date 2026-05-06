@@ -1420,42 +1420,74 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   width: 150px !important;
 }
 
-/* ─── CS job row: three-column flex structure ───────────────────────────────
- * Priority block (fixed 48px) + main content (flex:1) + meta (fixed 220px).
- * Classes are added to the row renderer in app.js.
+
+/* ─── CS table layout ────────────────────────────────────────────────────────
+ * Columns: Customer, SO#, Status, Parts, Est.Hrs, Tech, PRI, Due, Notes
  */
-.ops-cs-job-row {
-  display: flex;
+.ops-cs-table {
   width: 100%;
-  min-width: 0;
-  align-items: stretch;
+  border-collapse: collapse;
+  font-size: var(--slate-text-sm);
+  table-layout: auto;
 }
 
-.ops-cs-priority {
-  width: 48px;
-  flex: 0 0 48px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.ops-cs-job-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.ops-cs-job-meta {
-  width: 220px;
-  flex: 0 0 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  font-size: var(--slate-text-micro);
-  color: var(--slate-ink-muted);
+.ops-cs-th {
   padding: var(--slate-space-sm) var(--slate-space-md);
-  gap: var(--slate-space-2xs);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  color: var(--slate-ink-muted);
+  text-align: left;
+  white-space: nowrap;
+  background-color: var(--slate-sage-wash);
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.ops-cs-th-group {
+  background-color: var(--slate-sage-wash);
+  font-size: var(--slate-text-micro);
+  letter-spacing: var(--slate-tracking-label);
+}
+
+.ops-cs-group-header td {
+  padding: var(--slate-space-xs) var(--slate-space-md);
+  background-color: var(--slate-sage-wash);
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+
+.ops-cs-td {
+  padding: var(--slate-space-sm) var(--slate-space-md);
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  vertical-align: middle;
+}
+
+.ops-cs-td-customer {
+  color: var(--slate-ink);
+  font-weight: var(--slate-weight-medium);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-cs-td-notes {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--slate-ink-subtle);
+  font-size: var(--slate-text-xs);
+  font-style: italic;
+}
+
+.ops-cs-td-pri {
+  width: 52px;
+  min-width: 52px;
+  padding: 4px 6px !important;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── CS job row: ops-status-badge ─────────────────────────────────────────
