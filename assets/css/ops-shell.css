@@ -283,14 +283,14 @@ body.slate-ops {
   appearance: none;
   background: transparent !important;
   border-radius: var(--slate-radius-sm);
-  color: var(--slate-ink-subtle);
+  color: var(--slate-sage);
   cursor: pointer;
   padding: 0;
   transition: color var(--slate-duration-fast) var(--slate-ease);
 }
 
 .ops-sidebar-collapse-btn:hover {
-  color: var(--slate-ink);
+  color: var(--slate-redwood);
 }
 
 .ops-sidebar-collapse-btn:focus-visible {
@@ -1446,6 +1446,32 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   height: 32px;
 }
 
+/* CS controls polish: reduce font size slightly and keep vertical centering without increasing bar height. */
+.ops-page-cs .ops-cs-left .ops-cs-border-b input[type="text"],
+.ops-page-cs .ops-cs-left .ops-cs-border-b select,
+.ops-page-cs .ops-cs-left .ops-cs-border-b .cs-view-toggle-btn {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.ops-page-cs .ops-cs-left .ops-cs-border-b input[type="text"],
+.ops-page-cs .ops-cs-left .ops-cs-border-b select {
+  min-height: 32px;
+  height: 32px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.ops-page-cs .ops-cs-left .ops-cs-border-b input[type="text"]::placeholder {
+  line-height: 1.2;
+}
+
+.ops-page-cs .cs-view-toggle .cs-view-toggle-btn {
+  min-height: 32px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
 
 /* ─── CS table layout ────────────────────────────────────────────────────────
  * Columns: Customer, SO#, Status, Parts, Est.Hrs, Tech, PRI, Due, Notes
@@ -1827,7 +1853,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 
 /* CS KPI: enforce divider between Ready for Build and Ready for Closeout. */
 .ops-page-cs .ops-cs-divide > :nth-child(3) {
-  border-left: 1px solid var(--slate-divider-soft);
+  border-left: 1px solid var(--slate-divider-strong) !important;
 }
 
 /* CS detail header close (×) next to Unsaved: green outlined, not pink/red/gray. */
