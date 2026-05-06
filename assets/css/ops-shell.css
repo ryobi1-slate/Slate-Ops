@@ -1420,22 +1420,6 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   width: 150px !important;
 }
 
-/* ─── CS job row: three-column flex structure (unused — superseded by table) ─ */
-.ops-cs-job-row { display: flex; width: 100%; min-width: 0; align-items: stretch; }
-.ops-cs-priority { width: 48px; flex: 0 0 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ops-cs-job-main { flex: 1; min-width: 0; }
-.ops-cs-job-meta {
-  width: 220px;
-  flex: 0 0 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  font-size: var(--slate-text-micro);
-  color: var(--slate-ink-muted);
-  padding: var(--slate-space-sm) var(--slate-space-md);
-  gap: var(--slate-space-2xs);
-}
 
 /* ─── CS table layout ────────────────────────────────────────────────────────
  * Columns: Customer, SO#, Status, Parts, Est.Hrs, Tech, PRI, Due, Notes
