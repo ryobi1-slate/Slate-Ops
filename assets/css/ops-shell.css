@@ -1360,23 +1360,22 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .ops-cs-split-body {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(720px, 1fr) 360px;
   flex: 1;
   min-height: 0;
   gap: var(--slate-space-md);
   padding: var(--slate-space-lg) var(--slate-space-xl) var(--slate-space-2xl);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .ops-cs-left {
-  flex: 1;
   min-width: 0;
   overflow-y: auto;
 }
 
 .ops-cs-right {
-  width: 360px;
-  flex-shrink: 0;
   overflow-y: auto;
 }
 
@@ -1407,9 +1406,56 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   padding-bottom: var(--slate-space-sm) !important;
 }
 
-/* Control bar — prevent toggle from wrapping below filters on narrow windows */
+/* Control bar — no wrapping; search grows, selects fixed width */
 .ops-cs-left .ops-cs-border-b {
   flex-wrap: nowrap !important;
+}
+.ops-cs-left .ops-cs-border-b input[type="text"] {
+  flex: 1 1 auto !important;
+  min-width: 100px !important;
+  width: auto !important;
+}
+.ops-cs-left .ops-cs-border-b select {
+  flex-shrink: 0;
+  width: 150px !important;
+}
+
+/* ─── CS job row: three-column flex structure ───────────────────────────────
+ * Priority block (fixed 48px) + main content (flex:1) + meta (fixed 220px).
+ * Classes are added to the row renderer in app.js.
+ */
+.ops-cs-job-row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.ops-cs-priority {
+  width: 48px;
+  flex: 0 0 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ops-cs-job-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.ops-cs-job-meta {
+  width: 220px;
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: var(--slate-text-micro);
+  color: var(--slate-ink-muted);
+  padding: var(--slate-space-sm) var(--slate-space-md);
+  gap: var(--slate-space-2xs);
 }
 
 /* ─── CS job row: ops-status-badge ─────────────────────────────────────────
