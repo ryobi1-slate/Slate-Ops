@@ -124,10 +124,11 @@
   --slate-tracking-wide:   0.12em;
 
   /* Spacing scale — 4px base, mirrored from Dealer Portal */
-  --slate-space-2xs: 2px;
-  --slate-space-xs:  4px;
-  --slate-space-sm:  8px;
-  --slate-space-md:  12px;
+  --slate-space-2xs:     2px;
+  --slate-space-xs:      4px;
+  --slate-space-compact: 5px;  /* compact table rows */
+  --slate-space-sm:      8px;
+  --slate-space-md:      12px;
   --slate-space-lg:  16px;
   --slate-space-xl:  24px;
   --slate-space-2xl: 32px;
@@ -1402,8 +1403,8 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 /* Page-wide row spacing: compact table cells for density */
 .ops-cs-split-page .ops-cs-row-hover td,
 .ops-cs-split-page .ops-cs-row-selected td {
-  padding-top: var(--slate-space-sm) !important;
-  padding-bottom: var(--slate-space-sm) !important;
+  padding-top: var(--slate-space-compact) !important;
+  padding-bottom: var(--slate-space-compact) !important;
 }
 
 /* Control bar — no wrapping; search grows, selects fixed width */
@@ -1432,7 +1433,7 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .ops-cs-th {
-  padding: var(--slate-space-sm) var(--slate-space-md);
+  padding: var(--slate-space-compact) 10px;
   font-size: var(--slate-text-micro);
   font-weight: var(--slate-weight-medium);
   text-transform: uppercase;
@@ -1457,10 +1458,11 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .ops-cs-td {
-  padding: var(--slate-space-sm) var(--slate-space-md);
+  padding: var(--slate-space-compact) 10px;
   font-size: var(--slate-text-sm);
   color: var(--slate-ink-muted);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .ops-cs-td-customer {
@@ -1483,11 +1485,41 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 .ops-cs-td-pri {
-  width: 52px;
-  min-width: 52px;
-  padding: 4px 6px !important;
+  width: 60px;
+  min-width: 60px;
+  padding: var(--slate-space-compact) 6px !important;
   text-align: center;
-  font-variant-numeric: tabular-nums;
+}
+
+/* Priority badge — compact single-line label in PRI column */
+.ops-cs-pri-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 2px 7px;
+  border-radius: var(--slate-radius-full);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ops-cs-pri--next {
+  background-color: var(--slate-sage);
+  color: var(--white);
+}
+.ops-cs-pri--high {
+  background-color: var(--slate-arches);
+  color: var(--white);
+}
+.ops-cs-pri--normal {
+  background-color: var(--slate-sage-wash);
+  color: var(--slate-sage-ink);
+  border: var(--slate-border);
+}
+.ops-cs-pri--low {
+  background-color: var(--slate-surface-tint);
+  color: var(--slate-ink-subtle);
+  border: var(--slate-border-soft);
 }
 
 /* ─── CS job row: ops-status-badge ─────────────────────────────────────────
