@@ -2,6 +2,7 @@
 if (!defined('ABSPATH')) exit;
 
 class Slate_Ops_Utils {
+  const ROLE_PAGE_ACCESS_OPTION = 'slate_ops_role_page_access';
 
   // ── Role-level capabilities ──────────────────────────────────────────────
   const CAP_ACCESS     = 'slate_ops_access';      // base gate — every ops role has this
@@ -225,7 +226,79 @@ class Slate_Ops_Utils {
       $pages[] = 'monitor';
     }
 
-    return $pages;
+    if (current_user_can(self::CAP_MANAGE_SETTINGS)) {
+      $pages[] = 'purchasing';
+    }
+
+    // Layer role-page matrix on top of capability checks.
+    $matrix = self::get_role_page_access();
+    $role   = self::current_ops_role_slug();
+    $byRole = $matrix[$role] ?? [];
+    $pages  = array_values(array_intersect($pages, $byRole));
+
+    // Safety rails: admin-capable users always keep Admin + Settings.
+    if (current_user_can(self::CAP_ADMIN)) {
+      $pages[] = 'admin';
+    }
+    if (current_user_can(self::CAP_MANAGE_SETTINGS)) {
+      $pages[] = 'settings';
+    }
+
+    return array_values(array_unique($pages));
+  }
+
+  public static function get_default_role_page_access() {
+    return [
+      'admin'      => ['executive', 'cs', 'tech', 'schedule', 'purchasing', 'admin', 'settings', 'monitor'],
+      'supervisor' => ['executive', 'cs', 'tech', 'schedule', 'purchasing', 'monitor'],
+      'cs'         => ['cs', 'schedule'],
+      'tech'       => ['tech', 'schedule', 'monitor'],
+      'executive'  => ['executive', 'schedule', 'monitor'],
+    ];
+  }
+
+  public static function get_role_page_access() {
+    $defaults = self::get_default_role_page_access();
+    $saved = get_option(self::ROLE_PAGE_ACCESS_OPTION, []);
+    if (!is_array($saved)) return $defaults;
+    foreach ($defaults as $role => $allowed) {
+      if (!isset($saved[$role]) || !is_array($saved[$role])) {
+        $saved[$role] = $allowed;
+      }
+      $saved[$role] = self::sanitize_page_slugs($saved[$role]);
+      if ($role === 'admin') {
+        $saved[$role] = array_values(array_unique(array_merge($saved[$role], ['admin', 'settings'])));
+      }
+    }
+    return $saved;
+  }
+
+  public static function sanitize_page_slugs($slugs) {
+    $valid = ['executive','cs','tech','schedule','purchasing','admin','settings','monitor'];
+    $in = is_array($slugs) ? $slugs : [];
+    $out = [];
+    foreach ($in as $slug) {
+      $slug = sanitize_key((string)$slug);
+      if (in_array($slug, $valid, true)) $out[] = $slug;
+    }
+    return array_values(array_unique($out));
+  }
+
+  public static function current_ops_role_slug() {
+    $user = wp_get_current_user();
+    if (!$user || empty($user->ID)) return 'cs';
+    $roles = (array) $user->roles;
+    if (in_array('slate_ops_admin', $roles, true) || in_array('administrator', $roles, true)) return 'admin';
+    if (in_array('slate_ops_supervisor', $roles, true)) return 'supervisor';
+    if (in_array('slate_ops_cs', $roles, true) || in_array('slate_cs', $roles, true)) return 'cs';
+    if (in_array('slate_ops_tech', $roles, true) || in_array('slate_tech', $roles, true)) return 'tech';
+    if (current_user_can(self::CAP_VIEW_EXECUTIVE)) return 'executive';
+    return 'cs';
+  }
+
+  public static function current_user_can_access_ops_page($page_slug) {
+    $allowed = self::user_allowed_pages();
+    return in_array(sanitize_key((string)$page_slug), $allowed, true);
   }
 
   // ── Validators ──────────────────────────────────────────────────────────

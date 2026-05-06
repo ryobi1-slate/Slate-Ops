@@ -283,14 +283,14 @@ body.slate-ops {
   appearance: none;
   background: transparent !important;
   border-radius: var(--slate-radius-sm);
-  color: var(--slate-ink-subtle);
+  color: var(--slate-sage);
   cursor: pointer;
   padding: 0;
   transition: color var(--slate-duration-fast) var(--slate-ease);
 }
 
 .ops-sidebar-collapse-btn:hover {
-  color: var(--slate-ink);
+  color: var(--slate-redwood);
 }
 
 .ops-sidebar-collapse-btn:focus-visible {
@@ -681,8 +681,10 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 /* Section separator border */
 .ops-cs-border-b { border-bottom: 1px solid var(--slate-divider-soft); }
 
-/* Divider color override (used alongside Tailwind divide-x / divide-y) */
-.ops-cs-divide > * + * { border-color: var(--slate-divider-soft); }
+/* CS KPI dividers: every item after the first gets the same strong left divider. */
+.ops-page-cs .ops-cs-divide > * + * {
+  border-left: 1px solid var(--slate-divider-strong) !important;
+}
 
 /* Table header */
 .ops-cs-thead {
@@ -1446,6 +1448,32 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   height: 32px;
 }
 
+/* CS controls polish: reduce font size slightly and keep vertical centering without increasing bar height. */
+.ops-page-cs .ops-cs-left .ops-cs-border-b input[type="text"],
+.ops-page-cs .ops-cs-left .ops-cs-border-b select,
+.ops-page-cs .ops-cs-left .ops-cs-border-b .cs-view-toggle-btn {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.ops-page-cs .ops-cs-left .ops-cs-border-b input[type="text"],
+.ops-page-cs .ops-cs-left .ops-cs-border-b select {
+  min-height: 32px;
+  height: 32px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.ops-page-cs .ops-cs-left .ops-cs-border-b input[type="text"]::placeholder {
+  line-height: 1.2;
+}
+
+.ops-page-cs .cs-view-toggle .cs-view-toggle-btn {
+  min-height: 32px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
 
 /* ─── CS table layout ────────────────────────────────────────────────────────
  * Columns: Customer, SO#, Status, Parts, Est.Hrs, Tech, PRI, Due, Notes
@@ -1823,11 +1851,6 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-page-cs .cs-view-toggle .cs-view-toggle-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgba(47,62,57,.22);
-}
-
-/* CS KPI: enforce divider between Ready for Build and Ready for Closeout. */
-.ops-page-cs .ops-cs-divide > :nth-child(3) {
-  border-left: 1px solid var(--slate-divider-soft);
 }
 
 /* CS detail header close (×) next to Unsaved: green outlined, not pink/red/gray. */
