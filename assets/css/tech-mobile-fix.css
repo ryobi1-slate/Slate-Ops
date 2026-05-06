@@ -1,93 +1,42 @@
 /*
- * Tech mobile scroll fix
+ * Tech mobile-only refinements
  * Loaded only on /ops/tech routes.
  *
- * Switches the Tech page from a nested .ops-content scroll container to
- * normal document/body scrolling so Android Chrome and Android Firefox can
- * scroll past the expanded "Help on Another Job" list. Desktop and iPhone
- * Chrome work either way; this keeps a single scroll model across devices.
+ * The document-scroll model (chain unlock + Tailwind utility overrides)
+ * lives in ops-shell.css section 11 so it applies on every viewport.
+ * This file only carries mobile-specific tweaks: bottom padding to clear
+ * the React-app's fixed bottom action bar, touch behavior, and small-
+ * screen spacing/wrapping refinements.
  *
  * Notes:
  *  - No overscroll-behavior-y: contain (it can re-trap nested scroll on
- *    Android when the inner container ever gains a fixed height).
+ *    Android when an inner container ever gains a fixed height).
  *  - No overflow-y: auto on .ops-content (the document is the scroller).
- *  - Keeps bottom padding so the last Help card clears the React-app's
- *    fixed bottom action bar and the iOS home indicator.
  */
 
 @media (max-width: 900px),
        (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
 
-  /* Whole container chain: let the document scroll instead of .ops-content. */
+  /* Allow the document to scroll on the html/body level. */
   html,
   body.slate-ops.ops-page-tech {
     height: auto;
     max-height: none;
     min-height: 100%;
     overflow-x: hidden;
-    overflow-y: visible;
-  }
-
-  body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
-    height: auto;
-    max-height: none;
-    min-height: 100dvh;
-    overflow: visible;
-  }
-
-  body.slate-ops.ops-page-tech .ops-shell-body,
-  body.slate-ops.ops-page-tech .ops-body,
-  body.slate-ops.ops-page-tech .ops-content {
-    height: auto;
-    max-height: none;
-    min-height: 0;
-    overflow: visible;
   }
 
   body.slate-ops.ops-page-tech .ops-content {
-    padding: 0;
     touch-action: pan-y pinch-zoom;
   }
 
+  /* Keep the last Help card above the React app's fixed mobile bottom
+     action bar and the iOS home indicator. */
   body.slate-ops.ops-page-tech .ops-content > #ops-view {
     width: 100%;
     max-width: 100%;
-    height: auto;
-    min-height: 0;
     box-sizing: border-box;
     padding-bottom: calc(116px + env(safe-area-inset-bottom));
-  }
-
-  /* React wrappers inside #ops-view: keep the chain unlocked. The bundle
-     occasionally renders fixed-height wrappers that would re-trap scrolling. */
-  body.slate-ops.ops-page-tech #ops-view,
-  body.slate-ops.ops-page-tech #ops-view > div,
-  body.slate-ops.ops-page-tech #ops-view > div > div,
-  body.slate-ops.ops-page-tech #ops-view > div > main,
-  body.slate-ops.ops-page-tech #ops-view > div > div > main {
-    height: auto;
-    max-height: none;
-    min-height: 0;
-    overflow: visible;
-  }
-
-  /* Tailwind utility overrides — these classes appear in the React bundle
-     and would otherwise pin the viewport or hide overflow. */
-  body.slate-ops.ops-page-tech .ops-content .h-screen,
-  body.slate-ops.ops-page-tech .ops-content .min-h-screen,
-  body.slate-ops.ops-page-tech .ops-content [class~="h-screen"],
-  body.slate-ops.ops-page-tech .ops-content [class~="min-h-screen"] {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-  }
-
-  body.slate-ops.ops-page-tech .ops-content .overflow-hidden,
-  body.slate-ops.ops-page-tech .ops-content [class~="overflow-hidden"],
-  body.slate-ops.ops-page-tech .ops-content .overflow-y-auto,
-  body.slate-ops.ops-page-tech .ops-content [class~="overflow-y-auto"] {
-    overflow: visible !important;
-    max-height: none !important;
   }
 
   body.slate-ops.ops-page-tech .ops-content *,

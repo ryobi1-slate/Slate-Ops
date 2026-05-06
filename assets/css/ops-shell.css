@@ -872,7 +872,6 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * Unlock the whole chain (shell → shell-body → body → content → #ops-view →
  * React wrappers) so the document is the single scroller on every device. */
 body.slate-ops.ops-page-tech,
-body.slate-ops.ops-page-tech #slate-ops-app.ops-shell,
 body.slate-ops.ops-page-tech .ops-shell-body,
 body.slate-ops.ops-page-tech .ops-body {
   height: auto;
@@ -882,7 +881,10 @@ body.slate-ops.ops-page-tech .ops-body {
 }
 
 body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
+  height: auto;
+  max-height: none;
   min-height: 100dvh;
+  overflow: visible;
 }
 
 .ops-page-tech .ops-content {
@@ -908,8 +910,23 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
   overflow: visible;
 }
 
-.ops-page-tech #ops-view [class~="overflow-y-auto"],
-.ops-page-tech #ops-view [class~="overflow-hidden"] {
+/* Tailwind utility overrides — applied at all viewport sizes so desktop
+ * Tech doesn't re-trap scrolling when the React bundle renders wrappers
+ * with h-screen / min-h-screen / overflow-hidden / overflow-y-auto. */
+.ops-page-tech #ops-view .h-screen,
+.ops-page-tech #ops-view .min-h-screen,
+.ops-page-tech #ops-view [class~="h-screen"],
+.ops-page-tech #ops-view [class~="min-h-screen"] {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.ops-page-tech #ops-view .overflow-hidden,
+.ops-page-tech #ops-view .overflow-y-auto,
+.ops-page-tech #ops-view [class~="overflow-hidden"],
+.ops-page-tech #ops-view [class~="overflow-y-auto"] {
+  overflow: visible;
   max-height: none;
 }
 @media (max-width: 900px) {
