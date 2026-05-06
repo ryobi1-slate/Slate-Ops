@@ -1352,9 +1352,9 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   overflow: hidden;
   background-color: var(--slate-surface-page);
   width: 100%;
-  max-width: var(--slate-shell-maxwidth);
-  margin: 0 auto;
-  padding: var(--slate-space-xl) var(--slate-space-2xl) var(--slate-space-2xl);
+  max-width: min(1680px, calc(100vw - 180px));
+  margin: 0 auto 0 var(--slate-space-lg);
+  padding: var(--slate-space-lg) var(--slate-space-lg) var(--slate-space-2xl);
   box-sizing: border-box;
 }
 
