@@ -1341,6 +1341,8 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   display: flex;
   flex-direction: column;
   max-width: none;
+  width: 100%;
+  background-color: var(--slate-surface-page);
 }
 
 .ops-cs-split-page {
@@ -1349,25 +1351,27 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   height: 100%;
   overflow: hidden;
   background-color: var(--slate-surface-page);
+  width: 100%;
+  max-width: var(--slate-shell-maxwidth);
+  margin: 0 auto;
+  padding: var(--slate-space-xl) var(--slate-space-2xl) var(--slate-space-2xl);
+  box-sizing: border-box;
 }
 
 .ops-cs-split-page .ops-page-header {
   flex-shrink: 0;
-  padding-left: var(--slate-space-2xl);
-  padding-right: var(--slate-space-2xl);
-  padding-top: var(--slate-space-xl);
-  padding-bottom: var(--slate-space-lg);
+  padding: 0 0 var(--slate-space-lg);
   margin-bottom: 0;
 }
 
 .ops-cs-split-body {
   display: grid;
-  grid-template-columns: minmax(720px, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 420px);
   flex: 1;
   min-height: 0;
-  gap: var(--slate-space-md);
-  padding: var(--slate-space-lg) var(--slate-space-xl) var(--slate-space-2xl);
-  overflow-x: auto;
+  gap: var(--slate-space-lg);
+  padding: 0;
+  overflow-x: visible;
   overflow-y: hidden;
 }
 
