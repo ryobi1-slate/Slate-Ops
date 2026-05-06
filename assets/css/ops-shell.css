@@ -1742,3 +1742,36 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   flex-wrap: nowrap;
   gap: 8px;
 }
+
+
+/* CS-only button polish: green primary/secondary states */
+.ops-page-cs .ops-btn-arches-solid {
+  background-color: var(--slate-sage) !important;
+  border: 1px solid var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
+}
+.ops-page-cs .ops-btn-arches-solid:hover {
+  background-color: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .ops-btn-arches {
+  background-color: var(--slate-surface) !important;
+  border: 1px solid var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .ops-btn-arches:hover {
+  background-color: var(--slate-sage-wash) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .ops-btn-arches-solid:focus-visible,
+.ops-page-cs .ops-btn-arches:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(47,62,57,.22);
+}
+.ops-page-cs .ops-btn-arches-solid:disabled,
+.ops-page-cs .ops-btn-arches:disabled {
+  background-color: var(--slate-surface-tint) !important;
+  border-color: var(--slate-divider) !important;
+  color: var(--slate-ink-placeholder) !important;
+}
