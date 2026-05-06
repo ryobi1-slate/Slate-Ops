@@ -30,12 +30,18 @@
   body.slate-ops.ops-page-tech .ops-content {
     min-height: calc(100svh - 68px);
     min-height: calc(100dvh - 68px);
+    min-height: calc(100svh - 68px);
     height: auto;
     max-height: none;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+<<<<<<< codex/investigate-tech-page-scroll-bug
     touch-action: pan-y pinch-zoom;
+=======
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+>>>>>>> main
   }
 
   body.slate-ops.ops-page-tech .ops-content > #ops-view {
@@ -55,6 +61,7 @@
   body.slate-ops.ops-page-tech .ops-content [class~="min-h-screen"] {
     min-height: 100svh !important;
     min-height: 100dvh !important;
+    min-height: 100svh !important;
     height: auto !important;
     max-height: none !important;
   }
