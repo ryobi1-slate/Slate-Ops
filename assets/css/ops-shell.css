@@ -879,6 +879,19 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   flex-direction: column;
 }
 
+.ops-page-tech .ops-content > #ops-view,
+.ops-page-tech .ops-content > #ops-view > div,
+.ops-page-tech .ops-content > #ops-view > div > main {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.ops-page-tech #ops-view [class~="overflow-y-auto"],
+.ops-page-tech #ops-view [class~="overflow-hidden"] {
+  max-height: none;
+}
 @media (max-width: 900px) {
   .ops-page-tech .ops-sidebar {
     display: none !important;

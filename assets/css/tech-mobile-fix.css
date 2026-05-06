@@ -36,8 +36,12 @@
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+<<<<<<< codex/investigate-tech-page-scroll-bug
+    touch-action: pan-y pinch-zoom;
+=======
     touch-action: pan-y;
     overscroll-behavior-y: contain;
+>>>>>>> main
   }
 
   body.slate-ops.ops-page-tech .ops-content > #ops-view {
