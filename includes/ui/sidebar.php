@@ -37,7 +37,6 @@ if (!function_exists('ops_nav_link')) {
   <nav class="ops-nav">
     <?php
     $allowed = Slate_Ops_Utils::user_allowed_pages();
-    $is_admin = current_user_can(Slate_Ops_Utils::CAP_ADMIN);
 
     if (in_array('executive', $allowed, true)) :
       ops_nav_link('/ops/exec',     '/exec',     'dashboard',      'Executive');
@@ -51,7 +50,7 @@ if (!function_exists('ops_nav_link')) {
     if (in_array('schedule', $allowed, true)) :
       ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule');
     endif;
-    if ($is_admin) :
+    if (in_array('purchasing', $allowed, true)) :
       ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
     endif;
     if (in_array('admin', $allowed, true)) :

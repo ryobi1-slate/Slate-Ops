@@ -109,6 +109,19 @@ class Slate_Ops_REST {
         ],
       ]);
 
+      register_rest_route($ns, '/page-access', [
+        [
+          'methods' => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_admin'],
+          'callback' => [__CLASS__, 'get_page_access'],
+        ],
+        [
+          'methods' => 'POST',
+          'permission_callback' => [__CLASS__, 'perm_admin'],
+          'callback' => [__CLASS__, 'update_page_access'],
+        ],
+      ]);
+
       register_rest_route($ns, '/users', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
@@ -1151,6 +1164,28 @@ return ['ok' => true, 'id' => $id];
 
     self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks,'dealers'=>$dealers,'sales_people'=>$sales_people]), 'Settings updated');
     return self::get_settings($req);
+  }
+
+  public static function get_page_access($req) {
+    return [
+      'roles' => slate_ops_get_role_page_access(),
+      'defaults' => slate_ops_get_default_role_page_access(),
+    ];
+  }
+
+  public static function update_page_access($req) {
+    $body = $req->get_json_params();
+    $incoming = is_array($body['roles'] ?? null) ? $body['roles'] : [];
+    $defaults = slate_ops_get_default_role_page_access();
+    $next = [];
+    foreach ($defaults as $role => $default_pages) {
+      $candidate = $incoming[$role] ?? $default_pages;
+      $next[$role] = Slate_Ops_Utils::sanitize_page_slugs($candidate);
+    }
+    // Safety rails: never remove Admin/Settings from admin role.
+    $next['admin'] = array_values(array_unique(array_merge($next['admin'] ?? [], ['admin', 'settings'])));
+    update_option('slate_ops_role_page_access', $next, false);
+    return ['ok' => true, 'roles' => slate_ops_get_role_page_access()];
   }
 
   public static function list_jobs($req) {

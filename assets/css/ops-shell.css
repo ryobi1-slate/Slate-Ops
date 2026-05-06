@@ -681,8 +681,10 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 /* Section separator border */
 .ops-cs-border-b { border-bottom: 1px solid var(--slate-divider-soft); }
 
-/* Divider color override (used alongside Tailwind divide-x / divide-y) */
-.ops-cs-divide > * + * { border-color: var(--slate-divider-soft); }
+/* CS KPI dividers: every item after the first gets the same strong left divider. */
+.ops-page-cs .ops-cs-divide > * + * {
+  border-left: 1px solid var(--slate-divider-strong) !important;
+}
 
 /* Table header */
 .ops-cs-thead {

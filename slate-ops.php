@@ -12,6 +12,20 @@ define('SLATE_OPS_VERSION', '0.51.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
+
+// Page-access matrix helper wrappers (requested public API names).
+function slate_ops_get_default_role_page_access() {
+  return Slate_Ops_Utils::get_default_role_page_access();
+}
+function slate_ops_get_role_page_access() {
+  return Slate_Ops_Utils::get_role_page_access();
+}
+function slate_ops_current_user_can_access_ops_page($page_slug) {
+  return Slate_Ops_Utils::current_user_can_access_ops_page($page_slug);
+}
+function slate_ops_get_allowed_pages_for_current_user() {
+  return Slate_Ops_Utils::user_allowed_pages();
+}
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-contract.php';
 
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-install.php';
@@ -88,6 +102,14 @@ add_action('wp_enqueue_scripts', function() {
       ],
     ]);
   } else {
+    $route_map = [
+      '' => 'executive', 'exec' => 'executive', 'cs' => 'cs', 'tech' => 'tech',
+      'schedule' => 'schedule', 'purchasing' => 'purchasing', 'admin' => 'admin',
+      'settings' => 'settings', 'monitor' => 'monitor',
+    ];
+    $route_slug = $route_map[$current_path] ?? null;
+    $route_blocked = $route_slug ? !slate_ops_current_user_can_access_ops_page($route_slug) : false;
+
     // All other /ops/* routes — React app.
     $ver_app_css  = file_exists(SLATE_OPS_PATH . 'assets/react/app.css')       ? filemtime(SLATE_OPS_PATH . 'assets/react/app.css')       : SLATE_OPS_VERSION;
     $ver_app_js   = file_exists(SLATE_OPS_PATH . 'assets/react/app.js')        ? filemtime(SLATE_OPS_PATH . 'assets/react/app.js')        : SLATE_OPS_VERSION;
@@ -102,7 +124,9 @@ add_action('wp_enqueue_scripts', function() {
     $ver_pw_js = file_exists(SLATE_OPS_PATH . 'assets/js/ops-pause-work.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-pause-work.js') : SLATE_OPS_VERSION;
     wp_enqueue_script('slate-ops-pause-work', SLATE_OPS_URL . 'assets/js/ops-pause-work.js', [], $ver_pw_js, true);
 
-    wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element', 'slate-ops-guard', 'slate-ops-pause-work'], $ver_app_js, true);
+    if (!$route_blocked) {
+      wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element', 'slate-ops-guard', 'slate-ops-pause-work'], $ver_app_js, true);
+    }
 
     $current_user = wp_get_current_user();
 
@@ -144,7 +168,16 @@ add_action('wp_enqueue_scripts', function() {
         'white' => esc_url_raw(SLATE_OPS_URL . 'assets/logos/Slate-Logo-White-CMYK.png'),
       ],
       'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
+      'page_access' => [
+        'roles' => slate_ops_get_role_page_access(),
+        'defaults' => slate_ops_get_default_role_page_access(),
+      ],
     ]);
+
+    if (!$route_blocked) {
+      $ver_access_admin = file_exists(SLATE_OPS_PATH . 'assets/js/ops-page-access-admin.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-page-access-admin.js') : SLATE_OPS_VERSION;
+      wp_enqueue_script('slate-ops-page-access-admin', SLATE_OPS_URL . 'assets/js/ops-page-access-admin.js', ['slate-ops-react'], $ver_access_admin, true);
+    }
   }
 });
 
