@@ -871,7 +871,17 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * "Help on Another Job" list expanded inside the nested scroll container.
  * Unlock the whole chain (shell → shell-body → body → content → #ops-view →
  * React wrappers) so the document is the single scroller on every device. */
-body.slate-ops.ops-page-tech,
+/* Body is the document scroll container on Tech (root scroll container).
+ * Inner shell wrappers stay overflow: visible so nothing nested can trap
+ * a touch drag on Android. */
+body.slate-ops.ops-page-tech {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 body.slate-ops.ops-page-tech .ops-shell-body,
 body.slate-ops.ops-page-tech .ops-body {
   height: auto;

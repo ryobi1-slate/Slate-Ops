@@ -1,30 +1,33 @@
 /*
- * Tech mobile-only refinements
- * Loaded only on /ops/tech routes.
+ * Tech route scroll fix + mobile refinements
+ * Loaded only on /ops/tech routes — so the html rule below is effectively
+ * scoped to Tech and does not affect other routes.
  *
- * The document-scroll model (chain unlock + Tailwind utility overrides)
- * lives in ops-shell.css section 11 so it applies on every viewport.
- * This file only carries mobile-specific tweaks: bottom padding to clear
- * the React-app's fixed bottom action bar, touch behavior, and small-
- * screen spacing/wrapping refinements.
+ * The chain unlock and Tailwind utility overrides for Tech live in
+ * ops-shell.css section 11 so they apply on every viewport. This file
+ * promotes html to a root scroll container at all sizes and carries the
+ * mobile-specific tweaks: bottom padding to clear the React-app's fixed
+ * bottom action bar, touch behavior, small-screen spacing and wrapping.
  *
  * Notes:
  *  - No overscroll-behavior-y: contain (it can re-trap nested scroll on
  *    Android when an inner container ever gains a fixed height).
  *  - No overflow-y: auto on .ops-content (the document is the scroller).
+ *  - No height: 100vh anywhere in this file.
  */
+
+/* Root scroll container — applies on every viewport, including desktop.
+   The body-level overflow-y: auto for /ops/tech lives in ops-shell.css. */
+html {
+  height: auto;
+  max-height: none;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 
 @media (max-width: 900px),
        (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
-
-  /* Allow the document to scroll on the html/body level. */
-  html,
-  body.slate-ops.ops-page-tech {
-    height: auto;
-    max-height: none;
-    min-height: 100%;
-    overflow-x: hidden;
-  }
 
   body.slate-ops.ops-page-tech .ops-content {
     touch-action: pan-y pinch-zoom;
