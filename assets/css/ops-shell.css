@@ -1346,9 +1346,12 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 /* CS shell tone alignment with Purchasing: keep lighter page-surface sand */
+.ops-page-cs,
 .ops-page-cs .ops-content,
+.ops-page-cs .ops-content > #ops-view,
 .ops-page-cs .ops-body,
 .ops-page-cs .ops-cs-split-page,
+.ops-page-cs .ops-cs-split-body,
 .ops-page-cs .ops-cs-left,
 .ops-page-cs .ops-cs-right {
   background-color: var(--slate-surface-page) !important;
@@ -1758,20 +1761,24 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 
 
 /* CS-only button polish: green primary/secondary states */
+.ops-page-cs button.ops-btn-arches-solid,
 .ops-page-cs .ops-btn-arches-solid {
   background-color: var(--slate-sage) !important;
   border: 1px solid var(--slate-sage) !important;
   color: var(--slate-surface) !important;
 }
+.ops-page-cs button.ops-btn-arches-solid:hover,
 .ops-page-cs .ops-btn-arches-solid:hover {
   background-color: var(--slate-sage-ink) !important;
   border-color: var(--slate-sage-ink) !important;
 }
+.ops-page-cs button.ops-btn-arches,
 .ops-page-cs .ops-btn-arches {
   background-color: var(--slate-surface) !important;
   border: 1px solid var(--slate-sage) !important;
   color: var(--slate-sage-ink) !important;
 }
+.ops-page-cs button.ops-btn-arches:hover,
 .ops-page-cs .ops-btn-arches:hover {
   background-color: var(--slate-sage-wash) !important;
   border-color: var(--slate-sage-ink) !important;
@@ -1789,11 +1796,25 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   color: var(--slate-ink-placeholder) !important;
 }
 
-/* CS control toggle buttons: keep green-accented states (no pink/red accents) */
-.ops-page-cs .ops-cs-border-b .ops-cs-input > button {
+/* CS control toggle buttons: explicit active/inactive states (no pink/red accents) */
+.ops-page-cs .cs-view-toggle {
   border-color: var(--slate-sage) !important;
+  background: var(--slate-surface) !important;
 }
-.ops-page-cs .ops-cs-border-b .ops-cs-input > button:focus-visible {
+.ops-page-cs .cs-view-toggle .cs-view-toggle-btn {
+  border: 0 !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .cs-view-toggle .cs-view-toggle-btn.is-active {
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+.ops-page-cs .cs-view-toggle .cs-view-toggle-btn.is-inactive {
+  background: var(--slate-surface) !important;
+  color: var(--slate-sage-ink) !important;
+}
+.ops-page-cs .cs-view-toggle .cs-view-toggle-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgba(47,62,57,.22);
 }
