@@ -1357,6 +1357,12 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   background-color: var(--slate-surface-page) !important;
 }
 
+/* Compiled utility fallbacks in CS can still emit darker sand classes (e.g. bg-[#EAE8DC]). */
+.ops-page-cs [class*="bg-\\[\\#EAE8DC\\]"],
+.ops-page-cs [class*="bg-background-light"] {
+  background-color: var(--slate-surface-page) !important;
+}
+
 .ops-cs-split-page {
   display: flex;
   flex-direction: column;
