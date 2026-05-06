@@ -865,16 +865,36 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * On mobile the Ops sidebar is hidden — the tech panel is self-contained.
  */
 .ops-page-tech .ops-header  { display: none; }
+
+/* Tech route uses normal document/body scrolling — not a nested .ops-content
+ * scroller. Android Chrome / Firefox were trapping the viewport when the
+ * "Help on Another Job" list expanded inside the nested scroll container.
+ * Unlock the whole chain (shell → shell-body → body → content → #ops-view →
+ * React wrappers) so the document is the single scroller on every device. */
+body.slate-ops.ops-page-tech,
+body.slate-ops.ops-page-tech #slate-ops-app.ops-shell,
+body.slate-ops.ops-page-tech .ops-shell-body,
+body.slate-ops.ops-page-tech .ops-body {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
+  min-height: 100dvh;
+}
+
 .ops-page-tech .ops-content {
   padding: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  touch-action: pan-y pinch-zoom;
-  -webkit-overflow-scrolling: touch;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
 }
 .ops-page-tech .ops-content > #ops-view {
-  min-height: 100%;
   height: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
