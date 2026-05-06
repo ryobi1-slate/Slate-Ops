@@ -117,6 +117,11 @@ add_action('wp_enqueue_scripts', function() {
 
     wp_enqueue_style('slate-ops-react',  SLATE_OPS_URL . 'assets/react/app.css', ['slate-ops-shell'], $ver_app_css);
 
+    if (!$route_blocked && ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0)) {
+      $ver_tech_css = file_exists(SLATE_OPS_PATH . 'assets/css/tech-mobile-fix.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/tech-mobile-fix.css') : SLATE_OPS_VERSION;
+      wp_enqueue_style('slate-ops-tech-mobile-fix', SLATE_OPS_URL . 'assets/css/tech-mobile-fix.css', ['slate-ops-react'], $ver_tech_css);
+    }
+
     // Guard script loads first (before React) so it can intercept disallowed routes.
     wp_enqueue_script('slate-ops-guard', SLATE_OPS_URL . 'assets/js/ops-access-guard.js', [], $ver_guard_js, false);
 
