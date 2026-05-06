@@ -867,14 +867,31 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-page-tech .ops-header  { display: none; }
 .ops-page-tech .ops-content {
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
 }
 .ops-page-tech .ops-content > #ops-view {
-  height: 100%;
+  min-height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
 }
 
+.ops-page-tech .ops-content > #ops-view,
+.ops-page-tech .ops-content > #ops-view > div,
+.ops-page-tech .ops-content > #ops-view > div > main {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.ops-page-tech #ops-view [class~="overflow-y-auto"],
+.ops-page-tech #ops-view [class~="overflow-hidden"] {
+  max-height: none;
+}
 @media (max-width: 900px) {
   .ops-page-tech .ops-sidebar {
     display: none !important;
