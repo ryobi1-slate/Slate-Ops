@@ -2,9 +2,13 @@
   "scripts": {
     "wp-env:start": "wp-env start",
     "wp-env:stop": "wp-env stop",
-    "wp-env:destroy": "wp-env destroy"
+    "wp-env:destroy": "wp-env destroy",
+    "wp-env:logs": "wp-env logs",
+    "test:js": "playwright test --list",
+    "test:smoke": "playwright test"
   },
   "devDependencies": {
-    "@wordpress/env": "^10.0.0"
+    "@wordpress/env": "^10.0.0",
+    "@playwright/test": "^1.53.0"
   }
 }
