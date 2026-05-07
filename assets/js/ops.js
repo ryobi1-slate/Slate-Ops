@@ -1576,11 +1576,19 @@ async function openCSDrawer(jobId, isNew, context) {
     .concat((arr||[]).map(u => `<option value="${u.id}"${job&&job.assigned_user_id==u.id?' selected':''}>${escapeHtml(u.name)}</option>`))
     .join('');
 
-  // CS-settable status options (or read-only badge for locked statuses)
+  // CS-settable status options (or read-only badge for locked statuses).
+  // If the current status isn't in CS_SETTABLE_STATUSES (e.g. Ready for
+  // Closeout — QC/PENDING_QC), prepend it so the dropdown renders the
+  // current status as the selected option. Without this fallback the
+  // browser defaults to the first option (Intake) and saving any change
+  // (e.g. just notes) would attempt an invalid status transition.
+  const statusOptions = (jStatus && !CS_SETTABLE_STATUSES.includes(jStatus))
+    ? [jStatus, ...CS_SETTABLE_STATUSES]
+    : CS_SETTABLE_STATUSES;
   const statusField = isReadonlyStatus
     ? `<div style="padding:8px 0;"><span class="badge ${badgeClass(jStatus)}" style="font-size:13px;">${fmtStatusCS(jStatus)}</span> <span class="muted" style="font-size:11px;">(set by Tech/QC workflow)</span></div>`
     : `<select class="select" id="cs-drawer-status" name="status">
-        ${CS_SETTABLE_STATUSES.map(s => `<option value="${s}"${jStatus===s?' selected':''}>${fmtStatusCS(s)}</option>`).join('')}
+        ${statusOptions.map(s => `<option value="${s}"${jStatus===s?' selected':''}>${fmtStatusCS(s)}</option>`).join('')}
        </select>`;
 
   // Parts status options (v2)
