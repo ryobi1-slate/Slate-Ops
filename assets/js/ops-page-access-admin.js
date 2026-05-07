@@ -1,7 +1,9 @@
 (function () {
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   function apiRoot(){ return (window.slateOpsSettings && window.slateOpsSettings.api && window.slateOpsSettings.api.root) || '/wp-json/slate-ops/v1'; }
   function nonce(){ return (window.slateOpsSettings && window.slateOpsSettings.api && window.slateOpsSettings.api.nonce) || ''; }
+  function isAdmin(){ return !!(window.slateOpsSettings && window.slateOpsSettings.user && window.slateOpsSettings.user.caps && window.slateOpsSettings.user.caps.admin); }
+  const MOUNT_SELECTOR = '#ops-view .bg-white.rounded-xl.shadow-sm.overflow-hidden.mb-8';
+  const PANEL_ID = 'ops-page-access-panel';
   const roles = ['admin','supervisor','cs','tech','executive'];
   const pages = [
     ['executive','Executive'],
@@ -21,11 +23,10 @@
     return data;
   }
 
-  ready(function(){
-    if (!location.pathname.includes('/ops/admin')) return;
-    const mount = document.querySelector('#ops-view .bg-white.rounded-xl.shadow-sm.overflow-hidden.mb-8');
-    if (!mount) return;
+  function mountPanel(mount) {
+    if (document.getElementById(PANEL_ID)) return;
     const panel = document.createElement('div');
+    panel.id = PANEL_ID;
     panel.className = 'bg-white rounded-xl shadow-sm overflow-hidden mb-8';
     panel.innerHTML = '<div class="px-6 py-4 border-b border-slate-100"><h2 class="font-bold text-sm text-slate-700 uppercase tracking-wide">Page Access by Role</h2><p class="text-xs text-slate-500 mt-1">Control which Slate Ops pages are visible and accessible for each role.</p></div><div class="px-6 py-4"><div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;"><label class="text-xs font-bold text-slate-500">Role</label><select id="ops-page-access-role" class="border border-slate-200 rounded-md px-3 py-2 text-sm"></select></div><div id="ops-page-access-list" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin-bottom:12px;"></div><div style="display:flex;gap:8px;"><button id="ops-page-access-save" class="bg-[#404f4b] text-white text-xs font-bold px-3 py-2 rounded">Save</button><button id="ops-page-access-reset" class="border border-slate-300 text-xs font-bold px-3 py-2 rounded">Reset to Defaults</button><span id="ops-page-access-msg" class="text-xs text-slate-500" style="align-self:center;"></span></div></div>';
     mount.parentNode.insertBefore(panel, mount.nextSibling);
@@ -51,7 +52,7 @@
 
     panel.querySelector('#ops-page-access-save').addEventListener('click', async function(){
       const role = roleSel.value;
-      const checked = Array.from(list.querySelectorAll('input[type=\"checkbox\"]:checked')).map(i=>i.getAttribute('data-slug'));
+      const checked = Array.from(list.querySelectorAll('input[type="checkbox"]:checked')).map(i=>i.getAttribute('data-slug'));
       state.roles[role] = checked;
       if (role==='admin') ['admin','settings'].forEach(s=>{ if(!state.roles[role].includes(s)) state.roles[role].push(s); });
       msg.textContent='Saving...';
@@ -75,5 +76,37 @@
       roleSel.value = 'admin';
       renderChecks();
     }).catch(function(e){ msg.textContent = e.message; });
-  });
+  }
+
+  // Wait for the React-rendered mount element. React mounts asynchronously,
+  // so #ops-view is typically empty at DOMContentLoaded — observe until the
+  // first card panel appears, then attach. Re-attach on SPA route changes
+  // back to /ops/admin if the panel was removed by a re-render.
+  function tryMount() {
+    if (!isAdmin()) return false;
+    if (!/\/ops\/admin(\/|$)/.test(location.pathname)) return false;
+    if (document.getElementById(PANEL_ID)) return true;
+    const mount = document.querySelector(MOUNT_SELECTOR);
+    if (!mount) return false;
+    mountPanel(mount);
+    return true;
+  }
+
+  function startObserver() {
+    if (tryMount()) return;
+    const root = document.getElementById('ops-view') || document.body;
+    const obs = new MutationObserver(function(){
+      if (tryMount()) {
+        // Keep observing — React may re-render and drop our panel; we'll re-attach.
+        if (!/\/ops\/admin(\/|$)/.test(location.pathname)) obs.disconnect();
+      }
+    });
+    obs.observe(root, {childList:true, subtree:true});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startObserver);
+  } else {
+    startObserver();
+  }
 })();
