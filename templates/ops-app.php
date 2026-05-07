@@ -38,15 +38,16 @@ $_ops_path  = Slate_Ops_Routes::current_path(); // e.g. "tech", "cs", "schedule/
 $_ops_route = strtok($_ops_path, '/');           // first segment only
 $page_class = $_ops_route ? 'ops-page-' . sanitize_html_class($_ops_route) : '';
 $route_map = [
-  ''            => 'executive',
-  'exec'        => 'executive',
-  'cs'          => 'cs',
-  'tech'        => 'tech',
-  'schedule'    => 'schedule',
-  'purchasing'  => 'purchasing',
-  'admin'       => 'admin',
-  'settings'    => 'settings',
-  'monitor'     => 'monitor',
+  ''             => 'executive',
+  'exec'         => 'executive',
+  'cs'           => 'cs',
+  'cs-dashboard' => 'cs-dashboard',
+  'tech'         => 'tech',
+  'schedule'     => 'schedule',
+  'purchasing'   => 'purchasing',
+  'admin'        => 'admin',
+  'settings'     => 'settings',
+  'monitor'      => 'monitor',
 ];
 $page_slug = $route_map[$_ops_route] ?? null;
 $is_blocked = $page_slug && !slate_ops_current_user_can_access_ops_page($page_slug);
@@ -62,9 +63,14 @@ if ($is_blocked) : ?>
       <p style="margin:0;color:#5E646B;">You do not have permission to view this Slate Ops page.</p>
     </div>
   </section>
-<?php endif; ?>
+<?php elseif ($page_slug === 'cs-dashboard') :
+  // Server-rendered page (Phase 1, stub data). React app is not enqueued
+  // for this route in slate-ops.php; the empty #ops-view div above is a
+  // harmless sibling.
+  include SLATE_OPS_PATH . 'templates/pages/cs-dashboard.php';
+endif; ?>
 
-<?php // #ops-view is empty — React app (app.js) mounts and renders all content at runtime.
+<?php // For all other routes #ops-view is empty — React app (app.js) mounts and renders content at runtime.
 
 // Close layout shell (outputs </section></div></body></html>)
 $shell_part = 'close';

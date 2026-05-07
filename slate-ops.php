@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.51.3
+ * Version: 0.52.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.51.3');
+define('SLATE_OPS_VERSION', '0.52.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -41,6 +41,9 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-timelogs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-jobs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-schedule.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-work-centers.php';
+
+// CS / Supervisor Operations Dashboard data layer (Phase 1: stub data)
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-cs.php';
 
 // Scheduler services (Phase 0)
 require_once SLATE_OPS_PATH . 'includes/class-capacity-service.php';
@@ -84,7 +87,8 @@ add_action('wp_enqueue_scripts', function() {
   // Narrow check: only the purchasing sub-tree gets the purchasing bundle.
   // Exact match 'purchasing' or sub-paths 'purchasing/…' — nothing else.
   $current_path = Slate_Ops_Routes::current_path();
-  $is_purchasing = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
+  $is_purchasing   = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
+  $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
 
   if ($is_purchasing) {
     // Purchasing workspace — standalone vanilla JS; React app is not loaded here.
@@ -101,6 +105,13 @@ add_action('wp_enqueue_scripts', function() {
         'is_admin' => current_user_can(Slate_Ops_Utils::CAP_ADMIN),
       ],
     ]);
+  } elseif ($is_cs_dashboard) {
+    // CS / Supervisor Operations Dashboard — server-rendered template +
+    // standalone vanilla JS. React app is not loaded here.
+    $ver_cs_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops-cs-dashboard.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-cs-dashboard.css') : SLATE_OPS_VERSION;
+    $ver_cs_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-cs-dashboard.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-cs-dashboard.js')   : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-cs-dashboard',  SLATE_OPS_URL . 'assets/css/ops-cs-dashboard.css', ['slate-ops-shell'], $ver_cs_css);
+    wp_enqueue_script('slate-ops-cs-dashboard', SLATE_OPS_URL . 'assets/js/ops-cs-dashboard.js',   [],                  $ver_cs_js,  true);
   } else {
     $route_map = [
       '' => 'executive', 'exec' => 'executive', 'cs' => 'cs', 'tech' => 'tech',
@@ -227,7 +238,7 @@ add_filter('login_redirect', function($redirect_to, $requested_redirect_to, $use
                 || user_can($user, Slate_Ops_Utils::CAP_VIEW_MONITOR);
 
   if ($is_admin || $is_supervisor || $is_cs) {
-    return esc_url_raw(home_url('/ops/cs'));
+    return esc_url_raw(home_url('/ops/cs-dashboard'));
   }
   if ($is_tech) {
     return esc_url_raw(home_url('/ops/tech'));

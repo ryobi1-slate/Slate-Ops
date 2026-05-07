@@ -210,6 +210,14 @@ class Slate_Ops_Utils {
     if (current_user_can(self::CAP_CS) || current_user_can(self::CAP_CS_LEGACY)) {
       $pages[] = 'cs';
     }
+    if (
+      current_user_can(self::CAP_CS) ||
+      current_user_can(self::CAP_CS_LEGACY) ||
+      current_user_can(self::CAP_SUPERVISOR) ||
+      current_user_can(self::CAP_ADMIN)
+    ) {
+      $pages[] = 'cs-dashboard';
+    }
     if (current_user_can(self::CAP_TECH)) {
       $pages[] = 'tech';
     }
@@ -248,10 +256,14 @@ class Slate_Ops_Utils {
   }
 
   public static function get_default_role_page_access() {
+    // `cs-dashboard` is the canonical CS surface. The legacy `cs` slug is
+    // kept ONLY in admin defaults so admins retain a direct-URL escape
+    // hatch to the old React page during the migration window. Admins can
+    // re-grant `cs` to other roles via the Page Access matrix.
     return [
-      'admin'      => ['executive', 'cs', 'tech', 'schedule', 'purchasing', 'admin', 'settings', 'monitor'],
-      'supervisor' => ['executive', 'cs', 'tech', 'schedule', 'purchasing', 'monitor'],
-      'cs'         => ['cs', 'schedule'],
+      'admin'      => ['executive', 'cs', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'admin', 'settings', 'monitor'],
+      'supervisor' => ['executive', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'monitor'],
+      'cs'         => ['cs-dashboard', 'schedule'],
       'tech'       => ['tech', 'schedule', 'monitor'],
       'executive'  => ['executive', 'schedule', 'monitor'],
     ];
@@ -274,7 +286,7 @@ class Slate_Ops_Utils {
   }
 
   public static function sanitize_page_slugs($slugs) {
-    $valid = ['executive','cs','tech','schedule','purchasing','admin','settings','monitor'];
+    $valid = ['executive','cs','cs-dashboard','tech','schedule','purchasing','admin','settings','monitor'];
     $in = is_array($slugs) ? $slugs : [];
     $out = [];
     foreach ($in as $slug) {
