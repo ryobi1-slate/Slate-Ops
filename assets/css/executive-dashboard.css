@@ -1,0 +1,435 @@
+/* ============================================================
+ * Slate Ops · Executive Dashboard — page styles
+ * Mounted on the existing Executive dashboard route
+ *
+ * Content-only styles. Assumes the Ops shell already provides:
+ *   - Roboto Flex + JetBrains Mono families
+ *   - Slate token colors at the html/body level OR overridden here
+ *   - Sand page background
+ *
+ * No reset, no box-sizing global, no font-face declarations — those
+ * live in the shell. Only ID/class rules scoped to .so-exec.
+ * ============================================================ */
+
+/* ---------- Slate token fallbacks ---- */
+.so-exec {
+	--slate-sage: #404f4b;
+	--slate-sand: #e1dfc8;
+	--slate-arches: #d86b19;
+	--slate-redwood: #0f342a;
+	--slate-black: #000000;
+	--slate-white: #ffffff;
+
+	--page-bg: #f3f1e6;
+	--card: #ffffff;
+	--ink: #1a1a17;
+	--ink-2: #3a3a35;
+	--muted: #6e6a5e;
+	--muted-2: #8e8a7c;
+	--rule: #e6e1d0;
+	--rule-2: #efe9da;
+
+	--warn: var(--slate-arches);
+	--crit: #8a3a24;
+	--risk: #8a3a24;
+
+	font-family: "Roboto Flex", system-ui, -apple-system, sans-serif;
+	font-feature-settings: "ss01" on, "cv01" on;
+	color: var(--ink);
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+.so-exec *,
+.so-exec *::before,
+.so-exec *::after { box-sizing: border-box; }
+
+.so-exec .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+/* ---------- Page wrap ---- */
+.so-exec .page-wrap { max-width: 1480px; margin: 0 auto; padding: 20px 28px 64px; }
+
+/* ---------- Header ---- */
+.so-exec .page-head {
+	display: flex; justify-content: space-between; align-items: flex-end;
+	gap: 24px; padding-bottom: 16px;
+	border-bottom: 1px solid var(--rule);
+	margin-bottom: 18px;
+}
+.so-exec .eyebrow {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+	color: var(--slate-sage); font-weight: 500; margin-bottom: 6px;
+}
+.so-exec .page-title {
+	font-size: 26px; font-weight: 600; letter-spacing: -0.01em;
+	margin: 0; color: var(--ink); font-variation-settings: "wdth" 95;
+}
+.so-exec .page-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.so-exec .page-meta {
+	display: flex; gap: 10px; align-items: center;
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 11px; color: var(--ink-2); white-space: nowrap;
+}
+.so-exec .page-meta b { color: var(--ink); font-weight: 600; }
+.so-exec .page-meta .sep { color: var(--rule); }
+.so-exec .page-meta .crit b { color: var(--crit); }
+
+/* ---------- Tabs ---- */
+.so-exec .tabs {
+	display: flex; gap: 0;
+	border-bottom: 1px solid var(--rule);
+	margin-bottom: 20px;
+}
+.so-exec .tab {
+	display: inline-flex; align-items: center; gap: 8px;
+	padding: 10px 18px 11px; cursor: pointer;
+	background: transparent; border: 0;
+	font-family: inherit; font-size: 13px; color: var(--ink-2);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px; transition: color .12s, border-color .12s;
+}
+.so-exec .tab:hover { color: var(--ink); }
+.so-exec .tab.active {
+	color: var(--slate-sage);
+	border-bottom-color: var(--slate-sage);
+	font-weight: 600;
+}
+.so-exec .tab.active svg { color: var(--slate-sage); }
+.so-exec .tab svg { width: 14px; height: 14px; }
+.so-exec .tab .count {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; padding: 1px 6px; border-radius: 9px;
+	background: var(--rule-2); color: var(--ink-2);
+}
+.so-exec .tab.active .count { background: rgba(64,79,75,.15); color: var(--slate-sage); }
+
+.so-exec .tab-pane { display: none; }
+.so-exec .tab-pane.active { display: block; }
+
+/* ---------- KPI grid ---- */
+.so-exec .kpi-grid {
+	display: grid; grid-template-columns: repeat(4, 1fr);
+	border: 1px solid var(--rule);
+	background: var(--card);
+}
+.so-exec .kpi-grid > .kpi:nth-child(4n) { border-right: 0; }
+.so-exec .kpi {
+	padding: 12px 14px; min-height: 84px;
+	border-right: 1px solid var(--rule);
+	border-bottom: 1px solid var(--rule);
+	background: var(--card); position: relative;
+}
+.so-exec .kpi-grid > .kpi:nth-last-child(-n+4) { border-bottom: 0; }
+.so-exec .kpi.flag-crit::before,
+.so-exec .kpi.flag-warn::before {
+	content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+}
+.so-exec .kpi.flag-crit::before { background: var(--crit); }
+.so-exec .kpi.flag-warn::before { background: var(--warn); }
+.so-exec .kpi .k-label {
+	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+	color: var(--muted); display: flex; align-items: center; gap: 8px;
+	font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 500;
+}
+.so-exec .k-status {
+	font-size: 9.5px; padding: 1px 6px; border-radius: 2px;
+	background: var(--rule-2); color: var(--ink-2);
+}
+.so-exec .k-status.crit { background: rgba(138,58,44,.12); color: var(--crit); }
+.so-exec .k-status.warn { background: rgba(216,107,25,.15); color: var(--warn); }
+.so-exec .kpi .k-value {
+	font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px;
+	font-variant-numeric: tabular-nums; color: var(--ink);
+	display: flex; align-items: baseline; gap: 6px;
+	font-variation-settings: "wdth" 95;
+}
+.so-exec .kpi .k-value .unit {
+	font-size: 12px; font-weight: 500; color: var(--muted);
+	letter-spacing: 0; font-variation-settings: "wdth" 100;
+}
+.so-exec .kpi .k-help { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
+/* ---------- Executive Readout ---- */
+.so-exec .readout {
+	display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr;
+	border: 1px solid var(--rule); background: var(--card);
+	margin-top: 18px;
+}
+.so-exec .readout > * + * { border-left: 1px solid var(--rule); }
+.so-exec .readout-head {
+	background: var(--card); color: var(--ink); padding: 14px 16px;
+	display: flex; flex-direction: column; justify-content: space-between;
+	border-left: 3px solid var(--slate-sage);
+}
+.so-exec .readout-head .eyebrow { color: var(--slate-sage); margin-bottom: 0; }
+.so-exec .readout-head .title { font-size: 16px; font-weight: 600; line-height: 1.25; margin-top: 6px; color: var(--ink); }
+.so-exec .readout-head .stamp {
+	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px;
+	letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; margin-top: 12px;
+}
+.so-exec .readout-cell { padding: 14px 16px; }
+.so-exec .readout-cell .label {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+	color: var(--ink); display: flex; align-items: center; gap: 8px; font-weight: 500;
+}
+.so-exec .readout-cell p { font-size: 13px; line-height: 1.5; margin: 8px 0 12px; color: var(--ink); text-wrap: pretty; }
+.so-exec .readout-cell .row-stat {
+	display: flex; gap: 14px;
+	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px;
+	color: var(--muted); padding-top: 10px; border-top: 1px dashed var(--rule);
+}
+.so-exec .readout-cell .row-stat b { color: var(--ink); font-weight: 600; }
+.so-exec .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.so-exec .dot.crit { background: var(--crit); }
+.so-exec .dot.warn { background: var(--warn); }
+.so-exec .dot.ok   { background: var(--slate-sage); }
+
+/* ---------- Cards / split ---- */
+.so-exec .card { border: 1px solid var(--rule); background: var(--card); margin-top: 18px; }
+.so-exec .card-head {
+	display: flex; justify-content: space-between; align-items: center;
+	padding: 12px 16px; border-bottom: 1px solid var(--rule);
+}
+.so-exec .card-head h3 {
+	font-size: 13.5px; margin: 0; font-weight: 600;
+	display: flex; align-items: center; gap: 8px;
+}
+.so-exec .count-pill {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; padding: 2px 7px; border-radius: 2px;
+	background: var(--rule-2); color: var(--ink-2); font-weight: 500;
+}
+.so-exec .actions { display: flex; gap: 8px; }
+.so-exec .btn {
+	background: var(--card); border: 1px solid var(--rule);
+	padding: 5px 10px; font-size: 12px; font-family: inherit; color: var(--ink);
+	cursor: pointer;
+}
+.so-exec .btn:hover { border-color: var(--ink-2); }
+.so-exec .btn.ghost { background: transparent; }
+
+.so-exec .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+
+/* ---------- Tables ---- */
+.so-exec .t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.so-exec .t th, .so-exec .t td { padding: 9px 16px; text-align: left; }
+.so-exec .t thead th {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+	color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--rule);
+	background: #fbf8f0;
+}
+.so-exec .t tbody tr { border-bottom: 1px solid var(--rule-2); }
+.so-exec .t tbody tr:last-child { border-bottom: 0; }
+.so-exec .t tbody tr:hover { background: #fbf8f0; }
+.so-exec .t .num {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+}
+.so-exec .t .so { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11.5px; }
+.so-exec .t .cust { color: var(--ink); }
+.so-exec .t .tech { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.so-exec .t .tech .sub {
+	display: block; width: 100%; padding-left: 28px; padding-top: 2px;
+	font-size: 11px; color: var(--muted);
+}
+.so-exec .t .action { color: var(--slate-sage); font-weight: 500; }
+.so-exec .bad { color: var(--crit); font-weight: 500; }
+.so-exec .foot {
+	display: flex; justify-content: space-between; padding: 10px 16px;
+	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10.5px;
+	color: var(--muted); border-top: 1px solid var(--rule);
+}
+
+/* ---------- Avatars ---- */
+.so-exec .ava-sm {
+	display: inline-flex; align-items: center; justify-content: center;
+	width: 22px; height: 22px; border-radius: 2px;
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 9.5px; background: var(--rule-2); color: var(--ink-2);
+	font-weight: 600; flex-shrink: 0;
+}
+.so-exec .ava-sm.warn { background: rgba(216,107,25,.18); color: var(--warn); }
+.so-exec .ava-sm.crit { background: rgba(138,58,44,.18); color: var(--crit); }
+
+/* ---------- Tags ---- */
+.so-exec .tag {
+	display: inline-flex; align-items: center; gap: 5px;
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+	padding: 2px 6px; border-radius: 2px;
+	background: var(--rule-2); color: var(--ink-2); font-weight: 500;
+}
+.so-exec .tag .dot { width: 5px; height: 5px; }
+.so-exec .tag.muted  { background: var(--rule-2); color: var(--muted); }
+.so-exec .tag.normal { background: var(--rule-2); color: var(--ink-2); }
+.so-exec .tag.ok     { background: rgba(64,79,75,.14); color: var(--slate-sage); }
+.so-exec .tag.ok .dot { background: var(--slate-sage); }
+.so-exec .tag.watch  { background: rgba(216,107,25,.10); color: var(--ink-2); }
+.so-exec .tag.watch .dot { background: var(--warn); }
+.so-exec .tag.warn   { background: rgba(216,107,25,.18); color: var(--warn); }
+.so-exec .tag.warn .dot  { background: var(--warn); }
+.so-exec .tag.crit   { background: rgba(138,58,44,.14); color: var(--crit); }
+.so-exec .tag.crit .dot  { background: var(--crit); }
+
+/* ---------- Arches accent (warn only) ---- */
+.so-exec .arch {
+	width: 8px; height: 8px; flex-shrink: 0; display: inline-block;
+	background:
+		radial-gradient(circle at 50% 100%, var(--slate-arches) 0 4px, transparent 4.5px),
+		radial-gradient(circle at 0% 100%,  var(--slate-arches) 0 2px, transparent 2.5px),
+		radial-gradient(circle at 100% 100%,var(--slate-arches) 0 2px, transparent 2.5px);
+}
+
+/* ---------- Filter row ---- */
+.so-exec .filter-row {
+	display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+	padding: 10px 16px; border-bottom: 1px solid var(--rule);
+}
+.so-exec .search {
+	display: flex; align-items: center; gap: 6px;
+	border: 1px solid var(--rule); padding: 4px 10px;
+	background: var(--card); flex: 0 1 280px;
+}
+.so-exec .search svg { color: var(--muted); flex-shrink: 0; }
+.so-exec .search input {
+	border: 0; outline: 0; background: transparent;
+	font-family: inherit; font-size: 12.5px; color: var(--ink);
+	width: 100%; padding: 2px 0;
+}
+.so-exec .chip {
+	display: inline-flex; align-items: center; gap: 5px;
+	padding: 4px 10px; border: 1px solid var(--rule);
+	background: var(--card); cursor: pointer;
+	font-family: inherit; font-size: 11.5px; color: var(--ink-2);
+}
+.so-exec .chip .caret { font-size: 9px; color: var(--muted); }
+.so-exec .chip.toggle { user-select: none; }
+.so-exec .chip.toggle:hover { border-color: var(--ink-2); }
+.so-exec .chip.toggle.on { background: rgba(64,79,75,.12); border-color: var(--slate-sage); color: var(--slate-sage); }
+.so-exec .chip select {
+	border: 0; outline: 0; background: transparent; font-family: inherit;
+	font-size: 11.5px; color: var(--ink-2); cursor: pointer;
+}
+
+/* ---------- Help-card (info banner) ---- */
+.so-exec .help-card {
+	display: flex; gap: 8px; align-items: flex-start;
+	padding: 9px 16px; border-bottom: 1px solid var(--rule);
+	background: #faf6e8; color: var(--ink-2);
+	font-size: 12px; line-height: 1.5;
+}
+.so-exec .help-card svg { color: var(--slate-sage); flex-shrink: 0; margin-top: 1px; }
+
+/* ---------- Capture meter ---- */
+.so-exec .meter { display: inline-flex; align-items: center; gap: 8px; min-width: 130px; }
+.so-exec .meter .bar {
+	position: relative; flex: 1; height: 6px;
+	background: var(--rule-2); border-radius: 1px; overflow: hidden;
+}
+.so-exec .meter .bar i {
+	display: block; height: 100%; background: var(--slate-sage); border-radius: 1px;
+}
+.so-exec .meter .bar.warn i { background: var(--warn); }
+.so-exec .meter .bar.crit i { background: var(--crit); }
+.so-exec .meter .target {
+	position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--ink-2); opacity: .5;
+}
+.so-exec .meter b {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 11px; font-weight: 600; min-width: 32px; text-align: right;
+}
+
+/* ---------- Trust score block ---- */
+.so-exec .trust {
+	display: grid; grid-template-columns: 1fr 1.4fr;
+	border-bottom: 1px solid var(--rule);
+}
+.so-exec .trust .score {
+	padding: 18px 20px; border-right: 1px solid var(--rule);
+	background: linear-gradient(180deg, #faf6e8, transparent 50%);
+}
+.so-exec .trust .score .lbl {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+	color: var(--muted); font-weight: 500;
+}
+.so-exec .trust .score .val {
+	font-size: 32px; font-weight: 600; color: var(--crit);
+	margin-top: 6px; letter-spacing: -0.02em;
+	font-variation-settings: "wdth" 95;
+}
+.so-exec .trust .score .val .pct {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 14px; color: var(--ink-2); margin-left: 8px; font-weight: 500;
+}
+.so-exec .trust .score .desc { font-size: 12.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.5; max-width: 36ch; }
+.so-exec .trust .factors { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.so-exec .factor .row { display: flex; justify-content: space-between; font-size: 12px; }
+.so-exec .factor .row b {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.so-exec .factor .bar {
+	margin-top: 4px; height: 4px; background: var(--rule-2); position: relative;
+}
+.so-exec .factor .bar i { display: block; height: 100%; background: var(--slate-sage); }
+.so-exec .factor .bar.warn i { background: var(--warn); }
+.so-exec .factor .bar.crit i { background: var(--crit); }
+
+/* ---------- Reason grid (Bottlenecks) ---- */
+.so-exec .reason-grid {
+	display: grid; grid-template-columns: repeat(6, 1fr);
+	border-top: 1px solid var(--rule);
+}
+.so-exec .reason {
+	padding: 12px 14px; border-right: 1px solid var(--rule);
+	position: relative;
+}
+.so-exec .reason:last-child { border-right: 0; }
+.so-exec .reason.crit::before,
+.so-exec .reason.warn::before {
+	content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+}
+.so-exec .reason.crit::before { background: var(--crit); }
+.so-exec .reason.warn::before { background: var(--warn); }
+.so-exec .reason .lbl {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+	color: var(--muted); font-weight: 500;
+}
+.so-exec .reason .val {
+	font-size: 22px; font-weight: 600; margin-top: 4px;
+	font-variant-numeric: tabular-nums; color: var(--ink);
+	display: flex; align-items: baseline; gap: 8px;
+	font-variation-settings: "wdth" 95;
+}
+.so-exec .reason .val .delta {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px; font-weight: 500; color: var(--muted);
+}
+
+/* ---------- Block aging stripes ---- */
+.so-exec .age-cell { display: flex; align-items: center; gap: 8px; }
+.so-exec .age-cell .num { width: 24px; }
+.so-exec .age-cell .stripes { display: inline-flex; gap: 1px; }
+.so-exec .age-cell .stripes i {
+	width: 4px; height: 14px; background: var(--rule-2); display: block;
+}
+.so-exec .age-cell .stripes i.on      { background: var(--slate-sage); }
+.so-exec .age-cell .stripes i.on.warn { background: var(--warn); }
+.so-exec .age-cell .stripes i.on.crit { background: var(--crit); }
+
+/* ---------- Responsive ---- */
+@media (max-width: 1180px) {
+	.so-exec .kpi-grid    { grid-template-columns: repeat(2, 1fr); }
+	.so-exec .readout     { grid-template-columns: 1fr; }
+	.so-exec .readout > * + * { border-left: 0; border-top: 1px solid var(--rule); }
+	.so-exec .split       { grid-template-columns: 1fr; }
+	.so-exec .reason-grid { grid-template-columns: repeat(3, 1fr); }
+	.so-exec .reason:nth-child(3n) { border-right: 0; }
+	.so-exec .trust       { grid-template-columns: 1fr; }
+	.so-exec .trust .score { border-right: 0; border-bottom: 1px solid var(--rule); }
+}
