@@ -256,12 +256,12 @@ class Slate_Ops_Utils {
   }
 
   public static function get_default_role_page_access() {
-    // Note: the legacy `cs` slug is intentionally absent from every role's
-    // defaults. The /ops/cs route stays reachable for anyone an admin
-    // explicitly re-grants it to, but `cs-dashboard` is now the canonical
-    // CS surface and the only one shown in default sidebars.
+    // `cs-dashboard` is the canonical CS surface. The legacy `cs` slug is
+    // kept ONLY in admin defaults so admins retain a direct-URL escape
+    // hatch to the old React page during the migration window. Admins can
+    // re-grant `cs` to other roles via the Page Access matrix.
     return [
-      'admin'      => ['executive', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'admin', 'settings', 'monitor'],
+      'admin'      => ['executive', 'cs', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'admin', 'settings', 'monitor'],
       'supervisor' => ['executive', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'monitor'],
       'cs'         => ['cs-dashboard', 'schedule'],
       'tech'       => ['tech', 'schedule', 'monitor'],
