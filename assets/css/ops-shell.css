@@ -1798,6 +1798,10 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
     padding-top: 8px;
     padding-bottom: 8px;
   }
+  .ops-cs-right textarea.ops-cs-input {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
 }
 .ops-cs-right .flex.items-center.justify-between.pt-3.pb-3.px-4.border-t.ops-cs-border-t.bg-white.sticky.bottom-0 {
   padding-top: 10px;
