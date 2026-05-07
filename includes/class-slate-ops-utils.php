@@ -200,51 +200,32 @@ class Slate_Ops_Utils {
   /**
    * Returns the list of app pages this user is allowed to visit.
    * Used by /me endpoint and frontend guard.
+   *
+   * Page Access by Role controls VISIBILITY only — it does not grant action
+   * permissions. Action capabilities (CAP_TIME_TRACKING, CAP_CREATE_JOBS,
+   * CAP_EDIT_JOBS, CAP_UPDATE_STATUS, CAP_ADMIN, etc.) still gate what a user
+   * can DO inside each page. So an admin can grant CS visibility into the
+   * Tech page without giving CS permission to start/stop timers.
+   *
+   * Safety rails: admin / settings remain capability-gated regardless of
+   * matrix selections, so a non-admin role cannot be granted those pages
+   * by the Page Access matrix alone.
    */
   public static function user_allowed_pages() {
-    $pages = [];
+    if (!self::can_access()) return [];
 
-    if (current_user_can(self::CAP_VIEW_EXECUTIVE)) {
-      $pages[] = 'executive';
-    }
-    if (current_user_can(self::CAP_CS) || current_user_can(self::CAP_CS_LEGACY)) {
-      $pages[] = 'cs';
-    }
-    if (
-      current_user_can(self::CAP_CS) ||
-      current_user_can(self::CAP_CS_LEGACY) ||
-      current_user_can(self::CAP_SUPERVISOR) ||
-      current_user_can(self::CAP_ADMIN)
-    ) {
-      $pages[] = 'cs-dashboard';
-    }
-    if (current_user_can(self::CAP_TECH)) {
-      $pages[] = 'tech';
-    }
-    if (current_user_can(self::CAP_SCHEDULE_JOBS)) {
-      $pages[] = 'schedule';
-    }
-    if (current_user_can(self::CAP_ADMIN)) {
-      $pages[] = 'admin';
-    }
-    if (current_user_can(self::CAP_MANAGE_SETTINGS)) {
-      $pages[] = 'settings';
-    }
-    if (current_user_can(self::CAP_VIEW_MONITOR)) {
-      $pages[] = 'monitor';
-    }
-
-    if (current_user_can(self::CAP_MANAGE_SETTINGS)) {
-      $pages[] = 'purchasing';
-    }
-
-    // Layer role-page matrix on top of capability checks.
     $matrix = self::get_role_page_access();
     $role   = self::current_ops_role_slug();
-    $byRole = $matrix[$role] ?? [];
-    $pages  = array_values(array_intersect($pages, $byRole));
+    $byRole = isset($matrix[$role]) ? self::sanitize_page_slugs($matrix[$role]) : [];
 
-    // Safety rails: admin-capable users always keep Admin + Settings.
+    // Hard safety rails: admin and settings remain capability-gated.
+    $pages = array_values(array_filter($byRole, function ($slug) {
+      if ($slug === 'admin')    return current_user_can(self::CAP_ADMIN);
+      if ($slug === 'settings') return current_user_can(self::CAP_MANAGE_SETTINGS);
+      return true;
+    }));
+
+    // Admin-capable users always keep Admin + Settings, regardless of matrix.
     if (current_user_can(self::CAP_ADMIN)) {
       $pages[] = 'admin';
     }
