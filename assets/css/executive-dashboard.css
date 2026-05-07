@@ -12,6 +12,8 @@
  * ============================================================ */
 
 /* ---------- Slate token fallbacks ---- */
+/* Token values mirror ops-shell.css / purchasing.css so the page
+ * inherits the established Slate Ops surface, divider, and ink scale. */
 .so-exec {
 	--slate-sage: #404f4b;
 	--slate-sand: #e1dfc8;
@@ -22,13 +24,14 @@
 
 	--page-bg: #f3f1e6;
 	--card: #ffffff;
-	--ink: #1a1a17;
+	--ink: #2a2e2c;          /* matches --slate-ink */
 	--ink-2: #3a3a35;
-	--muted: #6e6a5e;
-	--muted-2: #8e8a7c;
-	--rule: #e6e1d0;
-	--rule-2: #efe9da;
-	--thead-bg: #f7f5ec;
+	--muted: #5a5e5c;        /* matches --slate-ink-muted */
+	--muted-2: #8a8880;      /* matches --slate-ink-subtle */
+	--rule: #e6e2d4;         /* matches --slate-divider */
+	--rule-2: #f0ede3;       /* matches --slate-divider-soft */
+	--thead-bg: #f2f3f1;     /* matches --slate-sage-wash (Purchasing thead) */
+	--row-hover: #fafaf7;    /* matches --slate-surface-tint */
 
 	--warn: var(--slate-arches);
 	--crit: #8a3a24;
@@ -79,34 +82,57 @@
 .so-exec .page-meta .crit b { color: var(--crit); }
 
 /* ---------- Tabs ---- */
+/* Hardened against WP theme/button defaults that may inject pink/blue
+ * highlights on <button> elements. Scoped + !important required. */
 .so-exec .tabs {
 	display: flex; gap: 0;
 	border-bottom: 1px solid var(--rule);
 	margin-bottom: 20px;
 }
-.so-exec .tab {
+.so-exec .tabs .tab {
+	-webkit-appearance: none !important;
+	appearance: none !important;
 	display: inline-flex; align-items: center; gap: 8px;
 	padding: 10px 18px 11px; cursor: pointer;
-	background: transparent; border: 0;
-	font-family: inherit; font-size: 13px; color: var(--ink-2);
-	border-bottom: 2px solid transparent;
-	margin-bottom: -1px; transition: color .12s, border-color .12s;
+	background: transparent !important;
+	border: 0 !important;
+	border-bottom: 2px solid transparent !important;
+	box-shadow: none !important;
+	outline: none;
+	font-family: inherit; font-size: 13px; font-weight: 500;
+	color: var(--ink-2) !important;
+	margin-bottom: -1px;
+	transition: color .12s, border-color .12s, background .12s;
 }
-.so-exec .tab:hover { color: var(--ink); }
-.so-exec .tab.active {
-	color: var(--slate-sage);
-	border-bottom-color: var(--slate-sage);
+.so-exec .tabs .tab:hover {
+	background: rgba(64, 79, 75, 0.06) !important;
+	color: var(--slate-sage) !important;
+}
+.so-exec .tabs .tab:focus,
+.so-exec .tabs .tab:focus-visible {
+	outline: 2px solid rgba(64, 79, 75, 0.35) !important;
+	outline-offset: 2px;
+	box-shadow: none !important;
+}
+.so-exec .tabs .tab.active {
+	background: transparent !important;
+	color: var(--slate-sage) !important;
+	border-bottom-color: var(--slate-sage) !important;
+	box-shadow: none !important;
 	font-weight: 600;
 }
-.so-exec .tab.active svg { color: var(--slate-sage); }
-.so-exec .tab svg { width: 14px; height: 14px; }
-.so-exec .tab .count {
+.so-exec .tabs .tab.active svg { color: var(--slate-sage); }
+.so-exec .tabs .tab svg { width: 14px; height: 14px; }
+.so-exec .tabs .tab .count {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-size: 10.5px; padding: 1px 6px; border-radius: 9px;
 	background: var(--rule-2); color: var(--ink-2);
 	font-variant-numeric: tabular-nums;
 }
-.so-exec .tab.active .count { background: rgba(64,79,75,.15); color: var(--slate-sage); }
+.so-exec .tabs .tab.active .count {
+	background: var(--slate-sage) !important;
+	color: #ffffff !important;
+}
 
 .so-exec .tab-pane { display: none; }
 .so-exec .tab-pane.active { display: block; }
@@ -212,27 +238,41 @@
 }
 .so-exec .actions { display: flex; gap: 8px; }
 .so-exec .btn {
-	background: var(--card); border: 1px solid var(--rule);
-	padding: 5px 10px; font-size: 12px; font-family: inherit; color: var(--ink);
-	cursor: pointer;
+	-webkit-appearance: none; appearance: none;
+	background: var(--card) !important;
+	border: 1px solid var(--rule) !important;
+	border-radius: 5px;
+	padding: 6px 12px; font-size: 12.5px; font-weight: 500;
+	font-family: inherit; color: var(--ink) !important;
+	box-shadow: none !important; cursor: pointer;
+	transition: border-color .12s, background .12s;
 }
-.so-exec .btn:hover { border-color: var(--ink-2); }
-.so-exec .btn.ghost { background: transparent; }
+.so-exec .btn:hover { border-color: var(--muted-2) !important; background: var(--row-hover) !important; }
+.so-exec .btn:focus-visible {
+	outline: 2px solid rgba(64, 79, 75, 0.35) !important;
+	outline-offset: 2px;
+}
+.so-exec .btn.ghost { background: transparent !important; }
 
 .so-exec .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
 
-/* ---------- Tables ---- */
-.so-exec .t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.so-exec .t th, .so-exec .t td { padding: 9px 16px; text-align: left; }
+/* ---------- Tables (matches Purchasing .pur-table) ---- */
+.so-exec .t { width: 100%; border-collapse: collapse; font-size: 13px; }
+.so-exec .t th, .so-exec .t td { padding: 11px 16px; text-align: left; }
+.so-exec .t thead tr { background: var(--thead-bg); border-bottom: 1px solid var(--rule); }
 .so-exec .t thead th {
 	font-family: inherit;
-	font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
-	color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--rule);
-	background: var(--thead-bg);
+	font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase;
+	color: var(--muted); font-weight: 600; white-space: nowrap;
+	background: transparent;
 }
-.so-exec .t tbody tr { border-bottom: 1px solid var(--rule-2); }
+.so-exec .t tbody tr {
+	border-bottom: 1px solid var(--rule-2);
+	transition: background 80ms ease;
+}
 .so-exec .t tbody tr:last-child { border-bottom: 0; }
-.so-exec .t tbody tr:hover { background: var(--thead-bg); }
+.so-exec .t tbody tr:hover { background: var(--row-hover); }
+.so-exec .t tbody td { padding: 14px 16px; vertical-align: middle; }
 .so-exec .t .num {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
@@ -310,15 +350,28 @@
 	width: 100%; padding: 2px 0;
 }
 .so-exec .chip {
+	-webkit-appearance: none; appearance: none;
 	display: inline-flex; align-items: center; gap: 5px;
-	padding: 4px 10px; border: 1px solid var(--rule);
-	background: var(--card); cursor: pointer;
-	font-family: inherit; font-size: 11.5px; color: var(--ink-2);
+	padding: 5px 11px; border: 1px solid var(--rule) !important;
+	border-radius: 5px;
+	background: var(--card) !important; cursor: pointer;
+	font-family: inherit; font-size: 12px; font-weight: 500;
+	color: var(--ink-2) !important;
+	box-shadow: none !important;
+	transition: border-color .12s, background .12s, color .12s;
+}
+.so-exec .chip:hover { border-color: var(--muted-2) !important; background: var(--row-hover) !important; }
+.so-exec .chip:focus-visible {
+	outline: 2px solid rgba(64, 79, 75, 0.35) !important;
+	outline-offset: 2px;
 }
 .so-exec .chip .caret { font-size: 9px; color: var(--muted); }
 .so-exec .chip.toggle { user-select: none; }
-.so-exec .chip.toggle:hover { border-color: var(--ink-2); }
-.so-exec .chip.toggle.on { background: rgba(64,79,75,.12); border-color: var(--slate-sage); color: var(--slate-sage); }
+.so-exec .chip.toggle.on {
+	background: rgba(64,79,75,.10) !important;
+	border-color: var(--slate-sage) !important;
+	color: var(--slate-sage) !important;
+}
 .so-exec .chip select {
 	border: 0; outline: 0; background: transparent; font-family: inherit;
 	font-size: 11.5px; color: var(--ink-2); cursor: pointer;
