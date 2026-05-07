@@ -111,9 +111,9 @@ eq(Slate_Ops_Statuses::label('INTAKE'),                    'Intake',           '
 eq(Slate_Ops_Statuses::label('READY_FOR_BUILD'),           'Ready for Build',  'READY_FOR_BUILD label');
 eq(Slate_Ops_Statuses::label('QUEUED'),                    'Queued',           'QUEUED label');
 eq(Slate_Ops_Statuses::label('IN_PROGRESS'),               'In Progress',      'IN_PROGRESS label');
-eq(Slate_Ops_Statuses::label('PENDING_QC'),                'Pending QC',       'PENDING_QC label');
-eq(Slate_Ops_Statuses::label('READY_FOR_PICKUP'),          'Ready for Pickup', 'READY_FOR_PICKUP label');
-eq(Slate_Ops_Statuses::label('COMPLETE'),                  'Complete',         'COMPLETE label');
+eq(Slate_Ops_Statuses::label('PENDING_QC'),                'Ready for Closeout', 'PENDING_QC label');
+eq(Slate_Ops_Statuses::label('READY_FOR_PICKUP'),          'Closed',           'READY_FOR_PICKUP label');
+eq(Slate_Ops_Statuses::label('COMPLETE'),                  'Closed',           'COMPLETE label');
 eq(Slate_Ops_Statuses::label('DELAYED'),                   'Delayed',          'DELAYED label');
 eq(Slate_Ops_Statuses::label('ON_HOLD'),                   'On Hold',          'ON_HOLD label');
 eq(Slate_Ops_Statuses::label('PENDING_INTAKE'),            'Intake',           'legacy PENDING_INTAKE → label "Intake"');
