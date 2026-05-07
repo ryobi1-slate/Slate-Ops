@@ -23,6 +23,9 @@
  *   $page_class  string   — CSS class derived from route (e.g. ops-page-tech); optional
  *   $role_label  string   — human-readable role label
  *   $user        WP_User  — current user object
+ *   $is_embed    bool     — when true (?embed=1), suppress topbar + sidebar so
+ *                           the page renders cleanly inside an iframe; access
+ *                           checks are unaffected. Optional; defaults to false.
  *
  * Shell structure:
  *   .ops-shell (column flex, 100vh)
@@ -35,6 +38,7 @@
 if (!defined('ABSPATH')) exit;
 
 $shell_part = $shell_part ?? 'open';
+$is_embed   = !empty($is_embed);
 
 if ($shell_part === 'open') : ?>
 <!doctype html>
@@ -46,14 +50,16 @@ if ($shell_part === 'open') : ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@8..144,300..700&display=swap" rel="stylesheet">
+  <?php if (!$is_embed) : ?>
   <script>try{if(localStorage.getItem('slate_ops_sidebar_collapsed')==='1')document.documentElement.classList.add('ops-sidebar-collapsed');}catch(e){}</script>
+  <?php endif; ?>
   <?php wp_head(); ?>
 </head>
-<body class="slate-ops <?php echo esc_attr($role_class); ?> <?php echo esc_attr($page_class ?? ''); ?>">
+<body class="slate-ops <?php echo esc_attr($role_class); ?> <?php echo esc_attr($page_class ?? ''); ?><?php echo $is_embed ? ' ops-embed' : ''; ?>">
 <div id="slate-ops-app" class="ops-shell">
-  <?php include SLATE_OPS_PATH . 'includes/ui/topbar.php'; ?>
+  <?php if (!$is_embed) include SLATE_OPS_PATH . 'includes/ui/topbar.php'; ?>
   <div class="ops-shell-body">
-    <?php include SLATE_OPS_PATH . 'includes/ui/sidebar.php'; ?>
+    <?php if (!$is_embed) include SLATE_OPS_PATH . 'includes/ui/sidebar.php'; ?>
     <div class="ops-body">
       <section class="ops-content">
         <div id="ops-view"></div>

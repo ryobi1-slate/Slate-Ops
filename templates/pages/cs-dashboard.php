@@ -90,6 +90,7 @@ $health_tone_class_map = [
   <!-- Sub-tabs -->
   <nav class="ops-subnav" id="ops-subnav">
     <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
+    <button class="ops-subtab" data-tab="workspace"><span class="material-symbols-outlined">support_agent</span>Workspace</button>
     <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count"><?php echo esc_html((string) $subtab_counts['intake']); ?></span></button>
     <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
     <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>
@@ -290,6 +291,28 @@ $health_tone_class_map = [
 
     </div>
 
+  </div>
+
+  <!-- ── WORKSPACE TAB ── -->
+  <!-- Embeds the legacy React /ops/cs page in an iframe. Lazy-loaded on
+       first activation; iframe persists in the DOM after that so subsequent
+       tab switches are instant. The iframe uses ?embed=1 which suppresses
+       the parent shell's topbar and sidebar (see layout-shell.php). -->
+  <div class="ops-tab-content" data-tab-content="workspace" hidden>
+    <div class="ops-workspace">
+      <div class="ops-workspace__skeleton" id="workspace-skeleton">
+        <span class="material-symbols-outlined ops-workspace__spinner" aria-hidden="true">progress_activity</span>
+        <span class="ops-workspace__skeleton-label">Loading workspace…</span>
+      </div>
+      <iframe
+        class="ops-workspace__frame"
+        id="workspace-frame"
+        src=""
+        data-src="/ops/cs?embed=1"
+        title="CS Workspace"
+        loading="lazy"
+        hidden></iframe>
+    </div>
   </div>
 
   <!-- Other tabs (stub views) -->

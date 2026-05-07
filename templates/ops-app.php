@@ -52,6 +52,12 @@ $route_map = [
 $page_slug = $route_map[$_ops_route] ?? null;
 $is_blocked = $page_slug && !slate_ops_current_user_can_access_ops_page($page_slug);
 
+// Embed mode: ?embed=1 strips topbar + sidebar so the page renders cleanly
+// inside an iframe (used by the CS Dashboard's Workspace tab to bridge the
+// legacy React /ops/cs page). Presentation flag only — access checks are
+// unaffected.
+$is_embed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+
 // `exec` is the canonical Executive route; only that path renders the
 // server-side Executive Dashboard V2 template. The empty `/ops/` path
 // keeps its legacy React-app behavior.

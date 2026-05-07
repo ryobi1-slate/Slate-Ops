@@ -1954,3 +1954,19 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
 .ops-page-admin #ops-page-access-save:focus-visible {
   background-color: var(--slate-sage-ink) !important;
 }
+
+/* =========== EMBED MODE =========== */
+/*
+ * Applied when /ops/* is loaded with ?embed=1 (e.g. inside the CS Dashboard's
+ * Workspace iframe). Topbar + sidebar are suppressed in PHP; this block
+ * normalises the body and forces the embedded background to match the
+ * cream `.ops-content` of the parent dashboard so there is no visible seam
+ * across the iframe boundary. Without this rule the embedded body would
+ * paint `--sand` (#f4f1e8), one shade lighter than the parent's cream
+ * `--slate-surface-page` (#F5F3ED).
+ */
+body.slate-ops.ops-embed {
+  margin: 0;
+  padding: 0;
+  background: var(--slate-surface-page);
+}

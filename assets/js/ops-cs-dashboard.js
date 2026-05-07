@@ -221,6 +221,36 @@
     toastT = setTimeout(function () { toast.classList.remove('show'); }, 2400);
   }
 
+  // ─── Workspace tab (lazy iframe + scroll lock) ───────────────────────
+  // The legacy React /ops/cs page is embedded in an iframe. The iframe
+  // src is left empty in the template and only set on first activation,
+  // so users who never click Workspace don't pay for the React bundle.
+  // Once loaded, the iframe stays in the DOM with its src intact.
+  function activateWorkspace() {
+    document.documentElement.classList.add('cs-workspace-active');
+    document.body.classList.add('cs-workspace-active');
+
+    var frame    = document.getElementById('workspace-frame');
+    var skeleton = document.getElementById('workspace-skeleton');
+    if (!frame) return;
+
+    if (!frame.getAttribute('src')) {
+      if (skeleton) skeleton.hidden = false;
+      frame.hidden = true;
+      frame.addEventListener('load', function () {
+        if (skeleton) skeleton.hidden = true;
+        frame.hidden = false;
+      }, { once: true });
+      frame.setAttribute('src', frame.dataset.src);
+    }
+  }
+
+  function deactivateWorkspace() {
+    document.documentElement.classList.remove('cs-workspace-active');
+    document.body.classList.remove('cs-workspace-active');
+    // Iframe stays in the DOM with src intact — do NOT clear it.
+  }
+
   // ─── Sub-tabs ─────────────────────────────────────────────────────────
   $$('.ops-subtab').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -231,6 +261,11 @@
       $$('.ops-tab-content').forEach(function (c) {
         c.hidden = c.dataset.tabContent !== tab;
       });
+      if (tab === 'workspace') {
+        activateWorkspace();
+      } else {
+        deactivateWorkspace();
+      }
     });
   });
 
