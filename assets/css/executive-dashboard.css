@@ -28,6 +28,7 @@
 	--muted-2: #8e8a7c;
 	--rule: #e6e1d0;
 	--rule-2: #efe9da;
+	--thead-bg: #f7f5ec;
 
 	--warn: var(--slate-arches);
 	--crit: #8a3a24;
@@ -38,6 +39,7 @@
 	color: var(--ink);
 	font-size: 13px;
 	line-height: 1.4;
+	background: transparent;
 }
 
 .so-exec *,
@@ -47,7 +49,7 @@
 .so-exec .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
 /* ---------- Page wrap ---- */
-.so-exec .page-wrap { max-width: 1480px; margin: 0 auto; padding: 20px 28px 64px; }
+.so-exec .page-wrap { max-width: 1480px; margin: 0 auto; padding: 20px 28px 64px; background: transparent; }
 
 /* ---------- Header ---- */
 .so-exec .page-head {
@@ -57,13 +59,14 @@
 	margin-bottom: 18px;
 }
 .so-exec .eyebrow {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
-	font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
-	color: var(--slate-sage); font-weight: 500; margin-bottom: 6px;
+	font-family: inherit;
+	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+	color: var(--slate-sage); font-weight: 600; margin-bottom: 6px;
 }
 .so-exec .page-title {
-	font-size: 26px; font-weight: 600; letter-spacing: -0.01em;
-	margin: 0; color: var(--ink); font-variation-settings: "wdth" 95;
+	font-family: inherit;
+	font-size: 26px; font-weight: 700; letter-spacing: -0.01em;
+	margin: 0; color: var(--ink);
 }
 .so-exec .page-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .so-exec .page-meta {
@@ -101,6 +104,7 @@
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-size: 10.5px; padding: 1px 6px; border-radius: 9px;
 	background: var(--rule-2); color: var(--ink-2);
+	font-variant-numeric: tabular-nums;
 }
 .so-exec .tab.active .count { background: rgba(64,79,75,.15); color: var(--slate-sage); }
 
@@ -130,11 +134,12 @@
 .so-exec .kpi .k-label {
 	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
 	color: var(--muted); display: flex; align-items: center; gap: 8px;
-	font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 500;
+	font-family: inherit; font-weight: 600;
 }
 .so-exec .k-status {
 	font-size: 9.5px; padding: 1px 6px; border-radius: 2px;
 	background: var(--rule-2); color: var(--ink-2);
+	letter-spacing: 0.06em; font-weight: 600;
 }
 .so-exec .k-status.crit { background: rgba(138,58,44,.12); color: var(--crit); }
 .so-exec .k-status.warn { background: rgba(216,107,25,.15); color: var(--warn); }
@@ -163,21 +168,22 @@
 	border-left: 3px solid var(--slate-sage);
 }
 .so-exec .readout-head .eyebrow { color: var(--slate-sage); margin-bottom: 0; }
-.so-exec .readout-head .title { font-size: 16px; font-weight: 600; line-height: 1.25; margin-top: 6px; color: var(--ink); }
+.so-exec .readout-head .title { font-size: 16px; font-weight: 700; line-height: 1.25; margin-top: 6px; color: var(--ink); }
 .so-exec .readout-head .stamp {
 	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px;
-	letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; margin-top: 12px;
+	letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; margin-top: 12px;
 }
 .so-exec .readout-cell { padding: 14px 16px; }
 .so-exec .readout-cell .label {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
-	color: var(--ink); display: flex; align-items: center; gap: 8px; font-weight: 500;
+	color: var(--ink); display: flex; align-items: center; gap: 8px; font-weight: 600;
 }
 .so-exec .readout-cell p { font-size: 13px; line-height: 1.5; margin: 8px 0 12px; color: var(--ink); text-wrap: pretty; }
 .so-exec .readout-cell .row-stat {
 	display: flex; gap: 14px;
-	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px;
+	font-family: inherit;
+	font-size: 11.5px; font-variant-numeric: tabular-nums;
 	color: var(--muted); padding-top: 10px; border-top: 1px dashed var(--rule);
 }
 .so-exec .readout-cell .row-stat b { color: var(--ink); font-weight: 600; }
@@ -193,13 +199,16 @@
 	padding: 12px 16px; border-bottom: 1px solid var(--rule);
 }
 .so-exec .card-head h3 {
+	font-family: inherit;
 	font-size: 13.5px; margin: 0; font-weight: 600;
 	display: flex; align-items: center; gap: 8px;
+	letter-spacing: 0;
 }
 .so-exec .count-pill {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-size: 10.5px; padding: 2px 7px; border-radius: 2px;
 	background: var(--rule-2); color: var(--ink-2); font-weight: 500;
+	font-variant-numeric: tabular-nums;
 }
 .so-exec .actions { display: flex; gap: 8px; }
 .so-exec .btn {
@@ -216,14 +225,14 @@
 .so-exec .t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .so-exec .t th, .so-exec .t td { padding: 9px 16px; text-align: left; }
 .so-exec .t thead th {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
-	color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--rule);
-	background: #fbf8f0;
+	color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--rule);
+	background: var(--thead-bg);
 }
 .so-exec .t tbody tr { border-bottom: 1px solid var(--rule-2); }
 .so-exec .t tbody tr:last-child { border-bottom: 0; }
-.so-exec .t tbody tr:hover { background: #fbf8f0; }
+.so-exec .t tbody tr:hover { background: var(--thead-bg); }
 .so-exec .t .num {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
@@ -239,7 +248,8 @@
 .so-exec .bad { color: var(--crit); font-weight: 500; }
 .so-exec .foot {
 	display: flex; justify-content: space-between; padding: 10px 16px;
-	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10.5px;
+	font-family: inherit;
+	font-size: 11.5px; font-variant-numeric: tabular-nums;
 	color: var(--muted); border-top: 1px solid var(--rule);
 }
 
@@ -257,10 +267,10 @@
 /* ---------- Tags ---- */
 .so-exec .tag {
 	display: inline-flex; align-items: center; gap: 5px;
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
 	padding: 2px 6px; border-radius: 2px;
-	background: var(--rule-2); color: var(--ink-2); font-weight: 500;
+	background: var(--rule-2); color: var(--ink-2); font-weight: 600;
 }
 .so-exec .tag .dot { width: 5px; height: 5px; }
 .so-exec .tag.muted  { background: var(--rule-2); color: var(--muted); }
@@ -318,7 +328,7 @@
 .so-exec .help-card {
 	display: flex; gap: 8px; align-items: flex-start;
 	padding: 9px 16px; border-bottom: 1px solid var(--rule);
-	background: #faf6e8; color: var(--ink-2);
+	background: var(--thead-bg); color: var(--ink-2);
 	font-size: 12px; line-height: 1.5;
 }
 .so-exec .help-card svg { color: var(--slate-sage); flex-shrink: 0; margin-top: 1px; }
@@ -349,21 +359,21 @@
 }
 .so-exec .trust .score {
 	padding: 18px 20px; border-right: 1px solid var(--rule);
-	background: linear-gradient(180deg, #faf6e8, transparent 50%);
+	background: var(--card);
 }
 .so-exec .trust .score .lbl {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
-	color: var(--muted); font-weight: 500;
+	color: var(--muted); font-weight: 600;
 }
 .so-exec .trust .score .val {
-	font-size: 32px; font-weight: 600; color: var(--crit);
+	font-size: 32px; font-weight: 700; color: var(--crit);
 	margin-top: 6px; letter-spacing: -0.02em;
-	font-variation-settings: "wdth" 95;
 }
 .so-exec .trust .score .val .pct {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-size: 14px; color: var(--ink-2); margin-left: 8px; font-weight: 500;
+	font-variant-numeric: tabular-nums;
 }
 .so-exec .trust .score .desc { font-size: 12.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.5; max-width: 36ch; }
 .so-exec .trust .factors { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -396,15 +406,14 @@
 .so-exec .reason.crit::before { background: var(--crit); }
 .so-exec .reason.warn::before { background: var(--warn); }
 .so-exec .reason .lbl {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
-	color: var(--muted); font-weight: 500;
+	color: var(--muted); font-weight: 600;
 }
 .so-exec .reason .val {
-	font-size: 22px; font-weight: 600; margin-top: 4px;
+	font-size: 22px; font-weight: 700; margin-top: 4px;
 	font-variant-numeric: tabular-nums; color: var(--ink);
 	display: flex; align-items: baseline; gap: 8px;
-	font-variation-settings: "wdth" 95;
 }
 .so-exec .reason .val .delta {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
