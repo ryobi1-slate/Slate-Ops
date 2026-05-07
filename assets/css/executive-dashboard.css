@@ -12,6 +12,8 @@
  * ============================================================ */
 
 /* ---------- Slate token fallbacks ---- */
+/* Token values mirror ops-shell.css / purchasing.css so the page
+ * inherits the established Slate Ops surface, divider, and ink scale. */
 .so-exec {
 	--slate-sage: #404f4b;
 	--slate-sand: #e1dfc8;
@@ -22,12 +24,14 @@
 
 	--page-bg: #f3f1e6;
 	--card: #ffffff;
-	--ink: #1a1a17;
+	--ink: #2a2e2c;          /* matches --slate-ink */
 	--ink-2: #3a3a35;
-	--muted: #6e6a5e;
-	--muted-2: #8e8a7c;
-	--rule: #e6e1d0;
-	--rule-2: #efe9da;
+	--muted: #5a5e5c;        /* matches --slate-ink-muted */
+	--muted-2: #8a8880;      /* matches --slate-ink-subtle */
+	--rule: #e6e2d4;         /* matches --slate-divider */
+	--rule-2: #f0ede3;       /* matches --slate-divider-soft */
+	--thead-bg: #f2f3f1;     /* matches --slate-sage-wash (Purchasing thead) */
+	--row-hover: #fafaf7;    /* matches --slate-surface-tint */
 
 	--warn: var(--slate-arches);
 	--crit: #8a3a24;
@@ -38,6 +42,7 @@
 	color: var(--ink);
 	font-size: 13px;
 	line-height: 1.4;
+	background: transparent;
 }
 
 .so-exec *,
@@ -47,7 +52,7 @@
 .so-exec .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
 /* ---------- Page wrap ---- */
-.so-exec .page-wrap { max-width: 1480px; margin: 0 auto; padding: 20px 28px 64px; }
+.so-exec .page-wrap { max-width: 1480px; margin: 0 auto; padding: 20px 28px 64px; background: transparent; }
 
 /* ---------- Header ---- */
 .so-exec .page-head {
@@ -57,13 +62,14 @@
 	margin-bottom: 18px;
 }
 .so-exec .eyebrow {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
-	font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
-	color: var(--slate-sage); font-weight: 500; margin-bottom: 6px;
+	font-family: inherit;
+	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+	color: var(--slate-sage); font-weight: 600; margin-bottom: 6px;
 }
 .so-exec .page-title {
-	font-size: 26px; font-weight: 600; letter-spacing: -0.01em;
-	margin: 0; color: var(--ink); font-variation-settings: "wdth" 95;
+	font-family: inherit;
+	font-size: 26px; font-weight: 700; letter-spacing: -0.01em;
+	margin: 0; color: var(--ink);
 }
 .so-exec .page-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .so-exec .page-meta {
@@ -76,33 +82,57 @@
 .so-exec .page-meta .crit b { color: var(--crit); }
 
 /* ---------- Tabs ---- */
+/* Hardened against WP theme/button defaults that may inject pink/blue
+ * highlights on <button> elements. Scoped + !important required. */
 .so-exec .tabs {
 	display: flex; gap: 0;
 	border-bottom: 1px solid var(--rule);
 	margin-bottom: 20px;
 }
-.so-exec .tab {
+.so-exec .tabs .tab {
+	-webkit-appearance: none !important;
+	appearance: none !important;
 	display: inline-flex; align-items: center; gap: 8px;
 	padding: 10px 18px 11px; cursor: pointer;
-	background: transparent; border: 0;
-	font-family: inherit; font-size: 13px; color: var(--ink-2);
-	border-bottom: 2px solid transparent;
-	margin-bottom: -1px; transition: color .12s, border-color .12s;
+	background: transparent !important;
+	border: 0 !important;
+	border-bottom: 2px solid transparent !important;
+	box-shadow: none !important;
+	outline: none;
+	font-family: inherit; font-size: 13px; font-weight: 500;
+	color: var(--ink-2) !important;
+	margin-bottom: -1px;
+	transition: color .12s, border-color .12s, background .12s;
 }
-.so-exec .tab:hover { color: var(--ink); }
-.so-exec .tab.active {
-	color: var(--slate-sage);
-	border-bottom-color: var(--slate-sage);
+.so-exec .tabs .tab:hover {
+	background: rgba(64, 79, 75, 0.06) !important;
+	color: var(--slate-sage) !important;
+}
+.so-exec .tabs .tab:focus,
+.so-exec .tabs .tab:focus-visible {
+	outline: 2px solid rgba(64, 79, 75, 0.35) !important;
+	outline-offset: 2px;
+	box-shadow: none !important;
+}
+.so-exec .tabs .tab.active {
+	background: transparent !important;
+	color: var(--slate-sage) !important;
+	border-bottom-color: var(--slate-sage) !important;
+	box-shadow: none !important;
 	font-weight: 600;
 }
-.so-exec .tab.active svg { color: var(--slate-sage); }
-.so-exec .tab svg { width: 14px; height: 14px; }
-.so-exec .tab .count {
+.so-exec .tabs .tab.active svg { color: var(--slate-sage); }
+.so-exec .tabs .tab svg { width: 14px; height: 14px; }
+.so-exec .tabs .tab .count {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-size: 10.5px; padding: 1px 6px; border-radius: 9px;
 	background: var(--rule-2); color: var(--ink-2);
+	font-variant-numeric: tabular-nums;
 }
-.so-exec .tab.active .count { background: rgba(64,79,75,.15); color: var(--slate-sage); }
+.so-exec .tabs .tab.active .count {
+	background: var(--slate-sage) !important;
+	color: #ffffff !important;
+}
 
 .so-exec .tab-pane { display: none; }
 .so-exec .tab-pane.active { display: block; }
@@ -130,11 +160,12 @@
 .so-exec .kpi .k-label {
 	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
 	color: var(--muted); display: flex; align-items: center; gap: 8px;
-	font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 500;
+	font-family: inherit; font-weight: 600;
 }
 .so-exec .k-status {
 	font-size: 9.5px; padding: 1px 6px; border-radius: 2px;
 	background: var(--rule-2); color: var(--ink-2);
+	letter-spacing: 0.06em; font-weight: 600;
 }
 .so-exec .k-status.crit { background: rgba(138,58,44,.12); color: var(--crit); }
 .so-exec .k-status.warn { background: rgba(216,107,25,.15); color: var(--warn); }
@@ -163,21 +194,22 @@
 	border-left: 3px solid var(--slate-sage);
 }
 .so-exec .readout-head .eyebrow { color: var(--slate-sage); margin-bottom: 0; }
-.so-exec .readout-head .title { font-size: 16px; font-weight: 600; line-height: 1.25; margin-top: 6px; color: var(--ink); }
+.so-exec .readout-head .title { font-size: 16px; font-weight: 700; line-height: 1.25; margin-top: 6px; color: var(--ink); }
 .so-exec .readout-head .stamp {
 	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px;
-	letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; margin-top: 12px;
+	letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; margin-top: 12px;
 }
 .so-exec .readout-cell { padding: 14px 16px; }
 .so-exec .readout-cell .label {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
-	color: var(--ink); display: flex; align-items: center; gap: 8px; font-weight: 500;
+	color: var(--ink); display: flex; align-items: center; gap: 8px; font-weight: 600;
 }
 .so-exec .readout-cell p { font-size: 13px; line-height: 1.5; margin: 8px 0 12px; color: var(--ink); text-wrap: pretty; }
 .so-exec .readout-cell .row-stat {
 	display: flex; gap: 14px;
-	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px;
+	font-family: inherit;
+	font-size: 11.5px; font-variant-numeric: tabular-nums;
 	color: var(--muted); padding-top: 10px; border-top: 1px dashed var(--rule);
 }
 .so-exec .readout-cell .row-stat b { color: var(--ink); font-weight: 600; }
@@ -193,37 +225,54 @@
 	padding: 12px 16px; border-bottom: 1px solid var(--rule);
 }
 .so-exec .card-head h3 {
+	font-family: inherit;
 	font-size: 13.5px; margin: 0; font-weight: 600;
 	display: flex; align-items: center; gap: 8px;
+	letter-spacing: 0;
 }
 .so-exec .count-pill {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-size: 10.5px; padding: 2px 7px; border-radius: 2px;
 	background: var(--rule-2); color: var(--ink-2); font-weight: 500;
+	font-variant-numeric: tabular-nums;
 }
 .so-exec .actions { display: flex; gap: 8px; }
 .so-exec .btn {
-	background: var(--card); border: 1px solid var(--rule);
-	padding: 5px 10px; font-size: 12px; font-family: inherit; color: var(--ink);
-	cursor: pointer;
+	-webkit-appearance: none; appearance: none;
+	background: var(--card) !important;
+	border: 1px solid var(--rule) !important;
+	border-radius: 5px;
+	padding: 6px 12px; font-size: 12.5px; font-weight: 500;
+	font-family: inherit; color: var(--ink) !important;
+	box-shadow: none !important; cursor: pointer;
+	transition: border-color .12s, background .12s;
 }
-.so-exec .btn:hover { border-color: var(--ink-2); }
-.so-exec .btn.ghost { background: transparent; }
+.so-exec .btn:hover { border-color: var(--muted-2) !important; background: var(--row-hover) !important; }
+.so-exec .btn:focus-visible {
+	outline: 2px solid rgba(64, 79, 75, 0.35) !important;
+	outline-offset: 2px;
+}
+.so-exec .btn.ghost { background: transparent !important; }
 
 .so-exec .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
 
-/* ---------- Tables ---- */
-.so-exec .t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.so-exec .t th, .so-exec .t td { padding: 9px 16px; text-align: left; }
+/* ---------- Tables (matches Purchasing .pur-table) ---- */
+.so-exec .t { width: 100%; border-collapse: collapse; font-size: 13px; }
+.so-exec .t th, .so-exec .t td { padding: 11px 16px; text-align: left; }
+.so-exec .t thead tr { background: var(--thead-bg); border-bottom: 1px solid var(--rule); }
 .so-exec .t thead th {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
-	font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
-	color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--rule);
-	background: #fbf8f0;
+	font-family: inherit;
+	font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase;
+	color: var(--muted); font-weight: 600; white-space: nowrap;
+	background: transparent;
 }
-.so-exec .t tbody tr { border-bottom: 1px solid var(--rule-2); }
+.so-exec .t tbody tr {
+	border-bottom: 1px solid var(--rule-2);
+	transition: background 80ms ease;
+}
 .so-exec .t tbody tr:last-child { border-bottom: 0; }
-.so-exec .t tbody tr:hover { background: #fbf8f0; }
+.so-exec .t tbody tr:hover { background: var(--row-hover); }
+.so-exec .t tbody td { padding: 14px 16px; vertical-align: middle; }
 .so-exec .t .num {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
@@ -239,7 +288,8 @@
 .so-exec .bad { color: var(--crit); font-weight: 500; }
 .so-exec .foot {
 	display: flex; justify-content: space-between; padding: 10px 16px;
-	font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10.5px;
+	font-family: inherit;
+	font-size: 11.5px; font-variant-numeric: tabular-nums;
 	color: var(--muted); border-top: 1px solid var(--rule);
 }
 
@@ -257,10 +307,10 @@
 /* ---------- Tags ---- */
 .so-exec .tag {
 	display: inline-flex; align-items: center; gap: 5px;
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
 	padding: 2px 6px; border-radius: 2px;
-	background: var(--rule-2); color: var(--ink-2); font-weight: 500;
+	background: var(--rule-2); color: var(--ink-2); font-weight: 600;
 }
 .so-exec .tag .dot { width: 5px; height: 5px; }
 .so-exec .tag.muted  { background: var(--rule-2); color: var(--muted); }
@@ -300,15 +350,28 @@
 	width: 100%; padding: 2px 0;
 }
 .so-exec .chip {
+	-webkit-appearance: none; appearance: none;
 	display: inline-flex; align-items: center; gap: 5px;
-	padding: 4px 10px; border: 1px solid var(--rule);
-	background: var(--card); cursor: pointer;
-	font-family: inherit; font-size: 11.5px; color: var(--ink-2);
+	padding: 5px 11px; border: 1px solid var(--rule) !important;
+	border-radius: 5px;
+	background: var(--card) !important; cursor: pointer;
+	font-family: inherit; font-size: 12px; font-weight: 500;
+	color: var(--ink-2) !important;
+	box-shadow: none !important;
+	transition: border-color .12s, background .12s, color .12s;
+}
+.so-exec .chip:hover { border-color: var(--muted-2) !important; background: var(--row-hover) !important; }
+.so-exec .chip:focus-visible {
+	outline: 2px solid rgba(64, 79, 75, 0.35) !important;
+	outline-offset: 2px;
 }
 .so-exec .chip .caret { font-size: 9px; color: var(--muted); }
 .so-exec .chip.toggle { user-select: none; }
-.so-exec .chip.toggle:hover { border-color: var(--ink-2); }
-.so-exec .chip.toggle.on { background: rgba(64,79,75,.12); border-color: var(--slate-sage); color: var(--slate-sage); }
+.so-exec .chip.toggle.on {
+	background: rgba(64,79,75,.10) !important;
+	border-color: var(--slate-sage) !important;
+	color: var(--slate-sage) !important;
+}
 .so-exec .chip select {
 	border: 0; outline: 0; background: transparent; font-family: inherit;
 	font-size: 11.5px; color: var(--ink-2); cursor: pointer;
@@ -318,7 +381,7 @@
 .so-exec .help-card {
 	display: flex; gap: 8px; align-items: flex-start;
 	padding: 9px 16px; border-bottom: 1px solid var(--rule);
-	background: #faf6e8; color: var(--ink-2);
+	background: var(--thead-bg); color: var(--ink-2);
 	font-size: 12px; line-height: 1.5;
 }
 .so-exec .help-card svg { color: var(--slate-sage); flex-shrink: 0; margin-top: 1px; }
@@ -349,21 +412,21 @@
 }
 .so-exec .trust .score {
 	padding: 18px 20px; border-right: 1px solid var(--rule);
-	background: linear-gradient(180deg, #faf6e8, transparent 50%);
+	background: var(--card);
 }
 .so-exec .trust .score .lbl {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
-	color: var(--muted); font-weight: 500;
+	color: var(--muted); font-weight: 600;
 }
 .so-exec .trust .score .val {
-	font-size: 32px; font-weight: 600; color: var(--crit);
+	font-size: 32px; font-weight: 700; color: var(--crit);
 	margin-top: 6px; letter-spacing: -0.02em;
-	font-variation-settings: "wdth" 95;
 }
 .so-exec .trust .score .val .pct {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
 	font-size: 14px; color: var(--ink-2); margin-left: 8px; font-weight: 500;
+	font-variant-numeric: tabular-nums;
 }
 .so-exec .trust .score .desc { font-size: 12.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.5; max-width: 36ch; }
 .so-exec .trust .factors { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -396,15 +459,14 @@
 .so-exec .reason.crit::before { background: var(--crit); }
 .so-exec .reason.warn::before { background: var(--warn); }
 .so-exec .reason .lbl {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: inherit;
 	font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
-	color: var(--muted); font-weight: 500;
+	color: var(--muted); font-weight: 600;
 }
 .so-exec .reason .val {
-	font-size: 22px; font-weight: 600; margin-top: 4px;
+	font-size: 22px; font-weight: 700; margin-top: 4px;
 	font-variant-numeric: tabular-nums; color: var(--ink);
 	display: flex; align-items: baseline; gap: 8px;
-	font-variation-settings: "wdth" 95;
 }
 .so-exec .reason .val .delta {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
