@@ -1780,17 +1780,31 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 
 
 /* CS detail panel — compact form density (scoped to the right-hand drawer
-   only; does not affect other Ops pages). Desktop targets ~36px input
-   height; mobile keeps ≥40px touch targets. */
+   only; does not affect other Ops pages). Desktop targets ~32–34px input
+   height with tight label/field spacing. Mobile keeps ≥40px touch targets. */
 .ops-cs-right .ops-cs-input {
-  min-height: 36px;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  min-height: 32px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  line-height: 1.25;
 }
 .ops-cs-right textarea.ops-cs-input {
-  min-height: 72px;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  min-height: 60px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  line-height: 1.35;
+}
+/* Tighten label-to-input spacing inside the drawer. The React markup uses
+   Tailwind's mb-1 (4px) on every label; scope to drawer to halve it. */
+.ops-cs-right label {
+  margin-bottom: 2px;
+}
+/* Tighten the vertical gap between drawer fields without changing the
+   Tailwind class string in the bundle. The drawer body and the create
+   form both use `flex flex-col gap-2`; trimming this only inside
+   .ops-cs-right narrows the scope to the right-hand drawer. */
+.ops-cs-right .flex.flex-col.gap-2 {
+  gap: 6px;
 }
 @media (max-width: 639px) {
   .ops-cs-right .ops-cs-input {
@@ -1801,6 +1815,14 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
   .ops-cs-right textarea.ops-cs-input {
     padding-top: 8px;
     padding-bottom: 8px;
+  }
+  /* Restore comfortable label and field gap on mobile so touch targets
+     and tap areas stay reasonable. */
+  .ops-cs-right label {
+    margin-bottom: 4px;
+  }
+  .ops-cs-right .flex.flex-col.gap-2 {
+    gap: 8px;
   }
 }
 .ops-cs-right .flex.items-center.justify-between.pt-3.pb-3.px-4.border-t.ops-cs-border-t.bg-white.sticky.bottom-0 {
