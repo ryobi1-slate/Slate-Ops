@@ -55,11 +55,11 @@ The internal DB value and the label shown in the Ops UI are not always identical
 | `APPROVED_FOR_SCHEDULING` | Approved for Scheduling |
 | `SCHEDULED` | Scheduled |
 | `IN_PROGRESS` | In Progress |
-| `PENDING_QC` | Pending QC |
-| `COMPLETE` | Complete |
+| `PENDING_QC` | Ready for Closeout |
+| `COMPLETE` | Closed |
 | `ON_HOLD` | On Hold |
 | `DELAYED` | Delayed |
-| `COMPLETE_AWAITING_PICKUP` | Complete – Awaiting Pickup |
+| `COMPLETE_AWAITING_PICKUP` | Closed – Awaiting Pickup |
 
 ### Dealer Portal Labels
 
