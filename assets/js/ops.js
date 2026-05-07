@@ -115,14 +115,14 @@
     SCHEDULED:        'Scheduled',
     IN_PROGRESS:      'In Progress',
     BLOCKED:          'Blocked',
-    QC:               'QC',
-    COMPLETE:         'Complete',
+    QC:               'Ready for Closeout',
+    COMPLETE:         'Closed',
     ON_HOLD:          'On Hold',
     CANCELLED:        'Cancelled',
     // Legacy aliases
     QUEUED:           'Scheduled',
-    PENDING_QC:       'QC',
-    READY_FOR_PICKUP: 'Complete',
+    PENDING_QC:       'Ready for Closeout',
+    READY_FOR_PICKUP: 'Closed',
     DELAYED:          'Blocked',
   };
 
@@ -204,7 +204,7 @@
           <div class="kpi"><div class="label">Pending Intake</div><div class="value">${counts.pendingIntake}</div></div>
           <div class="kpi"><div class="label">Needs SO#</div><div class="value">${counts.needsSo}</div></div>
           <div class="kpi"><div class="label">In Progress</div><div class="value">${counts.inProgress}</div></div>
-          <div class="kpi"><div class="label">Pending QC</div><div class="value">${counts.pendingQc}</div></div>
+          <div class="kpi"><div class="label">Ready for Closeout</div><div class="value">${counts.pendingQc}</div></div>
         </div>
       </div>
 
@@ -357,7 +357,7 @@
           ${job.notes ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);"><div class="label" style="margin-bottom:4px;">Notes</div><div style="white-space:pre-wrap;">${escapeHtml(job.notes)}</div></div>` : ''}
           <div class="row" style="margin-top:16px;flex-wrap:wrap;gap:8px;">
             ${isCS ? `<button class="btn secondary" id="so-btn">Set SO#</button>` : ``}
-            ${job.status === 'IN_PROGRESS' ? `<button class="btn" id="submit-qc-btn">Submit for QC</button>` : ''}
+            ${job.status === 'IN_PROGRESS' ? `<button class="btn" id="submit-qc-btn">Work Complete</button>` : ''}
             ${(job.status === 'QC' || job.status === 'PENDING_QC') && isSupervisor ? `<button class="btn" id="qc-pass-btn">QC Pass</button><button class="btn secondary" id="qc-fail-btn">QC Fail</button>` : ''}
             ${canEdit ? `<button class="btn secondary" id="edit-btn">Edit Job</button>` : ``}
           </div>
@@ -473,13 +473,13 @@
       const notes = prompt('Describe work completed (required):');
       if(!notes || !notes.trim()) return;
       submitQcBtn.disabled = true; submitQcBtn.textContent = 'Submitting…';
-      try{ await api.submitQC(job.job_id, notes.trim()); toast('Submitted for QC'); router(); }
-      catch(e){ alert(e.message); submitQcBtn.disabled = false; submitQcBtn.textContent = 'Submit for QC'; }
+      try{ await api.submitQC(job.job_id, notes.trim()); toast('Marked Work Complete'); router(); }
+      catch(e){ alert(e.message); submitQcBtn.disabled = false; submitQcBtn.textContent = 'Work Complete'; }
     };
 
     const qcPassBtn = document.getElementById('qc-pass-btn');
     if(qcPassBtn) qcPassBtn.onclick = async ()=>{
-      if(!confirm('QC Pass — mark job Complete?')) return;
+      if(!confirm('QC Pass — mark job Closed?')) return;
       qcPassBtn.disabled = true; qcPassBtn.textContent = '…';
       try{ await api.reviewQC(job.job_id, 'PASS', ''); toast('QC Passed'); router(); }
       catch(e){ alert(e.message); qcPassBtn.disabled = false; qcPassBtn.textContent = 'QC Pass'; }
@@ -834,7 +834,7 @@
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             ${kpi('In Progress',    byS('IN_PROGRESS').length)}
             ${kpi('Queued',         byS('QUEUED').length)}
-            ${kpi('Pending QC',     byS('PENDING_QC').length)}
+            ${kpi('Ready for Closeout', byS('PENDING_QC').length + byS('QC').length)}
             <span style="padding:6px 14px;border-radius:20px;background:rgba(39,174,96,0.13);color:#1a8a4a;font-size:12px;font-weight:700;letter-spacing:.04em;">&#x2022; System Status: Optimal</span>
           </div>
         </div>
@@ -1271,7 +1271,8 @@ async function loadCreateJobInto(selector){
 
 const CS_ACTIVE_STATUSES = ['INTAKE','NEEDS_SO','READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','BLOCKED','QC','ON_HOLD','QUEUED','PENDING_QC','DELAYED'];
 // Phase 0: NEEDS_SO removed from CS_SETTABLE_STATUSES — hidden from CS dropdown until SO workflow is re-enabled.
-const CS_SETTABLE_STATUSES = ['INTAKE','READY_FOR_BUILD','SCHEDULED','BLOCKED','ON_HOLD','CANCELLED'];
+// COMPLETE (Closed) included so CS/Supervisor can close out a job after paper sign-off (from Ready for Closeout).
+const CS_SETTABLE_STATUSES = ['INTAKE','READY_FOR_BUILD','SCHEDULED','BLOCKED','ON_HOLD','COMPLETE','CANCELLED'];
 const CS_READONLY_STATUSES = ['IN_PROGRESS','QC','COMPLETE','PENDING_QC','READY_FOR_PICKUP'];
 
 const BLOCK_REASONS  = ['PARTS','ENGINEERING','CUSTOMER','LABOR','OTHER'];
@@ -1282,11 +1283,9 @@ function partsLabel(ps) {
   return {NOT_READY:'Not Ready',PARTIAL:'Partial',READY:'Ready',HOLD:'Parts Hold',ORDERED:'Ordered',ARRIVED:'Arrived'}[ps] || (ps||'—');
 }
 
-// CS-specific status label: QC displays as "Ready for Closeout" on CS page only.
+// CS-specific status label: shorthand wrapper — labels now uniformly use the
+// Phase 0 wording ("Ready for Closeout"/"Closed") via STATUS_LABELS.
 function fmtStatusCS(s) {
-  if (!s) return '';
-  const upper = s.toUpperCase();
-  if (upper === 'QC' || upper === 'PENDING_QC') return 'Ready for Closeout';
   return fmtStatus(s);
 }
 function partsBadgeClass(ps) {
@@ -1409,7 +1408,7 @@ async function loadCS() {
       {id:'scheduled',    label:'Scheduled',           count: allJobs.filter(j => ['SCHEDULED','QUEUED'].includes((j.status||'').toUpperCase())).length},
       {id:'blocked',      label:'Blocked',             count: allJobs.filter(j => ['BLOCKED','DELAYED'].includes((j.status||'').toUpperCase())).length},
       {id:'on_hold',      label:'On Hold',             count: allJobs.filter(j => (j.status||'').toUpperCase() === 'ON_HOLD').length},
-      {id:'complete',     label:'Complete',            count: allJobs.filter(j => ['COMPLETE','READY_FOR_PICKUP'].includes((j.status||'').toUpperCase())).length},
+      {id:'complete',     label:'Closed',              count: allJobs.filter(j => ['COMPLETE','READY_FOR_PICKUP'].includes((j.status||'').toUpperCase())).length},
       {id:'cancelled',    label:'Cancelled',           count: allJobs.filter(j => (j.status||'').toUpperCase() === 'CANCELLED').length},
     ];
     const filterTabs = filters.map(f =>
@@ -2558,7 +2557,7 @@ async function loadTech() {
       <div class="tech-actions">
         <button class="btn danger tech-stop" id="stop-active">Stop Work &amp; Log Labor</button>
         <div class="tech-actions-sub">
-          <button class="btn secondary" id="submit-qc-active">Submit for QC</button>
+          <button class="btn secondary" id="submit-qc-active">Work Complete</button>
           <button class="btn secondary" id="note-toggle">+ Note</button>
         </div>
       </div>
@@ -2566,7 +2565,7 @@ async function loadTech() {
       <div id="qc-submit-panel" class="tech-inline-panel" style="display:none;">
         <textarea class="input" id="qc-submit-notes" rows="3" placeholder="Describe work completed…"></textarea>
         <div class="tech-inline-actions">
-          <button class="btn" id="qc-submit-confirm" style="flex:1;">Confirm Submit for QC</button>
+          <button class="btn" id="qc-submit-confirm" style="flex:1;">Confirm Work Complete</button>
           <button class="btn secondary" id="qc-submit-cancel">Cancel</button>
         </div>
       </div>
@@ -2715,9 +2714,9 @@ async function loadTech() {
       try {
         clearInterval(state.timerInterval);
         await api.submitQC(activeJobId, notes);
-        toast('Submitted for QC');
+        toast('Marked Work Complete');
         router();
-      } catch(e) { alert(e.message); qcSubmitConfirm.disabled = false; qcSubmitConfirm.textContent = 'Confirm Submit for QC'; }
+      } catch(e) { alert(e.message); qcSubmitConfirm.disabled = false; qcSubmitConfirm.textContent = 'Confirm Work Complete'; }
     };
   }
   const qcSubmitCancel = document.getElementById('qc-submit-cancel');
@@ -2735,9 +2734,9 @@ async function loadTech() {
       btn.textContent = 'Submitting…';
       try {
         await api.submitQC(jobId, notes.trim());
-        toast('Submitted for QC');
+        toast('Marked Work Complete');
         router();
-      } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Submit for QC'; }
+      } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Work Complete'; }
     };
   });
 
@@ -2825,15 +2824,15 @@ async function loadExecutive(){
     { label: 'Ready for Build', value: countByStatus(['READY_FOR_BUILD']) },
     { label: 'Queued', value: countByStatus(['QUEUED']) },
     { label: 'In Progress', value: countByStatus(['IN_PROGRESS']) },
-    { label: 'Pending QC', value: countByStatus(['PENDING_QC']) },
-    { label: 'Complete', value: countByStatus(['COMPLETE']) },
+    { label: 'Ready for Closeout', value: countByStatus(['PENDING_QC','QC']) },
+    { label: 'Closed', value: countByStatus(['COMPLETE']) },
   ];
 
   const flowHealth = [
     { label: 'Intake', value: countByStatus(['INTAKE']) },
     { label: 'Ready queue', value: countByStatus(['READY_FOR_BUILD']) },
     { label: 'Active load', value: countByStatus(['IN_PROGRESS', 'QUEUED']) },
-    { label: 'QC waiting', value: countByStatus(['PENDING_QC']) },
+    { label: 'Ready for Closeout', value: countByStatus(['PENDING_QC','QC']) },
   ];
 
   const exceptions = [
@@ -3216,7 +3215,7 @@ async function loadAdmin() {
         <div class="value">${byS('IN_PROGRESS')}${deltaChip(5, true)}</div>
       </div>
       <div class="stat-tile">
-        <div class="label">Pending QC</div>
+        <div class="label">Ready for Closeout</div>
         <div class="value">${byS('PENDING_QC')}${deltaChip(2, false)}</div>
       </div>
       <div class="stat-tile">

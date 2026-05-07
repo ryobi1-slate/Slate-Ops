@@ -65,17 +65,18 @@ class Slate_Ops_Statuses {
     }
 
     /**
-     * Statuses CS users are permitted to set manually.
-     * IN_PROGRESS, QC, and COMPLETE must come from Tech/QC workflow.
+     * Statuses CS users are permitted to set manually (Phase 0 CS workflow).
+     * IN_PROGRESS and QC (Ready for Closeout) come from Tech/QC workflow.
+     * COMPLETE (Closed) is set by CS/Supervisor after paper sign-off.
      */
     public static function cs_settable(): array {
         return [
             self::INTAKE,
-            self::NEEDS_SO,
             self::READY_FOR_BUILD,
             self::SCHEDULED,
             self::BLOCKED,
             self::ON_HOLD,
+            self::COMPLETE,
             self::CANCELLED,
         ];
     }
@@ -122,14 +123,14 @@ class Slate_Ops_Statuses {
             self::SCHEDULED        => 'Scheduled',
             self::IN_PROGRESS      => 'In Progress',
             self::BLOCKED          => 'Blocked',
-            self::QC               => 'QC',
-            self::COMPLETE         => 'Complete',
+            self::QC               => 'Ready for Closeout',
+            self::COMPLETE         => 'Closed',
             self::ON_HOLD          => 'On Hold',
             self::CANCELLED        => 'Cancelled',
             // Legacy display labels
             self::QUEUED           => 'Scheduled',
-            self::PENDING_QC       => 'QC',
-            self::READY_FOR_PICKUP => 'Complete',
+            self::PENDING_QC       => 'Ready for Closeout',
+            self::READY_FOR_PICKUP => 'Closed',
             self::DELAYED          => 'Blocked',
         ];
     }

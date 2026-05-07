@@ -1488,12 +1488,12 @@ foreach ($rows as &$r) {
         if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
           $cur = (string)($job['status'] ?? '');
 
-          // CS v2: CS users may not manually set IN_PROGRESS, QC, or COMPLETE.
+          // Phase 0: CS may not manually set IN_PROGRESS or Ready for Closeout (QC).
           // Those states come from Tech/QC workflow actions only.
+          // Closed (COMPLETE) is CS-settable — CS/Supervisor closes after paper sign-off.
           $cs_restricted = [
             Slate_Ops_Statuses::IN_PROGRESS,
             Slate_Ops_Statuses::QC,
-            Slate_Ops_Statuses::COMPLETE,
             Slate_Ops_Statuses::PENDING_QC, // legacy alias
           ];
           if ($is_cs && !$is_supervisor && in_array($ns, $cs_restricted, true)) {
@@ -2416,7 +2416,7 @@ return self::get_job(['id' => $job_id]);
 
     if ($decision === 'PASS') {
       $new_status = Slate_Ops_Statuses::COMPLETE;
-      $audit_note = 'QC passed — job complete';
+      $audit_note = 'QC passed — job closed';
     } else {
       $new_status = Slate_Ops_Statuses::IN_PROGRESS;
       $audit_note = 'QC failed: ' . $notes;
