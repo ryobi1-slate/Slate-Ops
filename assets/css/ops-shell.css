@@ -1779,10 +1779,26 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 
 
-/* CS detail panel polish */
-.ops-cs-right .ops-cs-input { min-height: 34px; }
-.ops-cs-right textarea.ops-cs-input { min-height: 72px; }
-.ops-cs-right .flex-1.overflow-y-auto.p-4.flex.flex-col.gap-3 { gap: 10px !important; }
+/* CS detail panel — compact form density (scoped to the right-hand drawer
+   only; does not affect other Ops pages). Desktop targets ~36px input
+   height; mobile keeps ≥40px touch targets. */
+.ops-cs-right .ops-cs-input {
+  min-height: 36px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.ops-cs-right textarea.ops-cs-input {
+  min-height: 72px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+@media (max-width: 639px) {
+  .ops-cs-right .ops-cs-input {
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
 .ops-cs-right .flex.items-center.justify-between.pt-3.pb-3.px-4.border-t.ops-cs-border-t.bg-white.sticky.bottom-0 {
   padding-top: 10px;
   padding-bottom: 10px;
