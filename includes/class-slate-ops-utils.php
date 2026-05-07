@@ -321,6 +321,54 @@ class Slate_Ops_Utils {
     return ['portal', 'manual'];
   }
 
+  /**
+   * Returns the set of WordPress users qualified to be assigned as the
+   * Tech on a job — i.e. users with the slate_ops_tech / slate_tech role
+   * or the slate_ops_tech capability. Page Access by Role does NOT grant
+   * tech assignability — it controls page visibility only.
+   *
+   * Output is shaped for dropdown use:
+   *   [ ['id' => int, 'name' => string], ... ]
+   * Sorted by display name. Display names are returned as-is and should
+   * be escaped on render by the caller.
+   */
+  public static function tech_user_options(): array {
+    // Prefer the meta_query on capability, which catches role grants AND
+    // any user with the cap added directly. Then union with role-based
+    // queries to cover any user who has a role but a quirky cap state.
+    $by_cap = get_users([
+      'capability' => self::CAP_TECH,
+      'orderby'    => 'display_name',
+      'order'      => 'ASC',
+      'number'     => -1,
+    ]);
+    $by_role = get_users([
+      'role__in' => ['slate_ops_tech', 'slate_tech'],
+      'orderby'  => 'display_name',
+      'order'    => 'ASC',
+      'number'   => -1,
+    ]);
+
+    $seen = [];
+    $out  = [];
+    foreach (array_merge($by_cap, $by_role) as $u) {
+      $id = (int) $u->ID;
+      if (isset($seen[$id])) continue;
+      // Defensive cap check — current_user filters above can be loose.
+      if (!user_can($u, self::CAP_TECH)
+          && !in_array('slate_ops_tech', (array) $u->roles, true)
+          && !in_array('slate_tech', (array) $u->roles, true)) {
+        continue;
+      }
+      $seen[$id] = true;
+      $out[] = ['id' => $id, 'name' => (string) $u->display_name];
+    }
+    usort($out, function ($a, $b) {
+      return strcasecmp($a['name'], $b['name']);
+    });
+    return $out;
+  }
+
   public static function cs_parts_statuses() {
     return ['NOT_READY', 'PARTIAL', 'READY', 'HOLD'];
   }
