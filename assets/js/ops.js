@@ -36,6 +36,7 @@
     me(){ return this.req('/me'); },
     settings(){ return this.req('/settings'); },
     users(){ return this.req('/users'); },
+    techs(){ return this.req('/techs'); },
     updateSettings(payload){ return this.req('/settings', {method:'POST', body: JSON.stringify(payload)}); },
     jobs(q=''){ return this.req('/jobs' + q); },
     job(id){ return this.req('/jobs/' + id); },
@@ -1341,16 +1342,22 @@ function csFilterJobs(jobs, filter, partsFilter) {
 }
 
 async function loadCS() {
-  const [jobsResp, settingsResp, usersResp] = await Promise.all([
+  const [jobsResp, settingsResp, usersResp, techsResp] = await Promise.all([
     api.jobs('?limit=500'),
     api.settings(),
     api.users().catch(() => ({users:[]})),
+    api.techs().catch(() => ({users:[]})),
   ]);
 
   const allJobs    = jobsResp.jobs || [];
   const dealerList = settingsResp.dealers || [];
   const salesList  = settingsResp.sales_people || [];
+  // Full users list — used only for name lookups when an existing job is
+  // assigned to a user who is no longer Tech-qualified (so we can label
+  // the option correctly without losing the saved value).
   const userList   = usersResp.users || [];
+  // Tech-qualified users only — drives the Assigned Tech dropdown.
+  const techList   = techsResp.users || [];
 
   // Phase 0 KPI counts: Intake / Ready for Build / Ready for Closeout (QC)
   const kpiIntake     = allJobs.filter(j => (j.status||'').toUpperCase() === 'INTAKE').length;
@@ -1522,14 +1529,14 @@ async function loadCS() {
     document.querySelectorAll('.cs-job-row').forEach(row => {
       row.addEventListener('click', () => {
         const id = row.getAttribute('data-job-id');
-        if (id) openCSDrawer(parseInt(id, 10), false, {dealerList, salesList, userList, allJobs});
+        if (id) openCSDrawer(parseInt(id, 10), false, {dealerList, salesList, userList, techList, allJobs});
       });
     });
 
     // Add Job button → open empty create drawer
     const addBtn = document.getElementById('cs-add-job');
     if (addBtn) addBtn.addEventListener('click', () => {
-      openCSDrawer(null, true, {dealerList, salesList, userList, allJobs});
+      openCSDrawer(null, true, {dealerList, salesList, userList, techList, allJobs});
     });
   }
 
@@ -1539,7 +1546,7 @@ async function loadCS() {
 // ── CS v2 Drawer ─────────────────────────────────────────────────────────────
 
 async function openCSDrawer(jobId, isNew, context) {
-  const {dealerList, salesList, userList} = context || {};
+  const {dealerList, salesList, userList, techList} = context || {};
   const panel = document.getElementById('cs-right-panel');
   if (!panel) return;
 
@@ -1571,10 +1578,27 @@ async function openCSDrawer(jobId, isNew, context) {
     .concat((arr||[]).map(s => `<option value="${escapeAttr(s)}"${job&&job.sales_person===s?' selected':''}>${escapeHtml(s)}</option>`))
     .join('');
 
-  // Tech options
-  const techOptsHtml = (arr) => ['<option value="">Unassigned</option>']
-    .concat((arr||[]).map(u => `<option value="${u.id}"${job&&job.assigned_user_id==u.id?' selected':''}>${escapeHtml(u.name)}</option>`))
-    .join('');
+  // Tech options. `techArr` is the filtered list of users with the Tech
+  // role/capability (from /techs). If the job is currently assigned to a
+  // user who is no longer Tech-qualified, prepend that user (looked up in
+  // the broader userList) so the saved value is visible. We do not add
+  // arbitrary non-Tech users to the selectable list.
+  const techOptsHtml = (techArr) => {
+    const techs = techArr || [];
+    const opts  = ['<option value="">Unassigned</option>'];
+    const assignedId = job ? parseInt(job.assigned_user_id, 10) : 0;
+    const inTechList = !!techs.find(u => parseInt(u.id, 10) === assignedId);
+    if (assignedId && !inTechList) {
+      const u = (userList || []).find(x => parseInt(x.id, 10) === assignedId);
+      if (u) {
+        opts.push(`<option value="${u.id}" selected>${escapeHtml(u.name)} (no longer Tech)</option>`);
+      }
+    }
+    techs.forEach(u => {
+      opts.push(`<option value="${u.id}"${assignedId===parseInt(u.id, 10)?' selected':''}>${escapeHtml(u.name)}</option>`);
+    });
+    return opts.join('');
+  };
 
   // CS-settable status options (or read-only badge for locked statuses).
   // If the current status isn't in CS_SETTABLE_STATUSES (e.g. Ready for
@@ -1659,7 +1683,7 @@ async function openCSDrawer(jobId, isNew, context) {
           <div class="cs-drawer-grid-2">
             <div class="cs-drawer-field">
               <label>Assigned Tech</label>
-              <select class="select" id="cs-f-tech" name="assigned_user_id">${techOptsHtml(userList)}</select>
+              <select class="select" id="cs-f-tech" name="assigned_user_id">${techOptsHtml(techList)}</select>
             </div>
             <div class="cs-drawer-field">
               <label>Est. Hours</label>
@@ -1912,7 +1936,7 @@ function showDrawerError(el, msg) {
 
 // CS: legacy openIntake kept for backward compat (routes to new drawer)
 async function openIntake(jobId, dealerList, salesList) {
-  return openCSDrawer(jobId, false, {dealerList, salesList, userList: []});
+  return openCSDrawer(jobId, false, {dealerList, salesList, userList: [], techList: []});
 }
 
 async function loadSchedule(){
