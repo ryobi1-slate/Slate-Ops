@@ -1738,10 +1738,6 @@ foreach ($rows as &$r) {
     if (empty(trim((string)($data['so_number'] ?? '')))) {
       $missing[] = 'SO#';
     }
-    // job description mapped to scope_summary
-    if (empty(trim((string)($data['scope_summary'] ?? '')))) {
-      $missing[] = 'job description';
-    }
     if (empty((int)($data['estimated_minutes'] ?? 0))) {
       $missing[] = 'estimated hours';
     }
@@ -2167,7 +2163,7 @@ if (!Slate_Ops_Statuses::is_valid_transition($current_status, $new_status)) {
   );
 }
 
-// Gate: READY_FOR_BUILD requires SO#, customer info, job description, estimated time, and ready parts.
+// Gate: READY_FOR_BUILD requires SO#, customer info, estimated time, and ready parts.
 if ($new_status === Slate_Ops_Statuses::READY_FOR_BUILD) {
   $gate = self::check_ready_for_build_gate($current_job, ['status' => $new_status]);
   if ($gate) return $gate;
