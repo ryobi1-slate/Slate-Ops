@@ -207,21 +207,24 @@ class Slate_Ops_Utils {
    * can DO inside each page. So an admin can grant CS visibility into the
    * Tech page without giving CS permission to start/stop timers.
    *
-   * Safety rails: admin / settings remain capability-gated regardless of
-   * matrix selections, so a non-admin role cannot be granted those pages
-   * by the Page Access matrix alone.
+   * Safety rails: admin / settings / purchasing remain capability-gated
+   * regardless of matrix selections, so a non-admin role cannot be granted
+   * those pages by the Page Access matrix alone. The matrix can still
+   * narrow visibility for those pages.
    */
   public static function user_allowed_pages() {
     if (!self::can_access()) return [];
 
     $matrix = self::get_role_page_access();
     $role   = self::current_ops_role_slug();
-    $byRole = isset($matrix[$role]) ? self::sanitize_page_slugs($matrix[$role]) : [];
+    // get_role_page_access() already sanitizes each role's slug list.
+    $byRole = isset($matrix[$role]) && is_array($matrix[$role]) ? $matrix[$role] : [];
 
-    // Hard safety rails: admin and settings remain capability-gated.
+    // Hard safety rails: admin / settings / purchasing remain capability-gated.
     $pages = array_values(array_filter($byRole, function ($slug) {
-      if ($slug === 'admin')    return current_user_can(self::CAP_ADMIN);
-      if ($slug === 'settings') return current_user_can(self::CAP_MANAGE_SETTINGS);
+      if ($slug === 'admin')      return current_user_can(self::CAP_ADMIN);
+      if ($slug === 'settings')   return current_user_can(self::CAP_MANAGE_SETTINGS);
+      if ($slug === 'purchasing') return current_user_can(self::CAP_MANAGE_SETTINGS);
       return true;
     }));
 
