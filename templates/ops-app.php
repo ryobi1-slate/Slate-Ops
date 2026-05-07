@@ -52,6 +52,11 @@ $route_map = [
 $page_slug = $route_map[$_ops_route] ?? null;
 $is_blocked = $page_slug && !slate_ops_current_user_can_access_ops_page($page_slug);
 
+// `exec` is the canonical Executive route; only that path renders the
+// server-side Executive Dashboard V2 template. The empty `/ops/` path
+// keeps its legacy React-app behavior.
+$is_executive_page = ($_ops_route === 'exec');
+
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
 $shell_part = 'open';
 include SLATE_OPS_PATH . 'includes/ui/layout-shell.php';
@@ -68,6 +73,10 @@ if ($is_blocked) : ?>
   // for this route in slate-ops.php; the empty #ops-view div above is a
   // harmless sibling.
   include SLATE_OPS_PATH . 'templates/pages/cs-dashboard.php';
+elseif ($is_executive_page) :
+  // Server-rendered Executive Dashboard V2 (Purchasing pattern).
+  // React app is not enqueued for this route in slate-ops.php.
+  include SLATE_OPS_PATH . 'templates/pages/executive-dashboard.php';
 endif; ?>
 
 <?php // For all other routes #ops-view is empty — React app (app.js) mounts and renders content at runtime.
