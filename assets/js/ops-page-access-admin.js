@@ -5,7 +5,8 @@
   const roles = ['admin','supervisor','cs','tech','executive'];
   const pages = [
     ['executive','Executive'],
-    ['cs','Customer Service'],
+    ['cs','Customer Service (legacy)'],
+    ['cs-dashboard','CS Dashboard'],
     ['tech','Tech'],
     ['schedule','Schedule'],
     ['purchasing','Purchasing'],
