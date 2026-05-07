@@ -1488,12 +1488,12 @@ foreach ($rows as &$r) {
         if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
           $cur = (string)($job['status'] ?? '');
 
-          // CS v2: CS users may not manually set IN_PROGRESS, QC, or COMPLETE.
+          // Phase 0: CS may not manually set IN_PROGRESS or Ready for Closeout (QC).
           // Those states come from Tech/QC workflow actions only.
+          // Closed (COMPLETE) is CS-settable — CS/Supervisor closes after paper sign-off.
           $cs_restricted = [
             Slate_Ops_Statuses::IN_PROGRESS,
             Slate_Ops_Statuses::QC,
-            Slate_Ops_Statuses::COMPLETE,
             Slate_Ops_Statuses::PENDING_QC, // legacy alias
           ];
           if ($is_cs && !$is_supervisor && in_array($ns, $cs_restricted, true)) {
@@ -1737,10 +1737,6 @@ foreach ($rows as &$r) {
     }
     if (empty(trim((string)($data['so_number'] ?? '')))) {
       $missing[] = 'SO#';
-    }
-    // job description mapped to scope_summary
-    if (empty(trim((string)($data['scope_summary'] ?? '')))) {
-      $missing[] = 'job description';
     }
     if (empty((int)($data['estimated_minutes'] ?? 0))) {
       $missing[] = 'estimated hours';
@@ -2167,7 +2163,7 @@ if (!Slate_Ops_Statuses::is_valid_transition($current_status, $new_status)) {
   );
 }
 
-// Gate: READY_FOR_BUILD requires SO#, customer info, job description, estimated time, and ready parts.
+// Gate: READY_FOR_BUILD requires SO#, customer info, estimated time, and ready parts.
 if ($new_status === Slate_Ops_Statuses::READY_FOR_BUILD) {
   $gate = self::check_ready_for_build_gate($current_job, ['status' => $new_status]);
   if ($gate) return $gate;
@@ -2420,7 +2416,7 @@ return self::get_job(['id' => $job_id]);
 
     if ($decision === 'PASS') {
       $new_status = Slate_Ops_Statuses::COMPLETE;
-      $audit_note = 'QC passed — job complete';
+      $audit_note = 'QC passed — job closed';
     } else {
       $new_status = Slate_Ops_Statuses::IN_PROGRESS;
       $audit_note = 'QC failed: ' . $notes;
