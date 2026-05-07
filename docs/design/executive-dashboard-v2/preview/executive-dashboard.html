@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slate Ops · Executive Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght,wdth@8..144,300..700,75..125&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="executive-dashboard.css" />
+</head>
+<body>
+
+<!--
+  executive-dashboard.php — content-only page.
+  Renders inside the existing Slate Ops portal shell. Sidebar entry: "Executive Dashboard"
+  routed at /ops/executive-dashboard (separate from /ops/executive).
+  Final WordPress build pulls data from includes/class-slate-ops-executive.php and
+  echoes the rows server-side. The JS file only handles tabs + filter chips.
+-->
+
+<div class="page-wrap">
+
+  <header class="page-head">
+    <div>
+      <div class="eyebrow">Executive · Production Control</div>
+      <h1 class="page-title">Labor &amp; Job Performance</h1>
+      <div class="page-sub">Job costing, performance tracking, and labor capture · Shop PDX-01</div>
+    </div>
+    <div class="page-meta">
+      <span>Period <b>30 days</b></span>
+      <span class="sep">·</span>
+      <span>WIP <b>6</b></span>
+      <span class="sep">·</span>
+      <span class="crit">Capture <b>55%</b></span>
+      <span class="sep">·</span>
+      <span class="crit">Blocked <b>9</b></span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="overview" role="tab">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
+      <span>Overview</span>
+    </button>
+    <button class="tab" data-tab="tech" role="tab">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="6" r="2.4"/><path d="M3 14c0-2.5 2.2-4.2 5-4.2S13 11.5 13 14"/></svg>
+      <span>Tech Performance</span>
+      <span class="count">7</span>
+    </button>
+    <button class="tab" data-tab="jobs" role="tab">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M11 3.2 13.2 1l1.6 1.6L12.6 5l.7.7-2.1 2.1-1.4-1.4-5 5L3 9.8l5-5L6.6 3.4l2.1-2.1Z"/></svg>
+      <span>Job Performance</span>
+      <span class="count">23</span>
+    </button>
+    <button class="tab" data-tab="labor" role="tab">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="9" r="5"/><path d="M8 6.5V9l1.6 1.2"/><path d="M6.5 1.5h3M8 1.5v2"/></svg>
+      <span>Labor Capture</span>
+      <span class="count">19</span>
+    </button>
+    <button class="tab" data-tab="blocks" role="tab">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 13.5h12L8 2.5 2 13.5Z"/><path d="M8 6.5v3"/><circle cx="8" cy="11.4" r=".4" fill="currentColor"/></svg>
+      <span>Bottlenecks</span>
+      <span class="count">9</span>
+    </button>
+  </nav>
+
+  <!-- ===== OVERVIEW ===== -->
+  <section class="tab-pane active" id="pane-overview" data-screen-label="01 Overview">
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="k-label">Active Jobs</div><div class="k-value">23</div><div class="k-help">6 ready · 1 sched · 4 WIP · 2 QC</div></div>
+      <div class="kpi"><div class="k-label">In Progress</div><div class="k-value">4</div></div>
+      <div class="kpi"><div class="k-label">Pending QC</div><div class="k-value">2</div></div>
+      <div class="kpi"><div class="k-label">Ready For Pickup</div><div class="k-value">6</div></div>
+
+      <div class="kpi flag-crit">
+        <div class="k-label">Labor Capture <span class="k-status crit">Low</span></div>
+        <div class="k-value">55<span class="unit">%</span></div>
+        <div class="k-help">19 jobs have no logged time</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">Variance</div>
+        <div class="k-value">−89h 7m</div>
+        <div class="k-help">Tracking gap likely</div>
+      </div>
+      <div class="kpi flag-crit">
+        <div class="k-label">Blocked</div>
+        <div class="k-value">9</div>
+        <div class="k-help">2 critical · 5 watch · 2 normal</div>
+      </div>
+      <div class="kpi flag-warn">
+        <div class="k-label">Open Timers</div>
+        <div class="k-value">1</div>
+        <div class="k-help">D. Walsh · 4h 12m</div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <div class="readout-head">
+        <div>
+          <div class="eyebrow">Executive Readout</div>
+          <div class="title">Where leadership should look first.</div>
+        </div>
+        <div class="stamp">Updated 9:41 AM · Auto-refresh 5m</div>
+      </div>
+      <div class="readout-cell">
+        <div class="label"><i class="dot crit"></i>Labor Data Quality</div>
+        <p><b>19 of 23 jobs</b> have no logged time. Capture is not reliable enough for job costing yet.</p>
+        <div class="row-stat"><span>Trust <b>Low</b></span><span>Coverage <b>17%</b></span></div>
+      </div>
+      <div class="readout-cell">
+        <div class="label"><i class="dot warn"></i>Schedule Risk</div>
+        <p><b>4 in progress</b>, <b>2 in QC</b>. Hold new releases until blocked work clears.</p>
+        <div class="row-stat"><span>WIP <b>6</b></span><span>Buffer <b>2</b></span></div>
+      </div>
+      <div class="readout-cell">
+        <div class="label"><i class="dot crit"></i>Bottleneck Status</div>
+        <p><b>9 jobs blocked</b>. 4 are 4+ days old. Parts and engineering are the largest sources.</p>
+        <div class="row-stat"><span>Aging <b>4</b></span><span>Owners <b>3 of 9</b></span></div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <div class="card-head">
+          <h3>Labor Watchlist <span class="count-pill">6 issues</span></h3>
+          <div class="actions"><button class="btn ghost">Export</button></div>
+        </div>
+        <table class="t">
+          <thead><tr><th>Issue</th><th class="num">Count</th><th>Risk</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Jobs with no logged time</td><td class="num">19</td><td><span class="tag crit"><span class="dot"></span>Critical</span></td><td class="action">Audit clock-in flow →</td></tr>
+            <tr><td>Jobs over estimate</td><td class="num">1</td><td><span class="tag muted">Watch</span></td><td class="action">Review with lead →</td></tr>
+            <tr><td>Jobs missing estimates</td><td class="num">2</td><td><span class="tag muted">Watch</span></td><td class="action">Add estimate →</td></tr>
+            <tr><td>Open timers (&gt;4h)</td><td class="num">1</td><td><span class="tag warn"><span class="arch"></span>Warn</span></td><td class="action">Confirm with tech →</td></tr>
+            <tr><td>Techs with no time today</td><td class="num">3</td><td><span class="tag warn"><span class="arch"></span>Warn</span></td><td class="action">Direct check-in →</td></tr>
+            <tr><td>Jobs complete with 0 logged time</td><td class="num">3</td><td><span class="tag crit"><span class="dot"></span>Critical</span></td><td class="action">Backfill or void →</td></tr>
+          </tbody>
+        </table>
+        <div class="foot"><span>Source · Time entries 30d</span><span>6 of 6</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Production Watchlist <span class="count-pill">6 areas</span></h3>
+        </div>
+        <table class="t">
+          <thead><tr><th>Area</th><th class="num">Count</th><th>Status</th><th>Owner</th></tr></thead>
+          <tbody>
+            <tr><td>Blocked jobs</td><td class="num">9</td><td><span class="tag crit"><span class="dot"></span>Critical</span></td><td>Shop lead</td></tr>
+            <tr><td>QC aging &gt; 1 day</td><td class="num">2</td><td><span class="tag muted">Watch</span></td><td>A. Tran</td></tr>
+            <tr><td>Jobs ready for build</td><td class="num">6</td><td><span class="tag muted">Normal</span></td><td>Floor</td></tr>
+            <tr><td>Jobs ready for pickup</td><td class="num">6</td><td><span class="tag muted">Normal</span></td><td>CS</td></tr>
+            <tr><td>Schedule risk (WIP &gt; buffer)</td><td class="num">4</td><td><span class="tag warn"><span class="arch"></span>Warn</span></td><td>Ops</td></tr>
+            <tr><td>On hold without owner</td><td class="num">2</td><td><span class="tag warn"><span class="arch"></span>Warn</span></td><td><span class="bad">Unassigned</span></td></tr>
+          </tbody>
+        </table>
+        <div class="foot"><span>Source · Job statuses · Live</span><span>6 of 6</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TECH ===== -->
+  <section class="tab-pane" id="pane-tech" data-screen-label="02 Tech Performance">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="k-label">Techs Active</div><div class="k-value">7</div></div>
+      <div class="kpi"><div class="k-label">Logged Today</div><div class="k-value">17h 32m</div></div>
+      <div class="kpi"><div class="k-label">Logged This Week</div><div class="k-value">227h 04m</div></div>
+      <div class="kpi flag-warn">
+        <div class="k-label">No Time Today</div>
+        <div class="k-value">3</div>
+        <div class="k-help">Jake A., Ben O., info</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="card-head">
+        <h3>Tech Performance <span class="count-pill">7 techs</span></h3>
+        <div class="actions"><button class="btn">Export CSV</button></div>
+      </div>
+      <div class="help-card">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 4.7v.4"/></svg>
+        Spot workload imbalance, training needs, and time-tracking gaps. Capture % over 100 usually means under-estimated work.
+      </div>
+      <div class="filter-row">
+        <div class="search">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+          <input placeholder="Search tech…" />
+        </div>
+        <button class="chip">Department <span class="caret">▾</span></button>
+        <button class="chip">Shift <span class="caret">▾</span></button>
+        <button class="chip toggle">Has issues</button>
+        <button class="chip toggle on">Active only</button>
+        <div style="flex:1"></div>
+        <button class="chip">This week <span class="caret">▾</span></button>
+      </div>
+      <table class="t">
+        <thead><tr>
+          <th>Tech</th>
+          <th class="num">Assigned</th>
+          <th class="num">Active</th>
+          <th class="num">Logged Today</th>
+          <th class="num">Logged Week</th>
+          <th class="num">Est.</th>
+          <th class="num">Logged</th>
+          <th class="num">Variance</th>
+          <th>Capture</th>
+          <th>Flags</th>
+        </tr></thead>
+        <tbody id="techs-tbody"></tbody>
+      </table>
+      <div class="foot"><span>Showing 7 of 7</span><span>Last sync 9:41 AM</span></div>
+    </div>
+  </section>
+
+  <!-- ===== JOBS ===== -->
+  <section class="tab-pane" id="pane-jobs" data-screen-label="03 Job Performance">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="k-label">Total Jobs</div><div class="k-value">23</div></div>
+      <div class="kpi flag-warn"><div class="k-label">Over Estimate</div><div class="k-value">1</div></div>
+      <div class="kpi flag-crit"><div class="k-label">Missing Time</div><div class="k-value">14</div></div>
+      <div class="kpi flag-crit"><div class="k-label">At Risk</div><div class="k-value">8</div></div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="card-head">
+        <h3>Job Performance <span class="count-pill" data-jobs-count>17 of 17</span></h3>
+        <div class="actions"><button class="btn">Export</button></div>
+      </div>
+      <div class="filter-row">
+        <div class="search">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+          <input placeholder="Search SO# or customer…" data-filter="search" />
+        </div>
+        <button class="chip">Status <span class="caret">▾</span></button>
+        <button class="chip">Lead Tech <span class="caret">▾</span></button>
+        <button class="chip">Job Type <span class="caret">▾</span></button>
+        <button class="chip">Last 30 days <span class="caret">▾</span></button>
+        <button class="chip toggle" data-filter="over">Over estimate</button>
+        <button class="chip toggle" data-filter="missing">Missing time</button>
+        <div style="flex:1"></div>
+        <span class="chip" style="cursor:default">Risk:&nbsp;
+          <select data-filter="risk">
+            <option value="all">All</option>
+            <option value="crit">Critical</option>
+            <option value="watch">Watch</option>
+            <option value="ok">OK</option>
+          </select>
+        </span>
+      </div>
+      <table class="t">
+        <thead><tr>
+          <th>SO#</th><th>Customer</th><th>Status</th><th>Lead Tech</th>
+          <th class="num">Est.</th><th class="num">Logged</th>
+          <th class="num">Variance</th><th>% Used</th><th>Risk</th>
+        </tr></thead>
+        <tbody id="jobs-tbody"></tbody>
+      </table>
+      <div class="foot"><span>Sorted by risk</span><span>Updated 9:41 AM</span></div>
+    </div>
+  </section>
+
+  <!-- ===== LABOR ===== -->
+  <section class="tab-pane" id="pane-labor" data-screen-label="04 Labor Capture">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="k-label">Jobs With Estimate</div><div class="k-value">21</div></div>
+      <div class="kpi flag-warn"><div class="k-label">Jobs Missing Estimate</div><div class="k-value">2</div></div>
+      <div class="kpi flag-crit"><div class="k-label">Jobs With Logged Time</div><div class="k-value">4</div></div>
+      <div class="kpi flag-crit">
+        <div class="k-label">Jobs With No Logged Time <span class="k-status crit">Audit</span></div>
+        <div class="k-value">19</div>
+      </div>
+      <div class="kpi"><div class="k-label">Total Raw Logged</div><div class="k-value">108h 53m</div></div>
+      <div class="kpi"><div class="k-label">Estimate Coverage</div><div class="k-value">91<span class="unit">%</span></div></div>
+      <div class="kpi flag-warn"><div class="k-label">Open Timers</div><div class="k-value">1</div></div>
+      <div class="kpi flag-crit"><div class="k-label">Zero-Time Completions</div><div class="k-value">3</div></div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><h3>Labor Data Trust</h3></div>
+      <div class="trust">
+        <div class="score">
+          <div class="lbl">Trust Score</div>
+          <div class="val">LOW <span class="pct">42 / 100</span></div>
+          <div class="desc">Too many jobs have no logged labor. Costing reports should not be relied on for the current period until capture clears 75%.</div>
+        </div>
+        <div class="factors">
+          <div class="factor"><div class="row"><span>Estimate coverage</span><b>91%</b></div><div class="bar"><i style="width:91%"></i></div></div>
+          <div class="factor"><div class="row"><span>Logged time coverage</span><b>17%</b></div><div class="bar crit"><i style="width:17%"></i></div></div>
+          <div class="factor"><div class="row"><span>Zero-time completions OK</span><b>86%</b></div><div class="bar crit"><i style="width:86%"></i></div></div>
+          <div class="factor"><div class="row"><span>Open-timer hygiene</span><b>71%</b></div><div class="bar warn"><i style="width:71%"></i></div></div>
+        </div>
+      </div>
+
+      <div class="card-head" style="border-top:1px solid var(--rule)">
+        <h3>Labor Capture Watchlist <span class="count-pill">12 issues</span></h3>
+        <div class="actions"><button class="btn">Export</button></div>
+      </div>
+      <table class="t">
+        <thead><tr>
+          <th>Job</th><th>Customer</th><th>Assigned Tech</th>
+          <th>Issue</th><th>Last Entry</th><th>Action Needed</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="so">S-ORD101353</td><td class="cust">Gresham Toyota</td><td><span class="bad">Unassigned</span></td><td><span class="tag crit"><span class="dot"></span>Complete with 0 time</span></td><td style="font-family:var(--mono);font-size:11.5px">—</td><td class="action">Backfill or void →</td></tr>
+          <tr><td class="so">S-ORD101365</td><td class="cust">Gresham Toyota</td><td><span class="bad">Unassigned</span></td><td><span class="tag crit"><span class="dot"></span>Complete with 0 time</span></td><td style="font-family:var(--mono);font-size:11.5px">—</td><td class="action">Backfill or void →</td></tr>
+          <tr><td class="so">S-ORD417524</td><td class="cust">Test Account</td><td><span class="bad">Unassigned</span></td><td><span class="tag muted">Test record</span></td><td style="font-family:var(--mono);font-size:11.5px">—</td><td class="action">Archive →</td></tr>
+          <tr><td class="so">S-ORD101422</td><td class="cust">Northstar Equipment</td><td><span class="ava-sm warn">DW</span>Devin Walsh</td><td><span class="tag warn"><span class="arch"></span>Open timer 4h 12m</span></td><td style="font-family:var(--mono);font-size:11.5px">9:24 AM</td><td class="action">Confirm with tech →</td></tr>
+          <tr><td class="so">S-ORD101396</td><td class="cust">Sigma Industrial</td><td><span class="ava-sm">BO</span>Ben Okafor</td><td><span class="tag crit"><span class="dot"></span>No logged time</span></td><td style="font-family:var(--mono);font-size:11.5px">—</td><td class="action">Verify clock-in →</td></tr>
+          <tr><td class="so">S-ORD101427</td><td class="cust">Sunset Transit</td><td><span class="ava-sm">MR</span>Marcos Rivera</td><td><span class="tag crit"><span class="dot"></span>No logged time</span></td><td style="font-family:var(--mono);font-size:11.5px">2 days</td><td class="action">Verify clock-in →</td></tr>
+          <tr><td class="so">S-ORD101430</td><td class="cust">Pearl District Auto</td><td><span class="ava-sm">PS</span>Priya Shah</td><td><span class="tag warn"><span class="arch"></span>Missing estimate</span></td><td style="font-family:var(--mono);font-size:11.5px">—</td><td class="action">Add estimate →</td></tr>
+          <tr><td class="so">S-ORD101411</td><td class="cust">Mercedes-Benz Wilson.</td><td><span class="ava-sm">AT</span>Alyssa Tran</td><td><span class="tag muted">On track</span></td><td style="font-family:var(--mono);font-size:11.5px">9:38 AM</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <div class="foot"><span>Showing 8 of 12</span><span>Source · Time entries · Live</span></div>
+    </div>
+  </section>
+
+  <!-- ===== BLOCKS ===== -->
+  <section class="tab-pane" id="pane-blocks" data-screen-label="05 Bottlenecks">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="k-label">Ready For Build</div><div class="k-value">6</div></div>
+      <div class="kpi"><div class="k-label">Scheduled</div><div class="k-value">1</div></div>
+      <div class="kpi"><div class="k-label">In Progress</div><div class="k-value">4</div></div>
+      <div class="kpi"><div class="k-label">QC</div><div class="k-value">2</div></div>
+      <div class="kpi flag-crit">
+        <div class="k-label">Blocked <span class="k-status crit">4+ days</span></div>
+        <div class="k-value">9</div>
+        <div class="k-help">4 critical · 5 watch</div>
+      </div>
+      <div class="kpi"><div class="k-label">On Hold</div><div class="k-value">0</div></div>
+      <div class="kpi"><div class="k-label">Cancelled</div><div class="k-value">0</div></div>
+      <div class="kpi flag-warn"><div class="k-label">Avg Block Age</div><div class="k-value">3.1<span class="unit">days</span></div><div class="k-help">Up from 2.4d last week</div></div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="card-head">
+        <h3>Blocker Reasons</h3>
+        <div class="actions"><span style="font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase">9 blocked · last 30 days</span></div>
+      </div>
+      <div class="reason-grid">
+        <div class="reason crit"><div class="lbl">Parts</div><div class="val">5<span class="delta">+2 wk</span></div></div>
+        <div class="reason"><div class="lbl">Approval</div><div class="val">1<span class="delta">—</span></div></div>
+        <div class="reason warn"><div class="lbl">Engineering</div><div class="val">1<span class="delta">+1</span></div></div>
+        <div class="reason"><div class="lbl">Customer</div><div class="val">1<span class="delta">—</span></div></div>
+        <div class="reason"><div class="lbl">Tech Capacity</div><div class="val">1<span class="delta">—</span></div></div>
+        <div class="reason warn"><div class="lbl">QC / Rework</div><div class="val">1<span class="delta">—</span></div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="card-head">
+        <h3>Bottleneck Aging <span class="count-pill">9 jobs</span></h3>
+        <div class="actions"><button class="btn">Export</button></div>
+      </div>
+      <div class="filter-row">
+        <button class="chip">Department <span class="caret">▾</span></button>
+        <button class="chip">Reason <span class="caret">▾</span></button>
+        <button class="chip toggle on">Aging only (2+ d)</button>
+        <button class="chip toggle">No owner</button>
+        <div style="flex:1"></div>
+        <button class="chip">Sort: oldest first <span class="caret">▾</span></button>
+      </div>
+      <table class="t">
+        <thead><tr>
+          <th>Job</th><th>Customer</th><th>Block Reason</th>
+          <th>Department</th><th>Owner</th>
+          <th>Days Blocked</th><th>Next Action</th><th>Severity</th>
+        </tr></thead>
+        <tbody id="blockers-tbody"></tbody>
+      </table>
+      <div class="foot"><span>9 of 9 blocked jobs</span><span>Severity rules · 0–1d Normal · 2–3d Watch · 4+d Critical</span></div>
+    </div>
+  </section>
+
+</div>
+
+<script src="executive-dashboard.js"></script>
+</body>
+</html>
