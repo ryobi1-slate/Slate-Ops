@@ -340,13 +340,13 @@ class Slate_Ops_Utils {
       'capability' => self::CAP_TECH,
       'orderby'    => 'display_name',
       'order'      => 'ASC',
-      'number'     => 500,
+      'number'     => -1,
     ]);
     $by_role = get_users([
       'role__in' => ['slate_ops_tech', 'slate_tech'],
       'orderby'  => 'display_name',
       'order'    => 'ASC',
-      'number'   => 500,
+      'number'   => -1,
     ]);
 
     $seen = [];
