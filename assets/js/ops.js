@@ -1582,9 +1582,9 @@ async function openCSDrawer(jobId, isNew, context) {
   // current status as the selected option. Without this fallback the
   // browser defaults to the first option (Intake) and saving any change
   // (e.g. just notes) would attempt an invalid status transition.
-  const statusOptions = CS_SETTABLE_STATUSES.includes(jStatus)
-    ? CS_SETTABLE_STATUSES
-    : [jStatus, ...CS_SETTABLE_STATUSES];
+  const statusOptions = (jStatus && !CS_SETTABLE_STATUSES.includes(jStatus))
+    ? [jStatus, ...CS_SETTABLE_STATUSES]
+    : CS_SETTABLE_STATUSES;
   const statusField = isReadonlyStatus
     ? `<div style="padding:8px 0;"><span class="badge ${badgeClass(jStatus)}" style="font-size:13px;">${fmtStatusCS(jStatus)}</span> <span class="muted" style="font-size:11px;">(set by Tech/QC workflow)</span></div>`
     : `<select class="select" id="cs-drawer-status" name="status">
