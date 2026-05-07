@@ -194,7 +194,7 @@
       pendingIntake: state.jobs.filter(j => j.status === 'INTAKE').length,
       needsSo: state.jobs.filter(j => !j.so_number).length,
       inProgress: state.jobs.filter(j => j.status === 'IN_PROGRESS').length,
-      pendingQc: state.jobs.filter(j => j.status === 'PENDING_QC').length,
+      pendingQc: state.jobs.filter(j => j.status === 'PENDING_QC' || j.status === 'QC').length,
     };
 
     view(`
@@ -1273,7 +1273,11 @@ const CS_ACTIVE_STATUSES = ['INTAKE','NEEDS_SO','READY_FOR_BUILD','SCHEDULED','I
 // Phase 0: NEEDS_SO removed from CS_SETTABLE_STATUSES — hidden from CS dropdown until SO workflow is re-enabled.
 // COMPLETE (Closed) included so CS/Supervisor can close out a job after paper sign-off (from Ready for Closeout).
 const CS_SETTABLE_STATUSES = ['INTAKE','READY_FOR_BUILD','SCHEDULED','BLOCKED','ON_HOLD','COMPLETE','CANCELLED'];
-const CS_READONLY_STATUSES = ['IN_PROGRESS','QC','COMPLETE','PENDING_QC','READY_FOR_PICKUP'];
+// IN_PROGRESS is Tech-set and not CS-changeable. COMPLETE / READY_FOR_PICKUP
+// are terminal — kept readonly so CS cannot reopen Closed jobs (Phase 0).
+// QC / PENDING_QC (Ready for Closeout) are intentionally NOT readonly so
+// CS/Supervisor can move them to Closed via the dropdown.
+const CS_READONLY_STATUSES = ['IN_PROGRESS','COMPLETE','READY_FOR_PICKUP'];
 
 const BLOCK_REASONS  = ['PARTS','ENGINEERING','CUSTOMER','LABOR','OTHER'];
 const HOLD_REASONS   = ['CUSTOMER_CHANGE','BILLING','ESCALATION','SCOPE_REVIEW','VENDOR_DISPUTE','WAITING_ON_VAN','OTHER'];
@@ -2825,7 +2829,7 @@ async function loadExecutive(){
     { label: 'Queued', value: countByStatus(['QUEUED']) },
     { label: 'In Progress', value: countByStatus(['IN_PROGRESS']) },
     { label: 'Ready for Closeout', value: countByStatus(['PENDING_QC','QC']) },
-    { label: 'Closed', value: countByStatus(['COMPLETE']) },
+    { label: 'Closed', value: countByStatus(['COMPLETE','READY_FOR_PICKUP']) },
   ];
 
   const flowHealth = [
@@ -3216,7 +3220,7 @@ async function loadAdmin() {
       </div>
       <div class="stat-tile">
         <div class="label">Ready for Closeout</div>
-        <div class="value">${byS('PENDING_QC')}${deltaChip(2, false)}</div>
+        <div class="value">${byS('PENDING_QC') + byS('QC')}${deltaChip(2, false)}</div>
       </div>
       <div class="stat-tile">
         <div class="label">Intake</div>
