@@ -309,10 +309,18 @@ $health_tone_class_map = [
         class="ops-workspace__frame"
         id="workspace-frame"
         src=""
-        data-src="/ops/cs?embed=1"
+        data-src="<?php echo esc_url(home_url('/ops/cs/?embed=1')); ?>"
         title="CS Workspace"
         loading="lazy"
         hidden></iframe>
+      <div class="ops-workspace__error" id="workspace-error" hidden role="alert">
+        <span class="material-symbols-outlined ops-workspace__error-icon" aria-hidden="true">error</span>
+        <div class="ops-workspace__error-msg">Workspace failed to load.</div>
+        <div class="ops-workspace__error-actions">
+          <button type="button" class="btn btn--primary" id="workspace-retry">Retry</button>
+          <a class="btn btn--secondary" id="workspace-open-legacy" href="<?php echo esc_url(home_url('/ops/cs/?embed=1')); ?>" target="_top">Open Legacy CS</a>
+        </div>
+      </div>
     </div>
   </div>
 

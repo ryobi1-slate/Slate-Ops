@@ -601,6 +601,33 @@
   to   { transform: rotate(360deg); }
 }
 
+.ops-workspace__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--slate-space-md);
+  flex: 1;
+  min-height: 240px;
+  padding: var(--slate-space-lg);
+  text-align: center;
+  color: var(--slate-ink);
+}
+.ops-workspace__error-icon {
+  font-size: 36px;
+  color: var(--slate-danger, #b3261e);
+}
+.ops-workspace__error-msg {
+  font-size: var(--slate-text-md);
+  font-weight: 500;
+}
+.ops-workspace__error-actions {
+  display: flex;
+  gap: var(--slate-space-sm);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* Workspace-active scroll lock + viewport-fill layout. */
 html.cs-workspace-active,
 body.cs-workspace-active { overflow: hidden; }

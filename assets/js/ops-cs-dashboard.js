@@ -226,22 +226,55 @@
   // src is left empty in the template and only set on first activation,
   // so users who never click Workspace don't pay for the React bundle.
   // Once loaded, the iframe stays in the DOM with its src intact.
+  var WORKSPACE_LOAD_TIMEOUT_MS = 8000;
+  var workspaceTimer = null;
+  var workspaceLoaded = false;
+
+  function clearWorkspaceTimer() {
+    if (workspaceTimer) {
+      clearTimeout(workspaceTimer);
+      workspaceTimer = null;
+    }
+  }
+
+  function showWorkspaceError() {
+    var frame    = document.getElementById('workspace-frame');
+    var skeleton = document.getElementById('workspace-skeleton');
+    var error    = document.getElementById('workspace-error');
+    if (skeleton) skeleton.hidden = true;
+    if (frame)    frame.hidden    = true;
+    if (error)    error.hidden    = false;
+  }
+
+  function startWorkspaceLoad() {
+    var frame    = document.getElementById('workspace-frame');
+    var skeleton = document.getElementById('workspace-skeleton');
+    var error    = document.getElementById('workspace-error');
+    if (!frame) return;
+
+    workspaceLoaded = false;
+    if (error)    error.hidden    = true;
+    if (skeleton) skeleton.hidden = false;
+    frame.hidden = true;
+
+    clearWorkspaceTimer();
+    workspaceTimer = setTimeout(function () {
+      if (workspaceLoaded) return;
+      showWorkspaceError();
+    }, WORKSPACE_LOAD_TIMEOUT_MS);
+
+    frame.setAttribute('src', frame.dataset.src);
+  }
+
   function activateWorkspace() {
     document.documentElement.classList.add('cs-workspace-active');
     document.body.classList.add('cs-workspace-active');
 
-    var frame    = document.getElementById('workspace-frame');
-    var skeleton = document.getElementById('workspace-skeleton');
+    var frame = document.getElementById('workspace-frame');
     if (!frame) return;
 
     if (!frame.getAttribute('src')) {
-      if (skeleton) skeleton.hidden = false;
-      frame.hidden = true;
-      frame.addEventListener('load', function () {
-        if (skeleton) skeleton.hidden = true;
-        frame.hidden = false;
-      }, { once: true });
-      frame.setAttribute('src', frame.dataset.src);
+      startWorkspaceLoad();
     }
   }
 
@@ -249,6 +282,31 @@
     document.documentElement.classList.remove('cs-workspace-active');
     document.body.classList.remove('cs-workspace-active');
     // Iframe stays in the DOM with src intact — do NOT clear it.
+  }
+
+  var workspaceFrame = document.getElementById('workspace-frame');
+  if (workspaceFrame) {
+    workspaceFrame.addEventListener('load', function () {
+      // Browsers fire `load` once with src="" on initial parse — ignore that.
+      if (!workspaceFrame.getAttribute('src')) return;
+      workspaceLoaded = true;
+      clearWorkspaceTimer();
+      var skeleton = document.getElementById('workspace-skeleton');
+      var error    = document.getElementById('workspace-error');
+      if (skeleton) skeleton.hidden = true;
+      if (error)    error.hidden    = true;
+      workspaceFrame.hidden = false;
+    });
+  }
+
+  var workspaceRetry = document.getElementById('workspace-retry');
+  if (workspaceRetry) {
+    workspaceRetry.addEventListener('click', function () {
+      var frame = document.getElementById('workspace-frame');
+      if (!frame) return;
+      frame.setAttribute('src', '');
+      startWorkspaceLoad();
+    });
   }
 
   // ─── Sub-tabs ─────────────────────────────────────────────────────────
