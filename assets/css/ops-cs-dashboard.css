@@ -561,6 +561,7 @@
  * subsequent activations are instant.
  */
 .ops-workspace {
+  position: relative;
   width: 100%;
   height: 100%;
   display: flex;
@@ -577,15 +578,18 @@
   background: transparent;
 }
 .ops-workspace__skeleton {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--slate-space-md);
-  flex: 1;
   min-height: 240px;
   color: var(--slate-ink-muted);
   font-size: var(--slate-text-sm);
+  background: var(--slate-surface-page);
+  z-index: 2;
 }
 .ops-workspace__spinner {
   font-size: 32px;
@@ -602,16 +606,19 @@
 }
 
 .ops-workspace__error {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--slate-space-md);
-  flex: 1;
   min-height: 240px;
   padding: var(--slate-space-lg);
   text-align: center;
   color: var(--slate-ink);
+  background: var(--slate-surface-page);
+  z-index: 3;
 }
 .ops-workspace__error-icon {
   font-size: 36px;
