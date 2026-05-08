@@ -91,6 +91,7 @@ $health_tone_class_map = [
   <nav class="ops-subnav" id="ops-subnav">
     <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
     <button class="ops-subtab" data-tab="workspace"><span class="material-symbols-outlined">support_agent</span>Workspace</button>
+    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Queue</button>
     <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count"><?php echo esc_html((string) $subtab_counts['intake']); ?></span></button>
     <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
     <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>
@@ -312,6 +313,47 @@ $health_tone_class_map = [
         title="CS Workspace"
         loading="lazy"
         hidden></iframe>
+    </div>
+  </div>
+
+  <!-- ── QUEUE TAB ── -->
+  <!-- Shop Queue: CS sequences jobs per tech. Tech reads queue order via
+       /jobs but cannot reorder. Data loads via /cs/queue on first activation. -->
+  <div class="ops-tab-content" data-tab-content="queue" hidden>
+    <div class="ops-queue">
+      <div class="ops-queue__header">
+        <div>
+          <h2 class="ops-queue__title">Shop Queue</h2>
+          <div class="ops-queue__sub">Manage the order CS wants jobs worked. Tech reads this queue but cannot reorder it.</div>
+        </div>
+        <div class="ops-queue__actions">
+          <button class="btn btn--secondary" id="queue-normalize-btn" title="Reset visible queue numbers to 1, 2, 3 within each tech group">
+            <span class="material-symbols-outlined">low_priority</span>
+            Normalize Order
+          </button>
+          <button class="btn btn--primary" id="queue-save-btn" disabled>
+            <span class="material-symbols-outlined">save</span>
+            <span id="queue-save-label">Save Queue</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="ops-queue__filterbar" id="queue-filters">
+        <button class="queue-chip active" data-filter="all">All</button>
+        <button class="queue-chip" data-filter="scheduled">Scheduled</button>
+        <button class="queue-chip" data-filter="blocked">Blocked</button>
+        <button class="queue-chip" data-filter="qc">Ready for Closeout</button>
+        <button class="queue-chip" data-filter="unassigned">Unassigned</button>
+      </div>
+
+      <div class="ops-queue__warnings" id="queue-warnings" hidden></div>
+
+      <div class="ops-queue__body" id="queue-body">
+        <div class="ops-queue__empty">
+          <span class="material-symbols-outlined ops-queue__spinner" aria-hidden="true">progress_activity</span>
+          <span>Loading queue…</span>
+        </div>
+      </div>
     </div>
   </div>
 

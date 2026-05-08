@@ -30,6 +30,20 @@ class Slate_Ops_Install {
     if (!in_array('queue_priority', $cols, true)) {
       $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_priority` TINYINT UNSIGNED NOT NULL DEFAULT 3 AFTER `queue_order`");
     }
+
+    // CS Queue tab support (Shop Queue): visibility flag, note, audit fields.
+    if (!in_array('queue_visible', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_visible` TINYINT(1) NOT NULL DEFAULT 1 AFTER `queue_priority`");
+    }
+    if (!in_array('queue_note', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_note` TEXT NULL AFTER `queue_visible`");
+    }
+    if (!in_array('queue_updated_at', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_updated_at` DATETIME NULL AFTER `queue_note`");
+    }
+    if (!in_array('queue_updated_by', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_updated_by` BIGINT UNSIGNED NULL AFTER `queue_updated_at`");
+    }
   }
 
   private static function run_install($flush_rewrites = false) {
@@ -155,6 +169,12 @@ queue_order INT UNSIGNED NULL,
 
 -- Phase 0: CS-controlled priority for Tech queue ordering (1=Next, 2=High, 3=Normal, 4=Low)
 queue_priority TINYINT UNSIGNED NOT NULL DEFAULT 3,
+
+-- CS Queue tab (Shop Queue): visibility, freeform CS note, audit
+queue_visible TINYINT(1) NOT NULL DEFAULT 1,
+queue_note TEXT NULL,
+queue_updated_at DATETIME NULL,
+queue_updated_by BIGINT UNSIGNED NULL,
 
 -- ClickUp
 clickup_task_id VARCHAR(64) NULL,

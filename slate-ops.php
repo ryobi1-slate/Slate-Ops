@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.54.1
+ * Version: 0.55.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.54.1');
+define('SLATE_OPS_VERSION', '0.55.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -116,6 +116,16 @@ add_action('wp_enqueue_scripts', function() {
     $ver_cs_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-cs-dashboard.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-cs-dashboard.js')   : SLATE_OPS_VERSION;
     wp_enqueue_style('slate-ops-cs-dashboard',  SLATE_OPS_URL . 'assets/css/ops-cs-dashboard.css', ['slate-ops-shell'], $ver_cs_css);
     wp_enqueue_script('slate-ops-cs-dashboard', SLATE_OPS_URL . 'assets/js/ops-cs-dashboard.js',   [],                  $ver_cs_js,  true);
+    wp_localize_script('slate-ops-cs-dashboard', 'slateOpsCsDashboard', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'user' => [
+        'id'   => get_current_user_id(),
+        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+      ],
+    ]);
   } elseif ($is_executive) {
     // Executive Dashboard V2 — server-rendered template + standalone
     // vanilla JS (Purchasing pattern). React app is not loaded here.
