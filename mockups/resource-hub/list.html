@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Resource hub — Slate Ops</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="rh-shell">
+
+    <header class="rh-topbar">
+      <a href="list.html" class="rh-topbar__logo">Slate</a>
+      <span class="rh-topbar__title">Resource hub</span>
+      <span class="rh-topbar__spacer"></span>
+      <span class="rh-topbar__avatar" aria-label="Account">JM</span>
+    </header>
+
+    <main class="rh-page">
+      <h1 class="rh-page__heading">Resource hub</h1>
+      <p class="rh-page__sub">Vendor install guides, certs, and Slate-authored notes.</p>
+
+      <section class="rh-controls" aria-label="Search and filter">
+        <label class="rh-search">
+          <span class="rh-search__icon" aria-hidden="true">⌕</span>
+          <input class="rh-search__input" type="search" placeholder="Search by SKU, title, or vendor">
+        </label>
+
+        <div class="rh-chips" role="group" aria-label="Vendor">
+          <button type="button" class="rh-chip is-active" data-chip-all>All vendors</button>
+          <button type="button" class="rh-chip">Flatline Van Co</button>
+          <button type="button" class="rh-chip">Adventure Wagon</button>
+          <button type="button" class="rh-chip">Slate-authored</button>
+          <button type="button" class="rh-chip">Owl Vans</button>
+        </div>
+
+        <div class="rh-chips" role="group" aria-label="Doc type">
+          <button type="button" class="rh-chip is-active" data-chip-all>All types</button>
+          <button type="button" class="rh-chip">Install guide</button>
+          <button type="button" class="rh-chip">QC checklist</button>
+          <button type="button" class="rh-chip">Spec sheet</button>
+          <button type="button" class="rh-chip">Cert</button>
+          <button type="button" class="rh-chip">SDS</button>
+        </div>
+
+        <div class="rh-chips" role="group" aria-label="Chassis">
+          <button type="button" class="rh-chip is-active" data-chip-all>All chassis</button>
+          <button type="button" class="rh-chip">Sprinter 144 HR</button>
+          <button type="button" class="rh-chip">Sprinter 170 HR</button>
+          <button type="button" class="rh-chip">Sprinter AWD</button>
+          <button type="button" class="rh-chip">Transit</button>
+          <button type="button" class="rh-chip">ProMaster</button>
+        </div>
+      </section>
+
+      <div class="rh-list" aria-label="Resources">
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">SP0114B</span>
+            <span class="rh-card__date">Updated apr 22</span>
+          </div>
+          <h2 class="rh-card__title">Sprinter standard roof rack — 144 HR</h2>
+          <div class="rh-card__vendor">Flatline Van Co</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Install guide</span>
+            <span class="rh-tag">Sprinter 144 HR</span>
+          </div>
+        </a>
+
+        <a class="rh-card rh-card--needs-review" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">AW2210</span>
+            <span class="rh-card__date">Updated may 02</span>
+          </div>
+          <h2 class="rh-card__title">Cabinet wall mount kit — 170 HR</h2>
+          <div class="rh-card__vendor">Adventure Wagon</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Install guide</span>
+            <span class="pill pill--parts">Needs Slate review</span>
+            <span class="rh-tag">Sprinter 170 HR</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">SL-QC-014</span>
+            <span class="rh-card__date">Updated apr 18</span>
+          </div>
+          <h2 class="rh-card__title">Slate QC checklist — bed platform handoff</h2>
+          <div class="rh-card__vendor">Slate-authored</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">QC checklist</span>
+            <span class="pill pill--ready">Reviewed</span>
+            <span class="rh-tag">All chassis</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">FL-3300</span>
+            <span class="rh-card__date">Updated mar 30</span>
+          </div>
+          <h2 class="rh-card__title">L-track flooring — Transit long</h2>
+          <div class="rh-card__vendor">Flatline Van Co</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Install guide</span>
+            <span class="rh-tag">Transit</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">SP0210</span>
+            <span class="rh-card__date">Updated feb 14</span>
+          </div>
+          <h2 class="rh-card__title">Awning bracket spec sheet — AWD</h2>
+          <div class="rh-card__vendor">Flatline Van Co</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Spec sheet</span>
+            <span class="rh-tag">Sprinter AWD</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">SDS-4416</span>
+            <span class="rh-card__date">Updated jan 09</span>
+          </div>
+          <h2 class="rh-card__title">3M VHB tape — safety data sheet</h2>
+          <div class="rh-card__vendor">3M (vendor reference)</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">SDS</span>
+            <span class="rh-tag">All chassis</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">AW1140</span>
+            <span class="rh-card__date">Updated apr 04</span>
+          </div>
+          <h2 class="rh-card__title">Insulation panel install — ProMaster 159</h2>
+          <div class="rh-card__vendor">Adventure Wagon</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Install guide</span>
+            <span class="rh-tag">ProMaster</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">CERT-DOT-019</span>
+            <span class="rh-card__date">Updated mar 11</span>
+          </div>
+          <h2 class="rh-card__title">DOT compliance cert — second-row seat anchor</h2>
+          <div class="rh-card__vendor">Owl Vans</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Cert</span>
+            <span class="pill pill--ready">Reviewed</span>
+            <span class="rh-tag">Sprinter 144 HR</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">SL-NOTE-082</span>
+            <span class="rh-card__date">Updated may 06</span>
+          </div>
+          <h2 class="rh-card__title">Slate addendum — water tank fill port routing</h2>
+          <div class="rh-card__vendor">Slate-authored · layered on FL-2208</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Install guide</span>
+            <span class="rh-tag">Sprinter 170 HR</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">FL-5102</span>
+            <span class="rh-card__date">Updated dec 18</span>
+          </div>
+          <h2 class="rh-card__title">12V house battery wiring — Transit AWD</h2>
+          <div class="rh-card__vendor">Flatline Van Co</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Install guide</span>
+            <span class="rh-tag">Transit</span>
+          </div>
+        </a>
+
+        <a class="rh-card rh-card--needs-review" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">OWL-BUMP-04</span>
+            <span class="rh-card__date">Updated may 04</span>
+          </div>
+          <h2 class="rh-card__title">Rear bumper swing-out — vendor revision</h2>
+          <div class="rh-card__vendor">Owl Vans</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Install guide</span>
+            <span class="pill pill--parts">Needs Slate review</span>
+            <span class="rh-tag">Sprinter 144 HR</span>
+          </div>
+        </a>
+
+        <a class="rh-card" href="detail.html">
+          <div class="rh-card__top">
+            <span class="rh-card__sku">SL-SOP-007</span>
+            <span class="rh-card__date">Updated apr 27</span>
+          </div>
+          <h2 class="rh-card__title">Slate SOP — fridge gimbal final torque values</h2>
+          <div class="rh-card__vendor">Slate-authored</div>
+          <div class="rh-card__tags">
+            <span class="pill pill--qc">Spec sheet</span>
+            <span class="pill pill--ready">Reviewed</span>
+            <span class="rh-tag">All chassis</span>
+          </div>
+        </a>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="mockup.js"></script>
+</body>
+</html>
