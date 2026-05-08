@@ -329,6 +329,9 @@
       if (tab === 'queue') {
         activateQueue();
       }
+      if (tab === 'workspace-beta') {
+        activateBeta();
+      }
     });
   });
 
@@ -824,6 +827,701 @@
         showToast('Dashboard refreshed');
       }, 600);
     });
+  }
+
+  // ─── CS Workspace (Beta) tab ─────────────────────────────────────────
+  // Phase 1 surface that combines the Workspace + Queue concepts. Reuses
+  // GET/POST /cs/queue. Local state is intentionally separate from
+  // queueState so edits in either tab don't fight. No drag/drop yet; manual
+  // queue # input is the accessibility fallback and only edit path.
+  var betaState = {
+    loaded:    false,
+    loading:   false,
+    jobs:      [],
+    edits:     {},        // { id: { queue_order, queue_visible, queue_note } }
+    filter:    'all',
+    query:     '',
+    selected:  null       // currently selected job id
+  };
+
+  function betaApi() {
+    return (window.slateOpsCsDashboard && window.slateOpsCsDashboard.api) || null;
+  }
+
+  function activateBeta() {
+    if (betaState.loaded || betaState.loading) {
+      renderBeta();
+      return;
+    }
+    loadBeta();
+  }
+
+  function loadBeta(opts) {
+    var api = betaApi();
+    var body = document.getElementById('cs-beta-body');
+    if (!api) {
+      if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Workspace API not available.</span></div>';
+      return;
+    }
+    if (!opts || !opts.silent) {
+      betaState.loading = true;
+      if (body) {
+        body.innerHTML = '<div class="cs-beta__placeholder"><span class="material-symbols-outlined cs-beta__spinner">progress_activity</span><span>Loading workspace…</span></div>';
+      }
+    }
+    fetch(api.root + '/cs/queue', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': api.nonce, 'Accept': 'application/json' }
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        betaState.loading = false;
+        if (!res.ok || !res.body || !res.body.ok) {
+          if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load workspace.</span></div>';
+          return;
+        }
+        betaState.jobs   = res.body.jobs || [];
+        betaState.edits  = {};
+        betaState.loaded = true;
+        renderBeta();
+      })
+      .catch(function () {
+        betaState.loading = false;
+        if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load workspace.</span></div>';
+      });
+  }
+
+  function betaJobById(id) {
+    for (var i = 0; i < betaState.jobs.length; i++) {
+      if (betaState.jobs[i].id === id) return betaState.jobs[i];
+    }
+    return null;
+  }
+
+  function betaEffectiveJob(j) {
+    var e = betaState.edits[j.id] || {};
+    return {
+      id:               j.id,
+      job_number:       j.job_number,
+      so_number:        j.so_number,
+      customer:         j.customer,
+      dealer:           j.dealer,
+      status:           j.status,
+      status_label:     j.status_label,
+      parts_status:     j.parts_status,
+      due_date:         j.due_date,
+      promised_date:    j.promised_date,
+      scheduled_start:  j.scheduled_start,
+      assigned_user_id: j.assigned_user_id,
+      assigned_tech:    j.assigned_tech,
+      queue_priority:   j.queue_priority,
+      queue_order:      e.queue_order   !== undefined ? e.queue_order   : j.queue_order,
+      queue_visible:    e.queue_visible !== undefined ? e.queue_visible : j.queue_visible,
+      queue_note:       e.queue_note    !== undefined ? e.queue_note    : (j.queue_note || ''),
+      _dirty:           Object.keys(e).length > 0
+    };
+  }
+
+  function betaPassesChip(j) {
+    var ps = String(j.parts_status || '').toUpperCase();
+    switch (betaState.filter) {
+      case 'all':        return true;
+      case 'ready':      return j.status === 'READY_FOR_BUILD';
+      case 'scheduled':  return j.status === 'SCHEDULED';
+      case 'inprog':     return j.status === 'IN_PROGRESS';
+      case 'blocked':    return j.status === 'BLOCKED';
+      case 'closeout':   return j.status === 'QC' || j.status === 'PENDING_QC';
+      case 'unassigned': return !j.assigned_user_id;
+      case 'parts':      return ps === 'HOLD' || ps === 'NOT_READY';
+      default:           return true;
+    }
+  }
+
+  function betaPassesQuery(j) {
+    var q = betaState.query;
+    if (!q) return true;
+    var hay = [
+      j.so_number, j.job_number, j.customer, j.dealer,
+      j.assigned_tech, j.queue_note, j.status_label
+    ].join(' ').toLowerCase();
+    return hay.indexOf(q) !== -1;
+  }
+
+  function betaCounts(jobs) {
+    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, unassigned: 0, parts: 0 };
+    jobs.forEach(function (j) {
+      var ps = String(j.parts_status || '').toUpperCase();
+      c.all++;
+      if (j.status === 'READY_FOR_BUILD')                       c.ready++;
+      if (j.status === 'SCHEDULED')                             c.scheduled++;
+      if (j.status === 'IN_PROGRESS')                           c.inprog++;
+      if (j.status === 'BLOCKED')                               c.blocked++;
+      if (j.status === 'QC' || j.status === 'PENDING_QC')       c.closeout++;
+      if (!j.assigned_user_id)                                  c.unassigned++;
+      if (ps === 'HOLD' || ps === 'NOT_READY')                  c.parts++;
+    });
+    return c;
+  }
+
+  function betaInitials(name) {
+    var s = String(name || '').trim();
+    if (!s) return '?';
+    var parts = s.split(/\s+/);
+    var a = parts[0] ? parts[0].charAt(0) : '';
+    var b = parts[1] ? parts[1].charAt(0) : '';
+    return (a + b).toUpperCase() || s.charAt(0).toUpperCase();
+  }
+
+  function betaFmtNote(s) {
+    if (!s) return '';
+    var t = String(s).trim();
+    if (t.length > 60) return t.slice(0, 57) + '…';
+    return t;
+  }
+
+  function renderBetaCounts(allJobs) {
+    var counts = betaCounts(allJobs);
+    Object.keys(counts).forEach(function (k) {
+      var el = document.querySelector('.cs-beta-chip__count[data-count="' + k + '"]');
+      if (el) el.textContent = counts[k];
+    });
+  }
+
+  function renderBeta() {
+    var body = document.getElementById('cs-beta-body');
+    if (!body) return;
+
+    var allJobs   = betaState.jobs.map(betaEffectiveJob);
+    renderBetaCounts(allJobs);
+
+    var filtered  = allJobs.filter(betaPassesChip).filter(betaPassesQuery);
+
+    // Group by tech
+    var groups   = {};
+    var keyOrder = [];
+    filtered.forEach(function (j) {
+      var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
+      if (!groups[key]) {
+        groups[key] = {
+          key:        key,
+          label:      j.assigned_user_id ? (j.assigned_tech || ('User #' + j.assigned_user_id)) : 'Unassigned',
+          unassigned: !j.assigned_user_id,
+          jobs:       []
+        };
+        keyOrder.push(key);
+      }
+      groups[key].jobs.push(j);
+    });
+
+    keyOrder.sort(function (a, b) {
+      if (groups[a].unassigned && !groups[b].unassigned) return 1;
+      if (!groups[a].unassigned && groups[b].unassigned) return -1;
+      return groups[a].label.localeCompare(groups[b].label);
+    });
+
+    if (keyOrder.length === 0) {
+      var emptyMsg = (betaState.query || betaState.filter !== 'all')
+        ? 'No jobs match your filter or search.'
+        : 'No active jobs in the queue right now.';
+      body.innerHTML = ''
+        + '<div class="cs-beta__placeholder cs-beta__placeholder--empty">'
+        +   '<span class="material-symbols-outlined">inbox</span>'
+        +   '<span>' + escapeHtml(emptyMsg) + '</span>'
+        + '</div>';
+      updateBetaWarnings(allJobs);
+      updateBetaSaveButton();
+      renderBetaDetail();
+      return;
+    }
+
+    var html = keyOrder.map(function (k) {
+      var g = groups[k];
+      g.jobs.sort(function (a, b) {
+        var ao = a.queue_order == null ? 1e9 : a.queue_order;
+        var bo = b.queue_order == null ? 1e9 : b.queue_order;
+        if (ao !== bo) return ao - bo;
+        return (a.job_number || '').localeCompare(b.job_number || '');
+      });
+
+      // Detect duplicate visible queue numbers within the group.
+      var seen = {}, dupSet = {};
+      g.jobs.forEach(function (j) {
+        if (!j.queue_visible || j.queue_order == null) return;
+        if (seen[j.queue_order]) dupSet[j.queue_order] = true;
+        seen[j.queue_order] = true;
+      });
+
+      var visibleCount = g.jobs.filter(function (j) { return j.queue_visible; }).length;
+
+      var rows = g.jobs.map(function (j) {
+        var dup        = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
+        var ps         = String(j.parts_status || '').toUpperCase();
+        var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || ps === 'HOLD' || ps === 'NOT_READY');
+        var sel        = (betaState.selected === j.id);
+
+        var rowCls = 'cs-beta-row';
+        if (j._dirty)         rowCls += ' is-dirty';
+        if (sel)              rowCls += ' is-selected';
+        if (!j.queue_visible) rowCls += ' is-hidden';
+        if (dup)              rowCls += ' is-dup';
+        if (blockedTop)       rowCls += ' is-warn';
+
+        var noteText = betaFmtNote(j.queue_note);
+        var noteIcon = j.queue_note ? 'sticky_note_2' : '';
+
+        return ''
+          + '<div class="' + rowCls + '" data-job="' + j.id + '" tabindex="0" role="button">'
+          +   '<div class="cs-beta-row__handle" title="Drag to reorder (coming soon)" aria-hidden="true">'
+          +     '<span class="material-symbols-outlined">drag_indicator</span>'
+          +   '</div>'
+          +   '<div class="cs-beta-row__qnum">'
+          +     '<input type="number" min="1" step="1" class="cs-beta-row__qinput"'
+          +       ' value="' + (j.queue_order == null ? '' : j.queue_order) + '"'
+          +       ' data-field="queue_order" aria-label="Queue number">'
+          +     (dup ? '<span class="cs-beta-row__dup" title="Duplicate queue number">!</span>' : '')
+          +   '</div>'
+          +   '<div class="cs-beta-row__so"><span class="cs-beta-mono">' + escapeHtml(j.so_number || j.job_number || '') + '</span></div>'
+          +   '<div class="cs-beta-row__cust">'
+          +     '<div class="cs-beta-row__name">' + escapeHtml(j.customer || '—') + '</div>'
+          +     '<div class="cs-beta-row__sub">' + escapeHtml(j.dealer || '') + '</div>'
+          +   '</div>'
+          +   '<div class="cs-beta-row__status"><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></div>'
+          +   '<div class="cs-beta-row__parts"><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></div>'
+          +   '<div class="cs-beta-row__tech">'
+          +     '<span class="cs-beta-avatar" aria-hidden="true">' + escapeHtml(betaInitials(j.assigned_tech)) + '</span>'
+          +     '<span class="cs-beta-row__techname">' + escapeHtml(j.assigned_tech || 'Unassigned') + '</span>'
+          +   '</div>'
+          +   '<div class="cs-beta-row__due cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</div>'
+          +   '<div class="cs-beta-row__note">'
+          +     (noteIcon ? '<span class="material-symbols-outlined cs-beta-row__noteicon" aria-hidden="true">' + noteIcon + '</span>' : '<span class="cs-beta-row__noteicon-spacer" aria-hidden="true"></span>')
+          +     '<span class="cs-beta-row__notetext">' + (noteText ? escapeHtml(noteText) : '<span class="cs-beta-row__notetext--empty">—</span>') + '</span>'
+          +   '</div>'
+          +   '<div class="cs-beta-row__actions">'
+          +     '<button type="button" class="cs-beta-row__iconbtn" data-action="toggle-visible"'
+          +       ' aria-pressed="' + (j.queue_visible ? 'true' : 'false') + '"'
+          +       ' title="' + (j.queue_visible ? 'Hide from queue' : 'Show in queue') + '">'
+          +       '<span class="material-symbols-outlined">' + (j.queue_visible ? 'visibility' : 'visibility_off') + '</span>'
+          +     '</button>'
+          +     '<button type="button" class="cs-beta-row__iconbtn" data-action="open-detail" title="Open detail">'
+          +       '<span class="material-symbols-outlined">chevron_right</span>'
+          +     '</button>'
+          +   '</div>'
+          + '</div>';
+      }).join('');
+
+      var totalHrsBlock = ''; // est. hours not in /cs/queue payload yet — omit per spec.
+
+      return ''
+        + '<section class="cs-beta-group" data-group="' + escapeHtml(g.key) + '">'
+        +   '<header class="cs-beta-group__head">'
+        +     '<div class="cs-beta-group__name">'
+        +       '<span class="cs-beta-avatar cs-beta-avatar--lg' + (g.unassigned ? ' cs-beta-avatar--ghost' : '') + '" aria-hidden="true">' + escapeHtml(betaInitials(g.label)) + '</span>'
+        +       '<div>'
+        +         '<div class="cs-beta-group__title">' + escapeHtml(g.label) + '</div>'
+        +         '<div class="cs-beta-group__meta">' + g.jobs.length + ' jobs · ' + visibleCount + ' visible' + (g.unassigned ? ' · needs assignment' : '') + '</div>'
+        +       '</div>'
+        +     '</div>'
+        +     '<div class="cs-beta-group__right">' + totalHrsBlock + '</div>'
+        +   '</header>'
+        +   '<div class="cs-beta-list">'
+        +     '<div class="cs-beta-list__head" aria-hidden="true">'
+        +       '<span></span>'
+        +       '<span>Q#</span>'
+        +       '<span>SO #</span>'
+        +       '<span>Customer / Dealer</span>'
+        +       '<span>Status</span>'
+        +       '<span>Parts</span>'
+        +       '<span>Tech</span>'
+        +       '<span>Due</span>'
+        +       '<span>Note</span>'
+        +       '<span></span>'
+        +     '</div>'
+        +     rows
+        +   '</div>'
+        + '</section>';
+    }).join('');
+
+    body.innerHTML = html;
+    wireBetaRows();
+    updateBetaWarnings(allJobs);
+    updateBetaSaveButton();
+    renderBetaDetail();
+  }
+
+  function wireBetaRows() {
+    var body = document.getElementById('cs-beta-body');
+    if (!body) return;
+
+    $$('.cs-beta-row__qinput', body).forEach(function (input) {
+      input.addEventListener('click',  function (e) { e.stopPropagation(); });
+      input.addEventListener('input',  function () {
+        var row = input.closest('.cs-beta-row'); if (!row) return;
+        var id  = parseInt(row.dataset.job, 10);
+        var v   = input.value.trim();
+        var parsed = v === '' ? null : parseInt(v, 10);
+        if (parsed != null && (!isFinite(parsed) || parsed < 1)) parsed = null;
+        recordBetaEdit(id, 'queue_order', parsed);
+      });
+    });
+
+    $$('.cs-beta-row__iconbtn[data-action="toggle-visible"]', body).forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var row = btn.closest('.cs-beta-row'); if (!row) return;
+        var id  = parseInt(row.dataset.job, 10);
+        var snap = betaJobById(id); if (!snap) return;
+        var cur  = betaEffectiveJob(snap);
+        recordBetaEdit(id, 'queue_visible', !cur.queue_visible);
+        renderBeta();
+      });
+    });
+
+    $$('.cs-beta-row__iconbtn[data-action="open-detail"]', body).forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var row = btn.closest('.cs-beta-row'); if (!row) return;
+        var id  = parseInt(row.dataset.job, 10);
+        selectBetaJob(id);
+      });
+    });
+
+    $$('.cs-beta-row', body).forEach(function (row) {
+      row.addEventListener('click', function () {
+        var id = parseInt(row.dataset.job, 10);
+        selectBetaJob(id);
+      });
+      row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          var id = parseInt(row.dataset.job, 10);
+          selectBetaJob(id);
+        }
+      });
+    });
+  }
+
+  function recordBetaEdit(id, field, value) {
+    var snap = betaJobById(id);
+    if (!snap) return;
+    var orig = snap[field];
+    var bag  = betaState.edits[id] || {};
+    var same = (value === orig) || (value == null && orig == null);
+    if (same) {
+      delete bag[field];
+    } else {
+      bag[field] = value;
+    }
+    if (Object.keys(bag).length === 0) {
+      delete betaState.edits[id];
+    } else {
+      betaState.edits[id] = bag;
+    }
+    // Lightweight repaint of warnings + save button without full re-render
+    // (full render happens on visibility toggle or save).
+    var allJobs = betaState.jobs.map(betaEffectiveJob);
+    updateBetaWarnings(allJobs);
+    updateBetaSaveButton();
+    renderBetaCounts(allJobs);
+    if (betaState.selected === id) renderBetaDetail();
+    // Mark dirty-class on the matching row in-place.
+    var row = document.querySelector('.cs-beta-row[data-job="' + id + '"]');
+    if (row) {
+      if (betaState.edits[id]) row.classList.add('is-dirty');
+      else row.classList.remove('is-dirty');
+    }
+  }
+
+  function selectBetaJob(id) {
+    betaState.selected = id;
+    $$('.cs-beta-row.is-selected').forEach(function (el) { el.classList.remove('is-selected'); });
+    var row = document.querySelector('.cs-beta-row[data-job="' + id + '"]');
+    if (row) row.classList.add('is-selected');
+    renderBetaDetail();
+  }
+
+  function clearBetaSelection() {
+    betaState.selected = null;
+    $$('.cs-beta-row.is-selected').forEach(function (el) { el.classList.remove('is-selected'); });
+    var panel = document.getElementById('cs-beta-detail');
+    if (panel) panel.hidden = true;
+  }
+
+  function renderBetaDetail() {
+    var panel = document.getElementById('cs-beta-detail');
+    var grid  = document.getElementById('cs-beta-detail-grid');
+    if (!panel || !grid) return;
+    if (betaState.selected == null) { panel.hidden = true; return; }
+    var snap = betaJobById(betaState.selected);
+    if (!snap) { panel.hidden = true; return; }
+    var j = betaEffectiveJob(snap);
+
+    var jobEl  = document.getElementById('cs-beta-detail-job');
+    var custEl = document.getElementById('cs-beta-detail-cust');
+    if (jobEl)  jobEl.textContent  = j.so_number || j.job_number || ('Job #' + j.id);
+    if (custEl) custEl.textContent = j.customer || '';
+
+    panel.hidden = false;
+
+    grid.innerHTML = ''
+      + '<section class="cs-beta-detail-section">'
+      +   '<h4 class="cs-beta-detail-section__title">Job Identity</h4>'
+      +   '<dl class="cs-beta-detail-kv">'
+      +     '<dt>Customer</dt><dd>' + escapeHtml(j.customer || '—') + '</dd>'
+      +     '<dt>Dealer</dt><dd>' + escapeHtml(j.dealer || '—') + '</dd>'
+      +     '<dt>SO #</dt><dd class="cs-beta-mono">' + escapeHtml(j.so_number || '—') + '</dd>'
+      +     '<dt>Job ID</dt><dd class="cs-beta-mono">#' + j.id + '</dd>'
+      +   '</dl>'
+      + '</section>'
+      + '<section class="cs-beta-detail-section">'
+      +   '<h4 class="cs-beta-detail-section__title">Scheduling</h4>'
+      +   '<dl class="cs-beta-detail-kv">'
+      +     '<dt>Due Date</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</dd>'
+      +     '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.promised_date)) + '</dd>'
+      +     '<dt>Scheduled Start</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.scheduled_start)) + '</dd>'
+      +     '<dt>Queue #</dt><dd class="cs-beta-mono">' + (j.queue_order == null ? '—' : j.queue_order) + '</dd>'
+      +   '</dl>'
+      + '</section>'
+      + '<section class="cs-beta-detail-section">'
+      +   '<h4 class="cs-beta-detail-section__title">Assignment</h4>'
+      +   '<dl class="cs-beta-detail-kv">'
+      +     '<dt>Tech</dt><dd>'
+      +       '<span class="cs-beta-avatar cs-beta-avatar--sm" aria-hidden="true">' + escapeHtml(betaInitials(j.assigned_tech || '')) + '</span> '
+      +       escapeHtml(j.assigned_tech || 'Unassigned')
+      +     '</dd>'
+      +     '<dt>Visible</dt><dd>' + (j.queue_visible ? 'Yes' : 'No') + '</dd>'
+      +   '</dl>'
+      + '</section>'
+      + '<section class="cs-beta-detail-section">'
+      +   '<h4 class="cs-beta-detail-section__title">Parts / Status</h4>'
+      +   '<dl class="cs-beta-detail-kv">'
+      +     '<dt>Status</dt><dd><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></dd>'
+      +     '<dt>Parts</dt><dd><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></dd>'
+      +   '</dl>'
+      + '</section>'
+      + '<section class="cs-beta-detail-section cs-beta-detail-section--wide">'
+      +   '<h4 class="cs-beta-detail-section__title">Queue Note <span class="cs-beta-detail-section__hint">visible to Tech</span></h4>'
+      +   '<textarea class="cs-beta-detail-note" id="cs-beta-detail-note" maxlength="240"'
+      +     ' placeholder="Add a short note for the tech…">' + escapeHtml(j.queue_note || '') + '</textarea>'
+      + '</section>'
+      + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
+      +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
+      +   '<div class="cs-beta-detail-actions">'
+      +     '<button type="button" class="btn btn--secondary" data-action="beta-toggle-visible">'
+      +       '<span class="material-symbols-outlined">' + (j.queue_visible ? 'visibility_off' : 'visibility') + '</span>'
+      +       (j.queue_visible ? 'Hide from queue' : 'Show in queue')
+      +     '</button>'
+      +     '<a class="btn btn--secondary" href="' + escapeHtml(window.location.origin + '/ops/cs/?embed=1') + '" target="_blank" rel="noopener">'
+      +       '<span class="material-symbols-outlined">open_in_new</span>'
+      +       'Open in legacy CS'
+      +     '</a>'
+      +   '</div>'
+      + '</section>';
+
+    var noteEl = document.getElementById('cs-beta-detail-note');
+    if (noteEl) {
+      noteEl.addEventListener('input', function () {
+        recordBetaEdit(j.id, 'queue_note', noteEl.value);
+      });
+    }
+    var toggleBtn = grid.querySelector('[data-action="beta-toggle-visible"]');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function () {
+        recordBetaEdit(j.id, 'queue_visible', !j.queue_visible);
+        renderBeta();
+      });
+    }
+  }
+
+  function updateBetaWarnings(allJobs) {
+    var box = document.getElementById('cs-beta-warnings');
+    if (!box) return;
+
+    var groups = {};
+    allJobs.forEach(function (j) {
+      var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
+      (groups[key] = groups[key] || { label: j.assigned_user_id ? (j.assigned_tech || 'Tech') : 'Unassigned', jobs: [] }).jobs.push(j);
+    });
+
+    var warnings = [];
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k];
+      var seen = {}, dupNums = {};
+      g.jobs.forEach(function (j) {
+        if (!j.queue_visible || j.queue_order == null) return;
+        if (seen[j.queue_order]) dupNums[j.queue_order] = true;
+        seen[j.queue_order] = true;
+      });
+      Object.keys(dupNums).forEach(function (n) {
+        warnings.push({
+          tone: 'alert',
+          text: 'Duplicate queue # ' + n + ' in ' + g.label + ' — only one job can hold a given slot.'
+        });
+      });
+      g.jobs.forEach(function (j) {
+        if (!j.queue_visible || j.queue_order !== 1) return;
+        var ps  = String(j.parts_status || '').toUpperCase();
+        var bad = j.status === 'BLOCKED' || ps === 'HOLD' || ps === 'NOT_READY';
+        if (bad) {
+          warnings.push({
+            tone: 'warn',
+            text: (j.so_number || j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? 'blocked' : 'on parts hold') + '.'
+          });
+        }
+      });
+    });
+
+    if (warnings.length === 0) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = warnings.map(function (w) {
+      return ''
+        + '<div class="cs-beta-warning cs-beta-warning--' + w.tone + '">'
+        +   '<span class="material-symbols-outlined">' + (w.tone === 'alert' ? 'error' : 'warning') + '</span>'
+        +   '<span>' + escapeHtml(w.text) + '</span>'
+        + '</div>';
+    }).join('');
+  }
+
+  function updateBetaSaveButton() {
+    var btn = document.getElementById('cs-beta-save');
+    if (!btn) return;
+    var n = Object.keys(betaState.edits).length;
+    btn.disabled = (n === 0);
+    var label = document.getElementById('cs-beta-save-label');
+    if (label) label.textContent = n > 0 ? ('Save Changes (' + n + ')') : 'Save Changes';
+  }
+
+  function normalizeBeta() {
+    var jobs   = betaState.jobs.map(betaEffectiveJob);
+    var groups = {};
+    jobs.forEach(function (j) {
+      var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
+      (groups[key] = groups[key] || []).push(j);
+    });
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k];
+      g.sort(function (a, b) {
+        var ao = a.queue_order == null ? 1e9 : a.queue_order;
+        var bo = b.queue_order == null ? 1e9 : b.queue_order;
+        if (ao !== bo) return ao - bo;
+        return (a.job_number || '').localeCompare(b.job_number || '');
+      });
+      var n = 1;
+      g.forEach(function (j) {
+        if (!j.queue_visible) return;
+        if (j.queue_order !== n) {
+          recordBetaEdit(j.id, 'queue_order', n);
+        }
+        n++;
+      });
+    });
+    renderBeta();
+    showToast('Queue numbers normalized — Save to commit');
+  }
+
+  function saveBeta() {
+    var api = betaApi();
+    if (!api) return;
+    var ids = Object.keys(betaState.edits);
+    if (ids.length === 0) return;
+
+    var updates = ids.map(function (id) {
+      var e = betaState.edits[id];
+      var u = { id: parseInt(id, 10) };
+      if ('queue_order'   in e) u.queue_order   = e.queue_order;
+      if ('queue_visible' in e) u.queue_visible = !!e.queue_visible;
+      if ('queue_note'    in e) u.queue_note    = e.queue_note;
+      return u;
+    });
+
+    var btn = document.getElementById('cs-beta-save');
+    if (btn) btn.disabled = true;
+
+    fetch(api.root + '/cs/queue', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce':   api.nonce,
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      },
+      body: JSON.stringify({ updates: updates })
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body || !res.body.ok) {
+          showToast('Save failed — check warnings');
+          if (btn) btn.disabled = false;
+          return;
+        }
+        showToast('Saved · ' + (res.body.saved || 0) + ' jobs updated');
+        betaState.loaded = false;
+        betaState.edits  = {};
+        loadBeta();
+      })
+      .catch(function () {
+        showToast('Save failed');
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  // ─── Beta tab wiring ─────────────────────────────────────────────────
+  $$('.cs-beta-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      $$('.cs-beta-chip').forEach(function (c) {
+        c.classList.remove('is-active');
+        c.setAttribute('aria-selected', 'false');
+      });
+      chip.classList.add('is-active');
+      chip.setAttribute('aria-selected', 'true');
+      betaState.filter = chip.dataset.filter || 'all';
+      renderBeta();
+    });
+  });
+
+  var betaSearch = document.getElementById('cs-beta-search');
+  if (betaSearch) {
+    var searchT;
+    betaSearch.addEventListener('input', function () {
+      clearTimeout(searchT);
+      searchT = setTimeout(function () {
+        betaState.query = betaSearch.value.trim().toLowerCase();
+        renderBeta();
+      }, 120);
+    });
+  }
+
+  var betaSaveBtn = document.getElementById('cs-beta-save');
+  if (betaSaveBtn) betaSaveBtn.addEventListener('click', saveBeta);
+
+  var betaNormBtn = document.getElementById('cs-beta-normalize');
+  if (betaNormBtn) betaNormBtn.addEventListener('click', normalizeBeta);
+
+  var betaRefreshBtn = document.getElementById('cs-beta-refresh');
+  if (betaRefreshBtn) {
+    betaRefreshBtn.addEventListener('click', function () {
+      if (Object.keys(betaState.edits).length > 0) {
+        if (!window.confirm('You have unsaved changes. Refresh and discard them?')) return;
+      }
+      betaState.loaded = false;
+      loadBeta();
+    });
+  }
+
+  var betaNewBtn = document.getElementById('cs-beta-new');
+  if (betaNewBtn) {
+    betaNewBtn.addEventListener('click', function () {
+      showToast('New Job intake — coming in Phase 2');
+    });
+  }
+
+  var betaDetailClose = document.getElementById('cs-beta-detail-close');
+  if (betaDetailClose) {
+    betaDetailClose.addEventListener('click', clearBetaSelection);
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────

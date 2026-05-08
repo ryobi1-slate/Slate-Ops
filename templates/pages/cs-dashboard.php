@@ -92,6 +92,7 @@ $health_tone_class_map = [
     <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
     <button class="ops-subtab" data-tab="workspace"><span class="material-symbols-outlined">support_agent</span>Workspace</button>
     <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Queue</button>
+    <button class="ops-subtab ops-subtab--beta" data-tab="workspace-beta"><span class="material-symbols-outlined">workspaces</span>CS Workspace<span class="ops-subtab__badge">Beta</span></button>
     <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count"><?php echo esc_html((string) $subtab_counts['intake']); ?></span></button>
     <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
     <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>
@@ -360,6 +361,100 @@ $health_tone_class_map = [
           <span>Loading queue…</span>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ── CS WORKSPACE (BETA) TAB ── -->
+  <!-- Phase 1: combined Workspace + Queue surface. Read/edit queue with
+       grouped-by-tech list, filter chips, search, and a bottom detail
+       panel. Uses the same /cs/queue endpoint as the Queue tab; saves
+       reuse queue_order / queue_visible / queue_note. No drag/drop yet,
+       no deeper job edit/save. -->
+  <div class="ops-tab-content" data-tab-content="workspace-beta" hidden>
+    <div class="ops-cs-workspace-beta cs-beta">
+      <header class="cs-beta__header">
+        <div class="cs-beta__heading">
+          <div class="cs-beta__eyebrow">CS / Supervisor</div>
+          <h2 class="cs-beta__title">CS Workspace</h2>
+          <div class="cs-beta__sub">Manage intake, job updates, assignments, and shop queue order.</div>
+        </div>
+        <div class="cs-beta__actions">
+          <button type="button" class="btn btn--secondary" id="cs-beta-new" title="Coming soon — create new job from intake">
+            <span class="material-symbols-outlined">add</span>
+            New Job
+          </button>
+          <button type="button" class="btn btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
+            <span class="material-symbols-outlined">low_priority</span>
+            Normalize Queue
+          </button>
+          <button type="button" class="btn btn--secondary" id="cs-beta-refresh" title="Reload queue data">
+            <span class="material-symbols-outlined">refresh</span>
+            Refresh
+          </button>
+          <button type="button" class="btn btn--primary" id="cs-beta-save" disabled>
+            <span class="material-symbols-outlined">save</span>
+            <span id="cs-beta-save-label">Save Changes</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="cs-beta__filterbar">
+        <label class="cs-beta__search" for="cs-beta-search">
+          <span class="material-symbols-outlined" aria-hidden="true">search</span>
+          <input type="search" id="cs-beta-search" placeholder="Search SO #, customer, dealer, note…" autocomplete="off">
+        </label>
+        <div class="cs-beta__chips" id="cs-beta-chips" role="tablist" aria-label="Filter queue">
+          <button type="button" class="cs-beta-chip is-active" data-filter="all" role="tab" aria-selected="true">
+            <span>All</span><span class="cs-beta-chip__count" data-count="all">0</span>
+          </button>
+          <button type="button" class="cs-beta-chip" data-filter="ready" role="tab" aria-selected="false">
+            <span>Ready</span><span class="cs-beta-chip__count" data-count="ready">0</span>
+          </button>
+          <button type="button" class="cs-beta-chip" data-filter="scheduled" role="tab" aria-selected="false">
+            <span>Scheduled</span><span class="cs-beta-chip__count" data-count="scheduled">0</span>
+          </button>
+          <button type="button" class="cs-beta-chip" data-filter="inprog" role="tab" aria-selected="false">
+            <span>In Progress</span><span class="cs-beta-chip__count" data-count="inprog">0</span>
+          </button>
+          <button type="button" class="cs-beta-chip" data-filter="blocked" role="tab" aria-selected="false">
+            <span>Blocked</span><span class="cs-beta-chip__count" data-count="blocked">0</span>
+          </button>
+          <button type="button" class="cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
+            <span>Ready for Closeout</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
+          </button>
+          <button type="button" class="cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
+            <span>Unassigned</span><span class="cs-beta-chip__count" data-count="unassigned">0</span>
+          </button>
+          <button type="button" class="cs-beta-chip" data-filter="parts" role="tab" aria-selected="false">
+            <span>Parts Hold</span><span class="cs-beta-chip__count" data-count="parts">0</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="cs-beta__warnings" id="cs-beta-warnings" hidden></div>
+
+      <div class="cs-beta__body" id="cs-beta-body" aria-live="polite">
+        <div class="cs-beta__placeholder">
+          <span class="material-symbols-outlined cs-beta__spinner" aria-hidden="true">progress_activity</span>
+          <span>Loading workspace…</span>
+        </div>
+      </div>
+
+      <aside class="cs-beta__detail" id="cs-beta-detail" hidden aria-label="Job detail">
+        <div class="cs-beta__detail-bar">
+          <div class="cs-beta__detail-id">
+            <span class="cs-beta__detail-eyebrow">Job Detail</span>
+            <span class="cs-beta__detail-job" id="cs-beta-detail-job">—</span>
+            <span class="cs-beta__detail-cust" id="cs-beta-detail-cust"></span>
+          </div>
+          <div class="cs-beta__detail-bar-actions">
+            <button type="button" class="cs-beta__detail-close" id="cs-beta-detail-close" aria-label="Close detail">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+        <div class="cs-beta__detail-grid" id="cs-beta-detail-grid"></div>
+      </aside>
     </div>
   </div>
 
