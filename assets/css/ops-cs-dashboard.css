@@ -1262,9 +1262,27 @@ body.cs-workspace-active .ops-tab-content[data-tab-content="workspace"][hidden] 
   color: var(--slate-ink-subtle);
   display: inline-flex;
   align-items: center;
-  cursor: not-allowed; /* drag/drop not implemented in Phase 1 */
+  cursor: grab;
+  user-select: none;
 }
+.cs-beta-row__handle:hover { color: var(--slate-sage); }
+.cs-beta-row__handle:active { cursor: grabbing; }
 .cs-beta-row__handle .material-symbols-outlined { font-size: 18px; }
+
+/* Drag/drop reorder visuals (Phase 2). Only enabled within the same
+   tech group; cross-tech drops are silently rejected (no indicator). */
+.cs-beta-row.is-dragging {
+  opacity: 0.45;
+  background: var(--slate-sage-wash);
+  outline: 1px dashed var(--slate-sage);
+  outline-offset: -2px;
+}
+.cs-beta-row.is-drop-above { box-shadow: inset 0  2px 0 0 var(--slate-sage); }
+.cs-beta-row.is-drop-below { box-shadow: inset 0 -2px 0 0 var(--slate-sage); }
+/* When a row is both selected/warn and a drop target, the drop hint
+   should still win — selected/dirty share the same Sand background. */
+.cs-beta-row.is-warn.is-drop-above { box-shadow: inset 3px 0 0 var(--slate-arches), inset 0  2px 0 0 var(--slate-sage); }
+.cs-beta-row.is-warn.is-drop-below { box-shadow: inset 3px 0 0 var(--slate-arches), inset 0 -2px 0 0 var(--slate-sage); }
 
 .cs-beta-row__qnum {
   display: inline-flex;

@@ -841,7 +841,8 @@
     edits:     {},        // { id: { queue_order, queue_visible, queue_note } }
     filter:    'all',
     query:     '',
-    selected:  null       // currently selected job id
+    selected:  null,      // currently selected job id
+    drag:      null       // { jobId, groupKey } while a drag is active
   };
 
   function betaApi() {
@@ -1072,7 +1073,7 @@
 
         return ''
           + '<div class="' + rowCls + '" data-job="' + j.id + '" tabindex="0" role="button">'
-          +   '<div class="cs-beta-row__handle" title="Drag to reorder (coming soon)" aria-hidden="true">'
+          +   '<div class="cs-beta-row__handle" title="Drag to reorder within ' + escapeHtml(g.label) + '" aria-label="Drag handle">'
           +     '<span class="material-symbols-outlined">drag_indicator</span>'
           +   '</div>'
           +   '<div class="cs-beta-row__qnum">'
@@ -1199,6 +1200,168 @@
         }
       });
     });
+
+    // ── Drag/drop reorder (Phase 2) ─────────────────────────────────────
+    // Only the drag handle initiates a drag; clicking a row, input, or
+    // button never starts one. Reorder is allowed within the same tech
+    // group only. After drop, visible jobs in that group get renumbered
+    // 1, 2, 3 and changed rows are marked dirty.
+    $$('.cs-beta-row__handle', body).forEach(function (handle) {
+      handle.addEventListener('mousedown', function () {
+        var row = handle.closest('.cs-beta-row');
+        if (row) row.setAttribute('draggable', 'true');
+      });
+    });
+
+    $$('.cs-beta-row', body).forEach(function (row) {
+      row.addEventListener('dragstart', function (e) {
+        // If the browser tried to drag a row that wasn't handle-armed,
+        // cancel — only handle-initiated drags are allowed.
+        if (row.getAttribute('draggable') !== 'true') {
+          e.preventDefault();
+          return;
+        }
+        var section = row.closest('.cs-beta-group');
+        var groupKey = section ? section.getAttribute('data-group') : null;
+        betaState.drag = {
+          jobId:    parseInt(row.dataset.job, 10),
+          groupKey: groupKey
+        };
+        row.classList.add('is-dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/plain', String(row.dataset.job)); } catch (_) {}
+        }
+      });
+
+      row.addEventListener('dragend', function () {
+        row.classList.remove('is-dragging');
+        row.setAttribute('draggable', 'false');
+        clearBetaDropIndicators();
+        betaState.drag = null;
+      });
+
+      row.addEventListener('dragover', function (e) {
+        if (!betaState.drag) return;
+        var section = row.closest('.cs-beta-group');
+        var thisGroup = section ? section.getAttribute('data-group') : null;
+        if (thisGroup !== betaState.drag.groupKey) return;     // reject cross-tech drop
+        if (parseInt(row.dataset.job, 10) === betaState.drag.jobId) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        var rect = row.getBoundingClientRect();
+        var above = e.clientY < (rect.top + rect.height / 2);
+        clearBetaDropIndicators();
+        row.classList.add(above ? 'is-drop-above' : 'is-drop-below');
+      });
+
+      row.addEventListener('dragleave', function () {
+        row.classList.remove('is-drop-above', 'is-drop-below');
+      });
+
+      row.addEventListener('drop', function (e) {
+        if (!betaState.drag) return;
+        var section = row.closest('.cs-beta-group');
+        var thisGroup = section ? section.getAttribute('data-group') : null;
+        if (thisGroup !== betaState.drag.groupKey) return;
+        if (parseInt(row.dataset.job, 10) === betaState.drag.jobId) return;
+        e.preventDefault();
+        var dropAbove = row.classList.contains('is-drop-above');
+        var refId = parseInt(row.dataset.job, 10);
+        var draggedId = betaState.drag.jobId;
+        clearBetaDropIndicators();
+        applyBetaReorder(draggedId, refId, dropAbove);
+      });
+    });
+
+    // Group-level drop: catches drops that land in empty space at the
+    // bottom of the list (or between rows) within the same group.
+    $$('.cs-beta-group', body).forEach(function (section) {
+      section.addEventListener('dragover', function (e) {
+        if (!betaState.drag) return;
+        if (section.getAttribute('data-group') !== betaState.drag.groupKey) return;
+        // Allow the drop; row-level handlers refine the indicator when
+        // the cursor is over a specific row.
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      });
+      section.addEventListener('drop', function (e) {
+        if (!betaState.drag) return;
+        if (section.getAttribute('data-group') !== betaState.drag.groupKey) return;
+        // Already handled by a row drop? Skip.
+        if (e.defaultPrevented) return;
+        // Otherwise treat as "append to end of this group".
+        var rows = $$('.cs-beta-row', section);
+        var lastRow = rows[rows.length - 1];
+        if (!lastRow) return;
+        if (parseInt(lastRow.dataset.job, 10) === betaState.drag.jobId) return;
+        e.preventDefault();
+        clearBetaDropIndicators();
+        applyBetaReorder(betaState.drag.jobId, parseInt(lastRow.dataset.job, 10), false);
+      });
+    });
+  }
+
+  function clearBetaDropIndicators() {
+    $$('.cs-beta-row.is-drop-above, .cs-beta-row.is-drop-below').forEach(function (el) {
+      el.classList.remove('is-drop-above', 'is-drop-below');
+    });
+  }
+
+  function applyBetaReorder(draggedId, refId, dropAbove) {
+    if (draggedId === refId) return;
+    var allJobs = betaState.jobs.map(betaEffectiveJob);
+    var dragged = null;
+    for (var i = 0; i < allJobs.length; i++) {
+      if (allJobs[i].id === draggedId) { dragged = allJobs[i]; break; }
+    }
+    if (!dragged) return;
+
+    var groupKey = dragged.assigned_user_id ? ('u:' + dragged.assigned_user_id) : 'unassigned';
+    var group = allJobs.filter(function (j) {
+      var k = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
+      return k === groupKey;
+    });
+
+    // Same sort order as renderBeta uses for display.
+    group.sort(function (a, b) {
+      var ao = a.queue_order == null ? 1e9 : a.queue_order;
+      var bo = b.queue_order == null ? 1e9 : b.queue_order;
+      if (ao !== bo) return ao - bo;
+      return (a.job_number || '').localeCompare(b.job_number || '');
+    });
+
+    var fromIdx = -1;
+    for (var i2 = 0; i2 < group.length; i2++) {
+      if (group[i2].id === draggedId) { fromIdx = i2; break; }
+    }
+    if (fromIdx === -1) return;
+    group.splice(fromIdx, 1);
+
+    var refIdx = -1;
+    for (var i3 = 0; i3 < group.length; i3++) {
+      if (group[i3].id === refId) { refIdx = i3; break; }
+    }
+    var insertAt;
+    if (refIdx === -1) {
+      insertAt = group.length;
+    } else {
+      insertAt = dropAbove ? refIdx : refIdx + 1;
+    }
+    group.splice(insertAt, 0, dragged);
+
+    // Renumber visible jobs only; hidden rows keep their existing
+    // queue_order so they don't accidentally collide with visible ones.
+    var n = 1;
+    group.forEach(function (j) {
+      if (!j.queue_visible) return;
+      if (j.queue_order !== n) {
+        recordBetaEdit(j.id, 'queue_order', n);
+      }
+      n++;
+    });
+
+    renderBeta();
   }
 
   function recordBetaEdit(id, field, value) {
@@ -1523,6 +1686,16 @@
   if (betaDetailClose) {
     betaDetailClose.addEventListener('click', clearBetaSelection);
   }
+
+  // Defensive: any row left with draggable="true" after a handle mousedown
+  // but without an active drag (e.g., user pressed the handle and let go
+  // without moving) is reset on the next document-level mouseup.
+  document.addEventListener('mouseup', function () {
+    if (betaState.drag) return;
+    $$('.cs-beta-row[draggable="true"]').forEach(function (r) {
+      if (!r.classList.contains('is-dragging')) r.setAttribute('draggable', 'false');
+    });
+  });
 
   // ─── Init ─────────────────────────────────────────────────────────────
   // Server already rendered the lists; re-render priorities/health to
