@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Slate Ops — CS Workspace (Combined)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600;8..144,700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sage: #404f4b;
+    --sage-soft: #5a6a65;
+    --sand: #e1dfc8;
+    --sand-soft: #efeedc;
+    --sand-deep: #c9c6a8;
+    --arches: #d86b19;
+    --arches-soft: #f5dcc4;
+    --redwood: #0f342a;
+    --ink: #0a0a0a;
+    --ink-2: #2a2a2a;
+    --ink-3: #5b5b5b;
+    --ink-4: #8a8a85;
+    --rule: #d9d6c0;
+    --rule-soft: #ebe8d3;
+    --bg: #f3f1e3;
+    --surface: #ffffff;
+    --surface-2: #faf8ed;
+    --ok: #2f6b4d;
+    --ok-soft: #d8e8df;
+    --warn: var(--arches);
+    --warn-soft: #fbe6d2;
+    --bad: #8a2218;
+    --bad-soft: #f3d7d3;
+    --info: #2c4f6b;
+    --info-soft: #d6e2eb;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Roboto Flex", system-ui, -apple-system, sans-serif;
+    font-variation-settings: "opsz" 16, "wght" 400;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "Roboto Mono", ui-monospace, monospace; }
+  .label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; font-size: 13px; color: var(--ink); }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--sage); outline-offset: -1px; }
+  ::selection { background: var(--sand); color: var(--ink); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #cdcab0; border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="atoms.jsx"></script>
+  <script type="text/babel" src="shell.jsx"></script>
+  <script type="text/babel" src="queue.jsx"></script>
+  <script type="text/babel" src="detail.jsx"></script>
+  <script type="text/babel" src="mobile.jsx"></script>
+  <script type="text/babel" src="notes.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
