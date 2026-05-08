@@ -225,7 +225,9 @@
   // The legacy React /ops/cs page is embedded in an iframe. The iframe
   // src is left empty in the template and only set on first activation,
   // so users who never click Workspace don't pay for the React bundle.
-  // Once loaded, the iframe stays in the DOM with its src intact.
+  // The iframe is always visible once activation starts; the skeleton sits
+  // on top as an overlay until `load` fires. Hiding the iframe during load
+  // proved fragile on WordPress.com staging, so we keep it visible.
   var WORKSPACE_LOAD_TIMEOUT_MS = 8000;
   var workspaceTimer = null;
   var workspaceLoaded = false;
@@ -237,15 +239,6 @@
     }
   }
 
-  function showWorkspaceError() {
-    var frame    = document.getElementById('workspace-frame');
-    var skeleton = document.getElementById('workspace-skeleton');
-    var error    = document.getElementById('workspace-error');
-    if (skeleton) skeleton.hidden = true;
-    if (frame)    frame.hidden    = true;
-    if (error)    error.hidden    = false;
-  }
-
   function startWorkspaceLoad() {
     var frame    = document.getElementById('workspace-frame');
     var skeleton = document.getElementById('workspace-skeleton');
@@ -255,14 +248,19 @@
     workspaceLoaded = false;
     if (error)    error.hidden    = true;
     if (skeleton) skeleton.hidden = false;
-    frame.hidden = true;
 
     clearWorkspaceTimer();
     workspaceTimer = setTimeout(function () {
       if (workspaceLoaded) return;
-      showWorkspaceError();
+      console.warn('[cs-dashboard] workspace iframe load timed out after', WORKSPACE_LOAD_TIMEOUT_MS, 'ms');
+      var sk = document.getElementById('workspace-skeleton');
+      var er = document.getElementById('workspace-error');
+      if (sk) sk.hidden = true;
+      if (er) er.hidden = false;
+      // Do NOT hide the iframe; let it keep trying / display whatever it can.
     }, WORKSPACE_LOAD_TIMEOUT_MS);
 
+    console.log('[cs-dashboard] workspace iframe loading:', frame.dataset.src);
     frame.setAttribute('src', frame.dataset.src);
   }
 
@@ -289,23 +287,27 @@
     workspaceFrame.addEventListener('load', function () {
       // Browsers fire `load` once with src="" on initial parse — ignore that.
       if (!workspaceFrame.getAttribute('src')) return;
+      console.log('[cs-dashboard] workspace iframe load fired:', workspaceFrame.getAttribute('src'));
       workspaceLoaded = true;
       clearWorkspaceTimer();
       var skeleton = document.getElementById('workspace-skeleton');
       var error    = document.getElementById('workspace-error');
       if (skeleton) skeleton.hidden = true;
       if (error)    error.hidden    = true;
-      workspaceFrame.hidden = false;
     });
   }
 
   var workspaceRetry = document.getElementById('workspace-retry');
   if (workspaceRetry) {
     workspaceRetry.addEventListener('click', function () {
-      var frame = document.getElementById('workspace-frame');
+      var frame    = document.getElementById('workspace-frame');
+      var skeleton = document.getElementById('workspace-skeleton');
+      var error    = document.getElementById('workspace-error');
       if (!frame) return;
+      if (skeleton) skeleton.hidden = false;
+      if (error)    error.hidden    = true;
       frame.setAttribute('src', '');
-      startWorkspaceLoad();
+      setTimeout(startWorkspaceLoad, 50);
     });
   }
 

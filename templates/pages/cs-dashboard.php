@@ -310,9 +310,7 @@ $health_tone_class_map = [
         id="workspace-frame"
         src=""
         data-src="<?php echo esc_url(home_url('/ops/cs/?embed=1')); ?>"
-        title="CS Workspace"
-        loading="lazy"
-        hidden></iframe>
+        title="CS Workspace"></iframe>
       <div class="ops-workspace__error" id="workspace-error" hidden role="alert">
         <span class="material-symbols-outlined ops-workspace__error-icon" aria-hidden="true">error</span>
         <div class="ops-workspace__error-msg">Workspace failed to load.</div>
