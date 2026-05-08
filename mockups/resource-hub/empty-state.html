@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Resource hub — no results — Slate Ops</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="rh-shell">
+
+    <header class="rh-topbar">
+      <a href="list.html" class="rh-topbar__logo">Slate</a>
+      <span class="rh-topbar__title">Resource hub</span>
+      <span class="rh-topbar__spacer"></span>
+      <span class="rh-topbar__avatar" aria-label="Account">JM</span>
+    </header>
+
+    <main class="rh-page">
+      <h1 class="rh-page__heading">Resource hub</h1>
+      <p class="rh-page__sub">Vendor install guides, certs, and Slate-authored notes.</p>
+
+      <section class="rh-controls" aria-label="Search and filter">
+        <label class="rh-search">
+          <span class="rh-search__icon" aria-hidden="true">⌕</span>
+          <input class="rh-search__input" type="search" value="bumper swing-out 170" placeholder="Search by SKU, title, or vendor">
+        </label>
+
+        <div class="rh-chips" role="group" aria-label="Vendor">
+          <button type="button" class="rh-chip" data-chip-all>All vendors</button>
+          <button type="button" class="rh-chip is-active">Flatline Van Co</button>
+          <button type="button" class="rh-chip">Adventure Wagon</button>
+          <button type="button" class="rh-chip">Slate-authored</button>
+          <button type="button" class="rh-chip">Owl Vans</button>
+        </div>
+
+        <div class="rh-chips" role="group" aria-label="Doc type">
+          <button type="button" class="rh-chip" data-chip-all>All types</button>
+          <button type="button" class="rh-chip">Install guide</button>
+          <button type="button" class="rh-chip">QC checklist</button>
+          <button type="button" class="rh-chip">Spec sheet</button>
+          <button type="button" class="rh-chip is-active">Cert</button>
+          <button type="button" class="rh-chip">SDS</button>
+        </div>
+
+        <div class="rh-chips" role="group" aria-label="Chassis">
+          <button type="button" class="rh-chip" data-chip-all>All chassis</button>
+          <button type="button" class="rh-chip">Sprinter 144 HR</button>
+          <button type="button" class="rh-chip is-active">Sprinter 170 HR</button>
+          <button type="button" class="rh-chip">Sprinter AWD</button>
+          <button type="button" class="rh-chip">Transit</button>
+          <button type="button" class="rh-chip">ProMaster</button>
+        </div>
+      </section>
+
+      <div class="rh-empty">
+        <div class="rh-empty__icon" aria-hidden="true">∅</div>
+        <h2 class="rh-empty__title">No resources match these filters</h2>
+        <p class="rh-empty__body">Try a different vendor, doc type, or chassis — or clear the filters and search again.</p>
+        <a class="rh-btn rh-btn--secondary" href="list.html">Clear filters</a>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="mockup.js"></script>
+</body>
+</html>

@@ -1,0 +1,830 @@
+/*
+ * Slate Ops — Resource Hub mockup styles.
+ * Static HTML/CSS only. No framework, no external fonts, no shadows, no gradients.
+ *
+ * Token strategy: this file re-declares only the --slate-* tokens we actually use
+ * so the mockup renders standalone without pulling assets/css/ops-shell.css.
+ * Where production has no token for what we need, the value is hardcoded and
+ * marked /* TODO: token candidate */. No new tokens are invented.
+ *
+ * Naming: BEM-ish with the rh- (resource hub) prefix. Element = __child,
+ * modifier = --variant, state = .is-active (matches assets/css/ops-cs-dashboard.css).
+ */
+
+:root {
+  /* Surfaces */
+  --slate-surface:         #FFFFFF;
+  --slate-surface-tint:    #FAFAF7;
+  --slate-surface-page:    #F5F3ED;
+
+  /* Sand layer */
+  --slate-sand:            #E1D8CB;
+  --slate-sand-deep:       #D4C9B7;
+  --slate-sand-wash:       #F5F1E9;
+
+  /* Sage (used for SKU per spec, doc-type pill, Slate-notes accent rule) */
+  --slate-sage:            #40464B;
+  --slate-sage-ink:        #2B3034;
+  --slate-sage-wash:       #F2F3F1;
+
+  /* Redwood (the in-app "ready/reviewed" pill) */
+  --slate-redwood:         #0F3A2A;
+  --slate-redwood-dark:    #1a4d39;
+  --slate-redwood-wash:    #E4EEE9;
+
+  /* Arches (the "needs Slate review" amber) */
+  --slate-arches:          #D68B19;
+  --slate-arches-ink:      #B07212;
+  --slate-arches-wash:     #FDF2DF;
+
+  /* Flag (error) */
+  --slate-flag:            #B22222;
+  --slate-flag-wash:       #F8E5E5;
+
+  /* Ink */
+  --slate-ink:             #2A2E2C;
+  --slate-ink-muted:       #5A5E5C;
+  --slate-ink-subtle:      #8A8880;
+  --slate-ink-placeholder: #B0AEA6;
+
+  /* Dividers */
+  --slate-divider:         #E6E2D4;
+  --slate-divider-strong:  #D9D5C7;
+  --slate-divider-soft:    #F0EDE3;
+
+  /* Radii */
+  --slate-radius-sm:       3px;
+  --slate-radius-md:       5px;
+  --slate-radius-lg:       8px;
+  --slate-radius-xl:       12px;
+  --slate-radius-full:     999px;
+
+  /* Type scale */
+  --slate-text-micro:  11px;
+  --slate-text-xs:     12px;
+  --slate-text-sm:     13px;
+  --slate-text-base:   14px;
+  --slate-text-md:     16px;
+  --slate-text-lg:     18px;
+  --slate-text-xl:     22px;
+  --slate-text-2xl:    28px;
+
+  --slate-weight-regular: 400;
+  --slate-weight-medium:  500;
+
+  --slate-leading-tight:   1.2;
+  --slate-leading-normal:  1.5;
+  --slate-leading-relaxed: 1.65;
+
+  --slate-tracking-label:  0.08em;
+  --slate-tracking-wide:   0.12em;
+
+  /* 4px spacing scale */
+  --slate-space-2xs:     2px;
+  --slate-space-xs:      4px;
+  --slate-space-compact: 5px;
+  --slate-space-sm:      8px;
+  --slate-space-md:      12px;
+  --slate-space-lg:      16px;
+  --slate-space-xl:      24px;
+  --slate-space-2xl:     32px;
+  --slate-space-3xl:     48px;
+
+  /* Shell */
+  --slate-shell-topbar-height: 56px;
+  --slate-shell-maxwidth:      1440px;
+
+  /* Borders */
+  --slate-border:        1px solid var(--slate-divider);
+  --slate-border-soft:   1px solid var(--slate-divider-soft);
+  --slate-border-strong: 1px solid var(--slate-divider-strong);
+
+  /* System font stack — production uses 'Roboto Flex' first, but we don't
+     load fonts in the mockup. Fallback chain only, per spec. */
+  --slate-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --slate-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ─── 1. Reset + page shell ─────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--slate-surface-page);
+  color: var(--slate-ink);
+  font-family: var(--slate-font-sans);
+  font-size: var(--slate-text-base);
+  line-height: var(--slate-leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+/* Material Symbols stand-ins. Production loads the icon font globally; the
+   mockup renders the unicode glyph names as plain text inside the span,
+   styled like a chip-icon, so the layout is honest without the font. */
+.rh-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: var(--slate-text-xs);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink-subtle);
+  flex-shrink: 0;
+  /* TODO: token candidate — production uses material-symbols-outlined here. */
+  font-family: var(--slate-font-mono);
+}
+
+.rh-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ─── 2. Topbar (matches production: white, sage logo, hairline divider) ── */
+
+.rh-topbar {
+  height: var(--slate-shell-topbar-height);
+  background: var(--slate-surface);
+  border-bottom: var(--slate-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--slate-space-lg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.rh-topbar__logo {
+  font-size: var(--slate-text-md);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: var(--slate-tracking-wide);
+  text-transform: uppercase;
+  color: var(--slate-sage);
+  text-decoration: none;
+}
+
+.rh-topbar__title {
+  margin-left: var(--slate-space-lg);
+  padding-left: var(--slate-space-lg);
+  border-left: var(--slate-border);
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  letter-spacing: var(--slate-tracking-label);
+  text-transform: uppercase;
+}
+
+.rh-topbar__spacer { flex: 1; }
+
+.rh-topbar__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--slate-radius-full);
+  background: var(--slate-sage-wash);
+  color: var(--slate-sage-ink);
+  font-size: var(--slate-text-xs);
+  font-weight: var(--slate-weight-medium);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── 3. Page container ─────────────────────────────────── */
+
+.rh-page {
+  width: 100%;
+  max-width: var(--slate-shell-maxwidth);
+  margin: 0 auto;
+  padding: var(--slate-space-lg);
+}
+
+@media (min-width: 1024px) {
+  .rh-page { padding: var(--slate-space-2xl); }
+}
+
+.rh-page__heading {
+  margin: 0 0 var(--slate-space-xs);
+  font-size: var(--slate-text-xl);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: -0.005em;
+}
+
+.rh-page__sub {
+  margin: 0 0 var(--slate-space-lg);
+  color: var(--slate-ink-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ─── 4. Sticky search + chip strip ─────────────────────── */
+
+.rh-controls {
+  position: sticky;
+  top: var(--slate-shell-topbar-height);
+  z-index: 5;
+  background: var(--slate-surface-page);
+  padding-top: var(--slate-space-md);
+  padding-bottom: var(--slate-space-md);
+  margin-bottom: var(--slate-space-md);
+}
+
+.rh-search {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-sm);
+  background: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-lg);
+  padding: 0 var(--slate-space-md);
+  height: 44px;
+}
+
+.rh-search__icon {
+  color: var(--slate-ink-subtle);
+  font-size: var(--slate-text-md);
+  font-family: var(--slate-font-mono);
+}
+
+.rh-search__input {
+  flex: 1;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--slate-ink);
+  outline: none;
+}
+
+.rh-search__input::placeholder { color: var(--slate-ink-placeholder); }
+
+.rh-chips {
+  display: flex;
+  gap: var(--slate-space-sm);
+  margin-top: var(--slate-space-md);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.rh-chips::-webkit-scrollbar { display: none; }
+
+.rh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-xs);
+  height: 36px;
+  padding: 0 var(--slate-space-md);
+  border-radius: var(--slate-radius-full);
+  border: var(--slate-border);
+  background: var(--slate-surface);
+  color: var(--slate-ink-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: var(--slate-tracking-label);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rh-chip:hover { border-color: var(--slate-divider-strong); }
+
+.rh-chip.is-active {
+  background: var(--slate-sage);
+  border-color: var(--slate-sage);
+  color: var(--slate-surface);
+}
+
+.rh-chip__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--slate-ink-subtle);
+}
+.rh-chip.is-active .rh-chip__count { color: var(--slate-sand-wash); }
+
+/* ─── 5. Resource cards (list) ──────────────────────────── */
+
+.rh-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-md);
+}
+
+.rh-card {
+  display: block;
+  background: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-xl);
+  padding: var(--slate-space-lg);
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+.rh-card:hover { border-color: var(--slate-divider-strong); }
+
+.rh-card--needs-review {
+  border-left: 3px solid var(--slate-arches);
+  padding-left: calc(var(--slate-space-lg) - 2px);
+}
+
+.rh-card__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--slate-space-md);
+  margin-bottom: var(--slate-space-xs);
+}
+
+.rh-card__sku {
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-md);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--slate-sage);
+}
+
+.rh-card__date {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+  white-space: nowrap;
+}
+
+.rh-card__title {
+  margin: 0 0 var(--slate-space-xs);
+  font-size: var(--slate-text-md);
+  font-weight: var(--slate-weight-medium);
+  line-height: var(--slate-leading-tight);
+  color: var(--slate-ink);
+}
+
+.rh-card__vendor {
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  margin-bottom: var(--slate-space-md);
+}
+
+.rh-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-sm);
+  align-items: center;
+}
+
+.rh-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--slate-space-sm);
+  border-radius: var(--slate-radius-md);
+  background: var(--slate-surface-tint);
+  border: var(--slate-border-soft);
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-muted);
+  white-space: nowrap;
+}
+
+/* ─── 6. Pills (lift the .pill--{variant} family from CS Dashboard) ─── */
+
+.pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: var(--slate-radius-full);
+  font-size: var(--slate-text-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.pill--qc      { background: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.pill--ready   { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.pill--parts   { background: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+.pill--neutral { background: var(--slate-surface-page); color: var(--slate-ink-muted); border: var(--slate-border); }
+
+/* ─── 7. Empty state ────────────────────────────────────── */
+
+.rh-empty {
+  text-align: center;
+  padding: var(--slate-space-3xl) var(--slate-space-lg);
+  border: 1px dashed var(--slate-divider-strong);
+  border-radius: var(--slate-radius-xl);
+  background: var(--slate-surface-tint);
+}
+
+.rh-empty__icon {
+  font-size: var(--slate-text-2xl);
+  color: var(--slate-ink-subtle);
+  font-family: var(--slate-font-mono);
+  margin-bottom: var(--slate-space-sm);
+}
+
+.rh-empty__title {
+  margin: 0 0 var(--slate-space-xs);
+  font-size: var(--slate-text-md);
+  font-weight: var(--slate-weight-medium);
+}
+
+.rh-empty__body {
+  margin: 0 0 var(--slate-space-lg);
+  color: var(--slate-ink-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ─── 8. Buttons ────────────────────────────────────────── */
+
+.rh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--slate-space-xs);
+  min-height: 44px;
+  padding: 0 var(--slate-space-lg);
+  border-radius: var(--slate-radius-lg);
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: var(--slate-tracking-label);
+  border: 1px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Primary = sage solid (matches .btn in ops.css:266) */
+.rh-btn--primary {
+  background: var(--slate-sage);
+  border-color: var(--slate-sage);
+  color: var(--slate-surface);
+}
+.rh-btn--primary:hover { background: var(--slate-sage-ink); border-color: var(--slate-sage-ink); }
+
+/* Secondary = outlined sage */
+.rh-btn--secondary {
+  background: var(--slate-surface);
+  border-color: var(--slate-divider-strong);
+  color: var(--slate-sage);
+}
+.rh-btn--secondary:hover { border-color: var(--slate-sage); }
+
+.rh-btn--block { width: 100%; }
+.rh-btn--sm { min-height: 36px; padding: 0 var(--slate-space-md); font-size: var(--slate-text-xs); }
+
+/* ─── 9. Detail page ────────────────────────────────────── */
+
+.rh-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-xs);
+  color: var(--slate-ink-muted);
+  font-size: var(--slate-text-sm);
+  text-decoration: none;
+  margin-bottom: var(--slate-space-md);
+  min-height: 44px;
+  /* TODO: token candidate — back-arrow link has no production analog. */
+}
+.rh-detail__back:hover { color: var(--slate-ink); }
+
+.rh-detail__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-sm);
+  margin-bottom: var(--slate-space-lg);
+  padding-bottom: var(--slate-space-lg);
+  border-bottom: var(--slate-border-soft);
+}
+
+.rh-detail__sku {
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-md);
+  color: var(--slate-sage);
+  letter-spacing: 0.02em;
+}
+
+.rh-detail__title {
+  margin: 0;
+  font-size: var(--slate-text-xl);
+  font-weight: var(--slate-weight-medium);
+  line-height: var(--slate-leading-tight);
+}
+
+.rh-detail__pills {
+  display: flex;
+  gap: var(--slate-space-sm);
+  flex-wrap: wrap;
+}
+
+.rh-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--slate-space-md);
+  background: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-xl);
+  padding: var(--slate-space-lg);
+  margin-bottom: var(--slate-space-lg);
+}
+
+@media (min-width: 720px) {
+  .rh-meta { grid-template-columns: repeat(2, 1fr); }
+}
+
+.rh-meta__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rh-meta__label {
+  font-size: var(--slate-text-micro);
+  color: var(--slate-ink-subtle);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+}
+
+.rh-meta__value {
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink);
+}
+
+/* PDF placeholder block */
+.rh-pdf {
+  background: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-xl);
+  padding: var(--slate-space-lg);
+  margin-bottom: var(--slate-space-lg);
+}
+
+.rh-pdf__viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 240px;
+  border: 1px dashed var(--slate-divider-strong);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-tint);
+  margin-bottom: var(--slate-space-md);
+  /* TODO: token candidate — no PDF viewer pattern exists in production. */
+}
+
+.rh-pdf__viewer-icon {
+  font-size: var(--slate-text-2xl);
+  color: var(--slate-ink-subtle);
+  font-family: var(--slate-font-mono);
+  margin-bottom: var(--slate-space-xs);
+}
+
+.rh-pdf__filename {
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  margin-bottom: var(--slate-space-2xs);
+}
+
+.rh-pdf__pages {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+}
+
+.rh-pdf__actions {
+  display: flex;
+  gap: var(--slate-space-sm);
+  flex-wrap: wrap;
+}
+
+/* Slate notes block — sand-wash bg + sage left rule + Slate-authored eyebrow.
+   Visually distinct so vendor content can't be mistaken for the annotation
+   layer. */
+.rh-notes {
+  background: var(--slate-sand-wash);
+  border: var(--slate-border-soft);
+  border-left: 3px solid var(--slate-sage);
+  border-radius: var(--slate-radius-xl);
+  padding: var(--slate-space-lg);
+  margin-bottom: var(--slate-space-lg);
+}
+
+.rh-notes__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-xs);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-wide);
+  color: var(--slate-sage);
+  margin-bottom: var(--slate-space-sm);
+}
+
+.rh-notes__title {
+  margin: 0 0 var(--slate-space-sm);
+  font-size: var(--slate-text-md);
+  font-weight: var(--slate-weight-medium);
+}
+
+.rh-notes__body {
+  margin: 0;
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink);
+  line-height: var(--slate-leading-relaxed);
+}
+
+.rh-notes__body + .rh-notes__body { margin-top: var(--slate-space-sm); }
+
+.rh-notes__byline {
+  margin-top: var(--slate-space-md);
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+}
+
+/* Attachments grid */
+.rh-attachments {
+  margin-bottom: var(--slate-space-lg);
+}
+
+.rh-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--slate-space-sm);
+}
+
+.rh-section__title {
+  margin: 0;
+  font-size: var(--slate-text-xs);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-wide);
+  color: var(--slate-ink-subtle);
+}
+
+.rh-attachments__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--slate-space-sm);
+}
+
+@media (min-width: 720px) {
+  .rh-attachments__grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.rh-thumb {
+  aspect-ratio: 1 / 1;
+  background: var(--slate-surface);
+  border: 1px dashed var(--slate-divider-strong);
+  border-radius: var(--slate-radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--slate-space-xs);
+  text-decoration: none;
+  color: var(--slate-ink-muted);
+  font-size: var(--slate-text-xs);
+  text-align: center;
+  padding: var(--slate-space-sm);
+}
+
+.rh-thumb__icon {
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-md);
+  color: var(--slate-ink-subtle);
+}
+
+/* Related */
+.rh-related {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-sm);
+}
+
+.rh-related .rh-card { padding: var(--slate-space-md); }
+
+/* ─── 10. Admin queue ───────────────────────────────────── */
+
+.rh-queue__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-md);
+  margin-bottom: var(--slate-space-lg);
+}
+
+@media (min-width: 720px) {
+  .rh-queue__head {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+.rh-queue__count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-xs);
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+}
+
+.rh-queue__count strong {
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink);
+}
+
+/* Mobile: stacked cards. Desktop (≥720px): table. */
+.rh-queue__cards { display: flex; flex-direction: column; gap: var(--slate-space-sm); }
+.rh-queue__table-wrap { display: none; }
+
+@media (min-width: 720px) {
+  .rh-queue__cards     { display: none; }
+  .rh-queue__table-wrap { display: block; }
+}
+
+.rh-queue-card {
+  background: var(--slate-surface);
+  border: var(--slate-border);
+  border-left: 3px solid var(--slate-arches);
+  border-radius: var(--slate-radius-xl);
+  padding: var(--slate-space-md) var(--slate-space-lg);
+}
+
+.rh-queue-card__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--slate-space-md);
+  margin-bottom: var(--slate-space-2xs);
+}
+
+.rh-queue-card__sku {
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-sm);
+  color: var(--slate-sage);
+}
+
+.rh-queue-card__rev {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-subtle);
+}
+
+.rh-queue-card__title {
+  margin: 0 0 var(--slate-space-xs);
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  line-height: var(--slate-leading-tight);
+}
+
+.rh-queue-card__vendor {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-muted);
+  margin-bottom: var(--slate-space-sm);
+}
+
+.rh-queue-card__actions { display: flex; gap: var(--slate-space-sm); }
+
+.rh-queue-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-xl);
+  overflow: hidden;
+}
+
+.rh-queue-table th,
+.rh-queue-table td {
+  padding: var(--slate-space-sm) var(--slate-space-md);
+  text-align: left;
+  font-size: var(--slate-text-sm);
+  border-bottom: var(--slate-border-soft);
+  vertical-align: middle;
+}
+
+.rh-queue-table th {
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  color: var(--slate-ink-subtle);
+  background: var(--slate-surface-tint);
+}
+
+.rh-queue-table tbody tr:last-child td { border-bottom: none; }
+
+.rh-queue-table__sku {
+  font-family: var(--slate-font-mono);
+  color: var(--slate-sage);
+  white-space: nowrap;
+}
+
+.rh-queue-table__title {
+  font-weight: var(--slate-weight-medium);
+}
+
+.rh-queue-table__actions { text-align: right; white-space: nowrap; }
