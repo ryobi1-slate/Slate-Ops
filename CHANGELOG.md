@@ -1,5 +1,20 @@
 # Slate Ops Changelog
 
+## 0.55.0 — CS Dashboard: Queue tab (Shop Queue)
+
+**`templates/pages/cs-dashboard.php`, `assets/js/ops-cs-dashboard.js`, `assets/css/ops-cs-dashboard.css`:**
+- New "Queue" sub-tab on CS Dashboard with Shop Queue header and helper text. Lazy-loads on first activation and renders one card per assigned tech (Unassigned last).
+- Filter chips: All / Scheduled / Blocked / Ready for Closeout / Unassigned.
+- Inline edits per row: queue # (number input), queue note (text input), visibility toggle. Save Queue button (disabled until edits) bulk-posts to `/cs/queue`. Normalize Order button re-numbers visible jobs in each tech group to 1, 2, 3 in their current sort.
+- Warnings bar: duplicate queue # within a tech group (alert) and blocked or parts-hold job at queue #1 (warn).
+- Localized REST root + nonce on the dashboard (`window.slateOpsCsDashboard.api`).
+
+**`includes/class-slate-ops-rest.php`:**
+- New `GET /cs/queue` and `POST /cs/queue` endpoints (CS / Supervisor / Admin) covering open jobs (READY_FOR_BUILD, SCHEDULED, IN_PROGRESS, BLOCKED, QC). Save handler accepts `queue_order`, `queue_visible`, `queue_note`, optional `assigned_user_id`; sanitizes input, audits via `Slate_Ops_Activity_Log::append`.
+
+**`includes/class-slate-ops-install.php`:**
+- Added job columns `queue_visible TINYINT(1)`, `queue_note TEXT`, `queue_updated_at DATETIME`, `queue_updated_by BIGINT UNSIGNED` (CREATE TABLE + idempotent ALTER in `add_missing_columns`).
+
 ## 0.47.0 — By Tech view on CS page; CS table enhancements (Phase 0)
 
 **`assets/react/app.js`:**

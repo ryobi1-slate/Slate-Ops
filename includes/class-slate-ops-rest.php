@@ -425,6 +425,20 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'create_quote_from_bom'],
       ]);
 
+      // ── CS Queue tab (Shop Queue) ───────────────────────────────────
+      register_rest_route($ns, '/cs/queue', [
+        [
+          'methods'             => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'callback'            => [__CLASS__, 'cs_queue_list'],
+        ],
+        [
+          'methods'             => 'POST',
+          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'callback'            => [__CLASS__, 'cs_queue_save'],
+        ],
+      ]);
+
       // ── Executive dashboard ─────────────────────────────────────────
       register_rest_route($ns, '/executive/labor-summary', [
         'methods'             => 'GET',
@@ -3857,6 +3871,199 @@ self::maybe_push_dealer_portal_status($job);
       'count'    => count($segments),
       'segments' => $segments,
     ]);
+  }
+
+  // ── CS Queue tab (Shop Queue) ───────────────────────────────────────
+  //
+  // Open jobs the CS team is actively sequencing for the shop. Tech reads
+  // these via the existing /jobs endpoint (read-only); only CS / Supervisor
+  // / Admin may write through these handlers.
+  //
+  // Queue scope: all non-archived jobs whose status is in the active set
+  // (READY_FOR_BUILD, SCHEDULED, IN_PROGRESS, BLOCKED, QC) plus historical
+  // PENDING_QC alias. Closed/cancelled jobs are excluded.
+
+  private static function cs_queue_active_statuses(): array {
+    return [
+      Slate_Ops_Statuses::READY_FOR_BUILD,
+      Slate_Ops_Statuses::SCHEDULED,
+      Slate_Ops_Statuses::IN_PROGRESS,
+      Slate_Ops_Statuses::BLOCKED,
+      Slate_Ops_Statuses::QC,
+      Slate_Ops_Statuses::PENDING_QC,
+    ];
+  }
+
+  /**
+   * GET /cs/queue — list open jobs for the CS Queue tab.
+   */
+  public static function cs_queue_list($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $statuses     = self::cs_queue_active_statuses();
+    $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
+
+    $sql = "SELECT job_id, so_number, customer_name, dealer_name,
+                   status, parts_status, promised_date, requested_date,
+                   target_ship_date, scheduled_start, assigned_user_id,
+                   queue_order, queue_visible, queue_note,
+                   queue_updated_at, queue_updated_by, queue_priority,
+                   updated_at
+              FROM $t
+             WHERE archived_at IS NULL
+               AND status IN ($placeholders)
+             ORDER BY assigned_user_id IS NULL, assigned_user_id ASC,
+                      (queue_order IS NULL), queue_order ASC,
+                      queue_priority ASC, updated_at DESC";
+
+    $rows = $wpdb->get_results($wpdb->prepare($sql, $statuses), ARRAY_A) ?: [];
+
+    $out = [];
+    foreach ($rows as $r) {
+      $assigned_id = isset($r['assigned_user_id']) && $r['assigned_user_id'] !== null
+        ? (int) $r['assigned_user_id'] : null;
+      $updated_by_id = isset($r['queue_updated_by']) && $r['queue_updated_by'] !== null
+        ? (int) $r['queue_updated_by'] : null;
+
+      $due_date = $r['promised_date'] ?: ($r['target_ship_date'] ?: $r['requested_date']);
+
+      $out[] = [
+        'id'                => (int) $r['job_id'],
+        'job_number'        => $r['so_number'] ?: ('JOB-' . (int) $r['job_id']),
+        'so_number'         => $r['so_number'],
+        'customer'          => $r['customer_name'],
+        'dealer'            => $r['dealer_name'],
+        'status'            => $r['status'],
+        'status_label'      => Slate_Ops_Statuses::label((string) $r['status']),
+        'parts_status'      => $r['parts_status'],
+        'due_date'          => $due_date,
+        'promised_date'     => $r['promised_date'],
+        'scheduled_start'   => $r['scheduled_start'],
+        'assigned_user_id'  => $assigned_id,
+        'assigned_tech'     => $assigned_id ? Slate_Ops_Utils::user_display($assigned_id) : '',
+        'queue_order'       => isset($r['queue_order']) && $r['queue_order'] !== null ? (int) $r['queue_order'] : null,
+        'queue_visible'     => (int) ($r['queue_visible'] ?? 1) === 1,
+        'queue_note'        => (string) ($r['queue_note'] ?? ''),
+        'queue_priority'    => isset($r['queue_priority']) ? (int) $r['queue_priority'] : 3,
+        'queue_updated_at'  => $r['queue_updated_at'],
+        'queue_updated_by'  => $updated_by_id,
+        'queue_updated_by_name' => $updated_by_id ? Slate_Ops_Utils::user_display($updated_by_id) : '',
+      ];
+    }
+
+    return rest_ensure_response([
+      'ok'   => true,
+      'jobs' => $out,
+    ]);
+  }
+
+  /**
+   * POST /cs/queue — bulk save queue updates.
+   *
+   * Body: { "updates": [
+   *   { "id": 123, "queue_order": 1, "queue_visible": true,
+   *     "queue_note": "...", "assigned_user_id": 7 },
+   *   ...
+   * ] }
+   *
+   * Only CS / Supervisor / Admin may write. The assigned_user_id field is
+   * accepted but optional — it lets dashboards that already do tech
+   * assignment reuse this save path; otherwise it's ignored.
+   */
+  public static function cs_queue_save($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $body = $req->get_json_params();
+    if (!is_array($body)) $body = [];
+
+    $updates = $body['updates'] ?? [];
+    if (!is_array($updates) || empty($updates)) {
+      return new WP_Error('invalid_payload', 'updates array required.', ['status' => 400]);
+    }
+
+    $now    = Slate_Ops_Utils::now_gmt();
+    $me     = (int) get_current_user_id();
+    $saved  = 0;
+    $errors = [];
+
+    foreach ($updates as $row) {
+      if (!is_array($row)) continue;
+
+      $job_id = isset($row['id']) ? (int) $row['id'] : 0;
+      if ($job_id <= 0) continue;
+
+      $job = self::job_by_id($job_id);
+      if (!$job) {
+        $errors[] = ['id' => $job_id, 'error' => 'not_found'];
+        continue;
+      }
+
+      $update = [];
+
+      if (array_key_exists('queue_order', $row)) {
+        $qo = self::parse_queue_order($row, 'queue_order');
+        if ($qo instanceof WP_Error) {
+          $errors[] = ['id' => $job_id, 'error' => 'invalid_queue_order'];
+          continue;
+        }
+        $update['queue_order'] = $qo;
+      }
+
+      if (array_key_exists('queue_visible', $row)) {
+        $update['queue_visible'] = self::truthy($row['queue_visible']) ? 1 : 0;
+      }
+
+      if (array_key_exists('queue_note', $row)) {
+        $note = sanitize_textarea_field((string) ($row['queue_note'] ?? ''));
+        if (strlen($note) > 1000) {
+          $note = substr($note, 0, 1000);
+        }
+        $update['queue_note'] = $note !== '' ? $note : null;
+      }
+
+      // Optional tech assignment — only if explicitly provided.
+      if (array_key_exists('assigned_user_id', $row)) {
+        $aid = $row['assigned_user_id'];
+        $update['assigned_user_id'] = ($aid === null || $aid === '' || (int) $aid <= 0)
+          ? null : (int) $aid;
+      }
+
+      if (empty($update)) continue;
+
+      $update['queue_updated_at'] = $now;
+      $update['queue_updated_by'] = $me ?: null;
+      $update['updated_at']       = $now;
+
+      $ok = $wpdb->update($t, $update, ['job_id' => $job_id]);
+      if ($ok === false) {
+        $errors[] = ['id' => $job_id, 'error' => 'db_error'];
+        continue;
+      }
+
+      $audit_fields = $update;
+      unset($audit_fields['updated_at']);
+      Slate_Ops_Activity_Log::append('job', $job_id, 'cs_queue_update', $audit_fields);
+
+      $saved++;
+    }
+
+    return rest_ensure_response([
+      'ok'     => empty($errors),
+      'saved'  => $saved,
+      'errors' => $errors,
+    ]);
+  }
+
+  /**
+   * Loose truthy parser for JSON booleans posted by the dashboard.
+   */
+  private static function truthy($v): bool {
+    if (is_bool($v))   return $v;
+    if (is_int($v))    return $v !== 0;
+    if (is_string($v)) return in_array(strtolower(trim($v)), ['1','true','yes','on'], true);
+    return false;
   }
 
 }
