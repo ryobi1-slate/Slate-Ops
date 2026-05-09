@@ -838,12 +838,26 @@
     loaded:    false,
     loading:   false,
     jobs:      [],
-    edits:     {},        // { id: { queue_order, queue_visible, queue_note } }
+    edits:     {},        // { id: { queue_order, queue_visible, queue_note, assigned_user_id, customer_name, dealer_name, sales_person, vin_last8, notes, parts_status, estimated_hours, requested_date } }
     filter:    'all',
     query:     '',
     selected:  null,      // currently selected job id
-    drag:      null       // { jobId, groupKey } while a drag is active
+    drag:      null,      // { jobId, groupKey } while a drag is active
+    jobDetails:        {},  // id → full /jobs/{id} response (cached)
+    jobDetailsLoading: {}   // id → in-flight Promise
   };
+
+  // Fields persisted via PATCH /jobs/{id} (Phase 4). The remaining keys
+  // (queue_order, queue_visible, queue_note, assigned_user_id) go through
+  // POST /cs/queue. Splitting at save-time means the bulk queue endpoint
+  // stays focused on queue concerns and isn't asked to handle general
+  // job edits.
+  var BETA_JOB_FIELDS = [
+    'customer_name', 'dealer_name', 'sales_person',
+    'vin_last8', 'notes',
+    'parts_status', 'estimated_hours', 'requested_date'
+  ];
+  function betaIsJobField(name) { return BETA_JOB_FIELDS.indexOf(name) >= 0; }
 
   function betaApi() {
     return (window.slateOpsCsDashboard && window.slateOpsCsDashboard.api) || null;
@@ -1507,12 +1521,38 @@
     });
   }
 
-  function recordBetaEdit(id, field, value) {
+  /**
+   * Look up a field's "server snapshot" value for dirty-comparison.
+   * Queue fields come from /cs/queue; PATCH /jobs/{id} fields come from
+   * the per-row jobDetails cache (must be populated first by selecting
+   * the row, which lazy-loads /jobs/{id}).
+   */
+  function betaOrigFieldValue(id, field) {
+    if (betaIsJobField(field)) {
+      var det = betaState.jobDetails[id];
+      if (!det) return undefined;
+      if (field === 'estimated_hours') {
+        var m = det.estimated_minutes != null ? Number(det.estimated_minutes) : 0;
+        return m > 0 ? String(+(m / 60).toFixed(2)) : '';
+      }
+      if (field === 'vin_last8') {
+        return String(det.vin_last8 || det.vin || '');
+      }
+      var v = det[field];
+      return v == null ? '' : String(v);
+    }
     var snap = betaJobById(id);
-    if (!snap) return;
-    var orig = snap[field];
+    if (!snap) return undefined;
+    return snap[field];
+  }
+
+  function recordBetaEdit(id, field, value) {
+    if (!betaJobById(id)) return;
+    var orig = betaOrigFieldValue(id, field);
     var bag  = betaState.edits[id] || {};
-    var same = (value === orig) || (value == null && orig == null);
+    // For job fields the orig might be undefined if the detail hasn't
+    // loaded yet; in that case treat any input as a tentative edit.
+    var same = (orig !== undefined) && ((value === orig) || (value == null && orig == null));
     if (same) {
       delete bag[field];
     } else {
@@ -1523,19 +1563,53 @@
     } else {
       betaState.edits[id] = bag;
     }
-    // Lightweight repaint of warnings + save button without full re-render
-    // (full render happens on visibility toggle or save).
+    // Lightweight repaint — DO NOT call renderBetaDetail() here, that
+    // would clobber input focus on every keystroke. Detail panel inputs
+    // are uncontrolled; their values stay in the DOM, and edit state is
+    // tracked in betaState.edits.
     var allJobs = betaState.jobs.map(betaEffectiveJob);
     updateBetaWarnings(allJobs);
     updateBetaSaveButton();
     renderBetaCounts(allJobs);
-    if (betaState.selected === id) renderBetaDetail();
-    // Mark dirty-class on the matching row in-place.
     var row = document.querySelector('.cs-beta-row[data-job="' + id + '"]');
     if (row) {
       if (betaState.edits[id]) row.classList.add('is-dirty');
       else row.classList.remove('is-dirty');
     }
+    // The detail-panel "staged" / "Was X" hints depend on staged
+    // assigned_user_id changes; only re-render the panel for that one
+    // field, since drag triggers a full renderBeta() anyway.
+  }
+
+  /**
+   * Lazy-load the full /jobs/{id} payload for the editable detail form
+   * and cache it. Returns a promise resolved with the job object.
+   */
+  function ensureBetaJobDetail(id) {
+    if (betaState.jobDetails[id]) return Promise.resolve(betaState.jobDetails[id]);
+    if (betaState.jobDetailsLoading[id]) return betaState.jobDetailsLoading[id];
+    var api = betaApi();
+    if (!api) return Promise.reject(new Error('no_api'));
+    var p = fetch(api.root + '/jobs/' + id, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': api.nonce, 'Accept': 'application/json' }
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('fetch_failed_' + r.status);
+        return r.json();
+      })
+      .then(function (job) {
+        betaState.jobDetails[id] = job || {};
+        delete betaState.jobDetailsLoading[id];
+        return betaState.jobDetails[id];
+      })
+      .catch(function (err) {
+        delete betaState.jobDetailsLoading[id];
+        throw err;
+      });
+    betaState.jobDetailsLoading[id] = p;
+    return p;
   }
 
   function selectBetaJob(id) {
@@ -1544,6 +1618,12 @@
     var row = document.querySelector('.cs-beta-row[data-job="' + id + '"]');
     if (row) row.classList.add('is-selected');
     renderBetaDetail();
+    // Background-fetch the full /jobs/{id} so the editable form fields
+    // can render. If it's already cached, the promise resolves
+    // immediately and the second render is a no-op.
+    ensureBetaJobDetail(id)
+      .then(function () { if (betaState.selected === id) renderBetaDetail(); })
+      .catch(function () { if (betaState.selected === id) renderBetaDetail(); });
   }
 
   function clearBetaSelection() {
@@ -1551,6 +1631,23 @@
     $$('.cs-beta-row.is-selected').forEach(function (el) { el.classList.remove('is-selected'); });
     var panel = document.getElementById('cs-beta-detail');
     if (panel) panel.hidden = true;
+  }
+
+  /**
+   * Read the effective value of a field for the currently selected job.
+   * Returns the staged edit if present, otherwise the server snapshot
+   * (queue snapshot for queue fields, /jobs/{id} cache for job fields).
+   */
+  function betaFieldValue(id, field) {
+    var bag = betaState.edits[id] || {};
+    if (field in bag) return bag[field] == null ? '' : String(bag[field]);
+    var orig = betaOrigFieldValue(id, field);
+    return orig == null ? '' : String(orig);
+  }
+
+  function betaIsEdited(id, field) {
+    var bag = betaState.edits[id];
+    return !!(bag && (field in bag));
   }
 
   function renderBetaDetail() {
@@ -1561,33 +1658,100 @@
     var snap = betaJobById(betaState.selected);
     if (!snap) { panel.hidden = true; return; }
     var j = betaEffectiveJob(snap);
+    var id = j.id;
+    var det = betaState.jobDetails[id];      // may be undefined while loading
+    var detailLoading = !det && betaState.jobDetailsLoading[id];
 
     var jobEl  = document.getElementById('cs-beta-detail-job');
     var custEl = document.getElementById('cs-beta-detail-cust');
-    if (jobEl)  jobEl.textContent  = j.so_number || j.job_number || ('Job #' + j.id);
+    if (jobEl)  jobEl.textContent  = j.so_number || j.job_number || ('Job #' + id);
     if (custEl) custEl.textContent = j.customer || '';
 
     panel.hidden = false;
+    grid.setAttribute('data-job-id', String(id));
+
+    // Field helpers — value() reads effective value, cls() flags edited.
+    function fv(field) { return escapeHtml(betaFieldValue(id, field)); }
+    function ec(field) { return betaIsEdited(id, field) ? ' is-edited' : ''; }
+    function readOnly(value) {
+      return '<div class="cs-beta-detail-readonly">' + (value == null || value === '' ? '—' : escapeHtml(String(value))) + '</div>';
+    }
+
+    var partsOptions = ['', 'NOT_READY', 'PARTIAL', 'READY', 'HOLD'].map(function (v) {
+      var label = v === '' ? '—' : (partsLabel(v) || v);
+      var sel = (betaFieldValue(id, 'parts_status') === v) ? ' selected' : '';
+      return '<option value="' + escapeHtml(v) + '"' + sel + '>' + escapeHtml(label) + '</option>';
+    }).join('');
+
+    var loadingNote = detailLoading
+      ? '<div class="cs-beta-detail-loading"><span class="material-symbols-outlined cs-beta__spinner" aria-hidden="true">progress_activity</span><span>Loading job…</span></div>'
+      : '';
+    var loadFailed = !det && !detailLoading
+      ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
+      : '';
 
     grid.innerHTML = ''
+      + loadingNote
+      + loadFailed
+
       + '<section class="cs-beta-detail-section">'
       +   '<h4 class="cs-beta-detail-section__title">Job Identity</h4>'
-      +   '<dl class="cs-beta-detail-kv">'
-      +     '<dt>Customer</dt><dd>' + escapeHtml(j.customer || '—') + '</dd>'
-      +     '<dt>Dealer</dt><dd>' + escapeHtml(j.dealer || '—') + '</dd>'
-      +     '<dt>SO #</dt><dd class="cs-beta-mono">' + escapeHtml(j.so_number || '—') + '</dd>'
-      +     '<dt>Job ID</dt><dd class="cs-beta-mono">#' + j.id + '</dd>'
-      +   '</dl>'
+      +   '<div class="cs-beta-detail-fields">'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Customer</span>'
+      +       (det
+                ? '<input type="text" class="cs-beta-field__input' + ec('customer_name') + '" data-field="customer_name" value="' + fv('customer_name') + '" maxlength="160">'
+                : readOnly(j.customer))
+      +     '</label>'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Dealer</span>'
+      +       (det
+                ? '<input type="text" class="cs-beta-field__input' + ec('dealer_name') + '" data-field="dealer_name" value="' + fv('dealer_name') + '" maxlength="160">'
+                : readOnly(j.dealer))
+      +     '</label>'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Salesperson</span>'
+      +       (det
+                ? '<input type="text" class="cs-beta-field__input' + ec('sales_person') + '" data-field="sales_person" value="' + fv('sales_person') + '" maxlength="120" placeholder="—">'
+                : readOnly(det && det.sales_person))
+      +     '</label>'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">VIN (last 8)</span>'
+      +       (det
+                ? '<input type="text" class="cs-beta-mono cs-beta-field__input' + ec('vin_last8') + '" data-field="vin_last8" value="' + fv('vin_last8') + '" maxlength="8" placeholder="—" pattern="[A-HJ-NPR-Z0-9]{7,8}">'
+                : readOnly(det && (det.vin_last8 || det.vin)))
+      +     '</label>'
+      +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
+      +       '<dt>SO #</dt><dd class="cs-beta-mono">' + escapeHtml(j.so_number || '—') + '</dd>'
+      +       '<dt>Job ID</dt><dd class="cs-beta-mono">#' + id + '</dd>'
+      +     '</dl>'
+      +   '</div>'
       + '</section>'
+
       + '<section class="cs-beta-detail-section">'
       +   '<h4 class="cs-beta-detail-section__title">Scheduling</h4>'
-      +   '<dl class="cs-beta-detail-kv">'
-      +     '<dt>Due Date</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</dd>'
-      +     '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.promised_date)) + '</dd>'
-      +     '<dt>Scheduled Start</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.scheduled_start)) + '</dd>'
-      +     '<dt>Queue #</dt><dd class="cs-beta-mono">' + (j.queue_order == null ? '—' : j.queue_order) + '</dd>'
-      +   '</dl>'
+      +   '<div class="cs-beta-detail-fields">'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Requested Date</span>'
+      +       (det
+                ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
+                : readOnly(det && det.requested_date))
+      +     '</label>'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Estimated Hours</span>'
+      +       (det
+                ? '<input type="number" min="0" step="0.25" class="cs-beta-mono cs-beta-field__input' + ec('estimated_hours') + '" data-field="estimated_hours" value="' + fv('estimated_hours') + '" placeholder="—">'
+                : readOnly(det && det.estimated_minutes ? +(det.estimated_minutes / 60).toFixed(2) : null))
+      +     '</label>'
+      +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
+      +       '<dt>Due</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</dd>'
+      +       '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.promised_date)) + '</dd>'
+      +       '<dt>Sch. Start</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.scheduled_start)) + '</dd>'
+      +       '<dt>Queue #</dt><dd class="cs-beta-mono">' + (j.queue_order == null ? '—' : j.queue_order) + '</dd>'
+      +     '</dl>'
+      +   '</div>'
       + '</section>'
+
       + '<section class="cs-beta-detail-section">'
       +   '<h4 class="cs-beta-detail-section__title">Assignment'
       +     (j._reassigned ? ' <span class="cs-beta-detail-section__hint">staged</span>' : '')
@@ -1602,25 +1766,43 @@
             : '')
       +     '<dt>Visible</dt><dd>' + (j.queue_visible ? 'Yes' : 'No') + '</dd>'
       +   '</dl>'
+      +   '<div class="cs-beta-detail-section__hint" style="margin-top:6px">Drag the row handle to move between tech groups; toggle visibility from the row.</div>'
       + '</section>'
+
       + '<section class="cs-beta-detail-section">'
       +   '<h4 class="cs-beta-detail-section__title">Parts / Status</h4>'
-      +   '<dl class="cs-beta-detail-kv">'
-      +     '<dt>Status</dt><dd><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></dd>'
-      +     '<dt>Parts</dt><dd><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></dd>'
-      +   '</dl>'
+      +   '<div class="cs-beta-detail-fields">'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Parts Status</span>'
+      +       (det
+                ? '<select class="cs-beta-field__input' + ec('parts_status') + '" data-field="parts_status">' + partsOptions + '</select>'
+                : readOnly(partsLabel(j.parts_status)))
+      +     '</label>'
+      +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
+      +       '<dt>Status</dt><dd><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></dd>'
+      +     '</dl>'
+      +     '<div class="cs-beta-detail-section__hint">Status transitions are managed via Tech / QC workflows; not editable here.</div>'
+      +   '</div>'
       + '</section>'
+
       + '<section class="cs-beta-detail-section cs-beta-detail-section--wide">'
       +   '<h4 class="cs-beta-detail-section__title">Queue Note <span class="cs-beta-detail-section__hint">visible to Tech</span></h4>'
-      +   '<textarea class="cs-beta-detail-note" id="cs-beta-detail-note" maxlength="240"'
-      +     ' placeholder="Add a short note for the tech…">' + escapeHtml(j.queue_note || '') + '</textarea>'
+      +   '<textarea class="cs-beta-detail-note' + ec('queue_note') + '" data-field="queue_note" maxlength="240" placeholder="Add a short note for the tech…">' + escapeHtml(betaFieldValue(id, 'queue_note')) + '</textarea>'
       + '</section>'
+
+      + '<section class="cs-beta-detail-section cs-beta-detail-section--wide">'
+      +   '<h4 class="cs-beta-detail-section__title">Internal Notes <span class="cs-beta-detail-section__hint">CS only — not visible to Tech</span></h4>'
+      +   (det
+          ? '<textarea class="cs-beta-detail-note' + ec('notes') + '" data-field="notes" maxlength="4000" placeholder="Internal CS notes, customer comms, history…">' + escapeHtml(betaFieldValue(id, 'notes')) + '</textarea>'
+          : '<div class="cs-beta-detail-loading">Loading…</div>')
+      + '</section>'
+
       + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
       +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
       +   '<div class="cs-beta-detail-actions">'
-      +     '<button type="button" class="btn btn--secondary" data-action="beta-toggle-visible">'
-      +       '<span class="material-symbols-outlined">' + (j.queue_visible ? 'visibility_off' : 'visibility') + '</span>'
-      +       (j.queue_visible ? 'Hide from queue' : 'Show in queue')
+      +     '<button type="button" class="btn btn--secondary" data-action="beta-discard-row"' + (betaState.edits[id] ? '' : ' disabled') + '>'
+      +       '<span class="material-symbols-outlined">undo</span>'
+      +       'Discard row edits'
       +     '</button>'
       +     '<a class="btn btn--secondary" href="' + escapeHtml(window.location.origin + '/ops/cs/?embed=1') + '" target="_blank" rel="noopener">'
       +       '<span class="material-symbols-outlined">open_in_new</span>'
@@ -1629,19 +1811,53 @@
       +   '</div>'
       + '</section>';
 
-    var noteEl = document.getElementById('cs-beta-detail-note');
-    if (noteEl) {
-      noteEl.addEventListener('input', function () {
-        recordBetaEdit(j.id, 'queue_note', noteEl.value);
+    // One-time delegated input listener on the grid. The grid element is
+    // long-lived; renderBetaDetail() only replaces its innerHTML, so a
+    // listener attached once survives every re-render.
+    if (!grid.dataset.wiredInputs) {
+      grid.dataset.wiredInputs = '1';
+      grid.addEventListener('input', betaDetailInputHandler);
+      grid.addEventListener('change', betaDetailInputHandler);
+      grid.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-action="beta-discard-row"]');
+        if (!t) return;
+        e.preventDefault();
+        betaDiscardRowEdits();
       });
     }
-    var toggleBtn = grid.querySelector('[data-action="beta-toggle-visible"]');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', function () {
-        recordBetaEdit(j.id, 'queue_visible', !j.queue_visible);
-        renderBeta();
-      });
-    }
+  }
+
+  function betaDetailInputHandler(e) {
+    var t = e.target;
+    if (!t || !t.dataset || !t.dataset.field) return;
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!grid) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+    var field = t.dataset.field;
+    var value = t.value;
+    // Normalise empty-string job-text fields to '' for clean comparison
+    // against the cached snapshot value.
+    if (typeof value === 'string') value = value.trim() === '' ? '' : value;
+    recordBetaEdit(id, field, value);
+    if (betaState.edits[id]) t.classList.add('is-edited');
+    else t.classList.remove('is-edited');
+    var discard = grid.querySelector('[data-action="beta-discard-row"]');
+    if (discard) discard.disabled = !betaState.edits[id];
+  }
+
+  function betaDiscardRowEdits() {
+    var id = betaState.selected;
+    if (id == null) return;
+    if (!betaState.edits[id]) return;
+    delete betaState.edits[id];
+    // Force a full row + detail re-render so all input values reset to
+    // the snapshot, the row's dirty class clears, and warnings recompute.
+    renderBeta();
+    var allJobs = betaState.jobs.map(betaEffectiveJob);
+    updateBetaWarnings(allJobs);
+    updateBetaSaveButton();
+    showToast('Row edits discarded');
   }
 
   function updateBetaWarnings(allJobs) {
@@ -1740,44 +1956,113 @@
     var ids = Object.keys(betaState.edits);
     if (ids.length === 0) return;
 
-    var updates = ids.map(function (id) {
-      var e = betaState.edits[id];
-      var u = { id: parseInt(id, 10) };
-      if ('queue_order'      in e) u.queue_order      = e.queue_order;
-      if ('queue_visible'    in e) u.queue_visible    = !!e.queue_visible;
-      if ('queue_note'       in e) u.queue_note       = e.queue_note;
-      if ('assigned_user_id' in e) u.assigned_user_id = e.assigned_user_id;
-      return u;
+    // Split edits per row into the queue payload (POST /cs/queue) and
+    // the per-job PATCH payload (PATCH /jobs/{id}). Each endpoint
+    // handles only the fields it owns.
+    var queueUpdates = [];
+    var jobUpdates   = [];
+    ids.forEach(function (idStr) {
+      var id = parseInt(idStr, 10);
+      var e  = betaState.edits[idStr];
+      var qBody = { id: id };
+      var jBody = {};
+      var hasQ = false, hasJ = false;
+      Object.keys(e).forEach(function (field) {
+        var v = e[field];
+        if (betaIsJobField(field)) {
+          // Empty-string text fields are sent as '' so the server can
+          // clear them to NULL (sanitize_text_field() + ?: null).
+          jBody[field] = v == null ? '' : v;
+          hasJ = true;
+        } else {
+          if (field === 'queue_visible') qBody[field] = !!v;
+          else                            qBody[field] = v;
+          hasQ = true;
+        }
+      });
+      if (hasQ) queueUpdates.push(qBody);
+      if (hasJ) jobUpdates.push({ id: id, body: jBody });
     });
 
-    var btn = document.getElementById('cs-beta-save');
+    var btn  = document.getElementById('cs-beta-save');
+    var lbl  = document.getElementById('cs-beta-save-label');
     if (btn) btn.disabled = true;
+    if (lbl) lbl.textContent = 'Saving…';
 
-    fetch(api.root + '/cs/queue', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'X-WP-Nonce':   api.nonce,
-        'Content-Type': 'application/json',
-        'Accept':       'application/json'
-      },
-      body: JSON.stringify({ updates: updates })
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-      .then(function (res) {
-        if (!res.ok || !res.body || !res.body.ok) {
-          showToast('Save failed — check warnings');
-          if (btn) btn.disabled = false;
-          return;
-        }
-        showToast('Saved · ' + (res.body.saved || 0) + ' jobs updated');
-        betaState.loaded = false;
-        betaState.edits  = {};
+    var savedQueue = 0;
+    var savedJobs  = 0;
+    var jobErrors  = [];
+
+    var step = Promise.resolve();
+
+    if (queueUpdates.length > 0) {
+      step = step.then(function () {
+        return fetch(api.root + '/cs/queue', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify({ updates: queueUpdates })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+          .then(function (res) {
+            if (!res.ok || !res.body || !res.body.ok) {
+              throw new Error('queue_save_failed');
+            }
+            savedQueue = res.body.saved || 0;
+          });
+      });
+    }
+
+    // PATCH each job sequentially. Sequential keeps the failure model
+    // simple — surface the first error and abort the rest, leaving
+    // unsaved edits in betaState.edits so the user can retry.
+    jobUpdates.forEach(function (u) {
+      step = step.then(function () {
+        return fetch(api.root + '/jobs/' + u.id, {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify(u.body)
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+          .then(function (res) {
+            if (!res.ok) {
+              var msg = (res.body && (res.body.message || res.body.code)) || ('PATCH ' + u.id + ' failed');
+              jobErrors.push({ id: u.id, message: msg });
+              throw new Error('job_save_failed:' + u.id + ':' + msg);
+            }
+            savedJobs++;
+          });
+      });
+    });
+
+    step
+      .then(function () {
+        var total = savedQueue + savedJobs;
+        showToast('Saved · ' + total + ' update' + (total === 1 ? '' : 's'));
+        betaState.loaded            = false;
+        betaState.edits             = {};
+        betaState.jobDetails        = {};
+        betaState.jobDetailsLoading = {};
         loadBeta();
       })
-      .catch(function () {
-        showToast('Save failed');
+      .catch(function (err) {
+        var msg = 'Save failed';
+        if (jobErrors.length > 0) msg += ' — ' + jobErrors[0].message;
+        else if (err && err.message) msg += ' — ' + err.message.replace(/^[a-z_]+:\d+:/i, '');
+        showToast(msg);
         if (btn) btn.disabled = false;
+        if (lbl) lbl.textContent = 'Save Changes';
+        // updateBetaSaveButton will recompute the count label
+        updateBetaSaveButton();
       });
   }
 

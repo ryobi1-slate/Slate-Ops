@@ -1677,6 +1677,100 @@ body.cs-workspace-active .ops-tab-content[data-tab-content="workspace"][hidden] 
 }
 .cs-beta-detail-actions .btn { text-decoration: none; }
 
+/* Editable form fields (Phase 4). The per-row dirty marker lives on the
+   row in the list; on individual inputs we use a subtle Sand-wash tint
+   to mark "this field has a staged edit". */
+.cs-beta-detail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cs-beta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cs-beta-field__label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--slate-ink-subtle);
+}
+.cs-beta-field__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--slate-ink);
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider-strong);
+  border-radius: 2px;
+  transition: border-color 100ms ease, background 100ms ease, box-shadow 100ms ease;
+}
+.cs-beta-field__input:focus {
+  outline: none;
+  border-color: var(--slate-sage);
+  box-shadow: 0 0 0 2px var(--slate-sage-wash);
+}
+.cs-beta-field__input.is-edited,
+.cs-beta-detail-note.is-edited {
+  background: var(--slate-sand-wash);
+  border-color: var(--slate-sand-deep);
+}
+select.cs-beta-field__input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--slate-ink-subtle) 50%),
+    linear-gradient(135deg, var(--slate-ink-subtle) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 9px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 26px;
+}
+.cs-beta-detail-readonly {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--slate-ink-muted);
+  background: var(--slate-surface-tint);
+  border: 1px dashed var(--slate-divider-soft);
+  border-radius: 2px;
+}
+
+.cs-beta-detail-kv--inline {
+  grid-template-columns: 80px 1fr;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--slate-divider-soft);
+}
+
+.cs-beta-detail-loading {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--slate-ink-muted);
+  background: var(--slate-surface-tint);
+  border: 1px solid var(--slate-divider-soft);
+  border-radius: 2px;
+}
+.cs-beta-detail-loading--error {
+  background: var(--slate-arches-wash);
+  color: var(--slate-arches-ink);
+  border-color: var(--slate-arches-wash);
+}
+.cs-beta-detail-loading--error .material-symbols-outlined {
+  color: var(--slate-arches);
+  font-size: 16px;
+}
+.cs-beta-detail-loading .material-symbols-outlined { font-size: 16px; }
+
 /* Scoped pill overrides — tighter, square, design-aligned palette. The
    global `.pill` (used on the Overview tab) is left untouched. */
 .cs-beta .pill {
