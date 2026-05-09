@@ -618,14 +618,14 @@
   padding: 7px 12px;
 }
 .cs-beta .btn--secondary {
-  background: var(--slate-surface);
-  color: var(--slate-ink);
-  border-color: var(--slate-divider-strong);
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+  border-color: var(--slate-divider-strong) !important;
 }
-.cs-beta .btn--secondary:hover {
-  background: var(--slate-surface-tint);
-  border-color: var(--slate-sage);
-  color: var(--slate-ink);
+.cs-beta .btn--secondary:hover:not(:disabled) {
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-ink) !important;
 }
 .cs-beta .btn--secondary:disabled {
   opacity: 0.55;
@@ -633,18 +633,18 @@
 }
 .cs-beta .btn--primary {
   border-radius: 2px;
-  background: var(--slate-sage);
-  color: var(--slate-sand-wash);
-  border-color: var(--slate-sage);
+  background: var(--slate-sage) !important;
+  color: var(--slate-sand-wash) !important;
+  border-color: var(--slate-sage) !important;
 }
-.cs-beta .btn--primary:hover {
-  background: var(--slate-sage-ink);
-  border-color: var(--slate-sage-ink);
+.cs-beta .btn--primary:hover:not(:disabled) {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
 }
 .cs-beta .btn--primary:disabled {
-  background: var(--slate-surface);
-  color: var(--slate-ink-subtle);
-  border-color: var(--slate-divider-strong);
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink-subtle) !important;
+  border-color: var(--slate-divider-strong) !important;
   cursor: not-allowed;
   opacity: 1;
 }
@@ -665,13 +665,13 @@
   gap: 6px;
   padding: 4px 10px;
   background: var(--slate-surface);
-  border: 1px solid var(--slate-divider-strong);
+  border: 1px solid var(--slate-divider-strong) !important;
   border-radius: 2px;
   flex: 0 0 240px;
   min-width: 200px;
 }
 .cs-beta__search:focus-within {
-  border-color: var(--slate-sage);
+  border-color: var(--slate-sage) !important;
   box-shadow: 0 0 0 2px var(--slate-sage-wash);
 }
 .cs-beta__search .material-symbols-outlined {
@@ -704,22 +704,28 @@
   font-weight: 400;
   letter-spacing: 0.01em;
   text-transform: none;
-  border: 1px solid var(--slate-divider-strong);
-  background: var(--slate-surface);
-  color: var(--slate-ink);
+  /* !important on border + background + color so the WP theme's
+     default <button> styling can't bleed through (the same pattern
+     ops-shell.css uses for .pur-tab and .ops-btn-* — without it the
+     chips render with the theme's default button outline). */
+  border: 1px solid var(--slate-divider-strong) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
   border-radius: 2px;
   cursor: pointer;
   font-family: var(--font-sans);
+  -webkit-appearance: none;
+  appearance: none;
   transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
 }
 .cs-beta-chip:hover {
-  border-color: var(--slate-sage);
-  color: var(--slate-ink);
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-ink) !important;
 }
 .cs-beta-chip.is-active {
-  background: var(--slate-sage);
-  border-color: var(--slate-sage);
-  color: var(--slate-surface);
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
   font-weight: 500;
 }
 .cs-beta-chip__count {
@@ -859,7 +865,7 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 52px 100px minmax(180px, 1.4fr) 130px 100px minmax(120px, 1fr) 90px minmax(120px, 1fr) 64px;
+  grid-template-columns: 24px 68px 100px minmax(180px, 1.4fr) 130px 100px minmax(120px, 1fr) 90px minmax(120px, 1fr) 64px;
   align-items: center;
   gap: 12px;
   padding: 6px 14px;
@@ -1000,7 +1006,7 @@
   gap: 4px;
 }
 .cs-beta-row__qinput {
-  width: 42px;
+  width: 56px;
   padding: 4px 6px;
   font-family: var(--font-mono);
   font-size: 12.5px;
@@ -1008,12 +1014,24 @@
   text-align: center;
   color: var(--slate-ink);
   background: var(--slate-surface);
-  border: 1px solid var(--slate-divider-strong);
+  border: 1px solid var(--slate-divider-strong) !important;
   border-radius: 2px;
+  -webkit-appearance: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  box-sizing: border-box;
+}
+/* Hide the native number-input spinner — it crops 2–3 digit values
+   on narrow inputs and we don't need it (drag/drop is the primary
+   reorder method; manual edit is the keyboard fallback). */
+.cs-beta-row__qinput::-webkit-outer-spin-button,
+.cs-beta-row__qinput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .cs-beta-row__qinput:focus {
   outline: none;
-  border-color: var(--slate-sage);
+  border-color: var(--slate-sage) !important;
   box-shadow: 0 0 0 2px var(--slate-sage-wash);
 }
 .cs-beta-row__dup {
@@ -1093,21 +1111,24 @@
   gap: 2px;
 }
 .cs-beta-row__iconbtn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--slate-ink-placeholder);
+  /* Same WP-theme override pattern as the chips. */
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--slate-ink-placeholder) !important;
   width: 26px; height: 26px;
   border-radius: 2px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
   transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
 }
 .cs-beta-row__iconbtn:hover {
-  background: var(--slate-surface-tint);
-  border-color: var(--slate-divider-strong);
-  color: var(--slate-ink-muted);
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-divider-strong) !important;
+  color: var(--slate-ink-muted) !important;
 }
 .cs-beta-row:hover .cs-beta-row__iconbtn,
 .cs-beta-row.is-selected .cs-beta-row__iconbtn { color: var(--slate-ink-subtle); }
@@ -1163,9 +1184,9 @@
   text-overflow: ellipsis;
 }
 .cs-beta__detail-close {
-  background: transparent;
-  border: 1px solid rgba(225, 223, 200, 0.25);
-  color: var(--slate-sand-wash);
+  background: transparent !important;
+  border: 1px solid rgba(225, 223, 200, 0.25) !important;
+  color: var(--slate-sand-wash) !important;
   padding: 4px 6px;
   cursor: pointer;
   border-radius: var(--slate-radius-sm);
@@ -1173,7 +1194,7 @@
   align-items: center;
   justify-content: center;
 }
-.cs-beta__detail-close:hover { background: rgba(255, 255, 255, 0.08); }
+.cs-beta__detail-close:hover { background: rgba(255, 255, 255, 0.08) !important; }
 .cs-beta__detail-close .material-symbols-outlined { font-size: 16px; }
 
 .cs-beta__detail-grid {
@@ -1250,13 +1271,13 @@
   font-family: var(--font-sans);
   color: var(--slate-ink);
   background: var(--slate-surface);
-  border: 1px solid var(--slate-divider-strong);
+  border: 1px solid var(--slate-divider-strong) !important;
   border-radius: var(--slate-radius-sm);
   box-sizing: border-box;
 }
 .cs-beta-detail-note:focus {
   outline: none;
-  border-color: var(--slate-sage);
+  border-color: var(--slate-sage) !important;
   box-shadow: 0 0 0 2px var(--slate-sage-wash);
 }
 .cs-beta-detail-actions {
@@ -1294,14 +1315,29 @@
   font-family: var(--font-sans);
   color: var(--slate-ink);
   background: var(--slate-surface);
-  border: 1px solid var(--slate-divider-strong);
+  /* !important to fight WP theme's default <input>/<select>/<textarea>
+     borders on the New Job modal + detail panel forms. */
+  border: 1px solid var(--slate-divider-strong) !important;
   border-radius: 2px;
+  -webkit-appearance: none;
+  appearance: none;
   transition: border-color 100ms ease, background 100ms ease, box-shadow 100ms ease;
 }
 .cs-beta-field__input:focus {
   outline: none;
-  border-color: var(--slate-sage);
+  border-color: var(--slate-sage) !important;
   box-shadow: 0 0 0 2px var(--slate-sage-wash);
+}
+/* Hide native number-input spinners on the modal + detail panel
+   number fields — same reasoning as the row Q# input. */
+.cs-beta-field__input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.cs-beta-field__input[type="number"]::-webkit-outer-spin-button,
+.cs-beta-field__input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .cs-beta-field__input.is-edited,
 .cs-beta-detail-note.is-edited {
@@ -1385,7 +1421,7 @@ select.cs-beta-field__input {
 @media (max-width: 1100px) {
   .cs-beta-list__head { display: none; }
   .cs-beta-row {
-    grid-template-columns: 28px 60px 1fr auto;
+    grid-template-columns: 28px 68px 1fr auto;
     grid-template-areas:
       'handle qnum so   actions'
       '.      .    cust cust'
@@ -1466,9 +1502,9 @@ body.cs-beta-modal-open { overflow: hidden; }
   letter-spacing: -0.01em;
 }
 .cs-beta-modal__close {
-  background: transparent;
-  border: 1px solid var(--slate-divider);
-  color: var(--slate-ink-muted);
+  background: transparent !important;
+  border: 1px solid var(--slate-divider) !important;
+  color: var(--slate-ink-muted) !important;
   width: 30px; height: 30px;
   border-radius: 2px;
   cursor: pointer;
@@ -1477,9 +1513,9 @@ body.cs-beta-modal-open { overflow: hidden; }
   justify-content: center;
 }
 .cs-beta-modal__close:hover {
-  background: var(--slate-surface);
-  color: var(--slate-ink);
-  border-color: var(--slate-sage);
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+  border-color: var(--slate-sage) !important;
 }
 .cs-beta-modal__close .material-symbols-outlined { font-size: 16px; }
 
