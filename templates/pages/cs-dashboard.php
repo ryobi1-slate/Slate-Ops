@@ -91,8 +91,6 @@ $health_tone_class_map = [
   <nav class="ops-subnav" id="ops-subnav">
     <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
     <button class="ops-subtab" data-tab="workspace-beta"><span class="material-symbols-outlined">workspaces</span>CS Workspace</button>
-    <button class="ops-subtab ops-subtab--legacy" data-tab="workspace" title="Legacy iframe Workspace — kept as fallback while CS Workspace is on staging."><span class="material-symbols-outlined">support_agent</span>Legacy Workspace</button>
-    <button class="ops-subtab ops-subtab--legacy" data-tab="queue" title="Legacy Queue tab — kept as fallback while CS Workspace is on staging."><span class="material-symbols-outlined">format_list_numbered</span>Legacy Queue</button>
     <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count"><?php echo esc_html((string) $subtab_counts['intake']); ?></span></button>
     <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
     <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>
@@ -295,76 +293,7 @@ $health_tone_class_map = [
 
   </div>
 
-  <!-- ── WORKSPACE TAB ── -->
-  <!-- Embeds the legacy React /ops/cs page in an iframe. Lazy-loaded on
-       first activation; iframe persists in the DOM after that so subsequent
-       tab switches are instant. The iframe uses ?embed=1 which suppresses
-       the parent shell's topbar and sidebar (see layout-shell.php). -->
-  <div class="ops-tab-content" data-tab-content="workspace" hidden>
-    <div class="ops-workspace">
-      <div class="ops-workspace__skeleton" id="workspace-skeleton">
-        <span class="material-symbols-outlined ops-workspace__spinner" aria-hidden="true">progress_activity</span>
-        <span class="ops-workspace__skeleton-label">Loading workspace…</span>
-      </div>
-      <iframe
-        class="ops-workspace__frame"
-        id="workspace-frame"
-        src=""
-        data-src="<?php echo esc_url(home_url('/ops/cs/?embed=1')); ?>"
-        title="CS Workspace"></iframe>
-      <div class="ops-workspace__error" id="workspace-error" hidden role="alert">
-        <span class="material-symbols-outlined ops-workspace__error-icon" aria-hidden="true">error</span>
-        <div class="ops-workspace__error-msg">Workspace failed to load.</div>
-        <div class="ops-workspace__error-actions">
-          <button type="button" class="btn btn--primary" id="workspace-retry">Retry</button>
-          <a class="btn btn--secondary" id="workspace-open-legacy" href="<?php echo esc_url(home_url('/ops/cs/?embed=1')); ?>" target="_top">Open Legacy CS</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── QUEUE TAB ── -->
-  <!-- Shop Queue: CS sequences jobs per tech. Tech reads queue order via
-       /jobs but cannot reorder. Data loads via /cs/queue on first activation. -->
-  <div class="ops-tab-content" data-tab-content="queue" hidden>
-    <div class="ops-queue">
-      <div class="ops-queue__header">
-        <div>
-          <h2 class="ops-queue__title">Shop Queue</h2>
-          <div class="ops-queue__sub">Manage the order CS wants jobs worked. Tech reads this queue but cannot reorder it.</div>
-        </div>
-        <div class="ops-queue__actions">
-          <button class="btn btn--secondary" id="queue-normalize-btn" title="Reset visible queue numbers to 1, 2, 3 within each tech group">
-            <span class="material-symbols-outlined">low_priority</span>
-            Normalize Order
-          </button>
-          <button class="btn btn--primary" id="queue-save-btn" disabled>
-            <span class="material-symbols-outlined">save</span>
-            <span id="queue-save-label">Save Queue</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="ops-queue__filterbar" id="queue-filters">
-        <button class="queue-chip active" data-filter="all">All</button>
-        <button class="queue-chip" data-filter="scheduled">Scheduled</button>
-        <button class="queue-chip" data-filter="blocked">Blocked</button>
-        <button class="queue-chip" data-filter="qc">Ready for Closeout</button>
-        <button class="queue-chip" data-filter="unassigned">Unassigned</button>
-      </div>
-
-      <div class="ops-queue__warnings" id="queue-warnings" hidden></div>
-
-      <div class="ops-queue__body" id="queue-body">
-        <div class="ops-queue__empty">
-          <span class="material-symbols-outlined ops-queue__spinner" aria-hidden="true">progress_activity</span>
-          <span>Loading queue…</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── CS WORKSPACE (BETA) TAB ── -->
+  <!-- ── CS WORKSPACE TAB ── -->
   <!-- Phase 1: combined Workspace + Queue surface. Read/edit queue with
        grouped-by-tech list, filter chips, search, and a bottom detail
        panel. Uses the same /cs/queue endpoint as the Queue tab; saves
@@ -379,7 +308,7 @@ $health_tone_class_map = [
           <div class="cs-beta__sub">Manage intake, job updates, assignments, and shop queue order.</div>
         </div>
         <div class="cs-beta__actions">
-          <button type="button" class="btn btn--secondary" id="cs-beta-new" title="Coming soon — create new job from intake">
+          <button type="button" class="btn btn--secondary" id="cs-beta-new" title="Create a new job (CS intake)">
             <span class="material-symbols-outlined">add</span>
             New Job
           </button>
@@ -549,6 +478,107 @@ $health_tone_class_map = [
     </button>
   </div>
 </aside>
+
+<!-- ─── New Job intake modal (Phase 6) ───
+     Hidden by default. Opens from the CS Workspace tab's New Job button.
+     Posts to existing POST /jobs (perm_create_jobs = CS / Supervisor / Admin). -->
+<div class="cs-beta-modal" id="cs-beta-newjob-modal" hidden role="dialog" aria-modal="true" aria-labelledby="cs-beta-newjob-title">
+  <div class="cs-beta-modal__backdrop" data-action="cs-beta-newjob-close"></div>
+  <div class="cs-beta-modal__panel" role="document">
+    <header class="cs-beta-modal__head">
+      <div>
+        <div class="cs-beta-modal__eyebrow">CS Intake</div>
+        <h2 class="cs-beta-modal__title" id="cs-beta-newjob-title">New Job</h2>
+      </div>
+      <button type="button" class="cs-beta-modal__close" data-action="cs-beta-newjob-close" aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </header>
+    <form class="cs-beta-modal__form" id="cs-beta-newjob-form" novalidate>
+      <div class="cs-beta-modal__error" id="cs-beta-newjob-error" hidden role="alert"></div>
+
+      <div class="cs-beta-modal__grid">
+        <label class="cs-beta-field cs-beta-field--span2">
+          <span class="cs-beta-field__label">SO #<span class="cs-beta-field__hint">optional · format S-ORD###### </span></span>
+          <input type="text" class="cs-beta-mono cs-beta-field__input" name="so_number" placeholder="S-ORD101350" autocomplete="off">
+        </label>
+        <label class="cs-beta-field">
+          <span class="cs-beta-field__label">Job Type<span class="cs-beta-field__hint">required</span></span>
+          <select class="cs-beta-field__input" name="job_type" required>
+            <option value="">Select…</option>
+            <option value="UPFIT">Upfit</option>
+            <option value="COMMERCIAL_UPFIT">Commercial Upfit</option>
+            <option value="COMMERCIAL_BUILD">Commercial Build</option>
+            <option value="RV_BUILD">RV Build</option>
+            <option value="RV_UPFIT">RV Upfit</option>
+            <option value="PARTS_ONLY">Parts Only</option>
+            <option value="SERVICE">Service</option>
+            <option value="WARRANTY">Warranty</option>
+          </select>
+        </label>
+        <label class="cs-beta-field">
+          <span class="cs-beta-field__label">Estimated Hours<span class="cs-beta-field__hint">required</span></span>
+          <input type="number" class="cs-beta-mono cs-beta-field__input" name="estimated_hours" min="0" step="0.25" required placeholder="e.g. 8.5">
+        </label>
+
+        <label class="cs-beta-field">
+          <span class="cs-beta-field__label">Customer Name<span class="cs-beta-field__hint">customer or dealer required</span></span>
+          <input type="text" class="cs-beta-field__input" name="customer_name" maxlength="160" placeholder="e.g. Smith RV">
+        </label>
+        <label class="cs-beta-field">
+          <span class="cs-beta-field__label">Dealer<span class="cs-beta-field__hint">optional if customer set</span></span>
+          <input type="text" class="cs-beta-field__input" name="dealer_name" maxlength="160" placeholder="e.g. Slate RV Dealer">
+        </label>
+
+        <label class="cs-beta-field">
+          <span class="cs-beta-field__label">VIN (last 8)<span class="cs-beta-field__hint">required unless Parts Only or “No VIN”</span></span>
+          <input type="text" class="cs-beta-mono cs-beta-field__input" name="vin_last8" maxlength="8" pattern="[A-HJ-NPR-Z0-9]{7,8}" autocapitalize="characters" autocomplete="off" placeholder="ABCDE123">
+        </label>
+        <label class="cs-beta-field cs-beta-field--checkbox">
+          <input type="checkbox" name="no_vin_required" value="1">
+          <span>No VIN required</span>
+        </label>
+
+        <label class="cs-beta-field">
+          <span class="cs-beta-field__label">Parts Status</span>
+          <select class="cs-beta-field__input" name="parts_status">
+            <option value="NOT_READY" selected>Not Ready</option>
+            <option value="PARTIAL">Partial</option>
+            <option value="READY">Ready</option>
+            <option value="HOLD">On Hold</option>
+          </select>
+        </label>
+        <label class="cs-beta-field">
+          <span class="cs-beta-field__label">Requested Date<span class="cs-beta-field__hint">optional</span></span>
+          <input type="date" class="cs-beta-mono cs-beta-field__input" name="requested_date">
+        </label>
+
+        <label class="cs-beta-field cs-beta-field--span2">
+          <span class="cs-beta-field__label">Salesperson<span class="cs-beta-field__hint">optional</span></span>
+          <input type="text" class="cs-beta-field__input" name="sales_person" maxlength="120">
+        </label>
+
+        <label class="cs-beta-field cs-beta-field--span4">
+          <span class="cs-beta-field__label">Job Description<span class="cs-beta-field__hint">scope summary, optional</span></span>
+          <textarea class="cs-beta-field__input" name="job_description" rows="2" maxlength="2000" placeholder="Brief scope of the job…"></textarea>
+        </label>
+
+        <label class="cs-beta-field cs-beta-field--span4">
+          <span class="cs-beta-field__label">Internal Notes<span class="cs-beta-field__hint">CS only · not visible to Tech</span></span>
+          <textarea class="cs-beta-field__input" name="notes" rows="2" maxlength="4000" placeholder="Customer comms, history, etc."></textarea>
+        </label>
+      </div>
+
+      <footer class="cs-beta-modal__foot">
+        <button type="button" class="btn btn--secondary" data-action="cs-beta-newjob-close">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="cs-beta-newjob-submit">
+          <span class="material-symbols-outlined">add</span>
+          <span id="cs-beta-newjob-submit-label">Create Job</span>
+        </button>
+      </footer>
+    </form>
+  </div>
+</div>
 
 <!-- Toast -->
 <div class="toast" id="toast">

@@ -221,96 +221,6 @@
     toastT = setTimeout(function () { toast.classList.remove('show'); }, 2400);
   }
 
-  // ─── Workspace tab (lazy iframe + scroll lock) ───────────────────────
-  // The legacy React /ops/cs page is embedded in an iframe. The iframe
-  // src is left empty in the template and only set on first activation,
-  // so users who never click Workspace don't pay for the React bundle.
-  // The iframe is always visible once activation starts; the skeleton sits
-  // on top as an overlay until `load` fires. Hiding the iframe during load
-  // proved fragile on WordPress.com staging, so we keep it visible.
-  var WORKSPACE_LOAD_TIMEOUT_MS = 8000;
-  var workspaceTimer = null;
-  var workspaceLoaded = false;
-
-  function clearWorkspaceTimer() {
-    if (workspaceTimer) {
-      clearTimeout(workspaceTimer);
-      workspaceTimer = null;
-    }
-  }
-
-  function startWorkspaceLoad() {
-    var frame    = document.getElementById('workspace-frame');
-    var skeleton = document.getElementById('workspace-skeleton');
-    var error    = document.getElementById('workspace-error');
-    if (!frame) return;
-
-    workspaceLoaded = false;
-    if (error)    error.hidden    = true;
-    if (skeleton) skeleton.hidden = false;
-
-    clearWorkspaceTimer();
-    workspaceTimer = setTimeout(function () {
-      if (workspaceLoaded) return;
-      console.warn('[cs-dashboard] workspace iframe load timed out after', WORKSPACE_LOAD_TIMEOUT_MS, 'ms');
-      var sk = document.getElementById('workspace-skeleton');
-      var er = document.getElementById('workspace-error');
-      if (sk) sk.hidden = true;
-      if (er) er.hidden = false;
-      // Do NOT hide the iframe; let it keep trying / display whatever it can.
-    }, WORKSPACE_LOAD_TIMEOUT_MS);
-
-    console.log('[cs-dashboard] workspace iframe loading:', frame.dataset.src);
-    frame.setAttribute('src', frame.dataset.src);
-  }
-
-  function activateWorkspace() {
-    document.documentElement.classList.add('cs-workspace-active');
-    document.body.classList.add('cs-workspace-active');
-
-    var frame = document.getElementById('workspace-frame');
-    if (!frame) return;
-
-    if (!frame.getAttribute('src')) {
-      startWorkspaceLoad();
-    }
-  }
-
-  function deactivateWorkspace() {
-    document.documentElement.classList.remove('cs-workspace-active');
-    document.body.classList.remove('cs-workspace-active');
-    // Iframe stays in the DOM with src intact — do NOT clear it.
-  }
-
-  var workspaceFrame = document.getElementById('workspace-frame');
-  if (workspaceFrame) {
-    workspaceFrame.addEventListener('load', function () {
-      // Browsers fire `load` once with src="" on initial parse — ignore that.
-      if (!workspaceFrame.getAttribute('src')) return;
-      console.log('[cs-dashboard] workspace iframe load fired:', workspaceFrame.getAttribute('src'));
-      workspaceLoaded = true;
-      clearWorkspaceTimer();
-      var skeleton = document.getElementById('workspace-skeleton');
-      var error    = document.getElementById('workspace-error');
-      if (skeleton) skeleton.hidden = true;
-      if (error)    error.hidden    = true;
-    });
-  }
-
-  var workspaceRetry = document.getElementById('workspace-retry');
-  if (workspaceRetry) {
-    workspaceRetry.addEventListener('click', function () {
-      var frame    = document.getElementById('workspace-frame');
-      var skeleton = document.getElementById('workspace-skeleton');
-      var error    = document.getElementById('workspace-error');
-      if (!frame) return;
-      if (skeleton) skeleton.hidden = false;
-      if (error)    error.hidden    = true;
-      frame.setAttribute('src', '');
-      setTimeout(startWorkspaceLoad, 50);
-    });
-  }
-
   // ─── Sub-tabs ─────────────────────────────────────────────────────────
   $$('.ops-subtab').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -321,480 +231,12 @@
       $$('.ops-tab-content').forEach(function (c) {
         c.hidden = c.dataset.tabContent !== tab;
       });
-      if (tab === 'workspace') {
-        activateWorkspace();
-      } else {
-        deactivateWorkspace();
-      }
-      if (tab === 'queue') {
-        activateQueue();
-      }
       if (tab === 'workspace-beta') {
         activateBeta();
       }
     });
   });
 
-  // ─── Queue tab (Shop Queue) ──────────────────────────────────────────
-  // Loads on first activation, then renders from in-memory state. CS edits
-  // queue_order (number input) and queue_note (text input) inline; Save
-  // pushes a single bulk POST to /cs/queue. Normalize re-numbers visible
-  // jobs in each tech group to 1, 2, 3 in their current sort order.
-  var queueState = {
-    loaded:   false,
-    loading:  false,
-    jobs:     [],          // server snapshot (last loaded)
-    edits:    {},          // { id: { queue_order, queue_visible, queue_note } }
-    filter:   'all'
-  };
-
-  function queueApi() {
-    return (window.slateOpsCsDashboard && window.slateOpsCsDashboard.api) || null;
-  }
-
-  function activateQueue() {
-    if (queueState.loaded || queueState.loading) {
-      renderQueue();
-      return;
-    }
-    loadQueue();
-  }
-
-  function loadQueue() {
-    var api = queueApi();
-    var body = document.getElementById('queue-body');
-    if (!api) {
-      if (body) body.innerHTML = '<div class="ops-queue__empty"><span>Queue API not available.</span></div>';
-      return;
-    }
-    queueState.loading = true;
-    fetch(api.root + '/cs/queue', {
-      method: 'GET',
-      credentials: 'same-origin',
-      headers: { 'X-WP-Nonce': api.nonce, 'Accept': 'application/json' }
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-      .then(function (res) {
-        queueState.loading = false;
-        if (!res.ok || !res.body || !res.body.ok) {
-          if (body) body.innerHTML = '<div class="ops-queue__empty"><span>Failed to load queue.</span></div>';
-          return;
-        }
-        queueState.jobs   = res.body.jobs || [];
-        queueState.edits  = {};
-        queueState.loaded = true;
-        renderQueue();
-      })
-      .catch(function () {
-        queueState.loading = false;
-        if (body) body.innerHTML = '<div class="ops-queue__empty"><span>Failed to load queue.</span></div>';
-      });
-  }
-
-  function effectiveJob(j) {
-    var e = queueState.edits[j.id] || {};
-    return {
-      id:               j.id,
-      job_number:       j.job_number,
-      so_number:        j.so_number,
-      customer:         j.customer,
-      dealer:           j.dealer,
-      status:           j.status,
-      status_label:     j.status_label,
-      parts_status:     j.parts_status,
-      due_date:         j.due_date,
-      assigned_user_id: j.assigned_user_id,
-      assigned_tech:    j.assigned_tech,
-      queue_order:      e.queue_order   !== undefined ? e.queue_order   : j.queue_order,
-      queue_visible:    e.queue_visible !== undefined ? e.queue_visible : j.queue_visible,
-      queue_note:       e.queue_note    !== undefined ? e.queue_note    : (j.queue_note || ''),
-      _dirty:           Object.keys(e).length > 0
-    };
-  }
-
-  function passesFilter(j) {
-    switch (queueState.filter) {
-      case 'all':        return true;
-      case 'scheduled':  return j.status === 'SCHEDULED';
-      case 'blocked':    return j.status === 'BLOCKED';
-      case 'qc':         return j.status === 'QC' || j.status === 'PENDING_QC';
-      case 'unassigned': return !j.assigned_user_id;
-      default:           return true;
-    }
-  }
-
-  function statusPillClass(status) {
-    switch (status) {
-      case 'BLOCKED':         return 'pill--blocked';
-      case 'SCHEDULED':       return 'pill--ready';
-      case 'IN_PROGRESS':     return 'pill--qc';
-      case 'QC':
-      case 'PENDING_QC':      return 'pill--qc';
-      case 'READY_FOR_BUILD': return 'pill--ready';
-      default:                return 'pill--neutral';
-    }
-  }
-
-  function partsPillClass(ps) {
-    var v = String(ps || '').toUpperCase();
-    if (v === 'HOLD' || v === 'NOT_READY') return 'pill--blocked';
-    if (v === 'PARTIAL')                   return 'pill--parts';
-    if (v === 'READY')                     return 'pill--ready';
-    return 'pill--neutral';
-  }
-
-  function partsLabel(ps) {
-    var v = String(ps || '').toUpperCase();
-    if (!v) return '—';
-    var map = { READY: 'Ready', PARTIAL: 'Partial', NOT_READY: 'Not ready', HOLD: 'On hold' };
-    return map[v] || v;
-  }
-
-  function fmtDate(s) {
-    if (!s) return '—';
-    // Date-only ('YYYY-MM-DD') or datetime — keep first 10 chars.
-    return String(s).substr(0, 10);
-  }
-
-  function renderQueue() {
-    var body = document.getElementById('queue-body');
-    if (!body) return;
-
-    var jobs    = queueState.jobs.map(effectiveJob);
-    var visible = jobs.filter(passesFilter);
-
-    // Group by tech (string label keyed for stability)
-    var groups   = {};
-    var keyOrder = [];
-    visible.forEach(function (j) {
-      var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
-      if (!groups[key]) {
-        groups[key] = {
-          key:        key,
-          label:      j.assigned_user_id ? (j.assigned_tech || ('User #' + j.assigned_user_id)) : 'Unassigned',
-          unassigned: !j.assigned_user_id,
-          jobs:       []
-        };
-        keyOrder.push(key);
-      }
-      groups[key].jobs.push(j);
-    });
-
-    keyOrder.sort(function (a, b) {
-      if (groups[a].unassigned && !groups[b].unassigned) return 1;
-      if (!groups[a].unassigned && groups[b].unassigned) return -1;
-      return groups[a].label.localeCompare(groups[b].label);
-    });
-
-    if (keyOrder.length === 0) {
-      body.innerHTML = '<div class="ops-queue__empty"><span>No jobs match this filter.</span></div>';
-      updateQueueWarnings();
-      updateSaveButton();
-      return;
-    }
-
-    var html = keyOrder.map(function (k) {
-      var g = groups[k];
-      g.jobs.sort(function (a, b) {
-        var ao = a.queue_order == null ? 1e9 : a.queue_order;
-        var bo = b.queue_order == null ? 1e9 : b.queue_order;
-        if (ao !== bo) return ao - bo;
-        return (a.job_number || '').localeCompare(b.job_number || '');
-      });
-
-      // Detect duplicate visible queue numbers within the group.
-      var seen   = {};
-      var dupSet = {};
-      g.jobs.forEach(function (j) {
-        if (!j.queue_visible) return;
-        if (j.queue_order == null) return;
-        if (seen[j.queue_order]) dupSet[j.queue_order] = true;
-        seen[j.queue_order] = true;
-      });
-
-      var rows = g.jobs.map(function (j) {
-        var dup = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
-        var rowCls = 'queue-row';
-        if (j._dirty)               rowCls += ' queue-row--dirty';
-        if (!j.queue_visible)       rowCls += ' queue-row--hidden';
-        if (dup)                    rowCls += ' queue-row--dup';
-
-        return ''
-          + '<tr class="' + rowCls + '" data-job="' + j.id + '">'
-          + '<td class="queue-col-num">'
-          +   '<input type="number" min="1" step="1" class="queue-num-input"'
-          +     ' value="' + (j.queue_order == null ? '' : j.queue_order) + '"'
-          +     ' data-field="queue_order" aria-label="Queue number">'
-          +   (dup ? '<span class="queue-dup-flag" title="Duplicate queue number">!</span>' : '')
-          + '</td>'
-          + '<td class="queue-col-job"><span class="job-id">' + escapeHtml(j.job_number || '') + '</span></td>'
-          + '<td class="queue-col-cust">'
-          +   '<div>' + escapeHtml(j.customer || '—') + '</div>'
-          +   '<div class="queue-sub">' + escapeHtml(j.dealer || '') + '</div>'
-          + '</td>'
-          + '<td class="queue-col-status"><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></td>'
-          + '<td class="queue-col-parts"><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></td>'
-          + '<td class="queue-col-due">' + escapeHtml(fmtDate(j.due_date)) + '</td>'
-          + '<td class="queue-col-tech">' + escapeHtml(j.assigned_tech || 'Unassigned') + '</td>'
-          + '<td class="queue-col-note">'
-          +   '<input type="text" class="queue-note-input" maxlength="240"'
-          +     ' value="' + escapeHtml(j.queue_note || '') + '"'
-          +     ' data-field="queue_note" placeholder="Add note…" aria-label="Queue note">'
-          + '</td>'
-          + '<td class="queue-col-actions">'
-          +   '<button type="button" class="queue-icon-btn" data-field="queue_visible"'
-          +     ' title="' + (j.queue_visible ? 'Hide from queue' : 'Show in queue') + '"'
-          +     ' aria-pressed="' + (j.queue_visible ? 'true' : 'false') + '">'
-          +     '<span class="material-symbols-outlined">' + (j.queue_visible ? 'visibility' : 'visibility_off') + '</span>'
-          +   '</button>'
-          + '</td>'
-          + '</tr>';
-      }).join('');
-
-      var visibleCount = g.jobs.filter(function (j) { return j.queue_visible; }).length;
-
-      return ''
-        + '<section class="queue-group" data-group="' + escapeHtml(g.key) + '">'
-        + '<header class="queue-group__head">'
-        +   '<div class="queue-group__name"><span class="material-symbols-outlined">' + (g.unassigned ? 'help' : 'engineering') + '</span>' + escapeHtml(g.label) + '</div>'
-        +   '<div class="queue-group__meta">' + g.jobs.length + ' jobs · ' + visibleCount + ' visible</div>'
-        + '</header>'
-        + '<div class="queue-table-wrap">'
-        + '<table class="queue-table">'
-        +   '<thead><tr>'
-        +     '<th class="queue-col-num">Queue #</th>'
-        +     '<th class="queue-col-job">SO / Job</th>'
-        +     '<th class="queue-col-cust">Customer / Dealer</th>'
-        +     '<th class="queue-col-status">Status</th>'
-        +     '<th class="queue-col-parts">Parts</th>'
-        +     '<th class="queue-col-due">Due Date</th>'
-        +     '<th class="queue-col-tech">Assigned Tech</th>'
-        +     '<th class="queue-col-note">Queue Note</th>'
-        +     '<th class="queue-col-actions">Actions</th>'
-        +   '</tr></thead>'
-        +   '<tbody>' + rows + '</tbody>'
-        + '</table>'
-        + '</div>'
-        + '</section>';
-    }).join('');
-
-    body.innerHTML = html;
-
-    // Wire up edits.
-    $$('.queue-num-input', body).forEach(function (input) {
-      input.addEventListener('input', function () {
-        var tr = input.closest('tr'); if (!tr) return;
-        var id = parseInt(tr.dataset.job, 10);
-        var v  = input.value.trim();
-        var parsed = v === '' ? null : parseInt(v, 10);
-        if (parsed != null && (!isFinite(parsed) || parsed < 1)) parsed = null;
-        recordEdit(id, 'queue_order', parsed);
-      });
-    });
-    $$('.queue-note-input', body).forEach(function (input) {
-      input.addEventListener('input', function () {
-        var tr = input.closest('tr'); if (!tr) return;
-        var id = parseInt(tr.dataset.job, 10);
-        recordEdit(id, 'queue_note', input.value);
-      });
-    });
-    $$('.queue-icon-btn[data-field="queue_visible"]', body).forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var tr = btn.closest('tr'); if (!tr) return;
-        var id = parseInt(tr.dataset.job, 10);
-        var j  = effectiveJob(jobById(id));
-        recordEdit(id, 'queue_visible', !j.queue_visible);
-        renderQueue();
-      });
-    });
-
-    updateQueueWarnings();
-    updateSaveButton();
-  }
-
-  function jobById(id) {
-    for (var i = 0; i < queueState.jobs.length; i++) {
-      if (queueState.jobs[i].id === id) return queueState.jobs[i];
-    }
-    return null;
-  }
-
-  function recordEdit(id, field, value) {
-    var snap = jobById(id);
-    if (!snap) return;
-    var orig = snap[field];
-    var bag  = queueState.edits[id] || {};
-    var same = (value === orig) || (value == null && orig == null);
-    if (same) {
-      delete bag[field];
-    } else {
-      bag[field] = value;
-    }
-    if (Object.keys(bag).length === 0) {
-      delete queueState.edits[id];
-    } else {
-      queueState.edits[id] = bag;
-    }
-    updateQueueWarnings();
-    updateSaveButton();
-  }
-
-  function updateQueueWarnings() {
-    var box = document.getElementById('queue-warnings');
-    if (!box) return;
-    var jobs   = queueState.jobs.map(effectiveJob);
-    var groups = {};
-    jobs.forEach(function (j) {
-      var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
-      (groups[key] = groups[key] || { label: j.assigned_user_id ? (j.assigned_tech || 'Tech') : 'Unassigned', jobs: [] }).jobs.push(j);
-    });
-
-    var warnings = [];
-
-    Object.keys(groups).forEach(function (k) {
-      var g = groups[k];
-      // Duplicate queue numbers within group (visible jobs only).
-      var seen = {}, dupNums = {};
-      g.jobs.forEach(function (j) {
-        if (!j.queue_visible || j.queue_order == null) return;
-        if (seen[j.queue_order]) dupNums[j.queue_order] = true;
-        seen[j.queue_order] = true;
-      });
-      Object.keys(dupNums).forEach(function (n) {
-        warnings.push({
-          tone: 'alert',
-          text: 'Duplicate queue # ' + n + ' in ' + g.label + ' — only one job can hold a given slot.'
-        });
-      });
-
-      // Blocked or parts-hold job at queue #1.
-      g.jobs.forEach(function (j) {
-        if (!j.queue_visible) return;
-        if (j.queue_order !== 1) return;
-        var ps  = String(j.parts_status || '').toUpperCase();
-        var bad = j.status === 'BLOCKED' || ps === 'HOLD' || ps === 'NOT_READY';
-        if (bad) {
-          warnings.push({
-            tone: 'warn',
-            text: (j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? 'blocked' : 'waiting on parts') + '.'
-          });
-        }
-      });
-    });
-
-    if (warnings.length === 0) {
-      box.hidden = true;
-      box.innerHTML = '';
-      return;
-    }
-    box.hidden = false;
-    box.innerHTML = warnings.map(function (w) {
-      return ''
-        + '<div class="queue-warning queue-warning--' + w.tone + '">'
-        +   '<span class="material-symbols-outlined">' + (w.tone === 'alert' ? 'error' : 'warning') + '</span>'
-        +   '<span>' + escapeHtml(w.text) + '</span>'
-        + '</div>';
-    }).join('');
-  }
-
-  function updateSaveButton() {
-    var btn = document.getElementById('queue-save-btn');
-    if (!btn) return;
-    var n = Object.keys(queueState.edits).length;
-    btn.disabled = (n === 0);
-    var label = document.getElementById('queue-save-label');
-    if (label) label.textContent = n > 0 ? ('Save Queue (' + n + ')') : 'Save Queue';
-  }
-
-  function normalizeQueue() {
-    var jobs   = queueState.jobs.map(effectiveJob);
-    var groups = {};
-    jobs.forEach(function (j) {
-      var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
-      (groups[key] = groups[key] || []).push(j);
-    });
-
-    Object.keys(groups).forEach(function (k) {
-      var g = groups[k];
-      g.sort(function (a, b) {
-        var ao = a.queue_order == null ? 1e9 : a.queue_order;
-        var bo = b.queue_order == null ? 1e9 : b.queue_order;
-        if (ao !== bo) return ao - bo;
-        return (a.job_number || '').localeCompare(b.job_number || '');
-      });
-      var n = 1;
-      g.forEach(function (j) {
-        if (!j.queue_visible) return;
-        if (j.queue_order !== n) {
-          recordEdit(j.id, 'queue_order', n);
-        }
-        n++;
-      });
-    });
-    renderQueue();
-    showToast('Queue numbers normalized — Save to commit');
-  }
-
-  function saveQueue() {
-    var api = queueApi();
-    if (!api) return;
-    var ids = Object.keys(queueState.edits);
-    if (ids.length === 0) return;
-
-    var updates = ids.map(function (id) {
-      var e = queueState.edits[id];
-      var u = { id: parseInt(id, 10) };
-      if ('queue_order'   in e) u.queue_order   = e.queue_order;
-      if ('queue_visible' in e) u.queue_visible = !!e.queue_visible;
-      if ('queue_note'    in e) u.queue_note    = e.queue_note;
-      return u;
-    });
-
-    var btn = document.getElementById('queue-save-btn');
-    if (btn) btn.disabled = true;
-
-    fetch(api.root + '/cs/queue', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'X-WP-Nonce':   api.nonce,
-        'Content-Type': 'application/json',
-        'Accept':       'application/json'
-      },
-      body: JSON.stringify({ updates: updates })
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-      .then(function (res) {
-        if (!res.ok || !res.body || !res.body.ok) {
-          showToast('Save failed — check warnings');
-          if (btn) btn.disabled = false;
-          return;
-        }
-        showToast('Queue saved · ' + (res.body.saved || 0) + ' jobs');
-        queueState.loaded  = false;
-        queueState.edits   = {};
-        loadQueue();
-      })
-      .catch(function () {
-        showToast('Save failed');
-        if (btn) btn.disabled = false;
-      });
-  }
-
-  $$('.queue-chip').forEach(function (chip) {
-    chip.addEventListener('click', function () {
-      $$('.queue-chip').forEach(function (c) { c.classList.remove('active'); });
-      chip.classList.add('active');
-      queueState.filter = chip.dataset.filter || 'all';
-      renderQueue();
-    });
-  });
-
-  var qSaveBtn = document.getElementById('queue-save-btn');
-  if (qSaveBtn) qSaveBtn.addEventListener('click', saveQueue);
-
-  var qNormalizeBtn = document.getElementById('queue-normalize-btn');
-  if (qNormalizeBtn) qNormalizeBtn.addEventListener('click', normalizeQueue);
 
   // Card "Go to" links jump to tab
   $$('[data-jump]').forEach(function (btn) {
@@ -966,8 +408,55 @@
     };
   }
 
+  /**
+   * Single source of truth for "is this job in a parts-blocking state".
+   * Both HOLD and NOT_READY count — the Tech can't make progress on
+   * either, so CS treats them the same on the parts hold filter, the
+   * parts-hold counter, the parts pill class, and the queue-#1 warning.
+   *
+   * Adjust this list once if the parts-status taxonomy ever expands
+   * (e.g. an explicit PARTIAL_HOLD value).
+   */
+  function betaIsPartsHold(parts_status) {
+    var ps = String(parts_status || '').toUpperCase();
+    return ps === 'HOLD' || ps === 'NOT_READY';
+  }
+
+  // Shared display helpers used by the row, the detail panel, and the
+  // overview's existing pills.
+  function statusPillClass(status) {
+    switch (status) {
+      case 'BLOCKED':         return 'pill--blocked';
+      case 'SCHEDULED':       return 'pill--ready';
+      case 'IN_PROGRESS':     return 'pill--qc';
+      case 'QC':
+      case 'PENDING_QC':      return 'pill--qc';
+      case 'READY_FOR_BUILD': return 'pill--ready';
+      default:                return 'pill--neutral';
+    }
+  }
+
+  function partsPillClass(ps) {
+    if (betaIsPartsHold(ps))                              return 'pill--blocked';
+    var v = String(ps || '').toUpperCase();
+    if (v === 'PARTIAL')                                  return 'pill--parts';
+    if (v === 'READY')                                    return 'pill--ready';
+    return 'pill--neutral';
+  }
+
+  function partsLabel(ps) {
+    var v = String(ps || '').toUpperCase();
+    if (!v) return '—';
+    var map = { READY: 'Ready', PARTIAL: 'Partial', NOT_READY: 'Not ready', HOLD: 'On hold' };
+    return map[v] || v;
+  }
+
+  function fmtDate(s) {
+    if (!s) return '—';
+    return String(s).substr(0, 10);
+  }
+
   function betaPassesChip(j) {
-    var ps = String(j.parts_status || '').toUpperCase();
     switch (betaState.filter) {
       case 'all':        return true;
       case 'ready':      return j.status === 'READY_FOR_BUILD';
@@ -976,7 +465,7 @@
       case 'blocked':    return j.status === 'BLOCKED';
       case 'closeout':   return j.status === 'QC' || j.status === 'PENDING_QC';
       case 'unassigned': return !j.assigned_user_id;
-      case 'parts':      return ps === 'HOLD' || ps === 'NOT_READY';
+      case 'parts':      return betaIsPartsHold(j.parts_status);
       default:           return true;
     }
   }
@@ -994,15 +483,14 @@
   function betaCounts(jobs) {
     var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, unassigned: 0, parts: 0 };
     jobs.forEach(function (j) {
-      var ps = String(j.parts_status || '').toUpperCase();
       c.all++;
-      if (j.status === 'READY_FOR_BUILD')                       c.ready++;
-      if (j.status === 'SCHEDULED')                             c.scheduled++;
-      if (j.status === 'IN_PROGRESS')                           c.inprog++;
-      if (j.status === 'BLOCKED')                               c.blocked++;
-      if (j.status === 'QC' || j.status === 'PENDING_QC')       c.closeout++;
-      if (!j.assigned_user_id)                                  c.unassigned++;
-      if (ps === 'HOLD' || ps === 'NOT_READY')                  c.parts++;
+      if (j.status === 'READY_FOR_BUILD')                  c.ready++;
+      if (j.status === 'SCHEDULED')                        c.scheduled++;
+      if (j.status === 'IN_PROGRESS')                      c.inprog++;
+      if (j.status === 'BLOCKED')                          c.blocked++;
+      if (j.status === 'QC' || j.status === 'PENDING_QC')  c.closeout++;
+      if (!j.assigned_user_id)                             c.unassigned++;
+      if (betaIsPartsHold(j.parts_status))                 c.parts++;
     });
     return c;
   }
@@ -1057,9 +545,11 @@
       groups[key].jobs.push(j);
     });
 
+    // Pin Unassigned to the top of the queue so CS sees the work that
+    // still needs a tech first; tech groups follow in alphabetical order.
     keyOrder.sort(function (a, b) {
-      if (groups[a].unassigned && !groups[b].unassigned) return 1;
-      if (!groups[a].unassigned && groups[b].unassigned) return -1;
+      if (groups[a].unassigned && !groups[b].unassigned) return -1;
+      if (!groups[a].unassigned && groups[b].unassigned) return 1;
       return groups[a].label.localeCompare(groups[b].label);
     });
 
@@ -1099,8 +589,7 @@
 
       var rows = g.jobs.map(function (j) {
         var dup        = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
-        var ps         = String(j.parts_status || '').toUpperCase();
-        var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || ps === 'HOLD' || ps === 'NOT_READY');
+        var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
         var sel        = (betaState.selected === j.id);
 
         var rowCls = 'cs-beta-row';
@@ -1887,8 +1376,7 @@
       });
       g.jobs.forEach(function (j) {
         if (!j.queue_visible || j.queue_order !== 1) return;
-        var ps  = String(j.parts_status || '').toUpperCase();
-        var bad = j.status === 'BLOCKED' || ps === 'HOLD' || ps === 'NOT_READY';
+        var bad = j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status);
         if (bad) {
           warnings.push({
             tone: 'warn',
@@ -1995,6 +1483,17 @@
 
     var step = Promise.resolve();
 
+    // Helper: drop fields from a row's edit bag once they've been
+    // saved server-side, so a partial-failure retry only re-sends
+    // what genuinely still needs saving.
+    function pruneEdits(id, fields) {
+      var bag = betaState.edits[id];
+      if (!bag) return;
+      fields.forEach(function (f) { delete bag[f]; });
+      if (Object.keys(bag).length === 0) delete betaState.edits[id];
+    }
+    var QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
+
     if (queueUpdates.length > 0) {
       step = step.then(function () {
         return fetch(api.root + '/cs/queue', {
@@ -2013,13 +1512,18 @@
               throw new Error('queue_save_failed');
             }
             savedQueue = res.body.saved || 0;
+            // Queue side succeeded for every row in queueUpdates — drop
+            // those fields so a later PATCH failure doesn't cause us to
+            // re-POST identical queue values on retry.
+            queueUpdates.forEach(function (u) { pruneEdits(u.id, QUEUE_FIELDS); });
           });
       });
     }
 
-    // PATCH each job sequentially. Sequential keeps the failure model
-    // simple — surface the first error and abort the rest, leaving
-    // unsaved edits in betaState.edits so the user can retry.
+    // PATCH each job sequentially. On failure, surface the first error
+    // and abort the rest. Edits for already-saved rows are pruned so
+    // the dirty marker clears for them; failed rows keep their job
+    // edits in betaState.edits so the user can retry.
     jobUpdates.forEach(function (u) {
       step = step.then(function () {
         return fetch(api.root + '/jobs/' + u.id, {
@@ -2040,6 +1544,7 @@
               throw new Error('job_save_failed:' + u.id + ':' + msg);
             }
             savedJobs++;
+            pruneEdits(u.id, BETA_JOB_FIELDS);
           });
       });
     });
@@ -2055,14 +1560,26 @@
         loadBeta();
       })
       .catch(function (err) {
-        var msg = 'Save failed';
-        if (jobErrors.length > 0) msg += ' — ' + jobErrors[0].message;
-        else if (err && err.message) msg += ' — ' + err.message.replace(/^[a-z_]+:\d+:/i, '');
+        var prefix = (savedQueue + savedJobs) > 0
+          ? 'Partial save (' + (savedQueue + savedJobs) + ' ok) — '
+          : 'Save failed — ';
+        var msg = prefix.replace(/—\s*$/, '');
+        if (jobErrors.length > 0) msg = prefix + jobErrors[0].message;
+        else if (err && err.message) msg = prefix + err.message.replace(/^[a-z_]+:\d+:/i, '');
+        else msg = prefix + 'unknown error';
         showToast(msg);
         if (btn) btn.disabled = false;
         if (lbl) lbl.textContent = 'Save Changes';
-        // updateBetaSaveButton will recompute the count label
-        updateBetaSaveButton();
+        // Refresh the queue snapshot so already-saved fields stop
+        // flagging dirty in the UI; remaining edits stay queued.
+        if (savedQueue > 0 || savedJobs > 0) {
+          betaState.loaded            = false;
+          betaState.jobDetails        = {};
+          betaState.jobDetailsLoading = {};
+          loadBeta();
+        } else {
+          updateBetaSaveButton();
+        }
       });
   }
 
@@ -2109,12 +1626,154 @@
     });
   }
 
+  // ── New Job intake modal ────────────────────────────────────────────
+  // Opens from the CS Workspace header, posts to the existing
+  // POST /jobs endpoint (perm_create_jobs = CS / Supervisor / Admin),
+  // and reloads the queue on success so the new job lands in the
+  // Unassigned group at the top.
+  function betaOpenNewJob() {
+    var modal = document.getElementById('cs-beta-newjob-modal');
+    var form  = document.getElementById('cs-beta-newjob-form');
+    var err   = document.getElementById('cs-beta-newjob-error');
+    if (!modal || !form) return;
+    form.reset();
+    if (err) { err.hidden = true; err.textContent = ''; }
+    modal.hidden = false;
+    document.body.classList.add('cs-beta-modal-open');
+    var first = form.querySelector('input, select, textarea');
+    if (first) first.focus();
+  }
+
+  function betaCloseNewJob() {
+    var modal = document.getElementById('cs-beta-newjob-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('cs-beta-modal-open');
+  }
+
+  function betaShowNewJobError(msg) {
+    var err = document.getElementById('cs-beta-newjob-error');
+    if (!err) return;
+    err.textContent = msg;
+    err.hidden = false;
+  }
+
+  function betaSubmitNewJob(e) {
+    e.preventDefault();
+    var api  = betaApi();
+    var form = document.getElementById('cs-beta-newjob-form');
+    if (!api || !form) return;
+    var fd = new FormData(form);
+    function val(name) { return (fd.get(name) || '').toString().trim(); }
+
+    var body = {
+      so_number:        val('so_number').toUpperCase(),
+      job_type:         val('job_type'),
+      estimated_hours:  val('estimated_hours'),
+      customer_name:    val('customer_name'),
+      dealer_name:      val('dealer_name'),
+      vin_last8:        val('vin_last8').toUpperCase(),
+      no_vin_required:  fd.get('no_vin_required') ? true : false,
+      parts_status:     val('parts_status') || 'NOT_READY',
+      requested_date:   val('requested_date'),
+      sales_person:     val('sales_person'),
+      job_description:  val('job_description'),
+      notes:            val('notes')
+    };
+
+    // Light client-side guard rails so we can fail fast before hitting
+    // the server. The PHP endpoint repeats every check authoritatively.
+    if (!body.job_type) {
+      betaShowNewJobError('Job Type is required.');
+      return;
+    }
+    if (!body.estimated_hours || isNaN(parseFloat(body.estimated_hours)) || parseFloat(body.estimated_hours) <= 0) {
+      betaShowNewJobError('Estimated Hours is required and must be greater than zero.');
+      return;
+    }
+    if (!body.customer_name && !body.dealer_name) {
+      betaShowNewJobError('Provide a customer name, dealer, or both.');
+      return;
+    }
+    if (body.so_number && !/^S-ORD\d{6}$/.test(body.so_number)) {
+      betaShowNewJobError('SO# format: S-ORD followed by 6 digits (e.g. S-ORD101350).');
+      return;
+    }
+    if (body.job_type !== 'PARTS_ONLY' && !body.no_vin_required) {
+      if (!/^[A-HJ-NPR-Z0-9]{7,8}$/.test(body.vin_last8)) {
+        betaShowNewJobError('VIN is required and must be 7–8 alphanumeric characters (or check “No VIN required”).');
+        return;
+      }
+    } else if (body.vin_last8 && !/^[A-HJ-NPR-Z0-9]{7,8}$/.test(body.vin_last8)) {
+      betaShowNewJobError('VIN must be 7–8 alphanumeric characters.');
+      return;
+    }
+
+    var err   = document.getElementById('cs-beta-newjob-error');
+    if (err) err.hidden = true;
+    var btn   = document.getElementById('cs-beta-newjob-submit');
+    var label = document.getElementById('cs-beta-newjob-submit-label');
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = 'Creating…';
+
+    fetch(api.root + '/jobs', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce':   api.nonce,
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          var msg = (res.body && (res.body.message || res.body.code)) || ('Create failed (HTTP ' + res.status + ').');
+          betaShowNewJobError(String(msg));
+          if (btn) btn.disabled = false;
+          if (label) label.textContent = 'Create Job';
+          return;
+        }
+        showToast('Job created' + (res.body && res.body.so_number ? ' · ' + res.body.so_number : ''));
+        betaCloseNewJob();
+        if (btn) btn.disabled = false;
+        if (label) label.textContent = 'Create Job';
+        // Reload the queue so the new job (status INTAKE → Unassigned)
+        // appears at the top.
+        betaState.loaded = false;
+        betaState.edits  = {};
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        loadBeta();
+      })
+      .catch(function () {
+        betaShowNewJobError('Create failed — please try again.');
+        if (btn) btn.disabled = false;
+        if (label) label.textContent = 'Create Job';
+      });
+  }
+
   var betaNewBtn = document.getElementById('cs-beta-new');
   if (betaNewBtn) {
-    betaNewBtn.addEventListener('click', function () {
-      showToast('New Job intake — coming in Phase 2');
+    betaNewBtn.disabled = false;
+    betaNewBtn.removeAttribute('title');
+    betaNewBtn.addEventListener('click', betaOpenNewJob);
+  }
+  var newJobModal = document.getElementById('cs-beta-newjob-modal');
+  if (newJobModal) {
+    newJobModal.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-action="cs-beta-newjob-close"]');
+      if (t) { e.preventDefault(); betaCloseNewJob(); }
     });
   }
+  var newJobForm = document.getElementById('cs-beta-newjob-form');
+  if (newJobForm) newJobForm.addEventListener('submit', betaSubmitNewJob);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var m = document.getElementById('cs-beta-newjob-modal');
+    if (m && !m.hidden) betaCloseNewJob();
+  });
 
   var betaDetailClose = document.getElementById('cs-beta-detail-close');
   if (betaDetailClose) {
@@ -2144,19 +1803,15 @@
   // directly on the new CS Workspace tab. Friendly aliases also map
   // to the legacy tabs in case anyone has an old link saved.
   var betaHashAliases = {
-    'workspace':         'workspace-beta',
-    'cs-workspace':      'workspace-beta',
-    'workspace-beta':    'workspace-beta',
-    'legacy-workspace':  'workspace',
-    'iframe-workspace':  'workspace',
-    'legacy-queue':      'queue',
-    'queue':             'queue',
-    'overview':          'overview',
-    'intake':            'intake',
-    'parts':             'parts',
-    'qc':                'qc',
-    'pickup':            'pickup',
-    'exceptions':        'exceptions'
+    'workspace':      'workspace-beta',
+    'cs-workspace':   'workspace-beta',
+    'workspace-beta': 'workspace-beta',
+    'overview':       'overview',
+    'intake':         'intake',
+    'parts':          'parts',
+    'qc':             'qc',
+    'pickup':         'pickup',
+    'exceptions':     'exceptions'
   };
   function applyHashRoute() {
     var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();
