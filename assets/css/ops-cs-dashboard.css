@@ -952,24 +952,19 @@ body.cs-workspace-active .ops-tab-content[data-tab-content="workspace"][hidden] 
  * reserved for warnings; selection uses Sand/Sage washes.
  */
 
-/* Beta badge on the sub-tab button — small flat tag. */
-.ops-subtab--beta .ops-subtab__badge {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 6px;
-  padding: 1px 5px;
-  font-size: 9px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-radius: 2px;
-  background: var(--slate-sand);
-  color: var(--slate-ink);
-  line-height: 1.5;
+/* Legacy fallback sub-tabs — kept reachable but visually demoted while
+   the new CS Workspace bakes on staging. Italic + softer color signals
+   that these are temporary fallbacks. */
+.ops-subtab--legacy {
+  font-style: italic;
+  color: var(--slate-ink-subtle);
 }
-.ops-subtab--beta.active .ops-subtab__badge {
-  background: var(--slate-sage-wash);
-  color: var(--slate-sage);
+.ops-subtab--legacy:hover {
+  color: var(--slate-ink-muted);
+}
+.ops-subtab--legacy.active {
+  color: var(--slate-ink-muted);
+  border-bottom-color: var(--slate-divider-strong);
 }
 
 .cs-beta {
