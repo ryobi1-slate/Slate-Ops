@@ -90,9 +90,9 @@ $health_tone_class_map = [
   <!-- Sub-tabs -->
   <nav class="ops-subnav" id="ops-subnav">
     <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
-    <button class="ops-subtab" data-tab="workspace"><span class="material-symbols-outlined">support_agent</span>Workspace</button>
-    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Queue</button>
-    <button class="ops-subtab ops-subtab--beta" data-tab="workspace-beta"><span class="material-symbols-outlined">workspaces</span>CS Workspace<span class="ops-subtab__badge">Beta</span></button>
+    <button class="ops-subtab" data-tab="workspace-beta"><span class="material-symbols-outlined">workspaces</span>CS Workspace</button>
+    <button class="ops-subtab ops-subtab--legacy" data-tab="workspace" title="Legacy iframe Workspace — kept as fallback while CS Workspace is on staging."><span class="material-symbols-outlined">support_agent</span>Legacy Workspace</button>
+    <button class="ops-subtab ops-subtab--legacy" data-tab="queue" title="Legacy Queue tab — kept as fallback while CS Workspace is on staging."><span class="material-symbols-outlined">format_list_numbered</span>Legacy Queue</button>
     <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count"><?php echo esc_html((string) $subtab_counts['intake']); ?></span></button>
     <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
     <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>

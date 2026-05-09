@@ -2140,4 +2140,35 @@
   // so the server-rendered markup is left in place.
   setTimeout(animateKPIs, 50);
 
+  // Sub-tab hash router. Allows /ops/cs-dashboard#workspace to land
+  // directly on the new CS Workspace tab. Friendly aliases also map
+  // to the legacy tabs in case anyone has an old link saved.
+  var betaHashAliases = {
+    'workspace':         'workspace-beta',
+    'cs-workspace':      'workspace-beta',
+    'workspace-beta':    'workspace-beta',
+    'legacy-workspace':  'workspace',
+    'iframe-workspace':  'workspace',
+    'legacy-queue':      'queue',
+    'queue':             'queue',
+    'overview':          'overview',
+    'intake':            'intake',
+    'parts':             'parts',
+    'qc':                'qc',
+    'pickup':            'pickup',
+    'exceptions':        'exceptions'
+  };
+  function applyHashRoute() {
+    var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();
+    if (!raw) return;
+    var key = betaHashAliases[raw];
+    if (!key) return;
+    var btn = document.querySelector('.ops-subtab[data-tab="' + key + '"]');
+    if (!btn) return;
+    if (btn.classList.contains('active')) return;  // already there
+    btn.click();
+  }
+  applyHashRoute();
+  window.addEventListener('hashchange', applyHashRoute);
+
 })();
