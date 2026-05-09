@@ -900,8 +900,33 @@
     return null;
   }
 
+  function betaTechDirectory() {
+    // Build a map of user_id → display name from the current server snapshot.
+    // Used to label the moved row's tech after a cross-tech drag.
+    var map = {};
+    betaState.jobs.forEach(function (j) {
+      if (j.assigned_user_id && j.assigned_tech && !map[j.assigned_user_id]) {
+        map[j.assigned_user_id] = j.assigned_tech;
+      }
+    });
+    return map;
+  }
+
   function betaEffectiveJob(j) {
     var e = betaState.edits[j.id] || {};
+    var hasAssignmentEdit = ('assigned_user_id' in e);
+    var aid = hasAssignmentEdit ? e.assigned_user_id : j.assigned_user_id;
+    var atech;
+    if (hasAssignmentEdit) {
+      if (aid == null) {
+        atech = '';
+      } else {
+        var dir = betaTechDirectory();
+        atech = dir[aid] || ('User #' + aid);
+      }
+    } else {
+      atech = j.assigned_tech;
+    }
     return {
       id:               j.id,
       job_number:       j.job_number,
@@ -914,13 +939,16 @@
       due_date:         j.due_date,
       promised_date:    j.promised_date,
       scheduled_start:  j.scheduled_start,
-      assigned_user_id: j.assigned_user_id,
-      assigned_tech:    j.assigned_tech,
+      assigned_user_id: aid,
+      assigned_tech:    atech,
       queue_priority:   j.queue_priority,
       queue_order:      e.queue_order   !== undefined ? e.queue_order   : j.queue_order,
       queue_visible:    e.queue_visible !== undefined ? e.queue_visible : j.queue_visible,
       queue_note:       e.queue_note    !== undefined ? e.queue_note    : (j.queue_note || ''),
-      _dirty:           Object.keys(e).length > 0
+      _dirty:           Object.keys(e).length > 0,
+      _reassigned:      hasAssignmentEdit && aid !== j.assigned_user_id,
+      _orig_assigned_user_id: j.assigned_user_id,
+      _orig_assigned_tech:    j.assigned_tech || ''
     };
   }
 
@@ -1067,6 +1095,7 @@
         if (!j.queue_visible) rowCls += ' is-hidden';
         if (dup)              rowCls += ' is-dup';
         if (blockedTop)       rowCls += ' is-warn';
+        if (j._reassigned)    rowCls += ' is-reassigned';
 
         var noteText = betaFmtNote(j.queue_note);
         var noteIcon = j.queue_note ? 'sticky_note_2' : '';
@@ -1086,6 +1115,12 @@
           +   '<div class="cs-beta-row__cust">'
           +     '<div class="cs-beta-row__name">' + escapeHtml(j.customer || '—') + '</div>'
           +     '<div class="cs-beta-row__sub">' + escapeHtml(j.dealer || '') + '</div>'
+          +     (j._reassigned
+                ? '<div class="cs-beta-row__staged" title="Reassigned from ' + escapeHtml(j._orig_assigned_tech || 'Unassigned') + '">'
+                +     '<span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>'
+                +     'Reassigned to ' + escapeHtml(j.assigned_tech || 'Unassigned')
+                + '</div>'
+                : '')
           +   '</div>'
           +   '<div class="cs-beta-row__status"><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></div>'
           +   '<div class="cs-beta-row__parts"><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></div>'
@@ -1203,11 +1238,12 @@
       });
     });
 
-    // ── Drag/drop reorder (Phase 2) ─────────────────────────────────────
+    // ── Drag/drop reorder (Phase 2) + cross-tech reassign (Phase 3) ────
     // Only the drag handle initiates a drag; clicking a row, input, or
-    // button never starts one. Reorder is allowed within the same tech
-    // group only. After drop, visible jobs in that group get renumbered
-    // 1, 2, 3 and changed rows are marked dirty.
+    // button never starts one. Same-group drops reorder; cross-group
+    // drops stage a tech reassignment. After every drop, visible jobs
+    // in each affected group get renumbered 1, 2, 3 and changed rows
+    // are marked dirty.
     $$('.cs-beta-row__handle', body).forEach(function (handle) {
       handle.addEventListener('mousedown', function () {
         var row = handle.closest('.cs-beta-row');
@@ -1217,8 +1253,6 @@
 
     $$('.cs-beta-row', body).forEach(function (row) {
       row.addEventListener('dragstart', function (e) {
-        // If the browser tried to drag a row that wasn't handle-armed,
-        // cancel — only handle-initiated drags are allowed.
         if (row.getAttribute('draggable') !== 'true') {
           e.preventDefault();
           return;
@@ -1240,21 +1274,26 @@
         row.classList.remove('is-dragging');
         row.setAttribute('draggable', 'false');
         clearBetaDropIndicators();
+        setBetaDropZone(null);
         betaState.drag = null;
       });
 
       row.addEventListener('dragover', function (e) {
         if (!betaState.drag) return;
+        if (parseInt(row.dataset.job, 10) === betaState.drag.jobId) return;
         var section = row.closest('.cs-beta-group');
         var thisGroup = section ? section.getAttribute('data-group') : null;
-        if (thisGroup !== betaState.drag.groupKey) return;     // reject cross-tech drop
-        if (parseInt(row.dataset.job, 10) === betaState.drag.jobId) return;
         e.preventDefault();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+        var sameGroup = (thisGroup === betaState.drag.groupKey);
         var rect = row.getBoundingClientRect();
         var above = e.clientY < (rect.top + rect.height / 2);
         clearBetaDropIndicators();
         row.classList.add(above ? 'is-drop-above' : 'is-drop-below');
+        // Group-level drop zone outline only on cross-tech to make the
+        // reassignment intent explicit.
+        setBetaDropZone(sameGroup ? null : section);
       });
 
       row.addEventListener('dragleave', function () {
@@ -1263,45 +1302,77 @@
 
       row.addEventListener('drop', function (e) {
         if (!betaState.drag) return;
+        if (parseInt(row.dataset.job, 10) === betaState.drag.jobId) return;
         var section = row.closest('.cs-beta-group');
         var thisGroup = section ? section.getAttribute('data-group') : null;
-        if (thisGroup !== betaState.drag.groupKey) return;
-        if (parseInt(row.dataset.job, 10) === betaState.drag.jobId) return;
         e.preventDefault();
+
         var dropAbove = row.classList.contains('is-drop-above');
-        var refId = parseInt(row.dataset.job, 10);
+        var refId     = parseInt(row.dataset.job, 10);
         var draggedId = betaState.drag.jobId;
         clearBetaDropIndicators();
-        applyBetaReorder(draggedId, refId, dropAbove);
+        setBetaDropZone(null);
+
+        if (thisGroup === betaState.drag.groupKey) {
+          applyBetaReorder(draggedId, refId, dropAbove);
+        } else {
+          applyBetaReorder(draggedId, refId, dropAbove, {
+            targetUserId: betaTargetUserIdFromKey(thisGroup)
+          });
+        }
       });
     });
 
     // Group-level drop: catches drops that land in empty space at the
-    // bottom of the list (or between rows) within the same group.
+    // bottom of the list, between rows, or anywhere on a group with
+    // no rows yet (only possible for an empty Unassigned group).
     $$('.cs-beta-group', body).forEach(function (section) {
       section.addEventListener('dragover', function (e) {
         if (!betaState.drag) return;
-        if (section.getAttribute('data-group') !== betaState.drag.groupKey) return;
-        // Allow the drop; row-level handlers refine the indicator when
-        // the cursor is over a specific row.
+        var thisGroup = section.getAttribute('data-group');
         e.preventDefault();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        var sameGroup = (thisGroup === betaState.drag.groupKey);
+        setBetaDropZone(sameGroup ? null : section);
+      });
+      section.addEventListener('dragleave', function (e) {
+        // Only clear if we're leaving the section entirely. dragleave
+        // fires when entering a child too, so verify the related target.
+        if (!e.relatedTarget || !section.contains(e.relatedTarget)) {
+          if (section.classList.contains('is-drop-zone')) {
+            section.classList.remove('is-drop-zone');
+          }
+        }
       });
       section.addEventListener('drop', function (e) {
         if (!betaState.drag) return;
-        if (section.getAttribute('data-group') !== betaState.drag.groupKey) return;
-        // Already handled by a row drop? Skip.
-        if (e.defaultPrevented) return;
-        // Otherwise treat as "append to end of this group".
+        if (e.defaultPrevented) return; // a row drop already handled it
+        var thisGroup = section.getAttribute('data-group');
+        var sameGroup = (thisGroup === betaState.drag.groupKey);
         var rows = $$('.cs-beta-row', section);
         var lastRow = rows[rows.length - 1];
-        if (!lastRow) return;
-        if (parseInt(lastRow.dataset.job, 10) === betaState.drag.jobId) return;
         e.preventDefault();
         clearBetaDropIndicators();
-        applyBetaReorder(betaState.drag.jobId, parseInt(lastRow.dataset.job, 10), false);
+        setBetaDropZone(null);
+
+        if (sameGroup) {
+          if (!lastRow) return;
+          if (parseInt(lastRow.dataset.job, 10) === betaState.drag.jobId) return;
+          applyBetaReorder(betaState.drag.jobId, parseInt(lastRow.dataset.job, 10), false);
+        } else {
+          var refId = lastRow ? parseInt(lastRow.dataset.job, 10) : null;
+          applyBetaReorder(betaState.drag.jobId, refId, false, {
+            targetUserId: betaTargetUserIdFromKey(thisGroup)
+          });
+        }
       });
     });
+  }
+
+  function betaTargetUserIdFromKey(groupKey) {
+    if (!groupKey || groupKey === 'unassigned') return null;
+    var m = /^u:(\d+)$/.exec(groupKey);
+    return m ? parseInt(m[1], 10) : null;
   }
 
   function clearBetaDropIndicators() {
@@ -1310,8 +1381,26 @@
     });
   }
 
-  function applyBetaReorder(draggedId, refId, dropAbove) {
-    if (draggedId === refId) return;
+  function setBetaDropZone(section) {
+    $$('.cs-beta-group.is-drop-zone').forEach(function (el) {
+      if (el !== section) el.classList.remove('is-drop-zone');
+    });
+    if (section) section.classList.add('is-drop-zone');
+  }
+
+  /**
+   * Reorder a job within its tech group, or — when `opts.targetUserId`
+   * is provided (including null for Unassigned) — move it across groups
+   * and stage an `assigned_user_id` reassignment edit.
+   *
+   * `refId` is the job whose row the cursor was over at drop time;
+   * pass `null` to append to the end of the target group.
+   */
+  function applyBetaReorder(draggedId, refId, dropAbove, opts) {
+    opts = opts || {};
+    var crossTech     = ('targetUserId' in opts);
+    var newAssignedId = crossTech ? (opts.targetUserId == null ? null : (opts.targetUserId | 0)) : undefined;
+
     var allJobs = betaState.jobs.map(betaEffectiveJob);
     var dragged = null;
     for (var i = 0; i < allJobs.length; i++) {
@@ -1319,41 +1408,95 @@
     }
     if (!dragged) return;
 
-    var groupKey = dragged.assigned_user_id ? ('u:' + dragged.assigned_user_id) : 'unassigned';
-    var group = allJobs.filter(function (j) {
-      var k = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
-      return k === groupKey;
-    });
+    var srcKey = dragged.assigned_user_id ? ('u:' + dragged.assigned_user_id) : 'unassigned';
+    var tgtKey;
+    if (crossTech) {
+      tgtKey = newAssignedId ? ('u:' + newAssignedId) : 'unassigned';
+    } else {
+      tgtKey = srcKey;
+    }
 
     // Same sort order as renderBeta uses for display.
-    group.sort(function (a, b) {
+    var sortFn = function (a, b) {
       var ao = a.queue_order == null ? 1e9 : a.queue_order;
       var bo = b.queue_order == null ? 1e9 : b.queue_order;
       if (ao !== bo) return ao - bo;
       return (a.job_number || '').localeCompare(b.job_number || '');
-    });
+    };
 
-    var fromIdx = -1;
-    for (var i2 = 0; i2 < group.length; i2++) {
-      if (group[i2].id === draggedId) { fromIdx = i2; break; }
-    }
-    if (fromIdx === -1) return;
-    group.splice(fromIdx, 1);
+    var srcGroup = allJobs.filter(function (j) {
+      var k = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
+      return k === srcKey;
+    }).sort(sortFn);
 
-    var refIdx = -1;
-    for (var i3 = 0; i3 < group.length; i3++) {
-      if (group[i3].id === refId) { refIdx = i3; break; }
-    }
-    var insertAt;
-    if (refIdx === -1) {
-      insertAt = group.length;
+    var tgtGroup;
+    if (srcKey === tgtKey) {
+      tgtGroup = srcGroup;
     } else {
-      insertAt = dropAbove ? refIdx : refIdx + 1;
+      tgtGroup = allJobs.filter(function (j) {
+        if (j.id === draggedId) return false;
+        var k = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
+        return k === tgtKey;
+      }).sort(sortFn);
     }
-    group.splice(insertAt, 0, dragged);
 
-    // Renumber visible jobs only; hidden rows keep their existing
-    // queue_order so they don't accidentally collide with visible ones.
+    // Stage the assignment edit BEFORE renumbering so subsequent
+    // recordBetaEdit() calls see the correct group context.
+    if (crossTech) {
+      recordBetaEdit(draggedId, 'assigned_user_id', newAssignedId);
+      // Update the local `dragged` object's group affiliation so the
+      // splice/insert math below routes it to the target group.
+      dragged.assigned_user_id = newAssignedId;
+    }
+
+    // Same-group reorder: just splice within srcGroup.
+    if (srcKey === tgtKey) {
+      var fromIdx = -1;
+      for (var i2 = 0; i2 < srcGroup.length; i2++) {
+        if (srcGroup[i2].id === draggedId) { fromIdx = i2; break; }
+      }
+      if (fromIdx === -1) return;
+      srcGroup.splice(fromIdx, 1);
+
+      var refIdx = -1;
+      for (var i3 = 0; i3 < srcGroup.length; i3++) {
+        if (srcGroup[i3].id === refId) { refIdx = i3; break; }
+      }
+      var insertAt = (refIdx === -1) ? srcGroup.length : (dropAbove ? refIdx : refIdx + 1);
+      srcGroup.splice(insertAt, 0, dragged);
+      betaRenumberGroup(srcGroup);
+      renderBeta();
+      return;
+    }
+
+    // Cross-tech: remove from src, insert into tgt at the right spot.
+    var srcIdx = -1;
+    for (var i4 = 0; i4 < srcGroup.length; i4++) {
+      if (srcGroup[i4].id === draggedId) { srcIdx = i4; break; }
+    }
+    if (srcIdx !== -1) srcGroup.splice(srcIdx, 1);
+
+    var tRefIdx = -1;
+    if (refId != null) {
+      for (var i5 = 0; i5 < tgtGroup.length; i5++) {
+        if (tgtGroup[i5].id === refId) { tRefIdx = i5; break; }
+      }
+    }
+    var tInsertAt = (tRefIdx === -1) ? tgtGroup.length : (dropAbove ? tRefIdx : tRefIdx + 1);
+    tgtGroup.splice(tInsertAt, 0, dragged);
+
+    // Renumber both groups (visible jobs only).
+    betaRenumberGroup(srcGroup);
+    betaRenumberGroup(tgtGroup);
+
+    // Move the focused selection with the dragged row so the detail
+    // panel keeps showing this job.
+    if (betaState.selected !== draggedId) betaState.selected = draggedId;
+
+    renderBeta();
+  }
+
+  function betaRenumberGroup(group) {
     var n = 1;
     group.forEach(function (j) {
       if (!j.queue_visible) return;
@@ -1362,8 +1505,6 @@
       }
       n++;
     });
-
-    renderBeta();
   }
 
   function recordBetaEdit(id, field, value) {
@@ -1448,12 +1589,17 @@
       +   '</dl>'
       + '</section>'
       + '<section class="cs-beta-detail-section">'
-      +   '<h4 class="cs-beta-detail-section__title">Assignment</h4>'
+      +   '<h4 class="cs-beta-detail-section__title">Assignment'
+      +     (j._reassigned ? ' <span class="cs-beta-detail-section__hint">staged</span>' : '')
+      +   '</h4>'
       +   '<dl class="cs-beta-detail-kv">'
       +     '<dt>Tech</dt><dd>'
       +       '<span class="cs-beta-avatar cs-beta-avatar--sm" aria-hidden="true">' + escapeHtml(betaInitials(j.assigned_tech || '')) + '</span> '
       +       escapeHtml(j.assigned_tech || 'Unassigned')
       +     '</dd>'
+      +     (j._reassigned
+            ? '<dt>Was</dt><dd class="cs-beta-detail-was">' + escapeHtml(j._orig_assigned_tech || 'Unassigned') + '</dd>'
+            : '')
       +     '<dt>Visible</dt><dd>' + (j.queue_visible ? 'Yes' : 'No') + '</dd>'
       +   '</dl>'
       + '</section>'
@@ -1597,9 +1743,10 @@
     var updates = ids.map(function (id) {
       var e = betaState.edits[id];
       var u = { id: parseInt(id, 10) };
-      if ('queue_order'   in e) u.queue_order   = e.queue_order;
-      if ('queue_visible' in e) u.queue_visible = !!e.queue_visible;
-      if ('queue_note'    in e) u.queue_note    = e.queue_note;
+      if ('queue_order'      in e) u.queue_order      = e.queue_order;
+      if ('queue_visible'    in e) u.queue_visible    = !!e.queue_visible;
+      if ('queue_note'       in e) u.queue_note       = e.queue_note;
+      if ('assigned_user_id' in e) u.assigned_user_id = e.assigned_user_id;
       return u;
     });
 
