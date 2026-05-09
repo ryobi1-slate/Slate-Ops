@@ -1113,8 +1113,10 @@
 
       var totalHrsBlock = ''; // est. hours not in /cs/queue payload yet — omit per spec.
 
+      var sectionCls = 'cs-beta-group' + (g.unassigned ? ' cs-beta-group--unassigned' : '');
+
       return ''
-        + '<section class="cs-beta-group" data-group="' + escapeHtml(g.key) + '">'
+        + '<section class="' + sectionCls + '" data-group="' + escapeHtml(g.key) + '">'
         +   '<header class="cs-beta-group__head">'
         +     '<div class="cs-beta-group__name">'
         +       '<span class="cs-beta-avatar cs-beta-avatar--lg' + (g.unassigned ? ' cs-beta-avatar--ghost' : '') + '" aria-hidden="true">' + escapeHtml(betaInitials(g.label)) + '</span>'
