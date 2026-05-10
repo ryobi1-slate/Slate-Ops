@@ -1,0 +1,296 @@
+/*
+ * ops-design-language.css — Purchasing-led visual alignment
+ *
+ * Loaded after page-specific bundles on every Ops route except Purchasing
+ * and Tech. Purchasing remains the design master; Tech keeps its dedicated
+ * mobile/workflow treatment.
+ */
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) {
+  --color-primary: var(--slate-sage);
+  --color-background-light: var(--slate-surface-page);
+  --font-display: var(--font-sans);
+  background: var(--slate-surface-page);
+  color: var(--slate-ink);
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-body,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-content,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-content > #ops-view,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-background-light,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-\[\#EAE8DC\],
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-\[\#e8e5d6\] {
+  background-color: var(--slate-surface-page) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .font-sans,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .font-technical,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec {
+  font-family: var(--font-sans) !important;
+  color: var(--slate-ink);
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-page,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-portal,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .page-wrap,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #ops-view > .flex:not(.min-h-screen) > main > .flex-1.overflow-y-auto {
+  padding: var(--slate-space-2xl);
+  max-width: var(--slate-shell-maxwidth);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-page-header,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .page-head {
+  padding-bottom: 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-page-eyebrow,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .eyebrow,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) h1 + .text-slate-500 {
+  color: var(--slate-arches) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-page-title,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .page-title,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) h1.text-3xl {
+  font-size: var(--slate-text-xl) !important;
+  font-weight: var(--slate-weight-medium) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-subnav,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .tabs {
+  border-bottom: 1px solid var(--slate-divider);
+  margin-bottom: var(--slate-space-xl);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-subtab,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .tabs .tab {
+  padding: var(--slate-space-md) var(--slate-space-lg) !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--slate-ink-muted) !important;
+  box-shadow: none !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-subtab:hover,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .tabs .tab:hover {
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-subtab.active,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .tabs .tab.active {
+  color: var(--slate-sage) !important;
+  border-bottom-color: var(--slate-sage) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi-grid,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--slate-space-lg);
+  border: 0;
+  background: transparent;
+  margin-bottom: var(--slate-space-xl);
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .kpi,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-kpi-card,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .grid > .bg-white {
+  background: var(--slate-surface) !important;
+  border: 1px solid var(--slate-divider) !important;
+  border-radius: var(--slate-radius-lg) !important;
+  box-shadow: none !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .kpi {
+  padding: 20px;
+  min-height: 112px;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi__label,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .kpi .k-label,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-kpi-card__label,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .text-\[10px\].uppercase {
+  color: var(--slate-ink-subtle) !important;
+  letter-spacing: var(--slate-tracking-label) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi__value,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .kpi .k-value,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-kpi-card__value {
+  color: var(--slate-ink) !important;
+  font-size: var(--slate-text-2xl);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: 0 !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-card,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .card,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .readout,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-card,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-white.rounded-xl,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-white.rounded-2xl,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-white.rounded-3xl {
+  background: var(--slate-surface) !important;
+  border: 1px solid var(--slate-divider) !important;
+  border-radius: var(--slate-radius-lg) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-card,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi {
+  border-top: 1px solid var(--slate-divider) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-card__head,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .card-head,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-card__header,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .border-b.border-slate-100 {
+  border-bottom-color: var(--slate-divider-soft) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-card__title,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .card-head h3,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-card__title,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-white h2 {
+  font-size: var(--slate-text-base);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--slate-ink);
+}
+
+body.slate-ops.ops-page-admin .bg-white h2 {
+  text-transform: lowercase;
+}
+
+body.slate-ops.ops-page-admin .bg-white h2::first-letter {
+  text-transform: uppercase;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) table,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-table,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-prio-table,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .t {
+  border-collapse: collapse;
+  font-size: var(--slate-text-sm);
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) thead,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-slate-50 {
+  background: var(--slate-sage-wash) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) th,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-prio-table thead th,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .t th {
+  color: var(--slate-ink-muted) !important;
+  border-bottom-color: var(--slate-divider) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) td,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .t td {
+  border-bottom-color: var(--slate-divider-soft) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) tbody tr:hover,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .hover\:bg-slate-50:hover {
+  background: var(--slate-surface-tint) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  background: var(--slate-surface) !important;
+  border: 1px solid var(--slate-divider) !important;
+  border-radius: var(--slate-radius-md) !important;
+  color: var(--slate-ink) !important;
+  box-shadow: none !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  border-color: var(--slate-sage) !important;
+  box-shadow: 0 0 0 2px rgba(64, 70, 75, 0.12) !important;
+  outline: none;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-primary,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-\[\#1f2d29\],
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) button.bg-primary {
+  background-color: var(--slate-sage) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .text-primary,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .text-blue-600,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .text-blue-700,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .text-indigo-600,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .text-purple-600,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .text-purple-700 {
+  color: var(--slate-sage) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-blue-50,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-blue-50\/40,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-indigo-100,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .bg-purple-100 {
+  background-color: var(--slate-sage-wash) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .border-primary,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .border-primary\/30,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .border-blue-100 {
+  border-color: var(--slate-divider) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .focus\:ring-primary:focus,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .focus\:ring-primary\/20:focus,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .focus\:border-primary:focus {
+  --tw-ring-color: rgba(64, 70, 75, 0.18) !important;
+  border-color: var(--slate-sage) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-xl,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-2xl,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-3xl {
+  border-radius: var(--slate-radius-lg) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .shadow-sm,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .shadow-md,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .shadow-lg,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .shadow-xl,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .shadow-2xl {
+  box-shadow: none !important;
+}
+
+@media (max-width: 1000px) {
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi-grid,
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-page,
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .slate-portal,
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .page-wrap,
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #ops-view > .flex:not(.min-h-screen) > main > .flex-1.overflow-y-auto {
+    padding: var(--slate-space-lg);
+  }
+
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .ops-kpi-grid,
+  body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .so-exec .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
