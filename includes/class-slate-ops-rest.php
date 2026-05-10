@@ -439,6 +439,12 @@ class Slate_Ops_REST {
         ],
       ]);
 
+      register_rest_route($ns, '/cs/demo-seed', [
+        'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'callback'            => [__CLASS__, 'cs_demo_seed'],
+      ]);
+
       // ── Executive dashboard ─────────────────────────────────────────
       register_rest_route($ns, '/executive/labor-summary', [
         'methods'             => 'GET',
@@ -3879,12 +3885,13 @@ self::maybe_push_dealer_portal_status($job);
   // these via the existing /jobs endpoint (read-only); only CS / Supervisor
   // / Admin may write through these handlers.
   //
-  // Queue scope: all non-archived jobs whose status is in the active set
-  // (READY_FOR_BUILD, SCHEDULED, IN_PROGRESS, BLOCKED, QC) plus historical
-  // PENDING_QC alias. Closed/cancelled jobs are excluded.
+  // Queue scope: all non-archived CS-visible active jobs, including intake
+  // work that still needs assignment or an SO. Closed/cancelled jobs are excluded.
 
   private static function cs_queue_active_statuses(): array {
     return [
+      Slate_Ops_Statuses::INTAKE,
+      Slate_Ops_Statuses::NEEDS_SO,
       Slate_Ops_Statuses::READY_FOR_BUILD,
       Slate_Ops_Statuses::SCHEDULED,
       Slate_Ops_Statuses::IN_PROGRESS,
@@ -4053,6 +4060,185 @@ self::maybe_push_dealer_portal_status($job);
       'ok'     => empty($errors),
       'saved'  => $saved,
       'errors' => $errors,
+    ]);
+  }
+
+  private static function cs_demo_seed_allowed(): bool {
+    $host = isset($_SERVER['HTTP_HOST']) ? strtolower(sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST']))) : '';
+    $host = preg_replace('/:\d+$/', '', $host);
+
+    return in_array($host, ['localhost', '127.0.0.1', '::1', '[::1]'], true)
+      || (defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local')
+      || (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'local');
+  }
+
+  private static function cs_demo_tech_user(string $login, string $name, string $email): int {
+    $user_id = username_exists($login);
+    if (!$user_id) {
+      $existing_email = email_exists($email);
+      if ($existing_email) {
+        $user_id = (int) $existing_email;
+      }
+    }
+
+    if (!$user_id) {
+      $user_id = wp_insert_user([
+        'user_login'   => $login,
+        'user_pass'    => wp_generate_password(20, true),
+        'user_email'   => $email,
+        'display_name' => $name,
+        'first_name'   => strtok($name, ' ') ?: $name,
+        'role'         => 'slate_ops_tech',
+      ]);
+    }
+
+    if (is_wp_error($user_id)) {
+      return 0;
+    }
+
+    $user = new WP_User((int) $user_id);
+    if ($user->exists()) {
+      $user->set_role('slate_ops_tech');
+      wp_update_user([
+        'ID'           => (int) $user_id,
+        'display_name' => $name,
+        'user_email'   => $email,
+      ]);
+    }
+
+    return (int) $user_id;
+  }
+
+  /**
+   * POST /cs/demo-seed — reset the local CS dashboard demo state.
+   *
+   * This is intentionally local-only. It recreates a compact warning demo:
+   * duplicate queue numbers, a parts-hold job at #1, and a scheduled job
+   * with no tech.
+   */
+  public static function cs_demo_seed($req) {
+    if (!self::cs_demo_seed_allowed()) {
+      return new WP_Error('local_only', 'Demo seed is only available on the local WordPress environment.', ['status' => 403]);
+    }
+
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $techs = [
+      'marco' => self::cs_demo_tech_user('demo-tech-marco', 'Marco Rivera', 'demo-tech-marco@example.test'),
+      'jamie' => self::cs_demo_tech_user('demo-tech-jamie', 'Jamie Park', 'demo-tech-jamie@example.test'),
+      'priya' => self::cs_demo_tech_user('demo-tech-priya', 'Priya Shah', 'demo-tech-priya@example.test'),
+    ];
+
+    if (in_array(0, $techs, true)) {
+      return new WP_Error('demo_user_failed', 'Could not create local demo tech users.', ['status' => 500]);
+    }
+
+    $demo_customers = [
+      'Steve Smith',
+      'Demo Alpine Vans',
+      'Demo Northstar Fleet',
+      'Demo Cascade Outfitters',
+      'Demo Harbor RV',
+    ];
+    $customer_placeholders = implode(',', array_fill(0, count($demo_customers), '%s'));
+    $delete_sql = "DELETE FROM $t WHERE (customer_name IN ($customer_placeholders) OR so_number = %s) AND source = %s";
+    $delete_args = array_merge($demo_customers, ['S-ORD999005', 'manual']);
+    $wpdb->query($wpdb->prepare($delete_sql, $delete_args));
+
+    $now = Slate_Ops_Utils::now_gmt();
+    $me  = (int) get_current_user_id();
+    $rows = [
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Steve Smith',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'NOT_READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => null,
+        'queue_order'      => null,
+        'queue_note'       => 'Unassigned intake job for queue grouping.',
+        'estimated_minutes'=> 90,
+      ],
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Demo Alpine Vans',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'NOT_READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => $techs['marco'],
+        'queue_order'      => 1,
+        'queue_note'       => 'Duplicate #1 and parts hold warning.',
+        'estimated_minutes'=> 180,
+      ],
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Demo Northstar Fleet',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => $techs['marco'],
+        'queue_order'      => 1,
+        'queue_note'       => 'Duplicate #1 warning.',
+        'estimated_minutes'=> 120,
+      ],
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Demo Cascade Outfitters',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'NOT_READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => $techs['priya'],
+        'queue_order'      => 1,
+        'queue_note'       => 'Parts hold at queue #1 warning.',
+        'estimated_minutes'=> 150,
+      ],
+      [
+        'so_number'        => 'S-ORD999005',
+        'customer_name'    => 'Demo Harbor RV',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'READY',
+        'status'           => Slate_Ops_Statuses::SCHEDULED,
+        'assigned_user_id' => null,
+        'queue_order'      => 2,
+        'queue_note'       => 'Scheduled job with no tech warning.',
+        'estimated_minutes'=> 240,
+      ],
+    ];
+
+    $ids = [];
+    foreach ($rows as $row) {
+      $inserted = $wpdb->insert($t, array_merge([
+        'source'            => 'manual',
+        'created_from'      => 'manual',
+        'status_updated_at' => $now,
+        'priority'          => 3,
+        'queue_priority'    => 3,
+        'queue_visible'     => 1,
+        'queue_updated_at'  => $now,
+        'queue_updated_by'  => $me ?: null,
+        'dealer_status'     => 'waiting',
+        'created_by'        => $me ?: null,
+        'created_at'        => $now,
+        'updated_at'        => $now,
+      ], $row));
+
+      if (!$inserted) {
+        return new WP_Error('demo_job_failed', $wpdb->last_error ?: 'Could not create local demo jobs.', ['status' => 500]);
+      }
+
+      $ids[] = (int) $wpdb->insert_id;
+    }
+
+    return rest_ensure_response([
+      'ok'      => true,
+      'job_ids' => $ids,
+      'techs'   => $techs,
     ]);
   }
 
