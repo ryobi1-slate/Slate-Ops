@@ -922,7 +922,7 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 68px 100px minmax(180px, 1.4fr) 130px 100px minmax(120px, 1fr) 90px minmax(120px, 1fr) 64px;
+  grid-template-columns: 24px 68px 100px minmax(180px, 1.35fr) 120px 100px minmax(220px, 0.95fr) 64px minmax(120px, 1fr) 64px;
   align-items: center;
   gap: 12px;
   padding: 6px 14px;
@@ -1131,7 +1131,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
+  min-width: 220px;
 }
 .cs-beta-row__techname {
   font-size: 12px;
@@ -1141,8 +1141,9 @@
   text-overflow: ellipsis;
 }
 .cs-beta-row__techselect {
-  min-width: 0;
-  max-width: 150px;
+  flex: 1 1 150px;
+  min-width: 150px;
+  max-width: 170px;
   height: 28px;
   padding: 3px 24px 3px 8px;
   border: 1px solid var(--slate-divider-strong);
@@ -1556,6 +1557,9 @@ select.cs-beta-field__input {
   .cs-beta-row__techselect,
   .cs-beta-row__notetext {
     min-width: 0;
+  }
+  .cs-beta-row__techselect {
+    max-width: 180px;
   }
 }
 
