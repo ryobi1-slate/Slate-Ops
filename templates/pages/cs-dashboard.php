@@ -90,11 +90,11 @@ $health_tone_class_map = [
   <!-- Sub-tabs -->
   <nav class="ops-subnav" id="ops-subnav">
     <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
-    <button class="ops-subtab" data-tab="workspace-beta"><span class="material-symbols-outlined">workspaces</span>CS Workspace</button>
     <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count"><?php echo esc_html((string) $subtab_counts['intake']); ?></span></button>
     <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
     <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>
     <button class="ops-subtab" data-tab="pickup"><span class="material-symbols-outlined">local_shipping</span>Pickup <span class="count"><?php echo esc_html((string) $subtab_counts['pickup']); ?></span></button>
+    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Queue <span class="count" id="queue-tab-count">0</span></button>
     <button class="ops-subtab" data-tab="exceptions"><span class="material-symbols-outlined">report</span>Exceptions <span class="count"><?php echo esc_html((string) $subtab_counts['exceptions']); ?></span></button>
   </nav>
 
@@ -293,19 +293,19 @@ $health_tone_class_map = [
 
   </div>
 
-  <!-- ── CS WORKSPACE TAB ── -->
-  <!-- Phase 1: combined Workspace + Queue surface. Read/edit queue with
+  <!-- ── QUEUE TAB ── -->
+  <!-- Phase 1: CS-owned shop queue surface. Read/edit queue with
        grouped-by-tech list, filter chips, search, and a bottom detail
        panel. Uses the same /cs/queue endpoint as the Queue tab; saves
        reuse queue_order / queue_visible / queue_note. No drag/drop yet,
        no deeper job edit/save. -->
-  <div class="ops-tab-content" data-tab-content="workspace-beta" hidden>
+  <div class="ops-tab-content" data-tab-content="queue" hidden>
     <div class="ops-cs-workspace-beta cs-beta">
       <header class="cs-beta__header">
         <div class="cs-beta__heading">
           <div class="cs-beta__eyebrow">CS / Supervisor</div>
-          <h2 class="cs-beta__title">CS Workspace</h2>
-          <div class="cs-beta__sub">Manage intake, job updates, assignments, and shop queue order.</div>
+          <h2 class="cs-beta__title">Shop Queue</h2>
+          <div class="cs-beta__sub">CS controls the visible work order. Lower queue order appears higher on the Tech page.</div>
         </div>
         <div class="cs-beta__actions">
           <button type="button" class="btn btn--secondary" id="cs-beta-new" title="Create a new job (CS intake)">
@@ -314,15 +314,27 @@ $health_tone_class_map = [
           </button>
           <button type="button" class="btn btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
             <span class="material-symbols-outlined">low_priority</span>
-            Normalize Queue
+            Normalize Order
           </button>
           <button type="button" class="btn btn--secondary" id="cs-beta-refresh" title="Reload queue data">
             <span class="material-symbols-outlined">refresh</span>
             Refresh
           </button>
+          <?php
+          $cs_demo_host = isset($_SERVER['HTTP_HOST']) ? strtolower(sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST']))) : '';
+          $cs_demo_host = preg_replace('/:\d+$/', '', $cs_demo_host);
+          $cs_demo_local = in_array($cs_demo_host, ['localhost', '127.0.0.1', '::1', '[::1]'], true)
+            || (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'local');
+          ?>
+          <?php if ($cs_demo_local && current_user_can(Slate_Ops_Utils::CAP_ADMIN)) : ?>
+          <button type="button" class="btn btn--secondary cs-beta__demo-reset" id="cs-beta-demo-reset" title="Reset the local CS demo queue">
+            <span class="material-symbols-outlined">restart_alt</span>
+            Reset demo
+          </button>
+          <?php endif; ?>
           <button type="button" class="btn btn--primary" id="cs-beta-save" disabled>
             <span class="material-symbols-outlined">save</span>
-            <span id="cs-beta-save-label">Save Changes</span>
+            <span id="cs-beta-save-label">Save Queue</span>
           </button>
         </div>
       </header>
@@ -336,14 +348,8 @@ $health_tone_class_map = [
           <button type="button" class="cs-beta-chip is-active" data-filter="all" role="tab" aria-selected="true">
             <span>All</span><span class="cs-beta-chip__count" data-count="all">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="ready" role="tab" aria-selected="false">
-            <span>Ready</span><span class="cs-beta-chip__count" data-count="ready">0</span>
-          </button>
           <button type="button" class="cs-beta-chip" data-filter="scheduled" role="tab" aria-selected="false">
             <span>Scheduled</span><span class="cs-beta-chip__count" data-count="scheduled">0</span>
-          </button>
-          <button type="button" class="cs-beta-chip" data-filter="inprog" role="tab" aria-selected="false">
-            <span>In Progress</span><span class="cs-beta-chip__count" data-count="inprog">0</span>
           </button>
           <button type="button" class="cs-beta-chip" data-filter="blocked" role="tab" aria-selected="false">
             <span>Blocked</span><span class="cs-beta-chip__count" data-count="blocked">0</span>
@@ -354,19 +360,21 @@ $health_tone_class_map = [
           <button type="button" class="cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
             <span>Unassigned</span><span class="cs-beta-chip__count" data-count="unassigned">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="parts" role="tab" aria-selected="false">
-            <span>Parts Hold</span><span class="cs-beta-chip__count" data-count="parts">0</span>
-          </button>
         </div>
       </div>
 
       <div class="cs-beta__warnings" id="cs-beta-warnings" hidden></div>
+      <div class="cs-beta__notice" id="cs-beta-notice" hidden></div>
 
       <div class="cs-beta__body" id="cs-beta-body" aria-live="polite">
         <div class="cs-beta__placeholder">
           <span class="material-symbols-outlined cs-beta__spinner" aria-hidden="true">progress_activity</span>
-          <span>Loading workspace…</span>
+          <span>Loading queue…</span>
         </div>
+      </div>
+
+      <div class="cs-beta__tech-note">
+        Tech page surfaces only Current Job / Next Job / Up Next. CS owns the full queue order here; techs do not manage it.
       </div>
 
       <aside class="cs-beta__detail" id="cs-beta-detail" hidden aria-label="Job detail">
@@ -480,7 +488,7 @@ $health_tone_class_map = [
 </aside>
 
 <!-- ─── New Job intake modal (Phase 6) ───
-     Hidden by default. Opens from the CS Workspace tab's New Job button.
+     Hidden by default. Opens from the Queue tab's New Job button.
      Posts to existing POST /jobs (perm_create_jobs = CS / Supervisor / Admin). -->
 <div class="cs-beta-modal" id="cs-beta-newjob-modal" hidden role="dialog" aria-modal="true" aria-labelledby="cs-beta-newjob-title">
   <div class="cs-beta-modal__backdrop" data-action="cs-beta-newjob-close"></div>

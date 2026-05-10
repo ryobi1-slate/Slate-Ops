@@ -93,6 +93,13 @@ add_action('wp_enqueue_scripts', function() {
   $is_purchasing   = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
   $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
   $is_executive    = ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
+  $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
+
+  $enqueue_design_language = function($deps = ['slate-ops-shell']) {
+    $file = SLATE_OPS_PATH . 'assets/css/ops-design-language.css';
+    $ver  = file_exists($file) ? filemtime($file) : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-design-language', SLATE_OPS_URL . 'assets/css/ops-design-language.css', $deps, $ver);
+  };
 
   if ($is_purchasing) {
     // Purchasing workspace — standalone vanilla JS; React app is not loaded here.
@@ -115,6 +122,7 @@ add_action('wp_enqueue_scripts', function() {
     $ver_cs_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops-cs-dashboard.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-cs-dashboard.css') : SLATE_OPS_VERSION;
     $ver_cs_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-cs-dashboard.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-cs-dashboard.js')   : SLATE_OPS_VERSION;
     wp_enqueue_style('slate-ops-cs-dashboard',  SLATE_OPS_URL . 'assets/css/ops-cs-dashboard.css', ['slate-ops-shell'], $ver_cs_css);
+    $enqueue_design_language(['slate-ops-cs-dashboard']);
     wp_enqueue_script('slate-ops-cs-dashboard', SLATE_OPS_URL . 'assets/js/ops-cs-dashboard.js',   [],                  $ver_cs_js,  true);
     wp_localize_script('slate-ops-cs-dashboard', 'slateOpsCsDashboard', [
       'api' => [
@@ -137,6 +145,7 @@ add_action('wp_enqueue_scripts', function() {
     $ver_exec_css = file_exists(SLATE_OPS_PATH . 'assets/css/executive-dashboard.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/executive-dashboard.css') : SLATE_OPS_VERSION;
     $ver_exec_js  = file_exists(SLATE_OPS_PATH . 'assets/js/executive-dashboard.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/executive-dashboard.js')   : SLATE_OPS_VERSION;
     wp_enqueue_style('slate-ops-executive',  SLATE_OPS_URL . 'assets/css/executive-dashboard.css', ['slate-ops-shell'], $ver_exec_css);
+    $enqueue_design_language(['slate-ops-executive']);
     wp_enqueue_script('slate-ops-executive', SLATE_OPS_URL . 'assets/js/executive-dashboard.js',   [],                  $ver_exec_js,  true);
   } else {
     $route_map = [
@@ -154,9 +163,13 @@ add_action('wp_enqueue_scripts', function() {
 
     wp_enqueue_style('slate-ops-react',  SLATE_OPS_URL . 'assets/react/app.css', ['slate-ops-shell'], $ver_app_css);
 
-    if (!$route_blocked && ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0)) {
+    if (!$route_blocked && $is_tech) {
       $ver_tech_css = file_exists(SLATE_OPS_PATH . 'assets/css/tech-mobile-fix.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/tech-mobile-fix.css') : SLATE_OPS_VERSION;
       wp_enqueue_style('slate-ops-tech-mobile-fix', SLATE_OPS_URL . 'assets/css/tech-mobile-fix.css', ['slate-ops-react'], $ver_tech_css);
+    }
+
+    if (!$is_tech) {
+      $enqueue_design_language(['slate-ops-react']);
     }
 
     // Guard script loads first (before React) so it can intercept disallowed routes.

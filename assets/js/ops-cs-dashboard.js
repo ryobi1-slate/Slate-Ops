@@ -221,17 +221,34 @@
     toastT = setTimeout(function () { toast.classList.remove('show'); }, 2400);
   }
 
+  function showBetaNotice(msg, tone) {
+    var notice = document.getElementById('cs-beta-notice');
+    if (!notice) return;
+    if (!msg) {
+      notice.hidden = true;
+      notice.textContent = '';
+      notice.className = 'cs-beta__notice';
+      return;
+    }
+    notice.hidden = false;
+    notice.textContent = msg;
+    notice.className = 'cs-beta__notice cs-beta__notice--' + (tone || 'info');
+  }
+
   // ─── Sub-tabs ─────────────────────────────────────────────────────────
   $$('.ops-subtab').forEach(function (btn) {
     btn.addEventListener('click', function () {
       $$('.ops-subtab').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
+      if (btn.scrollIntoView) {
+        try { btn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {}
+      }
       var tab = btn.dataset.tab;
       state.activeTab = tab;
       $$('.ops-tab-content').forEach(function (c) {
         c.hidden = c.dataset.tabContent !== tab;
       });
-      if (tab === 'workspace-beta') {
+      if (tab === 'queue') {
         activateBeta();
       }
     });
@@ -271,7 +288,7 @@
     });
   }
 
-  // ─── CS Workspace (Beta) tab ─────────────────────────────────────────
+  // ─── Queue tab ───────────────────────────────────────────────────────
   // Phase 1 surface that combines the Workspace + Queue concepts. Reuses
   // GET/POST /cs/queue. Local state is intentionally separate from
   // queueState so edits in either tab don't fight. No drag/drop yet; manual
@@ -280,6 +297,7 @@
     loaded:    false,
     loading:   false,
     jobs:      [],
+    users:     [],
     edits:     {},        // { id: { queue_order, queue_visible, queue_note, assigned_user_id, customer_name, dealer_name, sales_person, vin_last8, notes, parts_status, estimated_hours, requested_date } }
     filter:    'all',
     query:     '',
@@ -323,22 +341,35 @@
     if (!opts || !opts.silent) {
       betaState.loading = true;
       if (body) {
-        body.innerHTML = '<div class="cs-beta__placeholder"><span class="material-symbols-outlined cs-beta__spinner">progress_activity</span><span>Loading workspace…</span></div>';
+        body.innerHTML = '<div class="cs-beta__placeholder"><span class="material-symbols-outlined cs-beta__spinner">progress_activity</span><span>Loading queue…</span></div>';
       }
     }
-    fetch(api.root + '/cs/queue', {
+    var queueRequest = fetch(api.root + '/cs/queue', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': api.nonce, 'Accept': 'application/json' }
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); });
+
+    var usersRequest = fetch(api.root + '/users', {
       method: 'GET',
       credentials: 'same-origin',
       headers: { 'X-WP-Nonce': api.nonce, 'Accept': 'application/json' }
     })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-      .then(function (res) {
+      .catch(function () { return { ok: false, body: { users: [] } }; });
+
+    Promise.all([queueRequest, usersRequest])
+      .then(function (results) {
+        var res = results[0];
+        var usersRes = results[1];
         betaState.loading = false;
         if (!res.ok || !res.body || !res.body.ok) {
           if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load workspace.</span></div>';
           return;
         }
         betaState.jobs   = res.body.jobs || [];
+        betaState.users  = (usersRes && usersRes.ok && usersRes.body && usersRes.body.users) ? usersRes.body.users : [];
         betaState.edits  = {};
         betaState.loaded = true;
         renderBeta();
@@ -360,12 +391,48 @@
     // Build a map of user_id → display name from the current server snapshot.
     // Used to label the moved row's tech after a cross-tech drag.
     var map = {};
+    betaState.users.forEach(function (u) {
+      if (u.id && u.name && !map[u.id]) {
+        map[u.id] = u.name;
+      }
+    });
     betaState.jobs.forEach(function (j) {
       if (j.assigned_user_id && j.assigned_tech && !map[j.assigned_user_id]) {
         map[j.assigned_user_id] = j.assigned_tech;
       }
     });
     return map;
+  }
+
+  function betaTechUsers() {
+    var users = [];
+    var seen = {};
+
+    betaState.users.forEach(function (u) {
+      if (!u || !u.id) return;
+      if (u.ops_role !== 'slate_ops_tech') return;
+      seen[u.id] = true;
+      users.push({ id: u.id, name: u.name || ('User #' + u.id) });
+    });
+
+    betaState.jobs.forEach(function (j) {
+      if (!j.assigned_user_id || seen[j.assigned_user_id]) return;
+      seen[j.assigned_user_id] = true;
+      users.push({ id: j.assigned_user_id, name: j.assigned_tech || ('User #' + j.assigned_user_id) });
+    });
+
+    users.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    return users;
+  }
+
+  function betaTechOptions(selectedId) {
+    var selected = selectedId == null ? '' : String(selectedId);
+    var html = '<option value=""' + (selected === '' ? ' selected' : '') + '>Unassigned</option>';
+    betaTechUsers().forEach(function (u) {
+      var id = String(u.id);
+      html += '<option value="' + escapeHtml(id) + '"' + (selected === id ? ' selected' : '') + '>' + escapeHtml(u.name) + '</option>';
+    });
+    return html;
   }
 
   function betaEffectiveJob(j) {
@@ -387,11 +454,11 @@
       id:               j.id,
       job_number:       j.job_number,
       so_number:        j.so_number,
-      customer:         j.customer,
-      dealer:           j.dealer,
+      customer:         e.customer_name !== undefined ? e.customer_name : j.customer,
+      dealer:           e.dealer_name   !== undefined ? e.dealer_name   : j.dealer,
       status:           j.status,
       status_label:     j.status_label,
-      parts_status:     j.parts_status,
+      parts_status:     e.parts_status  !== undefined ? e.parts_status  : j.parts_status,
       due_date:         j.due_date,
       promised_date:    j.promised_date,
       scheduled_start:  j.scheduled_start,
@@ -517,6 +584,75 @@
       var el = document.querySelector('.cs-beta-chip__count[data-count="' + k + '"]');
       if (el) el.textContent = counts[k];
     });
+    var queueCount = document.getElementById('queue-tab-count');
+    if (queueCount) queueCount.textContent = counts.all;
+  }
+
+  function betaGroupKey(j) {
+    return j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
+  }
+
+  function betaWarningHtml(w) {
+    return ''
+      + '<div class="cs-beta-warning cs-beta-warning--' + escapeHtml(w.tone) + '">'
+      +   '<span class="material-symbols-outlined">' + (w.tone === 'alert' ? 'error' : 'warning') + '</span>'
+      +   '<span>' + escapeHtml(w.text) + '</span>'
+      + '</div>';
+  }
+
+  function betaWarningsByGroup(allJobs) {
+    var groups = {};
+    allJobs.forEach(function (j) {
+      var key = betaGroupKey(j);
+      if (!groups[key]) {
+        groups[key] = {
+          label: j.assigned_user_id ? (j.assigned_tech || 'Tech') : 'Unassigned',
+          jobs: []
+        };
+      }
+      groups[key].jobs.push(j);
+    });
+
+    var warnings = {};
+    function add(key, tone, text) {
+      (warnings[key] = warnings[key] || []).push({ tone: tone, text: text });
+    }
+
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k];
+      var seen = {}, dupNums = {};
+      g.jobs.forEach(function (j) {
+        if (!j.queue_visible || j.queue_order == null) return;
+        if (seen[j.queue_order]) dupNums[j.queue_order] = true;
+        seen[j.queue_order] = true;
+      });
+      Object.keys(dupNums).forEach(function (n) {
+        add(k, 'alert', 'Duplicate queue # ' + n + ' in ' + g.label + ' — only one job can hold a given slot.');
+      });
+      g.jobs.forEach(function (j) {
+        if (j.status === 'SCHEDULED' && !j.assigned_user_id) {
+          add(k, 'alert', (j.so_number || j.job_number || ('Job ' + j.id)) + ' is Scheduled but has no assigned tech.');
+        }
+        if (!j.queue_visible || j.queue_order !== 1) return;
+        var bad = j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status);
+        if (bad) {
+          add(k, 'warn', (j.so_number || j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? 'blocked' : 'on parts hold') + '.');
+        }
+      });
+    });
+
+    return warnings;
+  }
+
+  function betaGroupWarningsHtml(groupKey, warningsByGroup) {
+    var warnings = warningsByGroup[groupKey] || [];
+    if (warnings.length === 0) {
+      return '<div class="cs-beta-group__warnings" data-group-warnings="' + escapeHtml(groupKey) + '" hidden></div>';
+    }
+    return ''
+      + '<div class="cs-beta-group__warnings" data-group-warnings="' + escapeHtml(groupKey) + '">'
+      + warnings.map(betaWarningHtml).join('')
+      + '</div>';
   }
 
   function renderBeta() {
@@ -524,6 +660,7 @@
     if (!body) return;
 
     var allJobs   = betaState.jobs.map(betaEffectiveJob);
+    var warningsByGroup = betaWarningsByGroup(allJobs);
     renderBetaCounts(allJobs);
 
     var filtered  = allJobs.filter(betaPassesChip).filter(betaPassesQuery);
@@ -555,12 +692,18 @@
 
     if (keyOrder.length === 0) {
       var emptyMsg = (betaState.query || betaState.filter !== 'all')
-        ? 'No jobs match your filter or search.'
+        ? 'No jobs match this filter'
         : 'No active jobs in the queue right now.';
+      var emptySub = (betaState.query || betaState.filter !== 'all')
+        ? 'Try a different filter or clear all to see every job.'
+        : 'Create a job or move active work into the queue to begin ordering.';
       body.innerHTML = ''
         + '<div class="cs-beta__placeholder cs-beta__placeholder--empty">'
         +   '<span class="material-symbols-outlined">inbox</span>'
-        +   '<span>' + escapeHtml(emptyMsg) + '</span>'
+        +   '<span class="cs-beta__empty-copy">'
+        +     '<strong>' + escapeHtml(emptyMsg) + '</strong>'
+        +     '<small>' + escapeHtml(emptySub) + '</small>'
+        +   '</span>'
         + '</div>';
       updateBetaWarnings(allJobs);
       updateBetaSaveButton();
@@ -599,6 +742,7 @@
         if (dup)              rowCls += ' is-dup';
         if (blockedTop)       rowCls += ' is-warn';
         if (j._reassigned)    rowCls += ' is-reassigned';
+        if (j.status === 'SCHEDULED' && !j.assigned_user_id) rowCls += ' is-missing-tech';
 
         var noteText = betaFmtNote(j.queue_note);
         var noteIcon = j.queue_note ? 'sticky_note_2' : '';
@@ -629,7 +773,10 @@
           +   '<div class="cs-beta-row__parts"><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></div>'
           +   '<div class="cs-beta-row__tech">'
           +     '<span class="cs-beta-avatar" aria-hidden="true">' + escapeHtml(betaInitials(j.assigned_tech)) + '</span>'
-          +     '<span class="cs-beta-row__techname">' + escapeHtml(j.assigned_tech || 'Unassigned') + '</span>'
+          +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech">'
+          +       betaTechOptions(j.assigned_user_id)
+          +     '</select>'
+          +     (j.status === 'SCHEDULED' && !j.assigned_user_id ? '<span class="cs-beta-row__tag cs-beta-row__tag--warn">No tech</span>' : '')
           +   '</div>'
           +   '<div class="cs-beta-row__due cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</div>'
           +   '<div class="cs-beta-row__note">'
@@ -665,6 +812,7 @@
         +     '</div>'
         +     '<div class="cs-beta-group__right">' + totalHrsBlock + '</div>'
         +   '</header>'
+        +   betaGroupWarningsHtml(g.key, warningsByGroup)
         +   '<div class="cs-beta-list">'
         +     '<div class="cs-beta-list__head" aria-hidden="true">'
         +       '<span></span>'
@@ -703,6 +851,20 @@
         var parsed = v === '' ? null : parseInt(v, 10);
         if (parsed != null && (!isFinite(parsed) || parsed < 1)) parsed = null;
         recordBetaEdit(id, 'queue_order', parsed);
+      });
+    });
+
+    $$('.cs-beta-row__techselect', body).forEach(function (select) {
+      select.addEventListener('click', function (e) { e.stopPropagation(); });
+      select.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      select.addEventListener('change', function () {
+        var row = select.closest('.cs-beta-row'); if (!row) return;
+        var id  = parseInt(row.dataset.job, 10);
+        var v   = select.value.trim();
+        var parsed = v === '' ? null : parseInt(v, 10);
+        if (parsed != null && (!isFinite(parsed) || parsed <= 0)) parsed = null;
+        recordBetaEdit(id, 'assigned_user_id', parsed);
+        renderBeta();
       });
     });
 
@@ -1242,20 +1404,28 @@
       + '</section>'
 
       + '<section class="cs-beta-detail-section">'
-      +   '<h4 class="cs-beta-detail-section__title">Assignment'
+      +   '<h4 class="cs-beta-detail-section__title">Handoff'
       +     (j._reassigned ? ' <span class="cs-beta-detail-section__hint">staged</span>' : '')
       +   '</h4>'
-      +   '<dl class="cs-beta-detail-kv">'
-      +     '<dt>Tech</dt><dd>'
-      +       '<span class="cs-beta-avatar cs-beta-avatar--sm" aria-hidden="true">' + escapeHtml(betaInitials(j.assigned_tech || '')) + '</span> '
-      +       escapeHtml(j.assigned_tech || 'Unassigned')
-      +     '</dd>'
+      +   '<div class="cs-beta-detail-fields">'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Assigned Tech</span>'
+      +       '<select class="cs-beta-field__input' + ec('assigned_user_id') + '" data-field="assigned_user_id">'
+      +         betaTechOptions(j.assigned_user_id)
+      +       '</select>'
+      +     '</label>'
       +     (j._reassigned
-            ? '<dt>Was</dt><dd class="cs-beta-detail-was">' + escapeHtml(j._orig_assigned_tech || 'Unassigned') + '</dd>'
+            ? '<div class="cs-beta-detail-was">Was ' + escapeHtml(j._orig_assigned_tech || 'Unassigned') + '</div>'
             : '')
-      +     '<dt>Visible</dt><dd>' + (j.queue_visible ? 'Yes' : 'No') + '</dd>'
-      +   '</dl>'
-      +   '<div class="cs-beta-detail-section__hint" style="margin-top:6px">Drag the row handle to move between tech groups; toggle visibility from the row.</div>'
+      +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Queue #</span>'
+      +       '<input type="number" min="1" step="1" class="cs-beta-mono cs-beta-field__input' + ec('queue_order') + '" data-field="queue_order" value="' + fv('queue_order') + '" placeholder="—">'
+      +     '</label>'
+      +     '<label class="cs-beta-field cs-beta-field--inline">'
+      +       '<input type="checkbox" data-field="queue_visible"' + (j.queue_visible ? ' checked' : '') + '>'
+      +       '<span>Visible on tech queue</span>'
+      +     '</label>'
+      +   '</div>'
       + '</section>'
 
       + '<section class="cs-beta-detail-section">'
@@ -1324,7 +1494,15 @@
     var id = parseInt(grid.getAttribute('data-job-id'), 10);
     if (!id || isNaN(id)) return;
     var field = t.dataset.field;
-    var value = t.value;
+    var value = t.type === 'checkbox' ? !!t.checked : t.value;
+    if (field === 'assigned_user_id') {
+      value = value === '' ? null : parseInt(value, 10);
+      if (value != null && (!isFinite(value) || value <= 0)) value = null;
+    }
+    if (field === 'queue_order') {
+      value = String(value).trim() === '' ? null : parseInt(value, 10);
+      if (value != null && (!isFinite(value) || value < 1)) value = null;
+    }
     // Normalise empty-string job-text fields to '' for clean comparison
     // against the cached snapshot value.
     if (typeof value === 'string') value = value.trim() === '' ? '' : value;
@@ -1333,6 +1511,16 @@
     else t.classList.remove('is-edited');
     var discard = grid.querySelector('[data-action="beta-discard-row"]');
     if (discard) discard.disabled = !betaState.edits[id];
+    if (e.type === 'change' && [
+      'assigned_user_id',
+      'queue_order',
+      'queue_visible',
+      'parts_status',
+      'customer_name',
+      'dealer_name'
+    ].indexOf(field) >= 0) {
+      renderBeta();
+    }
   }
 
   function betaDiscardRowEdits() {
@@ -1351,54 +1539,23 @@
 
   function updateBetaWarnings(allJobs) {
     var box = document.getElementById('cs-beta-warnings');
-    if (!box) return;
-
-    var groups = {};
-    allJobs.forEach(function (j) {
-      var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
-      (groups[key] = groups[key] || { label: j.assigned_user_id ? (j.assigned_tech || 'Tech') : 'Unassigned', jobs: [] }).jobs.push(j);
-    });
-
-    var warnings = [];
-    Object.keys(groups).forEach(function (k) {
-      var g = groups[k];
-      var seen = {}, dupNums = {};
-      g.jobs.forEach(function (j) {
-        if (!j.queue_visible || j.queue_order == null) return;
-        if (seen[j.queue_order]) dupNums[j.queue_order] = true;
-        seen[j.queue_order] = true;
-      });
-      Object.keys(dupNums).forEach(function (n) {
-        warnings.push({
-          tone: 'alert',
-          text: 'Duplicate queue # ' + n + ' in ' + g.label + ' — only one job can hold a given slot.'
-        });
-      });
-      g.jobs.forEach(function (j) {
-        if (!j.queue_visible || j.queue_order !== 1) return;
-        var bad = j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status);
-        if (bad) {
-          warnings.push({
-            tone: 'warn',
-            text: (j.so_number || j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? 'blocked' : 'on parts hold') + '.'
-          });
-        }
-      });
-    });
-
-    if (warnings.length === 0) {
-      box.hidden = true;
+    if (box) {
       box.innerHTML = '';
-      return;
+      box.hidden = true;
     }
-    box.hidden = false;
-    box.innerHTML = warnings.map(function (w) {
-      return ''
-        + '<div class="cs-beta-warning cs-beta-warning--' + w.tone + '">'
-        +   '<span class="material-symbols-outlined">' + (w.tone === 'alert' ? 'error' : 'warning') + '</span>'
-        +   '<span>' + escapeHtml(w.text) + '</span>'
-        + '</div>';
-    }).join('');
+
+    var warningsByGroup = betaWarningsByGroup(allJobs);
+    $$('.cs-beta-group__warnings').forEach(function (el) {
+      var key = el.getAttribute('data-group-warnings') || '';
+      var warnings = warningsByGroup[key] || [];
+      if (warnings.length === 0) {
+        el.hidden = true;
+        el.innerHTML = '';
+        return;
+      }
+      el.hidden = false;
+      el.innerHTML = warnings.map(betaWarningHtml).join('');
+    });
   }
 
   function updateBetaSaveButton() {
@@ -1407,7 +1564,20 @@
     var n = Object.keys(betaState.edits).length;
     btn.disabled = (n === 0);
     var label = document.getElementById('cs-beta-save-label');
-    if (label) label.textContent = n > 0 ? ('Save Changes (' + n + ')') : 'Save Changes';
+    if (label) {
+      var hasJob = false;
+      var ids = Object.keys(betaState.edits);
+      ids.forEach(function (id) {
+        Object.keys(betaState.edits[id] || {}).forEach(function (field) {
+          if (betaIsJobField(field)) hasJob = true;
+        });
+      });
+      if (n === 0) {
+        label.textContent = 'Save Queue';
+      } else {
+        label.textContent = (hasJob ? 'Save Queue + Job' : 'Save Queue') + ' (' + n + ')';
+      }
+    }
   }
 
   function normalizeBeta() {
@@ -1435,7 +1605,51 @@
       });
     });
     renderBeta();
+    showBetaNotice('Queue numbers normalized. Duplicate queue warnings are cleared locally; review the remaining warnings, then Save Queue.', 'success');
     showToast('Queue numbers normalized — Save to commit');
+  }
+
+  function resetBetaDemo() {
+    var api = betaApi();
+    var btn = document.getElementById('cs-beta-demo-reset');
+    if (!api || !btn) return;
+    if (Object.keys(betaState.edits).length > 0) {
+      if (!window.confirm('Reset the demo queue and discard unsaved changes?')) return;
+    }
+
+    btn.disabled = true;
+    showBetaNotice('Resetting the local demo queue...', 'info');
+    fetch(api.root + '/cs/demo-seed', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce':   api.nonce,
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      },
+      body: JSON.stringify({ reset: true })
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body || !res.body.ok) {
+          var msg = (res.body && (res.body.message || res.body.code)) || 'Demo reset failed.';
+          throw new Error(msg);
+        }
+        betaState.loaded            = false;
+        betaState.edits             = {};
+        betaState.jobDetails        = {};
+        betaState.jobDetailsLoading = {};
+        showBetaNotice('Demo queue reset. Duplicate, parts-hold, and missing-tech warnings are ready to test.', 'success');
+        loadBeta();
+        showToast('Demo queue reset');
+      })
+      .catch(function (err) {
+        showBetaNotice('Demo reset failed: ' + (err && err.message ? err.message : 'unknown error'), 'error');
+        showToast('Demo reset failed');
+      })
+      .finally(function () {
+        btn.disabled = false;
+      });
   }
 
   function saveBeta() {
@@ -1553,6 +1767,7 @@
       .then(function () {
         var total = savedQueue + savedJobs;
         showToast('Saved · ' + total + ' update' + (total === 1 ? '' : 's'));
+        showBetaNotice('', 'info');
         betaState.loaded            = false;
         betaState.edits             = {};
         betaState.jobDetails        = {};
@@ -1569,7 +1784,7 @@
         else msg = prefix + 'unknown error';
         showToast(msg);
         if (btn) btn.disabled = false;
-        if (lbl) lbl.textContent = 'Save Changes';
+        if (lbl) lbl.textContent = 'Save Queue';
         // Refresh the queue snapshot so already-saved fields stop
         // flagging dirty in the UI; remaining edits stay queued.
         if (savedQueue > 0 || savedJobs > 0) {
@@ -1615,6 +1830,9 @@
   var betaNormBtn = document.getElementById('cs-beta-normalize');
   if (betaNormBtn) betaNormBtn.addEventListener('click', normalizeBeta);
 
+  var betaDemoResetBtn = document.getElementById('cs-beta-demo-reset');
+  if (betaDemoResetBtn) betaDemoResetBtn.addEventListener('click', resetBetaDemo);
+
   var betaRefreshBtn = document.getElementById('cs-beta-refresh');
   if (betaRefreshBtn) {
     betaRefreshBtn.addEventListener('click', function () {
@@ -1627,7 +1845,7 @@
   }
 
   // ── New Job intake modal ────────────────────────────────────────────
-  // Opens from the CS Workspace header, posts to the existing
+  // Opens from the Queue header, posts to the existing
   // POST /jobs endpoint (perm_create_jobs = CS / Supervisor / Admin),
   // and reloads the queue on success so the new job lands in the
   // Unassigned group at the top.
@@ -1651,8 +1869,16 @@
     document.body.classList.remove('cs-beta-modal-open');
   }
 
+  function betaSetNewJobSubmitting(isSubmitting) {
+    var btn   = document.getElementById('cs-beta-newjob-submit');
+    var label = document.getElementById('cs-beta-newjob-submit-label');
+    if (btn) btn.disabled = !!isSubmitting;
+    if (label) label.textContent = isSubmitting ? 'Creating…' : 'Create Job';
+  }
+
   function betaShowNewJobError(msg) {
     var err = document.getElementById('cs-beta-newjob-error');
+    betaSetNewJobSubmitting(false);
     if (!err) return;
     err.textContent = msg;
     err.hidden = false;
@@ -1663,6 +1889,9 @@
     var api  = betaApi();
     var form = document.getElementById('cs-beta-newjob-form');
     if (!api || !form) return;
+    betaSetNewJobSubmitting(false);
+    var existingErr = document.getElementById('cs-beta-newjob-error');
+    if (existingErr) { existingErr.hidden = true; existingErr.textContent = ''; }
     var fd = new FormData(form);
     function val(name) { return (fd.get(name) || '').toString().trim(); }
 
@@ -1711,14 +1940,17 @@
 
     var err   = document.getElementById('cs-beta-newjob-error');
     if (err) err.hidden = true;
-    var btn   = document.getElementById('cs-beta-newjob-submit');
-    var label = document.getElementById('cs-beta-newjob-submit-label');
-    if (btn) btn.disabled = true;
-    if (label) label.textContent = 'Creating…';
+    betaSetNewJobSubmitting(true);
+
+    var controller = window.AbortController ? new AbortController() : null;
+    var timeoutId = controller ? setTimeout(function () {
+      controller.abort();
+    }, 25000) : null;
 
     fetch(api.root + '/jobs', {
       method: 'POST',
       credentials: 'same-origin',
+      signal: controller ? controller.signal : undefined,
       headers: {
         'X-WP-Nonce':   api.nonce,
         'Content-Type': 'application/json',
@@ -1731,14 +1963,11 @@
         if (!res.ok) {
           var msg = (res.body && (res.body.message || res.body.code)) || ('Create failed (HTTP ' + res.status + ').');
           betaShowNewJobError(String(msg));
-          if (btn) btn.disabled = false;
-          if (label) label.textContent = 'Create Job';
           return;
         }
         showToast('Job created' + (res.body && res.body.so_number ? ' · ' + res.body.so_number : ''));
         betaCloseNewJob();
-        if (btn) btn.disabled = false;
-        if (label) label.textContent = 'Create Job';
+        betaSetNewJobSubmitting(false);
         // Reload the queue so the new job (status INTAKE → Unassigned)
         // appears at the top.
         betaState.loaded = false;
@@ -1747,10 +1976,15 @@
         betaState.jobDetailsLoading = {};
         loadBeta();
       })
-      .catch(function () {
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') {
+          betaShowNewJobError('Create is taking too long. Please check the queue before trying again.');
+          return;
+        }
         betaShowNewJobError('Create failed — please try again.');
-        if (btn) btn.disabled = false;
-        if (label) label.textContent = 'Create Job';
+      })
+      .finally(function () {
+        if (timeoutId) clearTimeout(timeoutId);
       });
   }
 
@@ -1799,13 +2033,14 @@
   // so the server-rendered markup is left in place.
   setTimeout(animateKPIs, 50);
 
-  // Sub-tab hash router. Allows /ops/cs-dashboard#workspace to land
-  // directly on the new CS Workspace tab. Friendly aliases also map
+  // Sub-tab hash router. Allows /ops/cs-dashboard#queue to land
+  // directly on the new Queue tab. Friendly aliases also map
   // to the legacy tabs in case anyone has an old link saved.
   var betaHashAliases = {
-    'workspace':      'workspace-beta',
-    'cs-workspace':   'workspace-beta',
-    'workspace-beta': 'workspace-beta',
+    'workspace':      'queue',
+    'cs-workspace':   'queue',
+    'workspace-beta': 'queue',
+    'queue':          'queue',
     'overview':       'overview',
     'intake':         'intake',
     'parts':          'parts',
