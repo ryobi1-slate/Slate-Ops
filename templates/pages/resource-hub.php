@@ -263,6 +263,10 @@ $recent_count = count(array_filter($resources, function ($resource) {
         <span class="rh-meta-pill"><?php echo esc_html((string) count($resources)); ?> resources</span>
         <?php if ($can_review) : ?>
           <span class="rh-meta-pill rh-meta-pill--warn"><?php echo esc_html((string) count($review_queue)); ?> need review</span>
+          <button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-rh-add-open>
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            Add resource
+          </button>
         <?php endif; ?>
       </div>
     </div>
@@ -332,4 +336,129 @@ $recent_count = count(array_filter($resources, function ($resource) {
     <section class="rh-detail" data-rh-screen="detail" hidden></section>
     <section class="rh-queue" data-rh-screen="queue" hidden></section>
   </main>
+
+  <?php if ($can_review) : ?>
+    <div class="rh-overlay" data-rh-add-modal hidden role="dialog" aria-labelledby="rh-add-title" aria-modal="true">
+      <div class="rh-modal">
+        <div class="rh-modal__head">
+          <div>
+            <h2 class="rh-modal__title" id="rh-add-title">Add resource</h2>
+            <p class="rh-modal__sub">Vendor docs land in the review queue. Slate-authored docs publish straight to the library.</p>
+          </div>
+          <button class="rh-modal__close" type="button" data-rh-dismiss aria-label="Close">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </div>
+
+        <form class="rh-modal__body" data-rh-add-form>
+          <div class="rh-field">
+            <span class="rh-field__label">Source</span>
+            <div class="rh-segment" role="group" aria-label="Source">
+              <button class="rh-segment__btn" type="button" data-rh-source="vendor" aria-pressed="true">Vendor doc</button>
+              <button class="rh-segment__btn" type="button" data-rh-source="slate" aria-pressed="false">Slate-authored</button>
+            </div>
+            <span class="rh-field__hint" data-rh-source-hint>Vendor doc lands in the review queue with status <em>Needs Slate review</em>.</span>
+          </div>
+
+          <div class="rh-field">
+            <span class="rh-field__label">File</span>
+            <label class="rh-drop" data-rh-drop>
+              <input class="rh-file-input" type="file" data-rh-file accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,image/*,application/pdf,video/*">
+              <span class="material-symbols-outlined rh-drop__icon" aria-hidden="true">upload_file</span>
+              <span class="rh-drop__title" data-rh-file-title>Drop a PDF, image, or video here</span>
+              <span class="rh-drop__sub" data-rh-file-sub>Up to 25 MB - pdf, jpg, png, mp4</span>
+              <span class="rh-drop__pick">Choose file</span>
+            </label>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-sku">SKU</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-add-sku" name="sku" placeholder="e.g. SP0114B" required>
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-vendor">Vendor</label>
+              <select class="rh-select" id="rh-add-vendor" name="vendor">
+                <option>Flatline Van Co</option>
+                <option>Adventure Wagon</option>
+                <option>Owl Vans</option>
+                <option>Slate-authored</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-doctype">Doc type</label>
+              <select class="rh-select" id="rh-add-doctype" name="doc_type">
+                <option>Install guide</option>
+                <option>Spec sheet</option>
+                <option>QC checklist</option>
+                <option>Cert</option>
+                <option>SDS</option>
+              </select>
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-rev">Vendor revision</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-add-rev" name="vendor_revision" placeholder="Rev. D - 2026-03-04">
+            </div>
+          </div>
+
+          <div class="rh-field">
+            <span class="rh-field__label">Chassis applicability</span>
+            <div class="rh-multi" role="group" aria-label="Chassis applicability">
+              <button class="rh-multi__chip" type="button" data-rh-chassis="Sprinter 144 HR" aria-pressed="true">Sprinter 144 HR <span class="rh-multi__chip__x">x</span></button>
+              <button class="rh-multi__chip" type="button" data-rh-chassis="Sprinter 170 HR" aria-pressed="false">Sprinter 170 HR</button>
+              <button class="rh-multi__chip" type="button" data-rh-chassis="Transit AWD" aria-pressed="false">Transit AWD</button>
+              <button class="rh-multi__chip" type="button" data-rh-chassis="ProMaster 159 HR" aria-pressed="false">ProMaster 159 HR</button>
+              <button class="rh-multi__chip" type="button" data-rh-chassis="All chassis" aria-pressed="false">All chassis</button>
+            </div>
+          </div>
+
+          <div class="rh-field">
+            <label class="rh-field__label" for="rh-add-title-input">Title</label>
+            <input class="rh-input" type="text" id="rh-add-title-input" name="title" placeholder="e.g. Sprinter standard roof rack - 144 HR" required>
+          </div>
+
+          <div class="rh-field">
+            <label class="rh-field__label" for="rh-add-notes">Initial Slate notes <span class="rh-mute" style="font-weight:500;letter-spacing:0;text-transform:none">(optional)</span></label>
+            <textarea class="rh-textarea" id="rh-add-notes" name="notes" placeholder="What should techs watch for? Hardware quirks, vendor errata, sealant call-outs..."></textarea>
+          </div>
+        </form>
+
+        <div class="rh-modal__foot">
+          <button class="rh-btn rh-btn--ghost" type="button" data-rh-dismiss>Cancel</button>
+          <div class="rh-row">
+            <button class="rh-btn" type="button" data-rh-save-draft>Save draft</button>
+            <button class="rh-btn rh-btn--primary" type="button" data-rh-add-submit>Add to queue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rh-drawer-overlay" data-rh-review-drawer hidden role="dialog" aria-labelledby="rh-review-title" aria-modal="true">
+      <aside class="rh-drawer">
+        <div class="rh-drawer__head">
+          <div class="rh-drawer__head-info">
+            <span class="rh-drawer__sku" data-rh-review-sku></span>
+            <h2 class="rh-drawer__title" id="rh-review-title" data-rh-review-title></h2>
+            <div class="rh-drawer__pillrow" data-rh-review-pills></div>
+          </div>
+          <button class="rh-modal__close" type="button" data-rh-dismiss aria-label="Close drawer">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </div>
+        <div class="rh-drawer__body" data-rh-review-body></div>
+        <div class="rh-drawer__foot">
+          <button class="rh-btn rh-btn--ghost" type="button" data-rh-dismiss>Cancel</button>
+          <div class="rh-drawer__foot-right">
+            <button class="rh-btn" type="button" data-rh-review-save>Save draft</button>
+            <button class="rh-btn" type="button" data-rh-request-changes>Request changes from vendor</button>
+            <button class="rh-btn rh-btn--primary" type="button" data-rh-review-approve>Approve and publish</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  <?php endif; ?>
 </div>
