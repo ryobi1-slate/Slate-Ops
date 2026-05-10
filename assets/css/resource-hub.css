@@ -51,6 +51,13 @@ body.slate-ops.ops-page-resource-hub {
   font: inherit;
 }
 
+body.slate-ops.ops-page-resource-hub .rh-app button {
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: none !important;
+  text-decoration: none;
+}
+
 .rh-page {
   width: 100%;
   max-width: var(--slate-shell-maxwidth, 1280px);
@@ -142,6 +149,16 @@ body.slate-ops.ops-page-resource-hub {
   background: transparent;
 }
 
+body.slate-ops.ops-page-resource-hub .rh-app .rh-tab {
+  background: transparent !important;
+  border-color: transparent !important;
+  border-style: solid !important;
+  border-width: 0 0 2px !important;
+  border-radius: 0 !important;
+  color: var(--rh-ink-2) !important;
+  padding: var(--rh-s-3) 0 !important;
+}
+
 .rh-tab__count {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   font-size: 12px;
@@ -151,6 +168,11 @@ body.slate-ops.ops-page-resource-hub {
 .rh-tab[aria-current="page"] {
   color: var(--rh-ink);
   border-bottom-color: var(--rh-ink);
+}
+
+body.slate-ops.ops-page-resource-hub .rh-app .rh-tab[aria-current="page"] {
+  color: var(--rh-ink) !important;
+  border-bottom-color: var(--rh-ink) !important;
 }
 
 .rh-sticky {
@@ -221,6 +243,13 @@ body.slate-ops.ops-page-resource-hub {
   cursor: pointer;
 }
 
+body.slate-ops.ops-page-resource-hub .rh-app .rh-chip {
+  background: var(--rh-surface) !important;
+  border: 1px solid var(--rh-border) !important;
+  border-radius: 999px !important;
+  color: var(--rh-ink-2) !important;
+}
+
 .rh-chip__caret {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   font-size: 12px;
@@ -231,6 +260,12 @@ body.slate-ops.ops-page-resource-hub {
   background: var(--rh-ink);
   border-color: var(--rh-ink);
   color: #f1ede3;
+}
+
+body.slate-ops.ops-page-resource-hub .rh-app .rh-chip[aria-pressed="true"] {
+  background: var(--rh-ink) !important;
+  border-color: var(--rh-ink) !important;
+  color: #f1ede3 !important;
 }
 
 .rh-pill {
@@ -419,10 +454,23 @@ body.slate-ops.ops-page-resource-hub {
   color: var(--rh-ink);
 }
 
+body.slate-ops.ops-page-resource-hub .rh-app .rh-btn {
+  background: var(--rh-surface) !important;
+  border: 1px solid var(--rh-border-strong) !important;
+  border-radius: var(--rh-r-md) !important;
+  color: var(--rh-ink) !important;
+}
+
 .rh-btn--primary {
   background: var(--rh-ink);
   color: #f1ede3;
   border-color: var(--rh-ink);
+}
+
+body.slate-ops.ops-page-resource-hub .rh-app .rh-btn--primary {
+  background: var(--rh-ink) !important;
+  border-color: var(--rh-ink) !important;
+  color: #f1ede3 !important;
 }
 
 .rh-btn--ghost {
