@@ -235,6 +235,9 @@ class Slate_Ops_Utils {
     if (current_user_can(self::CAP_MANAGE_SETTINGS)) {
       $pages[] = 'settings';
     }
+    if (current_user_can(self::CAP_ADMIN)) {
+      $pages[] = 'resource-hub';
+    }
 
     return array_values(array_unique($pages));
   }
@@ -245,11 +248,11 @@ class Slate_Ops_Utils {
     // hatch to the old React page during the migration window. Admins can
     // re-grant `cs` to other roles via the Page Access matrix.
     return [
-      'admin'      => ['executive', 'cs', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'admin', 'settings', 'monitor'],
-      'supervisor' => ['executive', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'monitor'],
-      'cs'         => ['cs-dashboard', 'schedule'],
-      'tech'       => ['tech', 'schedule', 'monitor'],
-      'executive'  => ['executive', 'schedule', 'monitor'],
+      'admin'      => ['executive', 'cs', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'resource-hub', 'admin', 'settings', 'monitor'],
+      'supervisor' => ['executive', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'resource-hub', 'monitor'],
+      'cs'         => ['cs-dashboard', 'schedule', 'resource-hub'],
+      'tech'       => ['tech', 'schedule', 'resource-hub', 'monitor'],
+      'executive'  => ['executive', 'schedule', 'resource-hub', 'monitor'],
     ];
   }
 
@@ -270,7 +273,7 @@ class Slate_Ops_Utils {
   }
 
   public static function sanitize_page_slugs($slugs) {
-    $valid = ['executive','cs','cs-dashboard','tech','schedule','purchasing','admin','settings','monitor'];
+    $valid = ['executive','cs','cs-dashboard','tech','schedule','purchasing','resource-hub','admin','settings','monitor'];
     $in = is_array($slugs) ? $slugs : [];
     $out = [];
     foreach ($in as $slug) {

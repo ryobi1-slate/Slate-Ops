@@ -30,6 +30,7 @@
     cs:        'cs',
     tech:      'tech',
     schedule:  'schedule',
+    'resource-hub': 'resource-hub',
     admin:     'admin',
     settings:  'settings',
     monitor:   'monitor',

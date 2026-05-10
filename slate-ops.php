@@ -93,6 +93,7 @@ add_action('wp_enqueue_scripts', function() {
   $is_purchasing   = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
   $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
   $is_executive    = ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
+  $is_resource_hub = ($current_path === 'resource-hub' || strncmp($current_path, 'resource-hub/', 13) === 0);
   $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
 
   $enqueue_design_language = function($deps = ['slate-ops-shell']) {
@@ -147,10 +148,20 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('slate-ops-executive',  SLATE_OPS_URL . 'assets/css/executive-dashboard.css', ['slate-ops-shell'], $ver_exec_css);
     $enqueue_design_language(['slate-ops-executive']);
     wp_enqueue_script('slate-ops-executive', SLATE_OPS_URL . 'assets/js/executive-dashboard.js',   [],                  $ver_exec_js,  true);
+  } elseif ($is_resource_hub) {
+    $route_blocked_resource_hub = !slate_ops_current_user_can_access_ops_page('resource-hub');
+    if ($route_blocked_resource_hub) {
+      return;
+    }
+    $ver_rh_css = file_exists(SLATE_OPS_PATH . 'assets/css/resource-hub.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/resource-hub.css') : SLATE_OPS_VERSION;
+    $ver_rh_js  = file_exists(SLATE_OPS_PATH . 'assets/js/resource-hub.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/resource-hub.js')   : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-resource-hub',  SLATE_OPS_URL . 'assets/css/resource-hub.css', ['slate-ops-shell'], $ver_rh_css);
+    $enqueue_design_language(['slate-ops-resource-hub']);
+    wp_enqueue_script('slate-ops-resource-hub', SLATE_OPS_URL . 'assets/js/resource-hub.js',   [],                  $ver_rh_js,  true);
   } else {
     $route_map = [
       '' => 'executive', 'exec' => 'executive', 'cs' => 'cs', 'tech' => 'tech',
-      'schedule' => 'schedule', 'purchasing' => 'purchasing', 'admin' => 'admin',
+      'schedule' => 'schedule', 'purchasing' => 'purchasing', 'resource-hub' => 'resource-hub', 'admin' => 'admin',
       'settings' => 'settings', 'monitor' => 'monitor',
     ];
     $route_slug = $route_map[$current_path] ?? null;

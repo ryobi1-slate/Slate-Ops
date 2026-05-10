@@ -58,6 +58,9 @@ if (!function_exists('ops_nav_link')) {
     if (in_array('purchasing', $allowed, true)) :
       ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
     endif;
+    if (in_array('resource-hub', $allowed, true)) :
+      ops_nav_link('/ops/resource-hub', '/resource-hub', 'folder_open', 'Resource hub');
+    endif;
     if (in_array('admin', $allowed, true)) :
       ops_nav_link('/ops/admin',    '/admin',    'shield',         'Admin');
     endif;

@@ -10,6 +10,7 @@
     ['tech','Tech'],
     ['schedule','Schedule'],
     ['purchasing','Purchasing'],
+    ['resource-hub','Resource hub'],
     ['admin','Admin'],
     ['settings','Settings'],
     ['monitor','Monitor'],
