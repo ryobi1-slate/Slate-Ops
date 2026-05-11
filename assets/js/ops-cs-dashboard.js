@@ -916,8 +916,7 @@
         var v   = select.value.trim();
         var parsed = v === '' ? null : parseInt(v, 10);
         if (parsed != null && (!isFinite(parsed) || parsed <= 0)) parsed = null;
-        recordBetaEdit(id, 'assigned_user_id', parsed);
-        renderBeta();
+        betaAutosaveRowDropdown(id, 'assigned_user_id', parsed, select);
       });
     });
 
@@ -925,6 +924,19 @@
       select.addEventListener('click', function (e) { e.stopPropagation(); });
       select.addEventListener('mousedown', function (e) { e.stopPropagation(); });
       select.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      select.addEventListener('change', function (e) {
+        e.stopPropagation();
+        var row = select.closest('.cs-beta-row'); if (!row) return;
+        var id = parseInt(row.dataset.job, 10);
+        if (!id || isNaN(id)) return;
+        if (select.dataset.action === 'beta-status-select') {
+          betaAutosaveRowDropdown(id, 'status', String(select.value || '').trim(), select);
+          return;
+        }
+        if (select.dataset.field === 'parts_status') {
+          betaAutosaveRowDropdown(id, 'parts_status', String(select.value || '').trim(), select);
+        }
+      });
     });
 
     $$('.cs-beta-row__iconbtn[data-action="toggle-visible"]', body).forEach(function (btn) {
@@ -1723,6 +1735,105 @@
     if (!bag) return;
     fields.forEach(function (f) { delete bag[f]; });
     if (Object.keys(bag).length === 0) delete betaState.edits[id];
+  }
+
+  function betaAutosaveRowDropdown(id, field, value, control) {
+    var api = betaApi();
+    var snap = betaJobById(id);
+    if (!api || !snap) return;
+
+    var oldValue = betaEffectiveJob(snap)[field];
+    recordBetaEdit(id, field, value);
+    if (!betaState.edits[id] || !(field in betaState.edits[id])) return;
+
+    if (control) control.disabled = true;
+    showToast('Saving...');
+
+    var request;
+    if (field === 'assigned_user_id') {
+      request = fetch(api.root + '/cs/queue', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-WP-Nonce': api.nonce,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ updates: [{ id: id, assigned_user_id: value }] })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.body || !res.body.ok) throw new Error('Tech assignment save failed');
+          snap.assigned_user_id = value;
+          snap.assigned_tech = value ? (betaTechDirectory()[value] || ('User #' + value)) : '';
+          if (betaState.jobDetails[id]) betaState.jobDetails[id].assigned_user_id = value;
+        });
+    } else if (field === 'status') {
+      request = fetch(api.root + '/jobs/' + id + '/status', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-WP-Nonce': api.nonce,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ status: value })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error((res.body && (res.body.message || res.body.code)) || 'Status save failed');
+          snap.status = betaStatusKey(value);
+          snap.status_label = betaStatusLabel(value);
+          if (betaState.jobDetails[id]) {
+            betaState.jobDetails[id].status = snap.status;
+            betaState.jobDetails[id].status_label = snap.status_label;
+          }
+          if (snap.status === 'COMPLETE') {
+            betaState.jobs = betaState.jobs.filter(function (job) { return job.id !== id; });
+          }
+        });
+    } else if (field === 'parts_status') {
+      request = fetch(api.root + '/jobs/' + id, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: {
+          'X-WP-Nonce': api.nonce,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ parts_status: value })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error((res.body && (res.body.message || res.body.code)) || 'Parts save failed');
+          snap.parts_status = value;
+          if (betaState.jobDetails[id]) betaState.jobDetails[id].parts_status = value;
+        });
+    } else {
+      request = Promise.reject(new Error('Unsupported autosave field'));
+    }
+
+    request
+      .then(function () {
+        betaPruneEdits(id, [field]);
+        if (field === 'status') delete betaState.jobDetails[id];
+        renderBeta();
+        showToast('Saved');
+      })
+      .catch(function (err) {
+        betaPruneEdits(id, [field]);
+        if (field === 'assigned_user_id') snap.assigned_user_id = oldValue;
+        if (field === 'parts_status') snap.parts_status = oldValue;
+        if (field === 'status') {
+          snap.status = betaStatusKey(oldValue);
+          snap.status_label = betaStatusLabel(oldValue);
+        }
+        renderBeta();
+        showToast(err && err.message ? err.message : 'Save failed');
+      })
+      .finally(function () {
+        if (control) control.disabled = false;
+      });
   }
 
   function betaSaveSelectedEdits(id) {
