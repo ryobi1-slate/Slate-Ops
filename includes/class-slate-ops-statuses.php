@@ -247,7 +247,7 @@ class Slate_Ops_Statuses {
         return [
             self::INTAKE           => [self::NEEDS_SO, self::READY_FOR_BUILD, self::ON_HOLD, self::CANCELLED],
             self::NEEDS_SO         => [self::INTAKE, self::READY_FOR_BUILD, self::ON_HOLD, self::CANCELLED],
-            self::READY_FOR_BUILD  => [self::SCHEDULED, self::IN_PROGRESS, self::ON_HOLD, self::CANCELLED, self::BLOCKED],
+            self::READY_FOR_BUILD  => [self::INTAKE, self::NEEDS_SO, self::SCHEDULED, self::IN_PROGRESS, self::ON_HOLD, self::CANCELLED, self::BLOCKED],
             self::SCHEDULED        => [self::IN_PROGRESS, self::READY_FOR_BUILD, self::ON_HOLD, self::CANCELLED, self::BLOCKED],
             self::IN_PROGRESS      => [self::QC, self::BLOCKED, self::ON_HOLD, self::SCHEDULED],
             self::BLOCKED          => $any,

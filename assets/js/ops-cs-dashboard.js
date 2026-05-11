@@ -1585,6 +1585,9 @@
         label: readyDeps.length ? ('Ready for Build - needs ' + readyDeps.join(', ')) : 'Ready for Build',
         disabled: readyDeps.length > 0
       });
+    } else if (status === 'READY_FOR_BUILD') {
+      options.push({ value: 'INTAKE', label: 'Intake', disabled: false });
+      options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
     } else if (status === 'QC') {
       options.push({ value: 'AWAITING_PICKUP', label: 'Complete - Awaiting Pickup', disabled: false });
       hint = 'Complete the closeout checklist before moving to pickup.';
