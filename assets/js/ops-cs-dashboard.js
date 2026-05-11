@@ -733,6 +733,9 @@
         var dup        = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
         var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
         var sel        = (betaState.selected === j.id);
+        var qTitle     = (!j.assigned_user_id && j.queue_order == null)
+          ? 'Assign a tech before queue order affects the Tech page.'
+          : 'Queue number';
 
         var rowCls = 'cs-beta-row';
         if (j._dirty)         rowCls += ' is-dirty';
@@ -754,7 +757,7 @@
           +   '<div class="cs-beta-row__qnum">'
           +     '<input type="number" min="1" step="1" class="cs-beta-row__qinput"'
           +       ' value="' + (j.queue_order == null ? '' : j.queue_order) + '"'
-          +       ' data-field="queue_order" aria-label="Queue number">'
+          +       ' data-field="queue_order" aria-label="Queue number" title="' + escapeHtml(qTitle) + '">'
           +     (dup ? '<span class="cs-beta-row__dup" title="Duplicate queue number">!</span>' : '')
           +   '</div>'
           +   '<div class="cs-beta-row__so"><span class="cs-beta-mono">' + escapeHtml(j.so_number || j.job_number || '') + '</span></div>'
@@ -788,7 +791,7 @@
           +       ' title="' + (j.queue_visible ? 'Hide from queue' : 'Show in queue') + '">'
           +       '<span class="material-symbols-outlined">' + (j.queue_visible ? 'visibility' : 'visibility_off') + '</span>'
           +     '</button>'
-          +     '<button type="button" class="cs-beta-row__iconbtn" data-action="open-detail" title="Open detail">'
+          +     '<button type="button" class="cs-beta-row__iconbtn" data-action="open-detail" title="Open" aria-label="Open">'
           +       '<span class="material-symbols-outlined">chevron_right</span>'
           +     '</button>'
           +   '</div>'
@@ -807,6 +810,7 @@
         +       '<div>'
         +         '<div class="cs-beta-group__title">' + escapeHtml(g.label) + '</div>'
         +         '<div class="cs-beta-group__meta">' + g.jobs.length + ' jobs · ' + visibleCount + ' visible' + (g.unassigned ? ' · needs assignment' : '') + '</div>'
+        +         (g.unassigned ? '<div class="cs-beta-group__helper">Assign a tech before queue order affects the Tech page.</div>' : '')
         +       '</div>'
         +     '</div>'
         +     '<div class="cs-beta-group__right">' + totalHrsBlock + '</div>'
