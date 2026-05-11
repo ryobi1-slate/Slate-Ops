@@ -14,7 +14,7 @@ All `/ops` URLs are captured by the rewrite rules in `includes/class-slate-ops-r
 |---|---|---|
 | `/ops/` | React bundle | Legacy root behavior. Empty root still falls through to `assets/react/app.js`. |
 | `/ops/exec` | Server-rendered PHP + vanilla JS | Uses `templates/pages/executive-dashboard.php`, `assets/css/executive-dashboard.css`, and `assets/js/executive-dashboard.js`. |
-| `/ops/cs-dashboard` | Server-rendered PHP + vanilla JS | Uses `templates/pages/cs-dashboard.php`, `assets/css/ops-cs-dashboard.css`, and `assets/js/ops-cs-dashboard.js`. Visible CS work tab is `CS Workspace`; internal tab key remains `queue`. |
+| `/ops/cs-dashboard` | Server-rendered PHP + vanilla JS | Uses `templates/pages/cs-dashboard.php`, `assets/css/ops-cs-dashboard.css`, and `assets/js/ops-cs-dashboard.js`. Visible CS work tab is `Job Queue`; internal tab key remains `queue`. |
 | `/ops/cs` | React bundle | Legacy CS route. Sidebar labels it `CS (legacy)` when the user has access to the legacy `cs` page. |
 | `/ops/tech` | React bundle | Loads the React app plus the tech mobile CSS override. |
 | `/ops/schedule` | React bundle | Scheduler UI is still in the React bundle. |
@@ -28,5 +28,5 @@ All `/ops` URLs are captured by the rewrite rules in `includes/class-slate-ops-r
 
 - Do not edit `assets/react/app.js` for CS Dashboard label cleanup. `/ops/cs-dashboard` does not load the React app.
 - Keep `/ops/cs-dashboard` as the canonical CS Dashboard route.
-- Keep `/cs/queue` as the CS Workspace queue endpoint.
+- Keep `/cs/queue` as the Job Queue endpoint.
 - Internal `.cs-beta` selectors are retained for compatibility until a separate CSS/JS refactor is approved.

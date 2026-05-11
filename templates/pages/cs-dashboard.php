@@ -1,6 +1,6 @@
 <?php
 /**
- * Slate Ops — CS / Supervisor Operations Dashboard.
+ * Slate Ops — Customer Service dashboard.
  *
  * Server-rendered first: every section paints with JS off. The companion
  * vanilla JS at assets/js/ops-cs-dashboard.js is enhancement only —
@@ -39,7 +39,6 @@ $health        = $payload['health'];
 $parts         = $payload['parts'];
 $qc            = $payload['qc'];
 $pickup        = $payload['pickup'];
-$subtab_counts = $payload['subtab_counts'];
 
 $pill_class_map = [
   'parts'   => 'pill--parts',
@@ -69,8 +68,8 @@ $health_tone_class_map = [
   <div class="ops-page-header">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;">
       <div>
-        <div class="ops-page-eyebrow">CS / Supervisor</div>
-        <h1 class="ops-page-title" style="font-size:22px;font-weight:500;color:var(--slate-ink);margin:0 0 4px;letter-spacing:normal;text-transform:none;">Operations Dashboard</h1>
+        <div class="ops-page-eyebrow">Customer Service</div>
+        <h1 class="ops-page-title" style="font-size:22px;font-weight:500;color:var(--slate-ink);margin:0 0 4px;letter-spacing:normal;text-transform:none;">Dashboard</h1>
         <div class="ops-page-desc" style="font-size:13px;color:var(--slate-ink-muted);">Daily job control, blockers, QC, parts, and pickup readiness.</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -89,17 +88,12 @@ $health_tone_class_map = [
 
   <!-- Sub-tabs -->
   <nav class="ops-subnav" id="ops-subnav">
-    <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
-    <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count"><?php echo esc_html((string) $subtab_counts['intake']); ?></span></button>
-    <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
-    <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>
-    <button class="ops-subtab" data-tab="pickup"><span class="material-symbols-outlined">local_shipping</span>Pickup <span class="count"><?php echo esc_html((string) $subtab_counts['pickup']); ?></span></button>
-    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>CS Workspace <span class="count" id="queue-tab-count">0</span></button>
-    <button class="ops-subtab" data-tab="exceptions"><span class="material-symbols-outlined">report</span>Exceptions <span class="count"><?php echo esc_html((string) $subtab_counts['exceptions']); ?></span></button>
+    <button class="ops-subtab active" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Job Queue <span class="count" id="queue-tab-count">0</span></button>
+    <button class="ops-subtab" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
   </nav>
 
   <!-- ── OVERVIEW TAB ── -->
-  <div class="ops-tab-content" data-tab-content="overview">
+  <div class="ops-tab-content" data-tab-content="overview" hidden>
 
     <!-- KPI grid: 8 cards, 4 columns -->
     <div class="ops-kpi-grid" id="kpi-grid">
@@ -235,7 +229,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['parts']); ?> jobs affected</span>
-          <button class="ops-link" data-jump="parts">Go to Parts <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" data-jump="queue">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -260,7 +254,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['qc']); ?> awaiting sign-off</span>
-          <button class="ops-link" data-jump="qc">Go to QC <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" data-jump="queue">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -285,7 +279,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['pickup']); ?> ready · 1 awaiting reply</span>
-          <button class="ops-link" data-jump="pickup">Go to Pickup <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" data-jump="queue">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -293,19 +287,14 @@ $health_tone_class_map = [
 
   </div>
 
-  <!-- ── CS WORKSPACE TAB ── -->
+  <!-- ── JOB QUEUE TAB ── -->
   <!-- CS-owned shop queue surface. Read/edit queue with grouped-by-tech
        list, filter chips, search, drag/drop, and a bottom detail panel.
        Uses the existing /cs/queue endpoint for queue fields; job detail
        edits continue through the existing /jobs/{id} endpoint. -->
-  <div class="ops-tab-content" data-tab-content="queue" hidden>
+  <div class="ops-tab-content" data-tab-content="queue">
     <div class="ops-cs-workspace-beta cs-beta">
       <header class="cs-beta__header">
-        <div class="cs-beta__heading">
-          <div class="cs-beta__eyebrow">CS / Supervisor</div>
-          <h2 class="cs-beta__title">CS Workspace</h2>
-          <div class="cs-beta__sub">CS controls the visible work order. Lower queue order appears higher on the Tech page.</div>
-        </div>
         <div class="cs-beta__actions">
           <button type="button" class="btn btn--secondary" id="cs-beta-new" title="Create a new job (CS intake)">
             <span class="material-symbols-outlined">add</span>
@@ -394,43 +383,6 @@ $health_tone_class_map = [
     </div>
   </div>
 
-  <!-- Other tabs (stub views) -->
-  <div class="ops-tab-content" data-tab-content="intake" hidden>
-    <div class="ops-tab-stub">
-      <span class="material-symbols-outlined ops-tab-stub__icon">inbox</span>
-      <div class="ops-tab-stub__title">Intake Queue</div>
-      <div><?php echo esc_html((string) $subtab_counts['intake']); ?> new jobs awaiting triage. Detailed intake view connects here.</div>
-    </div>
-  </div>
-  <div class="ops-tab-content" data-tab-content="parts" hidden>
-    <div class="ops-tab-stub">
-      <span class="material-symbols-outlined ops-tab-stub__icon">inventory_2</span>
-      <div class="ops-tab-stub__title">Parts Board</div>
-      <div>Full parts blocker board. Drill-in by job, vendor, ETA.</div>
-    </div>
-  </div>
-  <div class="ops-tab-content" data-tab-content="qc" hidden>
-    <div class="ops-tab-stub">
-      <span class="material-symbols-outlined ops-tab-stub__icon">verified</span>
-      <div class="ops-tab-stub__title">QC Queue</div>
-      <div>Supervisor sign-off list with checklists per job.</div>
-    </div>
-  </div>
-  <div class="ops-tab-content" data-tab-content="pickup" hidden>
-    <div class="ops-tab-stub">
-      <span class="material-symbols-outlined ops-tab-stub__icon">local_shipping</span>
-      <div class="ops-tab-stub__title">Pickup Readiness</div>
-      <div>Ready-for-pickup queue with customer contact status.</div>
-    </div>
-  </div>
-  <div class="ops-tab-content" data-tab-content="exceptions" hidden>
-    <div class="ops-tab-stub">
-      <span class="material-symbols-outlined ops-tab-stub__icon">report</span>
-      <div class="ops-tab-stub__title">Exceptions</div>
-      <div>Blocked jobs, past-due updates, escalations needing attention.</div>
-    </div>
-  </div>
-
 </div>
 
 <!-- ─── Detail Drawer ─── -->
@@ -487,7 +439,7 @@ $health_tone_class_map = [
 </aside>
 
 <!-- ─── New Job intake modal (Phase 6) ───
-     Hidden by default. Opens from the CS Workspace tab's New Job button.
+     Hidden by default. Opens from the Job Queue tab's New Job button.
      Posts to existing POST /jobs (perm_create_jobs = CS / Supervisor / Admin). -->
 <div class="cs-beta-modal" id="cs-beta-newjob-modal" hidden role="dialog" aria-modal="true" aria-labelledby="cs-beta-newjob-title">
   <div class="cs-beta-modal__backdrop" data-action="cs-beta-newjob-close"></div>

@@ -1190,6 +1190,9 @@ return ['ok' => true, 'id' => $id];
     return [
       'roles' => slate_ops_get_role_page_access(),
       'defaults' => slate_ops_get_default_role_page_access(),
+      'features' => Slate_Ops_Utils::get_feature_flags(),
+      'feature_defaults' => Slate_Ops_Utils::get_default_feature_flags(),
+      'page_labels' => Slate_Ops_Utils::get_page_labels(),
     ];
   }
 
@@ -1205,7 +1208,17 @@ return ['ok' => true, 'id' => $id];
     // Safety rails: never remove Admin/Settings from admin role.
     $next['admin'] = array_values(array_unique(array_merge($next['admin'] ?? [], ['admin', 'settings'])));
     update_option('slate_ops_role_page_access', $next, false);
-    return ['ok' => true, 'roles' => slate_ops_get_role_page_access()];
+
+    if (array_key_exists('features', $body)) {
+      $features = Slate_Ops_Utils::sanitize_feature_flags($body['features']);
+      update_option(Slate_Ops_Utils::FEATURE_FLAGS_OPTION, $features, false);
+    }
+
+    return [
+      'ok' => true,
+      'roles' => slate_ops_get_role_page_access(),
+      'features' => Slate_Ops_Utils::get_feature_flags(),
+    ];
   }
 
   public static function list_jobs($req) {

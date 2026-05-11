@@ -283,14 +283,14 @@ body.slate-ops {
   appearance: none;
   background: transparent !important;
   border-radius: var(--slate-radius-sm);
-  color: var(--slate-sage);
+  color: var(--slate-ink-subtle) !important;
   cursor: pointer;
   padding: 0;
   transition: color var(--slate-duration-fast) var(--slate-ease);
 }
 
 .ops-sidebar-collapse-btn:hover {
-  color: var(--slate-redwood);
+  color: var(--slate-ink) !important;
 }
 
 .ops-sidebar-collapse-btn:focus-visible {
