@@ -1,16 +1,41 @@
 # Slate Ops Changelog
 
-## 0.55.0 — CS Dashboard: Queue tab (Shop Queue)
+## 0.58.1 — Current CS Dashboard / CS Workspace final state
+
+**No behavior change in this cleanup entry.** Current main now documents the state reached across the 0.55.0 through 0.58.1 CS Dashboard work:
+
+- `/ops/cs-dashboard` remains the server-rendered CS Dashboard route with standalone vanilla JS enhancement.
+- The visible working sub-tab is labeled `CS Workspace`, while the internal tab key remains `queue` and the REST endpoint remains `/cs/queue`.
+- `/ops/cs` remains the legacy React CS route and is still reachable only for users granted the legacy `cs` page.
+- Queue fields continue to save through `GET/POST /cs/queue`; general job detail edits continue through existing `/jobs` and `/jobs/{id}` endpoints.
+- Internal `.cs-beta` selectors and IDs remain unchanged for compatibility.
+
+## 0.58.0 — CS Workspace stabilization
+
+- Finalized the CS Workspace surface inside `/ops/cs-dashboard` with queue ordering, grouped tech lists, detail editing, drag/drop reassignment, and new job intake using existing REST paths.
+- Kept `/ops/cs-dashboard` and `/cs/queue` stable; no checkout, payment, shipping, or production branch behavior changed.
+
+## 0.57.0 — CS Workspace promotion
+
+- Promoted the combined CS queue/detail surface as the primary CS workspace concept on the CS Dashboard while preserving legacy hash aliases for saved links.
+- Legacy `/ops/cs` stayed available as a separate React route for explicitly granted users.
+
+## 0.56.0 — CS Workspace beta phases
+
+- Added CS Workspace beta queue/detail behavior, then expanded it with drag/drop ordering, cross-tech reassignment, editable job detail fields, and UI polish.
+- Continued to use the existing `/cs/queue`, `/jobs`, and `/jobs/{id}` REST endpoints.
+
+## 0.55.0 — CS Dashboard: CS Workspace queue foundation
 
 **`templates/pages/cs-dashboard.php`, `assets/js/ops-cs-dashboard.js`, `assets/css/ops-cs-dashboard.css`:**
-- New "Queue" sub-tab on CS Dashboard with Shop Queue header and helper text. Lazy-loads on first activation and renders one card per assigned tech (Unassigned last).
+- Added the CS-owned queue foundation on CS Dashboard, now surfaced as the `CS Workspace` sub-tab. Lazy-loads on first activation and renders one card per assigned tech.
 - Filter chips: All / Scheduled / Blocked / Ready for Closeout / Unassigned.
 - Inline edits per row: queue # (number input), queue note (text input), visibility toggle. Save Queue button (disabled until edits) bulk-posts to `/cs/queue`. Normalize Order button re-numbers visible jobs in each tech group to 1, 2, 3 in their current sort.
 - Warnings bar: duplicate queue # within a tech group (alert) and blocked or parts-hold job at queue #1 (warn).
 - Localized REST root + nonce on the dashboard (`window.slateOpsCsDashboard.api`).
 
 **`includes/class-slate-ops-rest.php`:**
-- New `GET /cs/queue` and `POST /cs/queue` endpoints (CS / Supervisor / Admin) covering open jobs (READY_FOR_BUILD, SCHEDULED, IN_PROGRESS, BLOCKED, QC). Save handler accepts `queue_order`, `queue_visible`, `queue_note`, optional `assigned_user_id`; sanitizes input, audits via `Slate_Ops_Activity_Log::append`.
+- New `GET /cs/queue` and `POST /cs/queue` endpoints (CS / Supervisor / Admin) covering open jobs. Save handler accepts `queue_order`, `queue_visible`, `queue_note`, optional `assigned_user_id`; sanitizes input, audits via `Slate_Ops_Activity_Log::append`.
 
 **`includes/class-slate-ops-install.php`:**
 - Added job columns `queue_visible TINYINT(1)`, `queue_note TEXT`, `queue_updated_at DATETIME`, `queue_updated_by BIGINT UNSIGNED` (CREATE TABLE + idempotent ALTER in `add_missing_columns`).

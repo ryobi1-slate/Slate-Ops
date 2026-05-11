@@ -288,11 +288,10 @@
     });
   }
 
-  // ─── Queue tab ───────────────────────────────────────────────────────
-  // Phase 1 surface that combines the Workspace + Queue concepts. Reuses
-  // GET/POST /cs/queue. Local state is intentionally separate from
-  // queueState so edits in either tab don't fight. No drag/drop yet; manual
-  // queue # input is the accessibility fallback and only edit path.
+  // ─── CS Workspace tab ────────────────────────────────────────────────
+  // CS-owned queue/detail surface. Reuses GET/POST /cs/queue for queue
+  // fields and PATCH /jobs/{id} for general job fields. Manual queue # input
+  // remains the keyboard/accessibility fallback alongside drag/drop.
   var betaState = {
     loaded:    false,
     loading:   false,
@@ -335,7 +334,7 @@
     var api = betaApi();
     var body = document.getElementById('cs-beta-body');
     if (!api) {
-      if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Workspace API not available.</span></div>';
+      if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>CS Workspace API not available.</span></div>';
       return;
     }
     if (!opts || !opts.silent) {
@@ -365,7 +364,7 @@
         var usersRes = results[1];
         betaState.loading = false;
         if (!res.ok || !res.body || !res.body.ok) {
-          if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load workspace.</span></div>';
+          if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load CS Workspace.</span></div>';
           return;
         }
         betaState.jobs   = res.body.jobs || [];
@@ -376,7 +375,7 @@
       })
       .catch(function () {
         betaState.loading = false;
-        if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load workspace.</span></div>';
+        if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load CS Workspace.</span></div>';
       });
   }
 
@@ -1845,7 +1844,7 @@
   }
 
   // ── New Job intake modal ────────────────────────────────────────────
-  // Opens from the Queue header, posts to the existing
+  // Opens from the CS Workspace header, posts to the existing
   // POST /jobs endpoint (perm_create_jobs = CS / Supervisor / Admin),
   // and reloads the queue on success so the new job lands in the
   // Unassigned group at the top.
@@ -2033,9 +2032,9 @@
   // so the server-rendered markup is left in place.
   setTimeout(animateKPIs, 50);
 
-  // Sub-tab hash router. Allows /ops/cs-dashboard#queue to land
-  // directly on the new Queue tab. Friendly aliases also map
-  // to the legacy tabs in case anyone has an old link saved.
+  // Sub-tab hash router. Allows /ops/cs-dashboard#queue and
+  // /ops/cs-dashboard#cs-workspace to land directly on the CS Workspace tab.
+  // Legacy Workspace hashes are kept as aliases for saved links.
   var betaHashAliases = {
     'workspace':      'queue',
     'cs-workspace':   'queue',

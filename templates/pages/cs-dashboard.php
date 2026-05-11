@@ -94,7 +94,7 @@ $health_tone_class_map = [
     <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count"><?php echo esc_html((string) $subtab_counts['parts']); ?></span></button>
     <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count"><?php echo esc_html((string) $subtab_counts['qc']); ?></span></button>
     <button class="ops-subtab" data-tab="pickup"><span class="material-symbols-outlined">local_shipping</span>Pickup <span class="count"><?php echo esc_html((string) $subtab_counts['pickup']); ?></span></button>
-    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Queue <span class="count" id="queue-tab-count">0</span></button>
+    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>CS Workspace <span class="count" id="queue-tab-count">0</span></button>
     <button class="ops-subtab" data-tab="exceptions"><span class="material-symbols-outlined">report</span>Exceptions <span class="count"><?php echo esc_html((string) $subtab_counts['exceptions']); ?></span></button>
   </nav>
 
@@ -293,18 +293,17 @@ $health_tone_class_map = [
 
   </div>
 
-  <!-- ── QUEUE TAB ── -->
-  <!-- Phase 1: CS-owned shop queue surface. Read/edit queue with
-       grouped-by-tech list, filter chips, search, and a bottom detail
-       panel. Uses the same /cs/queue endpoint as the Queue tab; saves
-       reuse queue_order / queue_visible / queue_note. No drag/drop yet,
-       no deeper job edit/save. -->
+  <!-- ── CS WORKSPACE TAB ── -->
+  <!-- CS-owned shop queue surface. Read/edit queue with grouped-by-tech
+       list, filter chips, search, drag/drop, and a bottom detail panel.
+       Uses the existing /cs/queue endpoint for queue fields; job detail
+       edits continue through the existing /jobs/{id} endpoint. -->
   <div class="ops-tab-content" data-tab-content="queue" hidden>
     <div class="ops-cs-workspace-beta cs-beta">
       <header class="cs-beta__header">
         <div class="cs-beta__heading">
           <div class="cs-beta__eyebrow">CS / Supervisor</div>
-          <h2 class="cs-beta__title">Shop Queue</h2>
+          <h2 class="cs-beta__title">CS Workspace</h2>
           <div class="cs-beta__sub">CS controls the visible work order. Lower queue order appears higher on the Tech page.</div>
         </div>
         <div class="cs-beta__actions">
@@ -488,7 +487,7 @@ $health_tone_class_map = [
 </aside>
 
 <!-- ─── New Job intake modal (Phase 6) ───
-     Hidden by default. Opens from the Queue tab's New Job button.
+     Hidden by default. Opens from the CS Workspace tab's New Job button.
      Posts to existing POST /jobs (perm_create_jobs = CS / Supervisor / Admin). -->
 <div class="cs-beta-modal" id="cs-beta-newjob-modal" hidden role="dialog" aria-modal="true" aria-labelledby="cs-beta-newjob-title">
   <div class="cs-beta-modal__backdrop" data-action="cs-beta-newjob-close"></div>
