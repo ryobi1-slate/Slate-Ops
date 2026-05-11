@@ -1382,6 +1382,9 @@
       ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
       : '';
     var status = betaStatusKey(j.status);
+    var hasSoNumber = !!String(j.so_number || '').trim();
+    var canMarkNeedsSo = status === 'INTAKE' && !hasSoNumber;
+    var canMarkReadyForBuild = (status === 'INTAKE' || status === 'NEEDS_SO') && hasSoNumber;
     var canMarkAwaiting = status === 'QC';
     var canMarkClosed = status === 'AWAITING_PICKUP';
     var closeoutHtml = (canMarkAwaiting || canMarkClosed)
@@ -1499,7 +1502,7 @@
       +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
       +       '<dt>Status</dt><dd><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></dd>'
       +     '</dl>'
-      +     '<div class="cs-beta-detail-section__hint">Status is read-only. Use the closeout actions below when the job is ready for the next CS step.</div>'
+      +     '<div class="cs-beta-detail-section__hint">Status is read-only. CS actions are available before build and after tech completion.</div>'
       +   '</div>'
       + '</section>'
 
@@ -1520,6 +1523,12 @@
       + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
       +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
       +   '<div class="cs-beta-detail-actions">'
+      +     (canMarkNeedsSo
+              ? '<button type="button" class="slate-btn slate-btn--secondary" data-action="beta-mark-needs-so"><span class="material-symbols-outlined">assignment_late</span>Mark Needs SO</button>'
+              : '')
+      +     (canMarkReadyForBuild
+              ? '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-mark-ready-build"><span class="material-symbols-outlined">construction</span>Mark Ready for Build</button>'
+              : '')
       +     (canMarkAwaiting
               ? '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-mark-awaiting"><span class="material-symbols-outlined">inventory</span>Mark Complete - Awaiting Pickup</button>'
               : '')
@@ -1557,6 +1566,18 @@
           saveBeta();
           return;
         }
+        t = e.target.closest('[data-action="beta-mark-needs-so"]');
+        if (t) {
+          e.preventDefault();
+          betaStatusAction('NEEDS_SO');
+          return;
+        }
+        t = e.target.closest('[data-action="beta-mark-ready-build"]');
+        if (t) {
+          e.preventDefault();
+          betaStatusAction('READY_FOR_BUILD');
+          return;
+        }
         t = e.target.closest('[data-action="beta-mark-awaiting"]');
         if (t) {
           e.preventDefault();
@@ -1570,6 +1591,58 @@
         }
       });
     }
+  }
+
+  function betaStatusAction(status) {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+    if (betaState.edits[id]) {
+      showToast('Save or discard row edits before changing status.');
+      return;
+    }
+
+    var actionMap = {
+      NEEDS_SO: {
+        selector: '[data-action="beta-mark-needs-so"]',
+        toast: 'Marked Needs SO'
+      },
+      READY_FOR_BUILD: {
+        selector: '[data-action="beta-mark-ready-build"]',
+        toast: 'Marked Ready for Build'
+      }
+    };
+    var action = actionMap[status] || {};
+    var btn = action.selector ? grid.querySelector(action.selector) : null;
+    if (btn) btn.disabled = true;
+
+    fetch(api.root + '/jobs/' + id, {
+      method: 'PATCH',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce':   api.nonce,
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      },
+      body: JSON.stringify({ status: status })
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Status update failed');
+        }
+        showToast(action.toast || 'Status updated');
+        betaState.loaded = false;
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Status update failed');
+        if (btn) btn.disabled = false;
+      });
   }
 
   function betaCloseoutPayload(grid) {

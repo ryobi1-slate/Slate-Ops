@@ -74,6 +74,7 @@ class Slate_Ops_Statuses {
     public static function cs_settable(): array {
         return [
             self::INTAKE,
+            self::NEEDS_SO,
             self::READY_FOR_BUILD,
             self::SCHEDULED,
             self::BLOCKED,
