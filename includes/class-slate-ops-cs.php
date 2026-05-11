@@ -49,7 +49,7 @@ class Slate_Ops_CS {
       [
         'id'     => 'SO-1051',
         'cust'   => 'MB Anchorage',
-        'status' => 'Ready for Pickup',
+        'status' => 'Complete - Awaiting Pickup',
         'pill'   => 'pickup',
         'owner'  => 'CS',
         'action' => 'Notify dealer',
@@ -96,7 +96,7 @@ class Slate_Ops_CS {
 
   public static function get_pickup() {
     return [
-      ['name' => 'Ready for pickup',          'sub' => 'Customer can be contacted', 'count' => 2, 'tone' => 'good'],
+      ['name' => 'Complete - Awaiting Pickup', 'sub' => 'Customer can be contacted', 'count' => 2, 'tone' => 'good'],
       ['name' => 'Customer notified',         'sub' => 'Awaiting acknowledgement',  'count' => 1, 'tone' => ''],
       ['name' => 'Waiting customer response', 'sub' => '> 24 hours',                'count' => 1, 'tone' => 'alert'],
       ['name' => 'Delivery paperwork open',   'sub' => 'Needs CS to finalize',      'count' => 2, 'tone' => 'alert'],

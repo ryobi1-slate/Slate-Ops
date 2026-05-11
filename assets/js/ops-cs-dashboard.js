@@ -31,7 +31,7 @@
   var pillLabel = {
     parts:   'Waiting on Parts',
     qc:      'Pending QC',
-    pickup:  'Ready for Pickup',
+    pickup:  'Complete - Awaiting Pickup',
     blocked: 'Blocked',
     ready:   'Ready'
   };
@@ -496,15 +496,31 @@
     return ps === 'HOLD' || ps === 'NOT_READY';
   }
 
+  function betaStatusKey(status) {
+    var st = String(status || '').toUpperCase().trim().replace(/\s+/g, '_').replace(/-/g, '_');
+    switch (st) {
+      case 'PENDING_QC':
+      case 'READY_FOR_CLOSEOUT':
+      case 'READY_CLOSEOUT':
+        return 'QC';
+      case 'READY_FOR_PICKUP':
+      case 'COMPLETE_AWAITING_PICKUP':
+      case 'COMPLETED_AWAITING_PICKUP':
+        return 'AWAITING_PICKUP';
+      default:
+        return st;
+    }
+  }
+
   // Shared display helpers used by the row, the detail panel, and the
   // overview's existing pills.
   function statusPillClass(status) {
-    switch (status) {
+    switch (betaStatusKey(status)) {
       case 'BLOCKED':         return 'pill--danger';
       case 'SCHEDULED':       return 'pill--info';
       case 'IN_PROGRESS':     return 'pill--info';
-      case 'QC':
-      case 'PENDING_QC':      return 'pill--warn';
+      case 'QC':              return 'pill--warn';
+      case 'AWAITING_PICKUP': return 'pill--pickup';
       case 'READY_FOR_BUILD': return 'pill--info';
       default:                return 'pill--neutral';
     }
@@ -533,13 +549,15 @@
   }
 
   function betaPassesChip(j) {
+    var status = betaStatusKey(j.status);
     switch (betaState.filter) {
       case 'all':        return true;
-      case 'ready':      return j.status === 'READY_FOR_BUILD';
-      case 'scheduled':  return j.status === 'SCHEDULED';
-      case 'inprog':     return j.status === 'IN_PROGRESS';
-      case 'blocked':    return j.status === 'BLOCKED';
-      case 'closeout':   return j.status === 'QC' || j.status === 'PENDING_QC';
+      case 'ready':      return status === 'READY_FOR_BUILD';
+      case 'scheduled':  return status === 'SCHEDULED';
+      case 'inprog':     return status === 'IN_PROGRESS';
+      case 'blocked':    return status === 'BLOCKED';
+      case 'closeout':   return status === 'QC';
+      case 'pickup':     return status === 'AWAITING_PICKUP';
       case 'unassigned': return !j.assigned_user_id;
       case 'parts':      return betaIsPartsHold(j.parts_status);
       default:           return true;
@@ -557,14 +575,16 @@
   }
 
   function betaCounts(jobs) {
-    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, unassigned: 0, parts: 0 };
+    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, pickup: 0, unassigned: 0, parts: 0 };
     jobs.forEach(function (j) {
+      var status = betaStatusKey(j.status);
       c.all++;
-      if (j.status === 'READY_FOR_BUILD')                  c.ready++;
-      if (j.status === 'SCHEDULED')                        c.scheduled++;
-      if (j.status === 'IN_PROGRESS')                      c.inprog++;
-      if (j.status === 'BLOCKED')                          c.blocked++;
-      if (j.status === 'QC' || j.status === 'PENDING_QC')  c.closeout++;
+      if (status === 'READY_FOR_BUILD')                    c.ready++;
+      if (status === 'SCHEDULED')                          c.scheduled++;
+      if (status === 'IN_PROGRESS')                        c.inprog++;
+      if (status === 'BLOCKED')                            c.blocked++;
+      if (status === 'QC')                                 c.closeout++;
+      if (status === 'AWAITING_PICKUP')                    c.pickup++;
       if (!j.assigned_user_id)                             c.unassigned++;
       if (betaIsPartsHold(j.parts_status))                 c.parts++;
     });
@@ -1361,6 +1381,24 @@
     var loadFailed = !det && !detailLoading
       ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
       : '';
+    var status = betaStatusKey(j.status);
+    var canMarkAwaiting = status === 'QC';
+    var canMarkClosed = status === 'AWAITING_PICKUP';
+    var closeoutHtml = (canMarkAwaiting || canMarkClosed)
+      ? ''
+        + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-closeout">'
+        +   '<h4 class="cs-beta-detail-section__title">Closeout</h4>'
+        +   (canMarkAwaiting
+              ? '<div class="cs-beta-closeout__checks">'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="jacket_received"><span>Jacket received</span></label>'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="invoice_completed"><span>Invoice completed</span></label>'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="notified"><span>Customer/dealer notified</span></label>'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="pickup_arranged"><span>Pickup or delivery arranged</span></label>'
+              + '</div>'
+              : '<div class="cs-beta-detail-section__hint cs-beta-closeout__hint">Confirm pickup or delivery handoff is complete before closing.</div>')
+        +   '<textarea class="cs-beta-detail-note cs-beta-closeout__note" data-closeout-note maxlength="1000" placeholder="Closeout note…"></textarea>'
+        + '</section>'
+      : '';
 
     grid.innerHTML = ''
       + loadingNote
@@ -1461,7 +1499,7 @@
       +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
       +       '<dt>Status</dt><dd><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></dd>'
       +     '</dl>'
-      +     '<div class="cs-beta-detail-section__hint">Status transitions are managed via Tech / QC workflows; not editable here.</div>'
+      +     '<div class="cs-beta-detail-section__hint">Status is read-only. Use the closeout actions below when the job is ready for the next CS step.</div>'
       +   '</div>'
       + '</section>'
 
@@ -1477,9 +1515,17 @@
           : '<div class="cs-beta-detail-loading">Loading…</div>')
       + '</section>'
 
+      + closeoutHtml
+
       + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
       +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
       +   '<div class="cs-beta-detail-actions">'
+      +     (canMarkAwaiting
+              ? '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-mark-awaiting"><span class="material-symbols-outlined">inventory</span>Mark Complete - Awaiting Pickup</button>'
+              : '')
+      +     (canMarkClosed
+              ? '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-mark-closed"><span class="material-symbols-outlined">task_alt</span>Mark Closed</button>'
+              : '')
       +     '<button type="button" class="slate-btn slate-btn--secondary" data-action="beta-discard-row"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">undo</span>'
       +       'Discard row edits'
@@ -1509,9 +1555,76 @@
         if (t) {
           e.preventDefault();
           saveBeta();
+          return;
+        }
+        t = e.target.closest('[data-action="beta-mark-awaiting"]');
+        if (t) {
+          e.preventDefault();
+          betaCloseoutAction('AWAITING_PICKUP');
+          return;
+        }
+        t = e.target.closest('[data-action="beta-mark-closed"]');
+        if (t) {
+          e.preventDefault();
+          betaCloseoutAction('COMPLETE');
         }
       });
     }
+  }
+
+  function betaCloseoutPayload(grid) {
+    var checks = {};
+    $$('[data-closeout-check]', grid).forEach(function (input) {
+      checks[input.getAttribute('data-closeout-check')] = !!input.checked;
+    });
+    var noteEl = grid.querySelector('[data-closeout-note]');
+    return {
+      closeout_checklist: checks,
+      closeout_note: noteEl ? noteEl.value.trim() : ''
+    };
+  }
+
+  function betaCloseoutAction(status) {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+    if (betaState.edits[id]) {
+      showToast('Save or discard row edits before changing status.');
+      return;
+    }
+
+    var payload = betaCloseoutPayload(grid);
+    payload.status = status;
+
+    var btn = grid.querySelector(status === 'COMPLETE' ? '[data-action="beta-mark-closed"]' : '[data-action="beta-mark-awaiting"]');
+    if (btn) btn.disabled = true;
+    fetch(api.root + '/jobs/' + id, {
+      method: 'PATCH',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce':   api.nonce,
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Status update failed');
+        }
+        showToast(status === 'COMPLETE' ? 'Marked Closed' : 'Marked Complete - Awaiting Pickup');
+        betaState.loaded = false;
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Status update failed');
+        if (btn) btn.disabled = false;
+      });
   }
 
   function betaDetailInputHandler(e) {

@@ -117,13 +117,14 @@
     IN_PROGRESS:      'In Progress',
     BLOCKED:          'Blocked',
     QC:               'Ready for Closeout',
+    AWAITING_PICKUP:  'Complete - Awaiting Pickup',
     COMPLETE:         'Closed',
     ON_HOLD:          'On Hold',
     CANCELLED:        'Cancelled',
     // Legacy aliases
     QUEUED:           'Scheduled',
     PENDING_QC:       'Ready for Closeout',
-    READY_FOR_PICKUP: 'Closed',
+    READY_FOR_PICKUP: 'Complete - Awaiting Pickup',
     DELAYED:          'Blocked',
   };
 
@@ -134,7 +135,8 @@
 
   function badgeClass(status){
     const s = (status||'').toUpperCase();
-    if (s === 'COMPLETE' || s === 'READY_FOR_PICKUP') return 'complete';
+    if (s === 'COMPLETE') return 'complete';
+    if (s === 'AWAITING_PICKUP' || s === 'READY_FOR_PICKUP') return 'pickup';
     if (s === 'CANCELLED') return 'cancelled';
     if (s === 'NEEDS_SO') return 'needs-so';
     if (s === 'IN_PROGRESS') return 'progress';
@@ -484,7 +486,7 @@
 
     const qcPassBtn = document.getElementById('qc-pass-btn');
     if(qcPassBtn) qcPassBtn.onclick = async ()=>{
-      if(!confirm('QC Pass — mark job Closed?')) return;
+      if(!confirm('QC Pass — mark job Complete - Awaiting Pickup?')) return;
       qcPassBtn.disabled = true; qcPassBtn.textContent = '…';
       try{ await api.reviewQC(job.job_id, 'PASS', ''); toast('QC Passed'); router(); }
       catch(e){ alert(e.message); qcPassBtn.disabled = false; qcPassBtn.textContent = 'QC Pass'; }
@@ -569,7 +571,7 @@
 
     const estHours = job.estimated_minutes ? (job.estimated_minutes / 60).toFixed(1) : '';
 
-    const statusOpts = ['INTAKE','READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','READY_FOR_PICKUP','COMPLETE','DELAYED','ON_HOLD'].map(s =>
+    const statusOpts = ['INTAKE','READY_FOR_BUILD','QUEUED','IN_PROGRESS','PENDING_QC','AWAITING_PICKUP','COMPLETE','DELAYED','ON_HOLD'].map(s =>
       `<option value="${s}"${job.status===s?' selected':''}>${fmtStatus(s)}</option>`
     ).join('');
 
@@ -1274,15 +1276,12 @@ async function loadCreateJobInto(selector){
 
 // ── CS v2 helpers ────────────────────────────────────────────────────────────
 
-const CS_ACTIVE_STATUSES = ['INTAKE','NEEDS_SO','READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','BLOCKED','QC','ON_HOLD','QUEUED','PENDING_QC','DELAYED'];
+const CS_ACTIVE_STATUSES = ['INTAKE','NEEDS_SO','READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','BLOCKED','QC','AWAITING_PICKUP','ON_HOLD','QUEUED','PENDING_QC','READY_FOR_PICKUP','DELAYED'];
 // Phase 0: NEEDS_SO removed from CS_SETTABLE_STATUSES — hidden from CS dropdown until SO workflow is re-enabled.
-// COMPLETE (Closed) included so CS/Supervisor can close out a job after paper sign-off (from Ready for Closeout).
-const CS_SETTABLE_STATUSES = ['INTAKE','READY_FOR_BUILD','SCHEDULED','BLOCKED','ON_HOLD','COMPLETE','CANCELLED'];
-// IN_PROGRESS is Tech-set and not CS-changeable. COMPLETE / READY_FOR_PICKUP
-// are terminal — kept readonly so CS cannot reopen Closed jobs (Phase 0).
-// QC / PENDING_QC (Ready for Closeout) are intentionally NOT readonly so
-// CS/Supervisor can move them to Closed via the dropdown.
-const CS_READONLY_STATUSES = ['IN_PROGRESS','COMPLETE','READY_FOR_PICKUP'];
+// Closeout moves QC to AWAITING_PICKUP, then AWAITING_PICKUP to COMPLETE.
+const CS_SETTABLE_STATUSES = ['INTAKE','READY_FOR_BUILD','SCHEDULED','BLOCKED','AWAITING_PICKUP','ON_HOLD','COMPLETE','CANCELLED'];
+// IN_PROGRESS is Tech-set and not CS-changeable. COMPLETE is terminal.
+const CS_READONLY_STATUSES = ['IN_PROGRESS','COMPLETE'];
 
 const BLOCK_REASONS  = ['PARTS','ENGINEERING','CUSTOMER','LABOR','OTHER'];
 const HOLD_REASONS   = ['CUSTOMER_CHANGE','BILLING','ESCALATION','SCOPE_REVIEW','VENDOR_DISPUTE','WAITING_ON_VAN','OTHER'];
@@ -1330,8 +1329,11 @@ function csFilterJobs(jobs, filter, partsFilter) {
     case 'on_hold':
       list = jobs.filter(j => s(j) === 'ON_HOLD');
       break;
+    case 'pickup':
+      list = jobs.filter(j => ['AWAITING_PICKUP','READY_FOR_PICKUP'].includes(s(j)));
+      break;
     case 'complete':
-      list = jobs.filter(j => ['COMPLETE','READY_FOR_PICKUP'].includes(s(j)));
+      list = jobs.filter(j => s(j) === 'COMPLETE');
       break;
     case 'cancelled':
       list = jobs.filter(j => s(j) === 'CANCELLED');
@@ -1367,6 +1369,7 @@ async function loadCS() {
   const kpiIntake     = allJobs.filter(j => (j.status||'').toUpperCase() === 'INTAKE').length;
   const kpiRFB        = allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length;
   const kpiQC         = allJobs.filter(j => ['QC','PENDING_QC'].includes((j.status||'').toUpperCase())).length;
+  const kpiPickup     = allJobs.filter(j => ['AWAITING_PICKUP','READY_FOR_PICKUP'].includes((j.status||'').toUpperCase())).length;
 
   let activeFilter  = 'all_active';
   let partsFilter   = '';
@@ -1423,7 +1426,8 @@ async function loadCS() {
       {id:'scheduled',    label:'Scheduled',           count: allJobs.filter(j => ['SCHEDULED','QUEUED'].includes((j.status||'').toUpperCase())).length},
       {id:'blocked',      label:'Blocked',             count: allJobs.filter(j => ['BLOCKED','DELAYED'].includes((j.status||'').toUpperCase())).length},
       {id:'on_hold',      label:'On Hold',             count: allJobs.filter(j => (j.status||'').toUpperCase() === 'ON_HOLD').length},
-      {id:'complete',     label:'Closed',              count: allJobs.filter(j => ['COMPLETE','READY_FOR_PICKUP'].includes((j.status||'').toUpperCase())).length},
+      {id:'pickup',       label:'Awaiting Pickup',     count: kpiPickup},
+      {id:'complete',     label:'Closed',              count: allJobs.filter(j => (j.status||'').toUpperCase() === 'COMPLETE').length},
       {id:'cancelled',    label:'Cancelled',           count: allJobs.filter(j => (j.status||'').toUpperCase() === 'CANCELLED').length},
     ];
     const filterTabs = filters.map(f =>
@@ -2865,7 +2869,8 @@ async function loadExecutive(){
     { label: 'Queued', value: countByStatus(['QUEUED']) },
     { label: 'In Progress', value: countByStatus(['IN_PROGRESS']) },
     { label: 'Ready for Closeout', value: countByStatus(['PENDING_QC','QC']) },
-    { label: 'Closed', value: countByStatus(['COMPLETE','READY_FOR_PICKUP']) },
+    { label: 'Awaiting Pickup', value: countByStatus(['AWAITING_PICKUP','READY_FOR_PICKUP']) },
+    { label: 'Closed', value: countByStatus(['COMPLETE']) },
   ];
 
   const flowHealth = [
@@ -2982,7 +2987,7 @@ async function loadExecutive(){
 
 async function loadQC(){
   const [pendingResp, allResp] = await Promise.all([
-    api.jobs('?limit=300&status=PENDING_QC'),
+    api.jobs('?limit=300&status_in=QC,PENDING_QC'),
     api.jobs('?limit=300'),
   ]);
   const jobs      = pendingResp.jobs || [];
@@ -3114,7 +3119,7 @@ async function loadQC(){
   function rebindQcActions() {
     $$('[data-qc-pass]').forEach(btn => {
       btn.onclick = async () => {
-        if (!confirm('QC Pass — mark job Complete?')) return;
+        if (!confirm('QC Pass — mark job Complete - Awaiting Pickup?')) return;
         const id = parseInt(btn.getAttribute('data-qc-pass'), 10);
         btn.disabled = true; btn.textContent = '…';
         try { await api.reviewQC(id, 'PASS', ''); toast('QC Passed'); router(); }

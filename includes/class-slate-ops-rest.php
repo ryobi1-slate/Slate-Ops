@@ -1527,13 +1527,13 @@ foreach ($rows as &$r) {
     // CS + supervisor: Job Status and Lead Tech (per CS v2 rules).
     if ($is_cs || $is_supervisor) {
       if (array_key_exists('status', $body)) {
-        $ns = strtoupper(sanitize_text_field((string)($body['status'] ?? '')));
-        if ($ns !== '' && $ns !== ($job['status'] ?? '')) {
-          $cur = (string)($job['status'] ?? '');
+        $ns = Slate_Ops_Statuses::normalize(sanitize_text_field((string)($body['status'] ?? '')));
+        $cur = Slate_Ops_Statuses::normalize((string)($job['status'] ?? ''));
+        if ($ns !== '' && $ns !== $cur) {
 
           // Phase 0: CS may not manually set IN_PROGRESS or Ready for Closeout (QC).
           // Those states come from Tech/QC workflow actions only.
-          // Closed (COMPLETE) is CS-settable — CS/Supervisor closes after paper sign-off.
+          // Closeout states are CS-settable via controlled actions.
           $cs_restricted = [
             Slate_Ops_Statuses::IN_PROGRESS,
             Slate_Ops_Statuses::QC,
@@ -1701,6 +1701,13 @@ foreach ($rows as &$r) {
 
     foreach ($audits as [$field, $old, $new]) {
       self::audit('job', $job_id, 'update', $field, (string)$old, (string)$new, 'Field edited');
+    }
+
+    if (array_key_exists('status', $update)) {
+      $closeout_note = self::closeout_note_from_body($body, (string)$update['status']);
+      if ($closeout_note !== '') {
+        self::audit('job', $job_id, 'note', 'status', (string)$job['status'], (string)$update['status'], $closeout_note);
+      }
     }
 
     $job2 = self::job_by_id($job_id);
@@ -2180,6 +2187,7 @@ if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status'=>40
 
 $new_status = strtoupper(sanitize_text_field($body['status'] ?? ''));
 if (!$new_status) return new WP_Error('bad_request', 'Missing status', ['status'=>400]);
+$new_status = Slate_Ops_Statuses::normalize($new_status);
 
 $detail = sanitize_text_field($body['status_detail'] ?? '');
 $delay_reason = sanitize_key($body['delay_reason'] ?? '');
@@ -2191,7 +2199,16 @@ $now = Slate_Ops_Utils::now_gmt();
 $current_job = self::job_by_id($job_id);
 if (!$current_job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-$current_status = (string)($current_job['status'] ?? '');
+$current_status = Slate_Ops_Statuses::normalize((string)($current_job['status'] ?? ''));
+
+if (in_array($new_status, [Slate_Ops_Statuses::AWAITING_PICKUP, Slate_Ops_Statuses::COMPLETE], true)) {
+  $can_closeout = current_user_can(Slate_Ops_Utils::CAP_CS)
+    || current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+    || current_user_can(Slate_Ops_Utils::CAP_ADMIN);
+  if (!$can_closeout) {
+    return new WP_Error('forbidden_closeout_status', 'Only CS or Admin can close out jobs.', ['status' => 403]);
+  }
+}
 
 // Centralized transition guard — blocks all invalid status jumps.
 if (!Slate_Ops_Statuses::is_valid_transition($current_status, $new_status)) {
@@ -2280,7 +2297,11 @@ if ($priority >= 1 && $priority <= 5) {
 
 $wpdb->update($t, $update, ['job_id' => $job_id]);
 
-self::audit('job', $job_id, 'update', 'status', null, wp_json_encode($update), 'Status updated');
+self::audit('job', $job_id, 'update', 'status', $current_status, $new_status, 'Status updated');
+$closeout_note = self::closeout_note_from_body($body, $new_status);
+if ($closeout_note !== '') {
+  self::audit('job', $job_id, 'note', 'status', $current_status, $new_status, $closeout_note);
+}
 
 $job = self::job_by_id($job_id);
 self::maybe_push_dealer_portal_status($job);
@@ -2458,8 +2479,8 @@ return self::get_job(['id' => $job_id]);
     }
 
     if ($decision === 'PASS') {
-      $new_status = Slate_Ops_Statuses::COMPLETE;
-      $audit_note = 'QC passed — job closed';
+      $new_status = Slate_Ops_Statuses::AWAITING_PICKUP;
+      $audit_note = 'QC passed - awaiting pickup closeout';
     } else {
       $new_status = Slate_Ops_Statuses::IN_PROGRESS;
       $audit_note = 'QC failed: ' . $notes;
@@ -2510,7 +2531,8 @@ return self::get_job(['id' => $job_id]);
       Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::BLOCKED,
       Slate_Ops_Statuses::QUEUED, // legacy alias
     ];
-    if (!in_array($job['status'], $startable, true)) {
+    $job_status = Slate_Ops_Statuses::normalize((string)($job['status'] ?? ''));
+    if (!in_array($job_status, array_map([Slate_Ops_Statuses::class, 'normalize'], $startable), true)) {
       return new WP_Error('invalid_status', 'Job cannot be started in its current status', ['status' => 422]);
     }
 
@@ -2559,7 +2581,7 @@ return self::get_job(['id' => $job_id]);
     }
 
     // Set job to IN_PROGRESS if needed (inline update to avoid REST req context issues).
-    if (!in_array($job['status'], ['IN_PROGRESS','QC','PENDING_QC','COMPLETE'], true)) {
+    if (!in_array($job_status, [Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::QC, Slate_Ops_Statuses::AWAITING_PICKUP, Slate_Ops_Statuses::COMPLETE], true)) {
       $t    = $wpdb->prefix . 'slate_ops_jobs';
       $now2 = Slate_Ops_Utils::now_gmt();
       $wpdb->update($t, [
@@ -3112,6 +3134,43 @@ if ($row) {
     ]);
   }
 
+  private static function closeout_note_from_body($body, $new_status) {
+    $new_status = Slate_Ops_Statuses::normalize((string)$new_status);
+    if (!in_array($new_status, [Slate_Ops_Statuses::AWAITING_PICKUP, Slate_Ops_Statuses::COMPLETE], true)) {
+      return '';
+    }
+
+    $label = $new_status === Slate_Ops_Statuses::AWAITING_PICKUP
+      ? 'Marked Complete - Awaiting Pickup'
+      : 'Marked Closed';
+
+    $note = trim(sanitize_textarea_field((string)($body['closeout_note'] ?? $body['note'] ?? '')));
+    $checks = $body['closeout_checklist'] ?? [];
+    $done = [];
+    if (is_array($checks)) {
+      $labels = [
+        'jacket_received' => 'Jacket received',
+        'invoice_completed' => 'Invoice completed',
+        'notified' => 'Customer/dealer notified',
+        'pickup_arranged' => 'Pickup or delivery arranged',
+      ];
+      foreach ($labels as $key => $text) {
+        if (!empty($checks[$key])) {
+          $done[] = $text;
+        }
+      }
+    }
+
+    $parts = [$label];
+    if (!empty($done)) {
+      $parts[] = 'Checklist: ' . implode(', ', $done);
+    }
+    if ($note !== '') {
+      $parts[] = 'Note: ' . $note;
+    }
+    return implode(' | ', $parts);
+  }
+
   private static function maybe_create_clickup_task($job) {
     if (!$job || !empty($job['clickup_task_id'])) return;
 
@@ -3615,6 +3674,7 @@ self::maybe_push_dealer_portal_status($job);
          COUNT(*) AS active_jobs,
          SUM(status = 'IN_PROGRESS')                       AS in_progress,
          SUM(status IN ('QC','PENDING_QC'))                AS pending_qc,
+         SUM(status IN ('AWAITING_PICKUP','READY_FOR_PICKUP','COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')) AS awaiting_pickup,
          SUM(status IN ('BLOCKED','DELAYED'))              AS blocked,
          COALESCE(SUM(COALESCE(estimated_minutes,0)),0)    AS total_estimated_minutes
        FROM $jobs_t
@@ -3637,6 +3697,8 @@ self::maybe_push_dealer_portal_status($job);
       'in_progress'              => (int)($ov['in_progress']        ?? 0),
       'pending_qc'               => (int)($ov['pending_qc']         ?? 0), // kept for backward compat, maps to QC
       'qc'                       => (int)($ov['pending_qc']         ?? 0),
+      'awaiting_pickup'          => (int)($ov['awaiting_pickup']    ?? 0),
+      'ready_for_pickup'         => (int)($ov['awaiting_pickup']    ?? 0),
       'blocked'                  => (int)($ov['blocked']            ?? 0),
       'total_estimated_minutes'  => $total_est,
       'total_logged_minutes'     => $total_logged,
@@ -3770,11 +3832,16 @@ self::maybe_push_dealer_portal_status($job);
     foreach ($status_rows as $r) $status_map[$r['status']] = (int)$r['cnt'];
 
     $bottlenecks = [];
-    foreach (['READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','QC','BLOCKED','ON_HOLD','CANCELLED'] as $st) {
+    foreach (['READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','QC','AWAITING_PICKUP','BLOCKED','ON_HOLD','CANCELLED'] as $st) {
       // Merge legacy aliases into v2 counts
       $cnt = $status_map[$st] ?? 0;
       if ($st === 'SCHEDULED') $cnt += ($status_map['QUEUED'] ?? 0);
       if ($st === 'QC')        $cnt += ($status_map['PENDING_QC'] ?? 0);
+      if ($st === 'AWAITING_PICKUP') {
+        $cnt += ($status_map['READY_FOR_PICKUP'] ?? 0);
+        $cnt += ($status_map['COMPLETE_AWAITING_PICKUP'] ?? 0);
+        $cnt += ($status_map['COMPLETED_AWAITING_PICKUP'] ?? 0);
+      }
       if ($st === 'BLOCKED')   $cnt += ($status_map['DELAYED'] ?? 0);
       $bottlenecks[] = ['status' => $st, 'count' => $cnt];
     }
@@ -3924,7 +3991,9 @@ self::maybe_push_dealer_portal_status($job);
       Slate_Ops_Statuses::IN_PROGRESS,
       Slate_Ops_Statuses::BLOCKED,
       Slate_Ops_Statuses::QC,
+      Slate_Ops_Statuses::AWAITING_PICKUP,
       Slate_Ops_Statuses::PENDING_QC,
+      Slate_Ops_Statuses::READY_FOR_PICKUP,
     ];
   }
 
@@ -3962,14 +4031,17 @@ self::maybe_push_dealer_portal_status($job);
 
       $due_date = $r['promised_date'] ?: ($r['target_ship_date'] ?: $r['requested_date']);
 
+      $canonical_status = Slate_Ops_Statuses::normalize((string) $r['status']);
+
       $out[] = [
         'id'                => (int) $r['job_id'],
         'job_number'        => $r['so_number'] ?: ('JOB-' . (int) $r['job_id']),
         'so_number'         => $r['so_number'],
         'customer'          => $r['customer_name'],
         'dealer'            => $r['dealer_name'],
-        'status'            => $r['status'],
-        'status_label'      => Slate_Ops_Statuses::label((string) $r['status']),
+        'status'            => $canonical_status,
+        'status_raw'        => $r['status'],
+        'status_label'      => Slate_Ops_Statuses::label($canonical_status),
         'parts_status'      => $r['parts_status'],
         'due_date'          => $due_date,
         'promised_date'     => $r['promised_date'],

@@ -702,7 +702,8 @@ KEY awaiting_idx (awaiting_direction)
     $wpdb->query("UPDATE $jobs SET status = 'SCHEDULED'        WHERE status IN ('QUEUED','SCHEDULED')");
     $wpdb->query("UPDATE $jobs SET status = 'BLOCKED'          WHERE status = 'DELAYED'");
     $wpdb->query("UPDATE $jobs SET status = 'QC'               WHERE status = 'PENDING_QC'");
-    $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status IN ('COMPLETE','COMPLETED','READY_FOR_PICKUP','COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
+    $wpdb->query("UPDATE $jobs SET status = 'AWAITING_PICKUP'  WHERE status IN ('READY_FOR_PICKUP','COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
+    $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status IN ('COMPLETE','COMPLETED')");
     // Migrate scheduling_status column to match canonical job status values.
     $wpdb->query("UPDATE $jobs SET scheduling_status = 'READY_FOR_BUILD' WHERE scheduling_status = 'APPROVED_FOR_SCHEDULING'");
 

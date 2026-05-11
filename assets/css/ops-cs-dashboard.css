@@ -1333,6 +1333,20 @@ body.cs-beta-detail-modal-open { overflow: hidden; }
   gap: 8px;
 }
 .cs-beta-detail-actions .btn { text-decoration: none; }
+.cs-beta-closeout__checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.cs-beta-closeout__hint {
+  margin: 0;
+}
+.cs-beta-closeout__note {
+  min-height: 54px;
+}
+@media (max-width: 700px) {
+  .cs-beta-closeout__checks { grid-template-columns: 1fr; }
+}
 
 /* Editable form fields (Phase 4). The per-row dirty marker lives on the
    row in the list; on individual inputs we use a subtle Sand-wash tint

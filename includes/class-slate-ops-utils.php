@@ -467,8 +467,8 @@ class Slate_Ops_Utils {
       Slate_Ops_Statuses::RETURNED_TO_CS,
     ];
     if (in_array($canonical, $waiting, true)) return 'waiting';
-    if (in_array($canonical, [Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::PENDING_QC], true)) return 'in_process';
-    if (in_array($canonical, [Slate_Ops_Statuses::COMPLETE, Slate_Ops_Statuses::READY_FOR_PICKUP], true)) return 'complete';
+    if (in_array($canonical, [Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::QC, Slate_Ops_Statuses::AWAITING_PICKUP], true)) return 'in_process';
+    if ($canonical === Slate_Ops_Statuses::COMPLETE) return 'complete';
     return 'waiting';
   }
 

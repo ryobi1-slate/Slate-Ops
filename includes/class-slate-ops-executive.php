@@ -360,6 +360,7 @@ class Slate_Ops_Executive {
 			'BLOCKED'         => 'crit',
 			'IN PROGRESS'     => 'ok',
 			'QC'              => 'watch',
+			'AWAITING_PICKUP' => 'ok',
 			'COMPLETE'        => 'muted',
 			'READY FOR BUILD' => 'normal',
 			'SCHEDULED'       => 'normal',

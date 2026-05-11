@@ -123,7 +123,7 @@ $health_tone_class_map = [
         <div class="ops-kpi__sub">Needs supervisor sign-off</div>
       </div>
       <div class="ops-kpi" data-kpi="pickup">
-        <div class="ops-kpi__label">Ready for Pickup</div>
+        <div class="ops-kpi__label">Awaiting Pickup</div>
         <div class="ops-kpi__value" data-target="<?php echo esc_attr((string) $kpis['pickup']); ?>"><?php echo esc_html((string) $kpis['pickup']); ?></div>
         <div class="ops-kpi__sub">Customer can be notified</div>
       </div>
@@ -344,6 +344,9 @@ $health_tone_class_map = [
           </button>
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
             <span>Ready for Closeout</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
+          </button>
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="pickup" role="tab" aria-selected="false">
+            <span>Awaiting Pickup</span><span class="cs-beta-chip__count" data-count="pickup">0</span>
           </button>
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
             <span>Unassigned</span><span class="cs-beta-chip__count" data-count="unassigned">0</span>
