@@ -734,6 +734,7 @@
   font-size: 10.5px;
   color: var(--slate-ink-subtle);
   font-variant-numeric: tabular-nums;
+  margin-left: 2px;
 }
 .cs-beta-chip.is-active .cs-beta-chip__count { color: var(--slate-sand); }
 
