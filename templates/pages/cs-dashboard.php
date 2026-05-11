@@ -78,7 +78,7 @@ $health_tone_class_map = [
           <button class="range-chip" data-range="week">This week</button>
           <button class="range-chip" data-range="all">All open</button>
         </div>
-        <button class="btn btn--secondary" id="refresh-btn" title="Refresh data">
+        <button class="slate-btn slate-btn--secondary" id="refresh-btn" title="Refresh data">
           <span class="material-symbols-outlined">refresh</span>
           <span id="refresh-label">Refreshed 2m ago</span>
         </button>
@@ -296,15 +296,15 @@ $health_tone_class_map = [
     <div class="ops-cs-workspace-beta cs-beta">
       <header class="cs-beta__header">
         <div class="cs-beta__actions">
-          <button type="button" class="btn btn--secondary" id="cs-beta-new" title="Create a new job (CS intake)">
+          <button type="button" class="slate-btn slate-btn--accent" id="cs-beta-new" title="Create a new job (CS intake)">
             <span class="material-symbols-outlined">add</span>
             New Job
           </button>
-          <button type="button" class="btn btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
+          <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
             <span class="material-symbols-outlined">low_priority</span>
             Normalize Order
           </button>
-          <button type="button" class="btn btn--secondary" id="cs-beta-refresh" title="Reload queue data">
+          <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-refresh" title="Reload queue data">
             <span class="material-symbols-outlined">refresh</span>
             Refresh
           </button>
@@ -315,12 +315,12 @@ $health_tone_class_map = [
             || (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'local');
           ?>
           <?php if ($cs_demo_local && current_user_can(Slate_Ops_Utils::CAP_ADMIN)) : ?>
-          <button type="button" class="btn btn--secondary cs-beta__demo-reset" id="cs-beta-demo-reset" title="Reset the local CS demo queue">
+          <button type="button" class="slate-btn slate-btn--secondary cs-beta__demo-reset" id="cs-beta-demo-reset" title="Reset the local CS demo queue">
             <span class="material-symbols-outlined">restart_alt</span>
             Reset demo
           </button>
           <?php endif; ?>
-          <button type="button" class="btn btn--primary" id="cs-beta-save" disabled>
+          <button type="button" class="slate-btn slate-btn--primary" id="cs-beta-save" disabled>
             <span class="material-symbols-outlined">save</span>
             <span id="cs-beta-save-label">Save Changes</span>
           </button>
@@ -427,11 +427,11 @@ $health_tone_class_map = [
     </div>
   </div>
   <div class="ops-drawer__foot">
-    <button class="btn btn--primary" id="drawer-action-btn">
+    <button class="slate-btn slate-btn--primary" id="drawer-action-btn">
       <span class="material-symbols-outlined">check</span>
       <span id="drawer-action-btn-label"><?php echo esc_html($priorities[0]['action']); ?></span>
     </button>
-    <button class="btn btn--secondary">
+    <button class="slate-btn slate-btn--secondary">
       <span class="material-symbols-outlined">edit_note</span>
       Add note
     </button>
@@ -529,8 +529,8 @@ $health_tone_class_map = [
       </div>
 
       <footer class="cs-beta-modal__foot">
-        <button type="button" class="btn btn--secondary" data-action="cs-beta-newjob-close">Cancel</button>
-        <button type="submit" class="btn btn--primary" id="cs-beta-newjob-submit">
+        <button type="button" class="slate-btn slate-btn--secondary" data-action="cs-beta-newjob-close">Cancel</button>
+        <button type="submit" class="slate-btn slate-btn--primary" id="cs-beta-newjob-submit">
           <span class="material-symbols-outlined">add</span>
           <span id="cs-beta-newjob-submit-label">Create Job</span>
         </button>
