@@ -28,6 +28,10 @@
   box-sizing: border-box;
 }
 
+body.ops-page-purchasing .ops-header__center {
+  display: none;
+}
+
 /* ─── 2. Preview mode banner ─── */
 .pur-preview-banner {
   display: flex;
