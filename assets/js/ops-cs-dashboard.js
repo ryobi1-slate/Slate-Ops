@@ -1651,7 +1651,7 @@
       options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
       addOption(
         'READY_FOR_BUILD',
-        readyDeps.length ? ('Ready for Build - needs ' + readyDeps.join(', ')) : 'Ready for Build',
+        'Ready for Build',
         status !== 'READY_FOR_BUILD' && readyDeps.length > 0
       );
     } else if (status === 'QC') {
