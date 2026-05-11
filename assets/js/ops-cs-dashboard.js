@@ -1383,11 +1383,10 @@
       ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
       : '';
     var status = betaStatusKey(j.status);
-    var hasSoNumber = !!String(j.so_number || '').trim();
-    var canMarkNeedsSo = status === 'INTAKE' && !hasSoNumber;
-    var canMarkReadyForBuild = (status === 'INTAKE' || status === 'NEEDS_SO') && hasSoNumber;
     var canMarkAwaiting = status === 'QC';
     var canMarkClosed = status === 'AWAITING_PICKUP';
+    var readyDeps = betaReadyForBuildMissing(id, j);
+    var statusControlHtml = betaStatusControlHtml(status, j.status_label || j.status || '—', readyDeps);
     var closeoutHtml = (canMarkAwaiting || canMarkClosed)
       ? ''
         + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-closeout">'
@@ -1501,9 +1500,9 @@
                 : readOnly(partsLabel(j.parts_status)))
       +     '</label>'
       +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
-      +       '<dt>Status</dt><dd><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></dd>'
+      +       '<dt>Status</dt><dd>' + statusControlHtml + '</dd>'
       +     '</dl>'
-      +     '<div class="cs-beta-detail-section__hint">Status is read-only. CS actions are available before build and after tech completion.</div>'
+      +     '<div class="cs-beta-detail-section__hint">CS controls status before build and after tech completion. Tech owns the execution statuses.</div>'
       +   '</div>'
       + '</section>'
 
@@ -1524,18 +1523,6 @@
       + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
       +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
       +   '<div class="cs-beta-detail-actions">'
-      +     (canMarkNeedsSo
-              ? '<button type="button" class="slate-btn slate-btn--secondary" data-action="beta-mark-needs-so"><span class="material-symbols-outlined">assignment_late</span>Mark Needs SO</button>'
-              : '')
-      +     (canMarkReadyForBuild
-              ? '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-mark-ready-build"><span class="material-symbols-outlined">construction</span>Mark Ready for Build</button>'
-              : '')
-      +     (canMarkAwaiting
-              ? '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-mark-awaiting"><span class="material-symbols-outlined">inventory</span>Mark Complete - Awaiting Pickup</button>'
-              : '')
-      +     (canMarkClosed
-              ? '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-mark-closed"><span class="material-symbols-outlined">task_alt</span>Mark Closed</button>'
-              : '')
       +     '<button type="button" class="slate-btn slate-btn--secondary" data-action="beta-discard-row"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">undo</span>'
       +       'Discard row edits'
@@ -1567,31 +1554,56 @@
           saveBeta();
           return;
         }
-        t = e.target.closest('[data-action="beta-mark-needs-so"]');
-        if (t) {
-          e.preventDefault();
-          betaStatusAction('NEEDS_SO');
-          return;
-        }
-        t = e.target.closest('[data-action="beta-mark-ready-build"]');
-        if (t) {
-          e.preventDefault();
-          betaStatusAction('READY_FOR_BUILD');
-          return;
-        }
-        t = e.target.closest('[data-action="beta-mark-awaiting"]');
-        if (t) {
-          e.preventDefault();
-          betaCloseoutAction('AWAITING_PICKUP');
-          return;
-        }
-        t = e.target.closest('[data-action="beta-mark-closed"]');
-        if (t) {
-          e.preventDefault();
-          betaCloseoutAction('COMPLETE');
-        }
       });
     }
+  }
+
+  function betaReadyForBuildMissing(id, j) {
+    var missing = [];
+    if (!String(j.so_number || '').trim()) missing.push('SO #');
+    if (!String(betaFieldValue(id, 'customer_name') || j.customer || '').trim()) missing.push('customer');
+    var est = parseFloat(betaFieldValue(id, 'estimated_hours'));
+    if (!isFinite(est) || est <= 0) missing.push('estimated hours');
+    if (String(betaFieldValue(id, 'parts_status') || '').toUpperCase() !== 'READY') missing.push('parts ready');
+    return missing;
+  }
+
+  function betaStatusControlHtml(status, label, readyDeps) {
+    var options = [{ value: status, label: label || status, disabled: false }];
+    var hint = '';
+
+    if (status === 'INTAKE') {
+      options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
+      options.push({
+        value: 'READY_FOR_BUILD',
+        label: readyDeps.length ? ('Ready for Build - needs ' + readyDeps.join(', ')) : 'Ready for Build',
+        disabled: readyDeps.length > 0
+      });
+    } else if (status === 'NEEDS_SO') {
+      options.push({
+        value: 'READY_FOR_BUILD',
+        label: readyDeps.length ? ('Ready for Build - needs ' + readyDeps.join(', ')) : 'Ready for Build',
+        disabled: readyDeps.length > 0
+      });
+    } else if (status === 'QC') {
+      options.push({ value: 'AWAITING_PICKUP', label: 'Complete - Awaiting Pickup', disabled: false });
+      hint = 'Complete the closeout checklist before moving to pickup.';
+    } else if (status === 'AWAITING_PICKUP') {
+      options.push({ value: 'COMPLETE', label: 'Closed', disabled: false });
+      hint = 'Close only after pickup or delivery handoff is complete.';
+    }
+
+    if (options.length === 1) {
+      return '<span class="pill ' + statusPillClass(status) + '">' + escapeHtml(label || status || '—') + '</span>';
+    }
+
+    return ''
+      + '<select class="cs-beta-field__input cs-beta-status-select" data-action="beta-status-select" aria-label="Job status">'
+      + options.map(function (opt) {
+          return '<option value="' + escapeHtml(opt.value) + '"' + (opt.value === status ? ' selected' : '') + (opt.disabled ? ' disabled' : '') + '>' + escapeHtml(opt.label) + '</option>';
+        }).join('')
+      + '</select>'
+      + (hint ? '<div class="cs-beta-detail-section__hint">' + escapeHtml(hint) + '</div>' : '');
   }
 
   function betaStatusAction(status) {
@@ -1776,7 +1788,19 @@
 
   function betaDetailInputHandler(e) {
     var t = e.target;
-    if (!t || !t.dataset || !t.dataset.field) return;
+    if (!t || !t.dataset) return;
+    if (t.dataset.action === 'beta-status-select') {
+      var nextStatus = String(t.value || '').trim();
+      var currentJob = betaJobById(betaState.selected || 0);
+      if (!nextStatus || !currentJob || nextStatus === betaStatusKey(currentJob.status || '')) return;
+      if (nextStatus === 'AWAITING_PICKUP' || nextStatus === 'COMPLETE') {
+        betaCloseoutAction(nextStatus);
+      } else {
+        betaStatusAction(nextStatus);
+      }
+      return;
+    }
+    if (!t.dataset.field) return;
     var grid = document.getElementById('cs-beta-detail-grid');
     if (!grid) return;
     var id = parseInt(grid.getAttribute('data-job-id'), 10);
@@ -1806,6 +1830,7 @@
       'queue_order',
       'queue_visible',
       'parts_status',
+      'estimated_hours',
       'customer_name',
       'dealer_name'
     ].indexOf(field) >= 0) {
