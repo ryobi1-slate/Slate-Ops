@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slate Ops — Operations Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@8..144,300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined">
+<link rel="stylesheet" href="assets/css/ops-shell.css">
+<style>
+  /* ─── Page-specific styles for Operations Dashboard ─── */
+  .ops-page {
+    padding: var(--slate-space-2xl);
+    max-width: var(--slate-shell-maxwidth);
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  /* Sub-tab nav (matches Executive page style) */
+  .ops-subnav {
+    display: flex;
+    gap: 0;
+    border-bottom: var(--slate-border);
+    margin-bottom: var(--slate-space-xl);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .ops-subnav::-webkit-scrollbar { display: none; }
+  .ops-subtab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--slate-space-md) var(--slate-space-lg);
+    border: none;
+    background: none;
+    box-shadow: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-size: var(--slate-text-sm);
+    font-weight: var(--slate-weight-medium);
+    color: var(--slate-ink-muted);
+    font-family: var(--font-sans);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 100ms ease, border-color 100ms ease;
+  }
+  .ops-subtab:hover { color: var(--slate-ink); }
+  .ops-subtab.active {
+    color: var(--slate-sage);
+    border-bottom-color: var(--slate-sage);
+  }
+  .ops-subtab .material-symbols-outlined { font-size: 16px; line-height: 1; }
+  .ops-subtab .count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--slate-ink-subtle);
+    margin-left: 2px;
+  }
+  .ops-subtab.active .count { color: var(--slate-sage); }
+
+  /* KPI grid — 4-column, matching exec page */
+  .ops-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--slate-space-md);
+    margin-bottom: var(--slate-space-xl);
+  }
+  @media (max-width: 1100px) { .ops-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px)  { .ops-kpi-grid { grid-template-columns: 1fr; } }
+
+  .ops-kpi {
+    background: var(--slate-surface);
+    border: var(--slate-border);
+    border-top: 2px solid var(--slate-sage);
+    border-radius: var(--slate-radius-md);
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 110px;
+    position: relative;
+    transition: border-color 120ms ease, transform 120ms ease;
+  }
+  .ops-kpi:hover { border-top-color: var(--slate-sage-ink); }
+  .ops-kpi--alert { border-top-color: var(--slate-arches); }
+  .ops-kpi--alert:hover { border-top-color: var(--slate-arches-ink); }
+  .ops-kpi--block { border-top-color: var(--slate-redwood); }
+  .ops-kpi--block:hover { border-top-color: var(--slate-redwood-dark); }
+
+  .ops-kpi__label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--slate-tracking-wide);
+    color: var(--slate-ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ops-kpi__dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 999px;
+    background: var(--slate-arches);
+  }
+  .ops-kpi__dot--block { background: var(--slate-redwood); }
+  .ops-kpi__value {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--slate-ink);
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    margin-top: 2px;
+  }
+  .ops-kpi__sub {
+    font-size: 11px;
+    color: var(--slate-ink-muted);
+    line-height: 1.4;
+    margin-top: auto;
+  }
+
+  /* Two-column row */
+  .ops-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: var(--slate-space-md);
+    margin-bottom: var(--slate-space-md);
+  }
+  @media (max-width: 1000px) { .ops-row { grid-template-columns: 1fr; } }
+
+  .ops-row-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--slate-space-md);
+    margin-bottom: var(--slate-space-2xl);
+  }
+  @media (max-width: 1000px) { .ops-row-3 { grid-template-columns: 1fr; } }
+
+  /* Card */
+  .ops-card {
+    background: var(--slate-surface);
+    border: var(--slate-border);
+    border-top: 2px solid var(--slate-sage);
+    border-radius: var(--slate-radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .ops-card__head {
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--slate-divider-soft);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ops-card__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--slate-ink);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+  }
+  .ops-card__meta {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: var(--slate-tracking-wide);
+    color: var(--slate-ink-subtle);
+    font-family: var(--font-mono);
+  }
+
+  /* Priorities table */
+  .ops-prio-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ops-prio-table thead th {
+    text-align: left;
+    padding: 10px 18px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--slate-tracking-wide);
+    color: var(--slate-ink-subtle);
+    background: var(--slate-surface-tint);
+    border-bottom: 1px solid var(--slate-divider-soft);
+    white-space: nowrap;
+  }
+  .ops-prio-table tbody tr {
+    border-bottom: 1px solid var(--slate-divider-soft);
+    cursor: pointer;
+    transition: background 100ms ease;
+  }
+  .ops-prio-table tbody tr:last-child { border-bottom: none; }
+  .ops-prio-table tbody tr:hover { background: var(--slate-sage-wash); }
+  .ops-prio-table tbody tr.selected { background: var(--slate-arches-wash); }
+  .ops-prio-table tbody td {
+    padding: 13px 18px;
+    color: var(--slate-ink);
+    vertical-align: middle;
+  }
+  .ops-prio-table .job-id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--slate-sage);
+  }
+  .ops-prio-table .customer {
+    color: var(--slate-ink-muted);
+    font-size: 12px;
+  }
+  .ops-prio-table .owner {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--slate-ink-muted);
+    font-weight: 500;
+  }
+  .ops-prio-table .action {
+    color: var(--slate-ink);
+    font-size: 12px;
+  }
+  .ops-prio-table .action .arrow {
+    color: var(--slate-ink-subtle);
+    margin-left: 4px;
+    transition: color 120ms, transform 120ms;
+  }
+  .ops-prio-table tbody tr:hover .action .arrow {
+    color: var(--slate-arches);
+    transform: translateX(2px);
+  }
+
+  /* Status pill */
+  .pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  .pill--parts    { background: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+  .pill--qc       { background: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+  .pill--pickup   { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
+  .pill--blocked  { background: var(--slate-flag-wash);    color: var(--slate-flag); }
+  .pill--ready    { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
+  .pill--neutral  { background: var(--slate-surface-page); color: var(--slate-ink-muted); border: 1px solid var(--slate-divider); }
+
+  /* Operational Health rows */
+  .ops-health { padding: 6px 0; }
+  .ops-health__row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--slate-divider-soft);
+  }
+  .ops-health__row:last-child { border-bottom: none; }
+  .ops-health__label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--slate-ink);
+  }
+  .ops-health__value {
+    font-size: 11px;
+    color: var(--slate-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .ops-health__bar {
+    grid-column: 1 / -1;
+    height: 4px;
+    background: var(--slate-divider-soft);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+    position: relative;
+  }
+  .ops-health__bar-fill {
+    height: 100%;
+    background: var(--slate-sage);
+    transition: width 240ms ease;
+  }
+  .ops-health__bar-fill.warn  { background: var(--slate-arches); }
+  .ops-health__bar-fill.alert { background: var(--slate-flag); }
+  .ops-health__bar-fill.good  { background: var(--slate-redwood); }
+
+  /* Mini-card lists (Parts / QC / Pickup) */
+  .ops-list { padding: 4px 0; }
+  .ops-list__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--slate-divider-soft);
+    font-size: 13px;
+    transition: background 100ms ease;
+    cursor: default;
+  }
+  .ops-list__row:last-child { border-bottom: none; }
+  .ops-list__row:hover { background: var(--slate-surface-tint); }
+  .ops-list__name {
+    color: var(--slate-ink);
+    font-size: 13px;
+  }
+  .ops-list__sub {
+    color: var(--slate-ink-subtle);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .ops-list__count {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--slate-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .ops-list__count--alert { color: var(--slate-arches-ink); }
+  .ops-list__count--zero  { color: var(--slate-ink-subtle); }
+  .ops-list__count--block { color: var(--slate-flag); }
+  .ops-list__count--good  { color: var(--slate-redwood); }
+
+  /* Footer line */
+  .ops-card__foot {
+    padding: 10px 18px;
+    border-top: 1px solid var(--slate-divider-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--slate-surface-tint);
+  }
+  .ops-link {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: var(--slate-tracking-label);
+    font-weight: 500;
+    color: var(--slate-sage);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+  }
+  .ops-link:hover { color: var(--slate-arches); }
+  .ops-link .material-symbols-outlined { font-size: 14px; vertical-align: -3px; margin-left: 2px; }
+
+  /* Detail drawer (slides in when row clicked) */
+  .ops-drawer-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(15, 58, 42, 0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+    z-index: 90;
+  }
+  .ops-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .ops-drawer {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 420px;
+    max-width: 92vw;
+    background: var(--slate-surface);
+    border-left: 1px solid var(--slate-divider);
+    box-shadow: -8px 0 24px rgba(15, 58, 42, 0.08);
+    transform: translateX(100%);
+    transition: transform 220ms ease;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+  .ops-drawer.open { transform: translateX(0); }
+  .ops-drawer__head {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--slate-divider);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ops-drawer__title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: var(--slate-tracking-wide);
+    color: var(--slate-arches);
+    font-weight: 500;
+    margin: 0 0 4px;
+  }
+  .ops-drawer__job {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--slate-ink);
+    margin: 0;
+  }
+  .ops-drawer__cust {
+    font-size: 13px;
+    color: var(--slate-ink-muted);
+    margin-top: 4px;
+  }
+  .ops-drawer__close {
+    background: none;
+    border: 1px solid var(--slate-divider);
+    color: var(--slate-ink-muted);
+    width: 32px; height: 32px;
+    border-radius: var(--slate-radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms;
+  }
+  .ops-drawer__close:hover { background: var(--slate-sage-wash); color: var(--slate-ink); }
+  .ops-drawer__body { padding: 18px 20px; overflow-y: auto; flex: 1; }
+  .ops-drawer__section { margin-bottom: 22px; }
+  .ops-drawer__label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: var(--slate-tracking-wide);
+    color: var(--slate-ink-subtle);
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .ops-drawer__text { font-size: 13px; color: var(--slate-ink); line-height: 1.5; }
+  .ops-drawer__kv { display: grid; grid-template-columns: 110px 1fr; row-gap: 8px; column-gap: 12px; font-size: 12px; }
+  .ops-drawer__kv dt { color: var(--slate-ink-subtle); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; padding-top: 1px; }
+  .ops-drawer__kv dd { color: var(--slate-ink); margin: 0; }
+  .ops-drawer__foot {
+    padding: 14px 20px;
+    border-top: 1px solid var(--slate-divider);
+    display: flex;
+    gap: 8px;
+    background: var(--slate-surface-tint);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: var(--slate-radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 120ms, border-color 120ms;
+  }
+  .btn--primary { background: var(--slate-sage); color: var(--slate-surface); border-color: var(--slate-sage); }
+  .btn--primary:hover { background: var(--slate-sage-ink); border-color: var(--slate-sage-ink); }
+  .btn--secondary { background: var(--slate-surface); color: var(--slate-sage); border-color: var(--slate-divider); }
+  .btn--secondary:hover { background: var(--slate-sage-wash); }
+  .btn .material-symbols-outlined { font-size: 14px; }
+
+  /* Keyboard shortcut hints */
+  .kbd {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: var(--slate-surface-page);
+    border: 1px solid var(--slate-divider);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--slate-ink-muted);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translate(-50%, 16px);
+    background: var(--slate-ink);
+    color: var(--slate-surface);
+    padding: 10px 16px;
+    border-radius: var(--slate-radius-md);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    box-shadow: var(--slate-shadow-pop);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease, transform 200ms ease;
+    z-index: 200;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast .material-symbols-outlined { font-size: 16px; color: var(--slate-arches); }
+
+  /* Sub-tab content placeholder */
+  .ops-tab-stub {
+    padding: 60px 32px;
+    text-align: center;
+    color: var(--slate-ink-muted);
+    font-size: 13px;
+    background: var(--slate-surface);
+    border: var(--slate-border);
+    border-radius: var(--slate-radius-md);
+  }
+  .ops-tab-stub__icon { font-size: 32px; color: var(--slate-ink-subtle); }
+  .ops-tab-stub__title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--slate-ink);
+    margin: 8px 0 4px;
+  }
+
+  /* Filter/range chips next to title */
+  .range-chips { display: inline-flex; gap: 4px; margin-left: 12px; }
+  .range-chip {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 8px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--slate-ink-subtle);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-weight: 500;
+  }
+  .range-chip:hover { color: var(--slate-ink); }
+  .range-chip.active {
+    background: var(--slate-sage-wash);
+    color: var(--slate-sage);
+  }
+
+  /* === Tweaks panel === */
+  .tweaks {
+    position: fixed; bottom: 16px; right: 16px;
+    width: 280px;
+    background: var(--slate-surface);
+    border: 1px solid var(--slate-divider);
+    border-radius: var(--slate-radius-lg);
+    box-shadow: var(--slate-shadow-pop);
+    padding: 14px 16px 16px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    z-index: 150;
+    display: none;
+  }
+  .tweaks.show { display: block; }
+  .tweaks h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: var(--slate-tracking-wide);
+    color: var(--slate-ink-muted);
+    margin: 0 0 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tweaks h4 button {
+    background: none; border: none; color: var(--slate-ink-subtle); cursor: pointer;
+    font-family: inherit; font-size: 11px;
+  }
+  .tweaks-section {
+    border-top: 1px solid var(--slate-divider-soft);
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+  .tweaks-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+  .tweaks-label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--slate-ink-subtle);
+    margin-bottom: 6px;
+  }
+  .tweaks-radio { display: flex; gap: 4px; }
+  .tweaks-radio button {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 11px;
+    border: 1px solid var(--slate-divider);
+    background: var(--slate-surface);
+    color: var(--slate-ink-muted);
+    border-radius: var(--slate-radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tweaks-radio button.active {
+    background: var(--slate-sage);
+    color: var(--slate-surface);
+    border-color: var(--slate-sage);
+  }
+
+  /* Density variants */
+  body.density-compact .ops-kpi { min-height: 92px; padding: 10px 14px 12px; }
+  body.density-compact .ops-kpi__value { font-size: 26px; }
+  body.density-compact .ops-prio-table tbody td { padding: 9px 18px; }
+  body.density-compact .ops-list__row { padding: 8px 18px; }
+
+  /* Accent variants */
+  body.accent-arches .ops-kpi { border-top-color: var(--slate-arches); }
+  body.accent-arches .ops-kpi--alert { border-top-color: var(--slate-arches); }
+  body.accent-arches .ops-card { border-top-color: var(--slate-arches); }
+  body.accent-redwood .ops-kpi { border-top-color: var(--slate-redwood); }
+  body.accent-redwood .ops-card { border-top-color: var(--slate-redwood); }
+
+  /* === Animations === */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .ops-kpi, .ops-card { animation: fadeUp 240ms ease both; }
+  .ops-kpi:nth-child(1) { animation-delay: 0ms; }
+  .ops-kpi:nth-child(2) { animation-delay: 30ms; }
+  .ops-kpi:nth-child(3) { animation-delay: 60ms; }
+  .ops-kpi:nth-child(4) { animation-delay: 90ms; }
+  .ops-kpi:nth-child(5) { animation-delay: 120ms; }
+  .ops-kpi:nth-child(6) { animation-delay: 150ms; }
+  .ops-kpi:nth-child(7) { animation-delay: 180ms; }
+  .ops-kpi:nth-child(8) { animation-delay: 210ms; }
+
+  /* WP-style overrides removed because we are not in WP shell here */
+  body.slate-ops { background: var(--slate-surface-page); }
+</style>
+</head>
+<body class="slate-ops ops-page-cs">
+<div id="slate-ops-app" class="ops-shell">
+
+  <!-- ─── Topbar ─── -->
+  <header class="ops-header">
+    <div class="ops-header__left">
+      <a class="ops-topbar__logo-link" href="#" aria-label="Slate Ops home">
+        <img class="ops-topbar__logo" src="assets/logos/slate-logo-sage.png" alt="Slate" style="height:24px;width:auto;object-fit:contain;">
+      </a>
+    </div>
+    <div class="ops-header__center">
+      <span class="ops-page-title" id="ops-page-title">Operations Dashboard</span>
+    </div>
+    <div class="ops-header__right">
+      <span class="ops-version-badge">Slate Ops <strong>v0.29.0</strong></span>
+      <details class="ops-topbar__account">
+        <summary class="ops-topbar__avatar" aria-label="Account">RN</summary>
+        <div class="ops-topbar__dropdown">
+          <div class="ops-topbar__dropdown-name">Ryan Navarro</div>
+          <div class="ops-topbar__dropdown-role">CS / Supervisor</div>
+          <hr class="ops-topbar__dropdown-divider">
+          <a class="ops-topbar__dropdown-link" href="#">Log out</a>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <div class="ops-shell-body">
+
+    <!-- ─── Sidebar ─── -->
+    <aside class="ops-sidebar">
+      <div class="ops-sidebar-header">
+        <div class="ops-sidebar-collapse-row">
+          <button class="ops-sidebar-collapse-btn" id="ops-sidebar-toggle" type="button" aria-label="Collapse sidebar">
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+        </div>
+        <div class="ops-sidebar-nav-section">
+          <span class="ops-sidebar-nav-label">Navigate</span>
+        </div>
+      </div>
+      <nav class="ops-nav">
+        <a href="#" class="ops-nav-link"><span class="material-symbols-outlined ops-nav-icon">dashboard</span><span class="ops-nav-label">Executive</span></a>
+        <a href="#" class="ops-nav-link active"><span class="material-symbols-outlined ops-nav-icon">person</span><span class="ops-nav-label">CS</span></a>
+        <a href="#" class="ops-nav-link"><span class="material-symbols-outlined ops-nav-icon">build</span><span class="ops-nav-label">Tech</span></a>
+        <a href="#" class="ops-nav-link"><span class="material-symbols-outlined ops-nav-icon">calendar_month</span><span class="ops-nav-label">Schedule</span></a>
+        <a href="#" class="ops-nav-link"><span class="material-symbols-outlined ops-nav-icon">shopping_cart</span><span class="ops-nav-label">Purchasing</span></a>
+        <a href="#" class="ops-nav-link"><span class="material-symbols-outlined ops-nav-icon">shield</span><span class="ops-nav-label">Admin</span></a>
+        <a href="#" class="ops-nav-link"><span class="material-symbols-outlined ops-nav-icon">settings</span><span class="ops-nav-label">Settings</span></a>
+      </nav>
+      <div class="ops-sidebar-footer">
+        <div class="ops-sidebar-user">
+          <div class="ops-sidebar-user-name">Ryan Navarro</div>
+          <div class="ops-sidebar-user-role">Supervisor</div>
+        </div>
+        <a class="ops-sidebar-logout" href="#" title="Log out">
+          <span class="material-symbols-outlined">logout</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ─── Main ─── -->
+    <div class="ops-body">
+      <section class="ops-content">
+        <div id="ops-view">
+          <div class="ops-page">
+
+            <!-- Page header -->
+            <div class="ops-page-header">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;">
+                <div>
+                  <div class="ops-page-eyebrow">CS / Supervisor</div>
+                  <h1 class="ops-page-title" style="font-size:22px;font-weight:500;color:var(--slate-ink);margin:0 0 4px;letter-spacing:normal;text-transform:none;">Operations Dashboard</h1>
+                  <div class="ops-page-desc" style="font-size:13px;color:var(--slate-ink-muted);">Daily job control, blockers, QC, parts, and pickup readiness.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                  <div class="range-chips" id="range-chips">
+                    <button class="range-chip active" data-range="today">Today</button>
+                    <button class="range-chip" data-range="week">This week</button>
+                    <button class="range-chip" data-range="all">All open</button>
+                  </div>
+                  <button class="btn btn--secondary" id="refresh-btn" title="Refresh data">
+                    <span class="material-symbols-outlined">refresh</span>
+                    <span id="refresh-label">Refreshed 2m ago</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sub-tabs -->
+            <nav class="ops-subnav" id="ops-subnav">
+              <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
+              <button class="ops-subtab" data-tab="intake"><span class="material-symbols-outlined">inbox</span>Intake <span class="count">7</span></button>
+              <button class="ops-subtab" data-tab="parts"><span class="material-symbols-outlined">inventory_2</span>Parts <span class="count">6</span></button>
+              <button class="ops-subtab" data-tab="qc"><span class="material-symbols-outlined">verified</span>QC <span class="count">1</span></button>
+              <button class="ops-subtab" data-tab="pickup"><span class="material-symbols-outlined">local_shipping</span>Pickup <span class="count">2</span></button>
+              <button class="ops-subtab" data-tab="exceptions"><span class="material-symbols-outlined">report</span>Exceptions <span class="count">3</span></button>
+            </nav>
+
+            <!-- ── OVERVIEW TAB ── -->
+            <div class="ops-tab-content" data-tab-content="overview">
+
+              <!-- KPI grid: 8 cards, 4 columns -->
+              <div class="ops-kpi-grid" id="kpi-grid">
+                <div class="ops-kpi" data-kpi="active">
+                  <div class="ops-kpi__label">Active Jobs</div>
+                  <div class="ops-kpi__value" data-target="23">0</div>
+                  <div class="ops-kpi__sub">Jobs currently open</div>
+                </div>
+                <div class="ops-kpi ops-kpi--alert" data-kpi="parts">
+                  <div class="ops-kpi__label"><span class="ops-kpi__dot"></span>Waiting on Parts</div>
+                  <div class="ops-kpi__value" data-target="6">0</div>
+                  <div class="ops-kpi__sub">Parts blocking progress</div>
+                </div>
+                <div class="ops-kpi" data-kpi="ready">
+                  <div class="ops-kpi__label">Ready to Schedule</div>
+                  <div class="ops-kpi__value" data-target="5">0</div>
+                  <div class="ops-kpi__sub">Cleared for shop planning</div>
+                </div>
+                <div class="ops-kpi" data-kpi="inprogress">
+                  <div class="ops-kpi__label">In Progress</div>
+                  <div class="ops-kpi__value" data-target="4">0</div>
+                  <div class="ops-kpi__sub">Currently being worked</div>
+                </div>
+                <div class="ops-kpi" data-kpi="qc">
+                  <div class="ops-kpi__label">Pending QC</div>
+                  <div class="ops-kpi__value" data-target="1">0</div>
+                  <div class="ops-kpi__sub">Needs supervisor sign-off</div>
+                </div>
+                <div class="ops-kpi" data-kpi="pickup">
+                  <div class="ops-kpi__label">Ready for Pickup</div>
+                  <div class="ops-kpi__value" data-target="2">0</div>
+                  <div class="ops-kpi__sub">Customer can be notified</div>
+                </div>
+                <div class="ops-kpi ops-kpi--block" data-kpi="blocked">
+                  <div class="ops-kpi__label"><span class="ops-kpi__dot ops-kpi__dot--block"></span>Blocked Jobs</div>
+                  <div class="ops-kpi__value" data-target="3">0</div>
+                  <div class="ops-kpi__sub">Needs action today</div>
+                </div>
+                <div class="ops-kpi" data-kpi="updates">
+                  <div class="ops-kpi__label">Past Due Updates</div>
+                  <div class="ops-kpi__value" data-target="4">0</div>
+                  <div class="ops-kpi__sub">CS follow-up needed</div>
+                </div>
+              </div>
+
+              <!-- Two-column row: Priorities | Operational Health -->
+              <div class="ops-row">
+
+                <!-- LEFT: Today's Priorities -->
+                <div class="ops-card">
+                  <div class="ops-card__head">
+                    <h2 class="ops-card__title">Today's Priorities</h2>
+                    <span class="ops-card__meta">4 items</span>
+                  </div>
+                  <table class="ops-prio-table">
+                    <thead>
+                      <tr>
+                        <th>Job</th>
+                        <th>Customer / Dealer</th>
+                        <th>Status</th>
+                        <th>Owner</th>
+                        <th>Action Needed</th>
+                      </tr>
+                    </thead>
+                    <tbody id="prio-tbody">
+                      <!-- rows injected by JS -->
+                    </tbody>
+                  </table>
+                  <div class="ops-card__foot">
+                    <span style="font-size:11px;color:var(--slate-ink-subtle);">Click any row to view detail · <span class="kbd">↑</span> <span class="kbd">↓</span> to navigate</span>
+                    <button class="ops-link">View all open jobs <span class="material-symbols-outlined">arrow_forward</span></button>
+                  </div>
+                </div>
+
+                <!-- RIGHT: Operational Health -->
+                <div class="ops-card">
+                  <div class="ops-card__head">
+                    <h2 class="ops-card__title">Operational Health</h2>
+                    <span class="ops-card__meta">Live</span>
+                  </div>
+                  <div class="ops-health" id="health-list">
+                    <!-- rows injected -->
+                  </div>
+                  <div class="ops-card__foot">
+                    <span style="font-size:11px;color:var(--slate-ink-subtle);">Updated every 5 minutes</span>
+                    <button class="ops-link">Open report <span class="material-symbols-outlined">arrow_forward</span></button>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Three-column row: Parts | QC | Pickup -->
+              <div class="ops-row-3">
+
+                <!-- Parts Watch -->
+                <div class="ops-card">
+                  <div class="ops-card__head">
+                    <h2 class="ops-card__title">Parts Watch</h2>
+                    <span class="ops-card__meta">Top blockers</span>
+                  </div>
+                  <div class="ops-list" id="parts-list">
+                    <!-- rows injected -->
+                  </div>
+                  <div class="ops-card__foot">
+                    <span style="font-size:11px;color:var(--slate-ink-subtle);">6 jobs affected</span>
+                    <button class="ops-link" data-jump="parts">Go to Parts <span class="material-symbols-outlined">arrow_forward</span></button>
+                  </div>
+                </div>
+
+                <!-- QC Queue -->
+                <div class="ops-card">
+                  <div class="ops-card__head">
+                    <h2 class="ops-card__title">QC Queue</h2>
+                    <span class="ops-card__meta">Today</span>
+                  </div>
+                  <div class="ops-list" id="qc-list">
+                    <!-- rows injected -->
+                  </div>
+                  <div class="ops-card__foot">
+                    <span style="font-size:11px;color:var(--slate-ink-subtle);">1 awaiting sign-off</span>
+                    <button class="ops-link" data-jump="qc">Go to QC <span class="material-symbols-outlined">arrow_forward</span></button>
+                  </div>
+                </div>
+
+                <!-- Pickup / Customer Contact -->
+                <div class="ops-card">
+                  <div class="ops-card__head">
+                    <h2 class="ops-card__title">Pickup / Customer Contact</h2>
+                    <span class="ops-card__meta">Outbound</span>
+                  </div>
+                  <div class="ops-list" id="pickup-list">
+                    <!-- rows injected -->
+                  </div>
+                  <div class="ops-card__foot">
+                    <span style="font-size:11px;color:var(--slate-ink-subtle);">2 ready · 1 awaiting reply</span>
+                    <button class="ops-link" data-jump="pickup">Go to Pickup <span class="material-symbols-outlined">arrow_forward</span></button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Other tabs (stub views) -->
+            <div class="ops-tab-content" data-tab-content="intake" hidden>
+              <div class="ops-tab-stub">
+                <span class="material-symbols-outlined ops-tab-stub__icon">inbox</span>
+                <div class="ops-tab-stub__title">Intake Queue</div>
+                <div>7 new jobs awaiting triage. Detailed intake view connects here.</div>
+              </div>
+            </div>
+            <div class="ops-tab-content" data-tab-content="parts" hidden>
+              <div class="ops-tab-stub">
+                <span class="material-symbols-outlined ops-tab-stub__icon">inventory_2</span>
+                <div class="ops-tab-stub__title">Parts Board</div>
+                <div>Full parts blocker board. Drill-in by job, vendor, ETA.</div>
+              </div>
+            </div>
+            <div class="ops-tab-content" data-tab-content="qc" hidden>
+              <div class="ops-tab-stub">
+                <span class="material-symbols-outlined ops-tab-stub__icon">verified</span>
+                <div class="ops-tab-stub__title">QC Queue</div>
+                <div>Supervisor sign-off list with checklists per job.</div>
+              </div>
+            </div>
+            <div class="ops-tab-content" data-tab-content="pickup" hidden>
+              <div class="ops-tab-stub">
+                <span class="material-symbols-outlined ops-tab-stub__icon">local_shipping</span>
+                <div class="ops-tab-stub__title">Pickup Readiness</div>
+                <div>Ready-for-pickup queue with customer contact status.</div>
+              </div>
+            </div>
+            <div class="ops-tab-content" data-tab-content="exceptions" hidden>
+              <div class="ops-tab-stub">
+                <span class="material-symbols-outlined ops-tab-stub__icon">report</span>
+                <div class="ops-tab-stub__title">Exceptions</div>
+                <div>Blocked jobs, past-due updates, escalations needing attention.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Detail Drawer ─── -->
+<div class="ops-drawer-backdrop" id="drawer-backdrop"></div>
+<aside class="ops-drawer" id="job-drawer" aria-hidden="true">
+  <div class="ops-drawer__head">
+    <div>
+      <div class="ops-drawer__title">Job Detail</div>
+      <h3 class="ops-drawer__job" id="drawer-job">SO-1042</h3>
+      <div class="ops-drawer__cust" id="drawer-cust">MB Wilsonville</div>
+    </div>
+    <button class="ops-drawer__close" id="drawer-close" aria-label="Close">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+  <div class="ops-drawer__body">
+    <div class="ops-drawer__section">
+      <span class="ops-drawer__label">Status</span>
+      <span class="pill" id="drawer-pill">Waiting on Parts</span>
+    </div>
+    <div class="ops-drawer__section">
+      <span class="ops-drawer__label">Action needed</span>
+      <div class="ops-drawer__text" id="drawer-action">Confirm ETA with vendor and notify dealer of revised ready date.</div>
+    </div>
+    <div class="ops-drawer__section">
+      <span class="ops-drawer__label">Job summary</span>
+      <dl class="ops-drawer__kv" id="drawer-kv">
+        <dt>Owner</dt><dd id="drawer-owner">CS · Ryan</dd>
+        <dt>Opened</dt><dd>Apr 22, 2026</dd>
+        <dt>Promised</dt><dd>May 6, 2026</dd>
+        <dt>Workcenter</dt><dd>Bay 2 · Main floor</dd>
+        <dt>Last update</dt><dd id="drawer-update">2 hours ago — CS</dd>
+      </dl>
+    </div>
+    <div class="ops-drawer__section">
+      <span class="ops-drawer__label">Recent activity</span>
+      <div class="ops-drawer__text" style="font-size:12px;line-height:1.7;">
+        <div>· Apr 28 — Parts ETA pushed by vendor (electrical kit)</div>
+        <div>· Apr 27 — Intake complete, scope confirmed by dealer</div>
+        <div>· Apr 26 — Job opened from dealer ticket #4421</div>
+      </div>
+    </div>
+  </div>
+  <div class="ops-drawer__foot">
+    <button class="btn btn--primary" id="drawer-action-btn">
+      <span class="material-symbols-outlined">check</span>
+      <span id="drawer-action-btn-label">Mark Action Done</span>
+    </button>
+    <button class="btn btn--secondary">
+      <span class="material-symbols-outlined">edit_note</span>
+      Add note
+    </button>
+  </div>
+</aside>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="material-symbols-outlined">check_circle</span>
+  <span id="toast-msg">Action completed</span>
+</div>
+
+<!-- Tweaks panel -->
+<div class="tweaks" id="tweaks-panel">
+  <h4>Tweaks <button id="tweaks-close" aria-label="Close">×</button></h4>
+  <div class="tweaks-section">
+    <span class="tweaks-label">Density</span>
+    <div class="tweaks-radio" data-tweak="density">
+      <button data-val="default" class="active">Default</button>
+      <button data-val="compact">Compact</button>
+    </div>
+  </div>
+  <div class="tweaks-section">
+    <span class="tweaks-label">Card top accent</span>
+    <div class="tweaks-radio" data-tweak="accent">
+      <button data-val="sage" class="active">Sage</button>
+      <button data-val="arches">Arches</button>
+      <button data-val="redwood">Redwood</button>
+    </div>
+  </div>
+  <div class="tweaks-section">
+    <span class="tweaks-label">KPI value style</span>
+    <div class="tweaks-radio" data-tweak="numeric">
+      <button data-val="sans" class="active">Sans</button>
+      <button data-val="mono">Mono</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/*EDITMODE-BEGIN*/
+const TWEAK_DEFAULTS = {
+  "density": "default",
+  "accent": "sage",
+  "numeric": "sans"
+};
+/*EDITMODE-END*/
+
+(function () {
+  // ===== State =====
+  const state = {
+    selectedRow: 0,
+    activeTab: 'overview',
+    tweaks: { ...TWEAK_DEFAULTS }
+  };
+
+  // ===== Data =====
+  const priorities = [
+    { id:'SO-1042', cust:'MB Wilsonville', status:'Waiting on Parts', pill:'parts',   owner:'CS',         action:'Confirm ETA',
+      detail:'Electrical kit ETA pushed by vendor. Confirm new date and notify dealer.' },
+    { id:'SO-1045', cust:'MB Seattle',     status:'Pending QC',       pill:'qc',      owner:'Supervisor', action:'Final sign-off',
+      detail:'Build complete. Awaiting supervisor walk-through and QC checklist sign-off.' },
+    { id:'SO-1051', cust:'MB Anchorage',   status:'Ready for Pickup', pill:'pickup',  owner:'CS',         action:'Notify dealer',
+      detail:'Cleared QC. Send pickup notification and prep delivery paperwork.' },
+    { id:'SO-1053', cust:'MB Wilsonville', status:'Blocked',          pill:'blocked', owner:'Supervisor', action:'Review blocker',
+      detail:'Tech flagged scope mismatch on cabinet hardware. Needs supervisor review before continuing.' },
+  ];
+
+  const health = [
+    { label:'Parts Risk',          value:'6 jobs affected',   pct:60, tone:'warn'  },
+    { label:'QC Load',             value:'1 pending sign-off', pct:14, tone:''     },
+    { label:'Pickup Queue',        value:'2 ready',           pct:28, tone:'good'  },
+    { label:'Schedule Readiness',  value:'5 jobs cleared',    pct:71, tone:'good'  },
+    { label:'Update Discipline',   value:'4 jobs need notes', pct:42, tone:'alert' },
+  ];
+
+  const parts = [
+    { name:'Electrical components', sub:'3 vendors · longest ETA 9 days', count:3, tone:'alert' },
+    { name:'Flooring kit',          sub:'1 vendor · ETA 4 days',          count:2, tone:'alert' },
+    { name:'Cabinet hardware',      sub:'Inbound · ETA tomorrow',         count:1, tone:'' },
+  ];
+
+  const qc = [
+    { name:'Pending QC',       sub:'Awaiting supervisor walk', count:1, tone:'alert' },
+    { name:'Failed QC',        sub:'No failures today',        count:0, tone:'zero' },
+    { name:'Rework Required',  sub:'Clean queue',              count:0, tone:'zero' },
+    { name:'Ready to Release', sub:'Cleared for pickup prep',  count:2, tone:'good' },
+  ];
+
+  const pickup = [
+    { name:'Ready for pickup',         sub:'Customer can be contacted',  count:2, tone:'good' },
+    { name:'Customer notified',        sub:'Awaiting acknowledgement',   count:1, tone:'' },
+    { name:'Waiting customer response', sub:'> 24 hours',                count:1, tone:'alert' },
+    { name:'Delivery paperwork open',  sub:'Needs CS to finalize',       count:2, tone:'alert' },
+  ];
+
+  // ===== Render: Priorities table =====
+  const pillLabel = {
+    parts: 'Waiting on Parts',
+    qc: 'Pending QC',
+    pickup: 'Ready for Pickup',
+    blocked: 'Blocked'
+  };
+
+  function renderPriorities() {
+    const tbody = document.getElementById('prio-tbody');
+    tbody.innerHTML = priorities.map((p, i) => `
+      <tr data-row="${i}" class="${i===state.selectedRow?'selected':''}">
+        <td class="job-id">${p.id}</td>
+        <td class="customer">${p.cust}</td>
+        <td><span class="pill pill--${p.pill}">${p.status}</span></td>
+        <td class="owner">${p.owner}</td>
+        <td class="action">${p.action} <span class="material-symbols-outlined arrow" style="font-size:14px;vertical-align:-3px;">arrow_forward</span></td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const idx = parseInt(tr.dataset.row, 10);
+        state.selectedRow = idx;
+        openDrawer(priorities[idx]);
+        renderPriorities();
+      });
+    });
+  }
+
+  // ===== Render: Operational Health =====
+  function renderHealth() {
+    const list = document.getElementById('health-list');
+    list.innerHTML = health.map(h => `
+      <div class="ops-health__row">
+        <div class="ops-health__label">${h.label}</div>
+        <div class="ops-health__value">${h.value}</div>
+        <div class="ops-health__bar">
+          <div class="ops-health__bar-fill ${h.tone}" style="width:0%" data-target="${h.pct}"></div>
+        </div>
+      </div>
+    `).join('');
+    // Animate bars
+    requestAnimationFrame(() => {
+      list.querySelectorAll('.ops-health__bar-fill').forEach(el => {
+        setTimeout(() => { el.style.width = el.dataset.target + '%'; }, 100);
+      });
+    });
+  }
+
+  // ===== Render: Mini-card lists =====
+  function renderList(id, rows, accentClass) {
+    const el = document.getElementById(id);
+    el.innerHTML = rows.map(r => {
+      const tone = r.tone === 'alert' ? 'ops-list__count--alert'
+                 : r.tone === 'zero'  ? 'ops-list__count--zero'
+                 : r.tone === 'block' ? 'ops-list__count--block'
+                 : r.tone === 'good'  ? 'ops-list__count--good'
+                 : '';
+      return `
+        <div class="ops-list__row">
+          <div>
+            <div class="ops-list__name">${r.name}</div>
+            <div class="ops-list__sub">${r.sub}</div>
+          </div>
+          <div class="ops-list__count ${tone}">${r.count}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== KPI count-up =====
+  function animateKPIs() {
+    document.querySelectorAll('.ops-kpi__value').forEach(el => {
+      const target = parseInt(el.dataset.target, 10);
+      const dur = 600 + Math.random()*200;
+      const start = performance.now();
+      function tick(now) {
+        const t = Math.min(1, (now - start) / dur);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(eased * target);
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // ===== Drawer =====
+  const drawer   = document.getElementById('job-drawer');
+  const backdrop = document.getElementById('drawer-backdrop');
+
+  function openDrawer(p) {
+    document.getElementById('drawer-job').textContent = p.id;
+    document.getElementById('drawer-cust').textContent = p.cust;
+    const pill = document.getElementById('drawer-pill');
+    pill.textContent = p.status;
+    pill.className = 'pill pill--' + p.pill;
+    document.getElementById('drawer-action').textContent = p.detail;
+    document.getElementById('drawer-owner').textContent = p.owner;
+    document.getElementById('drawer-action-btn-label').textContent = p.action;
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+  }
+  document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+  backdrop.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeDrawer();
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (state.activeTab !== 'overview') return;
+      e.preventDefault();
+      const dir = e.key === 'ArrowDown' ? 1 : -1;
+      state.selectedRow = (state.selectedRow + dir + priorities.length) % priorities.length;
+      renderPriorities();
+    }
+    if (e.key === 'Enter' && state.activeTab === 'overview') {
+      openDrawer(priorities[state.selectedRow]);
+    }
+  });
+
+  document.getElementById('drawer-action-btn').addEventListener('click', () => {
+    showToast('Action logged · job updated');
+    closeDrawer();
+  });
+
+  // ===== Toast =====
+  const toast = document.getElementById('toast');
+  let toastT;
+  function showToast(msg) {
+    document.getElementById('toast-msg').textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  // ===== Tabs =====
+  document.querySelectorAll('.ops-subtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.ops-subtab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      state.activeTab = tab;
+      document.querySelectorAll('.ops-tab-content').forEach(c => {
+        c.hidden = c.dataset.tabContent !== tab;
+      });
+    });
+  });
+
+  // Card "Go to" links jump to tab
+  document.querySelectorAll('[data-jump]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.querySelector(`.ops-subtab[data-tab="${btn.dataset.jump}"]`);
+      if (target) target.click();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  // ===== Range chips =====
+  document.querySelectorAll('.range-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.range-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      showToast('Range: ' + chip.textContent);
+    });
+  });
+
+  // ===== Refresh =====
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    document.getElementById('refresh-label').textContent = 'Refreshing…';
+    setTimeout(() => {
+      document.getElementById('refresh-label').textContent = 'Refreshed just now';
+      animateKPIs();
+      renderHealth();
+      showToast('Dashboard refreshed');
+    }, 600);
+  });
+
+  // ===== Sidebar collapse =====
+  const collapseBtn = document.getElementById('ops-sidebar-toggle');
+  collapseBtn.addEventListener('click', () => {
+    document.documentElement.classList.toggle('ops-sidebar-collapsed');
+  });
+
+  // ===== Tweaks =====
+  const tweaksPanel = document.getElementById('tweaks-panel');
+
+  function applyTweaks() {
+    document.body.classList.toggle('density-compact', state.tweaks.density === 'compact');
+    document.body.classList.remove('accent-arches','accent-redwood');
+    if (state.tweaks.accent === 'arches')  document.body.classList.add('accent-arches');
+    if (state.tweaks.accent === 'redwood') document.body.classList.add('accent-redwood');
+    document.querySelectorAll('.ops-kpi__value').forEach(el => {
+      el.style.fontFamily = state.tweaks.numeric === 'mono' ? 'var(--font-mono)' : 'var(--font-sans)';
+    });
+  }
+
+  document.querySelectorAll('.tweaks-radio').forEach(group => {
+    const key = group.dataset.tweak;
+    group.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.tweaks[key] = btn.dataset.val;
+        applyTweaks();
+        try {
+          window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: btn.dataset.val } }, '*');
+        } catch(e) {}
+      });
+    });
+  });
+
+  document.getElementById('tweaks-close').addEventListener('click', () => {
+    tweaksPanel.classList.remove('show');
+    try { window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); } catch(e) {}
+  });
+
+  // Tweaks protocol
+  window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.type === '__activate_edit_mode')   tweaksPanel.classList.add('show');
+    if (d.type === '__deactivate_edit_mode') tweaksPanel.classList.remove('show');
+  });
+  try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch(e) {}
+
+  // ===== Init =====
+  renderPriorities();
+  renderHealth();
+  renderList('parts-list', parts);
+  renderList('qc-list', qc);
+  renderList('pickup-list', pickup);
+  applyTweaks();
+  setTimeout(animateKPIs, 50);
+
+})();
+</script>
+</body>
+</html>

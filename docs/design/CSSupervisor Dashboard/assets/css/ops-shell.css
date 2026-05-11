@@ -1,0 +1,1393 @@
+/*
+ * ops-shell.css — Slate Ops shared layout shell styles v1.0
+ *
+ * Design system aligned with Slate Scheduler v0.4 and mockup reference.
+ * Font: Roboto Flex / JetBrains Mono (loaded via layout-shell.php)
+ * Sidebar: dark sage #2f3e39 — matches mockup exactly
+ *
+ * Sections:
+ *   1. Design tokens
+ *   2. Shell structure
+ *   3. Sidebar navigation
+ *   4. Topbar / header
+ *   5. Version badge
+ *   6. Responsive
+ *   11. Tech screen layout overrides
+ *   12. Tech screen: Slate palette for React cards (WP theme reset)
+ */
+
+/* ─── 1. Design Tokens ─── */
+:root {
+  /* Slate palette — single source of truth */
+  --sage:         #2f3e39;
+  --sage-mid:     #445a53;
+  --sage-lt:      #5d726c;
+  --sand:         #f4f1e8;
+  --sand-lt:      #faf8f2;
+  --arches:       #d86b19;
+  --arches-lt:    #f2893a;
+  --black:        #111111;
+  --white:        #ffffff;
+  --muted:        rgba(0,0,0,0.55);
+  --border:       rgba(47,62,57,0.12);
+  --border-md:    rgba(47,62,57,0.20);
+  --shadow:       0 1px 1px rgba(18,25,22,0.04);
+  --radius:       12px;
+  --radius-sm:    8px;
+  --radius-pill:  999px;
+  --font-sans:    'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', 'Roboto Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  --space-1:      8px;
+  --space-2:      12px;
+  --space-3:      16px;
+  --space-4:      24px;
+  --surface-bg:   #f4f1e8;
+  --surface-card: #ffffff;
+  --stroke-subtle: rgba(47,62,57,0.12);
+  --control-bg:   #fbfaf6;
+  --control-border: rgba(47,62,57,0.22);
+
+  /* Shell tokens (used by shell partials) */
+  --shell-sidebar-bg:   #f6f2e8;
+  --shell-sidebar-w:    172px;
+  --shell-header-h:     56px;
+  --shell-header-bg:    var(--slate-surface);
+  --shell-canvas:       var(--surface-bg);
+  --shell-surface:      var(--surface-card);
+  --shell-border:       var(--stroke-subtle);
+  --shell-accent:       var(--arches);
+  --shell-text:         var(--black);
+  --shell-muted:        var(--muted);
+  --shell-nav-active-bg: rgba(47,62,57,0.10);
+
+  /* Slate design tokens — mirrored from Dealer Portal */
+  --slate-sage:            #40464B;
+  --slate-sage-ink:        #2B3034;
+  --slate-sage-wash:       #F2F3F1;
+
+  --slate-sand:            #E1D8CB;
+  --slate-sand-deep:       #D4C9B7;
+  --slate-sand-wash:       #F5F1E9;
+
+  --slate-arches:          #D68B19;
+  --slate-arches-ink:      #B07212;
+  --slate-arches-wash:     #FDF2DF;
+
+  --slate-redwood:         #0F3A2A;
+  --slate-redwood-dark:    #1a4d39;
+  --slate-redwood-wash:    #E4EEE9;
+
+  --slate-flag:            #B22222;
+  --slate-flag-ink:        #8B1A1A;
+  --slate-flag-wash:       #F8E5E5;
+
+  --slate-ink:             #2A2E2C;
+  --slate-ink-muted:       #5A5E5C;
+  --slate-ink-subtle:      #8A8880;
+  --slate-ink-placeholder: #B0AEA6;
+
+  --slate-divider:         #E6E2D4;
+  --slate-divider-strong:  #D9D5C7;
+  --slate-divider-soft:    #F0EDE3;
+
+  --slate-surface:         #FFFFFF;
+  --slate-surface-tint:    #FAFAF7;
+  --slate-surface-page:    #F5F3ED;
+
+  --slate-radius-none:     0;
+  --slate-radius-sm:       3px;
+  --slate-radius-md:       5px;
+  --slate-radius-lg:       8px;
+  --slate-radius-xl:       12px;
+  --slate-radius-full:     999px;
+
+  /* Typography scale — mirrored from Dealer Portal */
+  --slate-text-micro:  11px;
+  --slate-text-xs:     12px;
+  --slate-text-sm:     13px;
+  --slate-text-base:   14px;
+  --slate-text-md:     16px;
+  --slate-text-lg:     18px;
+  --slate-text-xl:     22px;
+  --slate-text-2xl:    28px;
+  --slate-weight-regular: 400;
+  --slate-weight-medium:  500;
+
+  /* Line heights */
+  --slate-leading-tight:   1.2;
+  --slate-leading-normal:  1.5;
+  --slate-leading-relaxed: 1.65;
+
+  /* Letter spacing */
+  --slate-tracking-normal: 0;
+  --slate-tracking-label:  0.08em;
+  --slate-tracking-wide:   0.12em;
+
+  /* Spacing scale — 4px base, mirrored from Dealer Portal */
+  --slate-space-2xs: 2px;
+  --slate-space-xs:  4px;
+  --slate-space-sm:  8px;
+  --slate-space-md:  12px;
+  --slate-space-lg:  16px;
+  --slate-space-xl:  24px;
+  --slate-space-2xl: 32px;
+  --slate-space-3xl: 48px;
+  --slate-space-4xl: 64px;
+
+  /* Border shorthands */
+  --slate-border-width:  1px;
+  --slate-border-thick:  2px;
+  --slate-border:        var(--slate-border-width) solid var(--slate-divider);
+  --slate-border-strong: var(--slate-border-width) solid var(--slate-divider-strong);
+  --slate-border-soft:   var(--slate-border-width) solid var(--slate-divider-soft);
+
+  /* Shell dimensions — mirrored from Dealer Portal */
+  --slate-shell-topbar-height: 56px;
+  --slate-shell-maxwidth:      1440px;
+  --slate-sidebar-w-expanded:  172px;
+  --slate-sidebar-w-collapsed: 44px;
+  --slate-sidebar-transition:  160ms ease;
+
+  /* Shadows */
+  --slate-shadow-none:   none;
+  --slate-shadow-subtle: 0 1px 2px rgba(42,46,44,0.04);
+  --slate-shadow-pop:    0 4px 12px rgba(42,46,44,0.08);
+
+  /* Z-index */
+  --slate-z-base:      0;
+  --slate-z-dropdown:  100;
+  --slate-z-sticky:    200;
+  --slate-z-modal:     300;
+  --slate-z-tooltip:   400;
+
+  /* Motion */
+  --slate-duration-fast:   100ms;
+  --slate-duration-normal: 160ms;
+  --slate-duration-slow:   240ms;
+  --slate-ease:            ease;
+
+  --slate-font-sans: var(--font-sans);
+  --slate-font-mono: var(--font-mono);
+
+  --mono: var(--font-mono);
+}
+
+/* ─── 2. Shell Structure ─── */
+body.slate-ops {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--black);
+  background: var(--sand);
+}
+
+/* Column flex: topbar on top, sidebar+content row below */
+.ops-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Row wrapper: sidebar + main content, fills remaining height below topbar */
+.ops-shell-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ops-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--slate-surface-page);
+}
+
+.ops-content {
+  flex: 1;
+  padding: 0;
+  overflow-y: auto;
+  background: var(--slate-surface-page);
+}
+.ops-content > #ops-view {
+  max-width: var(--slate-shell-maxwidth);
+  margin: 0 auto;
+}
+
+/* ─── 3. Sidebar ─── */
+.ops-sidebar {
+  width: var(--shell-sidebar-w);
+  background: var(--slate-surface);
+  color: var(--slate-ink-muted);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--slate-divider);
+  transition: width var(--slate-sidebar-transition);
+}
+
+.ops-brand {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+
+.ops-logo {
+  display: block;
+  width: auto;
+  height: 26px;
+  max-height: 28px;
+}
+
+/* Legacy icon — hidden when SVG logo is used */
+.ops-brand-icon { display: none; }
+.ops-brand-text { display: none; }
+
+/* ─── 3a. Sidebar header: collapse row + Navigate label row ─── */
+.ops-sidebar-header {
+  display: flex;
+  flex-direction: column;
+  border-bottom: var(--slate-border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ops-sidebar-collapse-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--slate-space-sm) 0 var(--slate-space-xs);
+}
+
+.ops-sidebar-nav-section {
+  padding: var(--slate-space-sm) var(--slate-space-md);
+  overflow: hidden;
+  transition: opacity var(--slate-sidebar-transition);
+}
+
+.ops-sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none !important;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent !important;
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-ink-subtle);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--slate-duration-fast) var(--slate-ease);
+}
+
+.ops-sidebar-collapse-btn:hover {
+  color: var(--slate-ink);
+}
+
+.ops-sidebar-collapse-btn:focus-visible {
+  outline: 2px solid var(--slate-sage-wash);
+  outline-offset: 2px;
+}
+
+.ops-sidebar-collapse-btn .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  transition: transform var(--slate-sidebar-transition);
+}
+
+.ops-sidebar-nav-label {
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-wide);
+  color: var(--slate-ink-subtle);
+  white-space: nowrap;
+}
+
+/* ─── 3b. Collapsed sidebar state ─── */
+html.ops-sidebar-collapsed .ops-sidebar {
+  width: var(--slate-sidebar-w-collapsed);
+}
+
+html.ops-sidebar-collapsed .ops-sidebar-nav-section {
+  opacity: 0;
+  pointer-events: none;
+  height: 0;
+  padding: 0;
+}
+
+html.ops-sidebar-collapsed .ops-sidebar-collapse-btn .material-symbols-outlined {
+  transform: rotate(180deg);
+}
+
+html.ops-sidebar-collapsed .ops-nav-label {
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+html.ops-sidebar-collapsed .ops-nav-link {
+  padding: var(--slate-space-sm);
+  justify-content: center;
+  gap: 0;
+}
+
+html.ops-sidebar-collapsed .ops-sidebar-user {
+  display: none;
+}
+
+html.ops-sidebar-collapsed .ops-sidebar-footer {
+  justify-content: center;
+}
+
+/* Nav */
+.ops-nav {
+  flex: 1;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ops-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: var(--slate-space-sm) var(--slate-space-md);
+  border: none;
+  border-radius: 0;
+  border-left: 2px solid transparent;
+  color: var(--slate-ink-muted);
+  text-decoration: none;
+  font-weight: var(--slate-weight-medium);
+  font-size: var(--slate-text-sm);
+  font-family: var(--font-sans);
+  transition: background var(--slate-duration-fast) var(--slate-ease),
+              color var(--slate-duration-fast) var(--slate-ease),
+              border-color var(--slate-duration-fast) var(--slate-ease);
+  cursor: pointer;
+  background: none;
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.ops-nav-link:hover {
+  background: var(--slate-sage-wash);
+  color: var(--slate-ink);
+}
+
+.ops-nav-link.active {
+  color: var(--slate-ink);
+  background: var(--slate-sage-wash);
+}
+
+/* Material icon sizing */
+.ops-nav-icon,
+.ops-nav-link .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-size: 18px;
+  line-height: 1;
+  width: 24px;
+  flex-shrink: 0;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Sidebar footer */
+.ops-sidebar-footer {
+  padding: 10px 10px;
+  border-top: 1px solid var(--slate-divider-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ops-sidebar-user {}
+
+.ops-sidebar-user-name {
+  font-size: 11px;
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink);
+  line-height: 1.2;
+}
+
+.ops-sidebar-user-role {
+  font-size: 9px;
+  color: var(--slate-ink-subtle);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.ops-sidebar-logout {
+  color: var(--slate-ink-subtle);
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.12s;
+}
+.ops-sidebar-logout:hover { color: var(--slate-ink); }
+.ops-sidebar-logout .material-symbols-outlined { font-size: 20px; }
+
+/* ─── 4. Topbar ─── */
+.ops-header {
+  height: var(--shell-header-h);
+  background: var(--shell-header-bg);
+  border-bottom: 1px solid var(--slate-divider);
+  padding: 0 var(--slate-space-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-md);
+  flex-shrink: 0;
+}
+
+.ops-header__left {
+  display: flex;
+  align-items: center;
+}
+
+.ops-header__center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ops-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-md);
+}
+
+/* Topbar logo (mirrors .slate-topbar__logo-link / __logo) */
+.ops-topbar__logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  line-height: 0;
+}
+
+.ops-topbar__logo {
+  height: 24px;
+  width: auto;
+  display: block;
+}
+
+/* User avatar — <details>/<summary> dropdown */
+details.ops-topbar__account > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.ops-topbar__account > summary::-webkit-details-marker { display: none; }
+
+.ops-topbar__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--slate-radius-full);
+  background: var(--slate-sage);
+  color: var(--slate-surface);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: 0.04em;
+  font-family: var(--font-sans);
+  transition: background var(--slate-duration-fast) var(--slate-ease);
+  user-select: none;
+}
+
+.ops-topbar__avatar:hover {
+  background: var(--slate-sage-ink);
+}
+
+.ops-topbar__dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + var(--slate-space-sm));
+  right: 0;
+  min-width: 180px;
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  box-shadow: var(--slate-shadow-pop);
+  padding: var(--slate-space-md);
+  z-index: var(--slate-z-dropdown);
+}
+
+details.ops-topbar__account[open] .ops-topbar__dropdown {
+  display: block;
+}
+
+.ops-topbar__dropdown-name {
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink);
+}
+
+.ops-topbar__dropdown-role {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-muted);
+  margin-top: var(--slate-space-2xs);
+}
+
+.ops-topbar__dropdown-divider {
+  border: none;
+  border-top: 1px solid var(--slate-divider);
+  margin: var(--slate-space-sm) 0;
+}
+
+.ops-topbar__dropdown-link {
+  display: block;
+  font-size: var(--slate-text-sm);
+  color: var(--slate-ink-muted);
+  text-decoration: none;
+  padding: var(--slate-space-2xs) 0;
+  transition: color var(--slate-duration-fast) var(--slate-ease);
+}
+
+.ops-topbar__dropdown-link:hover {
+  color: var(--slate-sage);
+}
+
+/* Page title — populated by JS via setPageTitle() */
+.ops-page-title {
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink-muted);
+  letter-spacing: var(--slate-tracking-label, 0.08em);
+  text-transform: uppercase;
+}
+
+/* ─── 5. Version badge ─── */
+.ops-version-badge {
+  display: inline-block;
+  background: rgba(47,62,57,0.06);
+  color: rgba(47,62,57,0.60);
+  border: 1px solid rgba(47,62,57,0.14);
+  border-radius: 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+  padding: 3px 9px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ops-version-badge strong { font-weight: var(--slate-weight-medium); }
+
+/* ─── 6. Responsive ─── */
+@media (max-width: 900px) {
+  .ops-sidebar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    width: 100%; height: auto;
+    flex-direction: row;
+    z-index: 50;
+  }
+  .ops-brand,
+  .ops-sidebar-header,
+  .ops-sidebar-footer { display: none; }
+  .ops-header         { display: none; }
+  .ops-nav {
+    flex-direction: row;
+    padding: 6px;
+    gap: 0;
+  }
+  .ops-nav-link {
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 4px;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
+    border-radius: 7px;
+    border-left: none;
+    color: rgba(255,255,255,0.62);
+  }
+  .ops-nav-link.active {
+    background: rgba(255,255,255,0.15);
+    color: var(--white);
+  }
+  .ops-nav-icon,
+  .ops-nav-link .material-symbols-outlined { font-size: 22px; width: auto; }
+  .ops-body { padding-bottom: 68px; }
+  /* Collapse state has no effect on mobile bottom-tab layout */
+  html.ops-sidebar-collapsed .ops-sidebar { width: 100%; }
+  html.ops-sidebar-collapsed .ops-nav-link { padding: 8px 4px; justify-content: center; gap: 2px; }
+  html.ops-sidebar-collapsed .ops-nav-label { width: auto; overflow: visible; opacity: 1; }
+}
+
+
+/* ─── 7. Ops action button colors ───────────────────────────────────
+ * These are NOT in a Tailwind @layer so they beat any WordPress theme
+ * CSS (unlayered styles always win over @layer utilities rules).
+ * Use .ops-btn-arches for outlined orange and
+ *     .ops-btn-arches-solid for filled orange buttons.
+ */
+.ops-btn-arches {
+  color: var(--slate-arches) !important;
+  border-color: var(--slate-arches) !important;
+}
+.ops-btn-arches:hover {
+  background-color: var(--slate-arches-wash) !important;
+}
+.ops-btn-arches-solid {
+  background-color: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
+}
+.ops-btn-arches-solid:hover {
+  background-color: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+}
+.ops-btn-danger {
+  background-color: var(--slate-flag) !important;
+  border-color: var(--slate-flag) !important;
+  color: #ffffff !important;
+}
+.ops-btn-danger:hover {
+  background-color: var(--slate-flag-ink) !important;
+  border-color: var(--slate-flag-ink) !important;
+}
+
+/* ─── 8. CS page token classes ──────────────────────────────────────
+ * Semantic classes for the CS component. All colors via var(--slate-*).
+ * Applied by replacing Tailwind color utilities in the React bundle.
+ */
+
+/* Page background */
+.ops-cs-page { background-color: var(--slate-surface-page); }
+
+/* Card surface — white bg + divider border replaces shadow-sm */
+.ops-cs-card {
+  background-color: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+}
+
+/* Section separator border */
+.ops-cs-border-b { border-bottom: 1px solid var(--slate-divider-soft); }
+
+/* Divider color override (used alongside Tailwind divide-x / divide-y) */
+.ops-cs-divide > * + * { border-color: var(--slate-divider-soft); }
+
+/* Table header */
+.ops-cs-thead {
+  background-color: var(--slate-sage-wash);
+  color: var(--slate-ink-muted);
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+/* Table row states */
+.ops-cs-row-selected { background-color: var(--slate-arches-wash); }
+.ops-cs-row-hover:hover { background-color: var(--slate-surface-tint); }
+
+/* Input fields */
+.ops-cs-input { border: 1px solid var(--slate-divider); background-color: var(--slate-surface); }
+.ops-cs-input::placeholder { color: var(--slate-ink-placeholder); }
+.ops-cs-input:focus {
+  outline: none;
+  border-color: var(--slate-arches);
+  box-shadow: 0 0 0 1px var(--slate-arches);
+}
+
+/* Parts status badges */
+.ops-badge-ready     { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.ops-badge-partial   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+.ops-badge-not-ready { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
+
+/* Job status badges — legacy names */
+.ops-badge-status-intake     { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-scheduled  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-inprogress { background-color: var(--slate-sage);         color: var(--slate-surface); }
+.ops-badge-status-complete   { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.ops-badge-status-hold       { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
+.ops-badge-status-pending-qc { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
+
+/* Job status badges — canonical names */
+.ops-badge-status-ready-for-build  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-queued           { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
+.ops-badge-status-ready-for-pickup { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
+.ops-badge-status-delayed          { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
+
+/* Inline text link (Reset filters) */
+.ops-cs-reset-link { color: var(--slate-ink-muted); }
+.ops-cs-reset-link:hover { color: var(--slate-arches); }
+
+/* ─── 9. Softness pass ───────────────────────────────────────────────
+ * Radius, borders, text hierarchy, spacing, empty state.
+ * All overrides use !important to beat Tailwind utilities in app.css.
+ */
+
+/* Radius */
+.ops-cs-card    { border-radius: var(--slate-radius-lg) !important; }
+.ops-cs-input   { border-radius: var(--slate-radius-md) !important; }
+.ops-btn-arches-solid { border-radius: var(--slate-radius-md) !important; }
+.ops-btn-arches       { border-radius: var(--slate-radius-md) !important; }
+
+/* Badge pills — fully rounded */
+.ops-badge-ready,
+.ops-badge-partial,
+.ops-badge-not-ready,
+.ops-badge-status-intake,
+.ops-badge-status-scheduled,
+.ops-badge-status-inprogress,
+.ops-badge-status-complete,
+.ops-badge-status-hold,
+.ops-badge-status-pending-qc,
+.ops-badge-status-ready-for-build,
+.ops-badge-status-queued,
+.ops-badge-status-ready-for-pickup,
+.ops-badge-status-delayed {
+  border-radius: 999px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+}
+
+/* Table row dividers */
+.ops-cs-row-hover,
+.ops-cs-row-selected {
+  border-bottom: 1px solid var(--slate-divider-soft) !important;
+}
+
+/* Table cell height — slightly taller rows */
+.ops-cs-row-hover td,
+.ops-cs-row-selected td {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+/* Table header height */
+.ops-cs-thead th {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+}
+
+/* Text hierarchy — labels use subtle ink; headings use full ink */
+.ops-cs-card label {
+  color: var(--slate-ink-subtle) !important;
+  font-weight: 500 !important;
+}
+.ops-cs-card h1,
+.ops-cs-card h2 {
+  color: var(--slate-ink) !important;
+}
+
+/* Section card spacing */
+.ops-cs-card.mb-4,
+.ops-cs-page .ops-cs-card {
+  margin-bottom: 20px !important;
+}
+
+/* Empty state */
+.ops-cs-empty {
+  margin: 24px;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px solid var(--slate-divider-soft);
+  border-radius: var(--slate-radius-lg);
+  color: var(--slate-ink-muted);
+  font-size: 14px;
+}
+
+/* ─── 10. Page header pattern ────────────────────────────────────────
+ * Eyebrow + title + description + divider.
+ * Mirrors Dealer Portal header structure across all Ops pages.
+ */
+.ops-page-header {
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.ops-page-eyebrow {
+  font-size: 10px;
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--slate-arches);
+  margin-bottom: 4px;
+}
+
+.ops-page-header .ops-page-title {
+  color: var(--slate-ink) !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-size: var(--slate-text-xl) !important;
+}
+
+.ops-page-desc {
+  color: var(--slate-ink-muted) !important;
+}
+
+/* ─── 11. Tech screen layout overrides ──────────────────────────────
+ * Scoped to .ops-page-tech (set by route, not by user role) so that
+ * admins and supervisors visiting /ops/tech get the same layout.
+ * Phone-first panel: full-height, no shell padding, centered on desktop.
+ * On mobile the Ops sidebar is hidden — the tech panel is self-contained.
+ */
+.ops-page-tech .ops-header  { display: none; }
+.ops-page-tech .ops-content {
+  padding: 0;
+  overflow: hidden;
+}
+.ops-page-tech .ops-content > #ops-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .ops-page-tech .ops-sidebar {
+    display: none !important;
+  }
+  .ops-page-tech .ops-body {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* ─── 12. Tech screen: Palette override for help button & job cards ──
+ * Tailwind @layer utilities loses to unlayered WordPress theme CSS (e.g.
+ * button { color: … }). The #ops-view ID gives specificity 1,2,0 which
+ * beats any element-only theme selector. bg/color are set here so the
+ * theme can never tint the help button or job cards.
+ */
+.ops-page-tech #ops-view .ops-tech-help-btn {
+  background: #fff;
+  color: var(--sage);
+  border: 1px solid rgba(15, 52, 42, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(15, 52, 42, 0.08);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.ops-page-tech #ops-view .ops-tech-help-btn:hover {
+  border-color: rgba(15, 52, 42, 0.18);
+}
+.ops-page-tech #ops-view .ops-tech-card {
+  background-color: var(--surface-card);
+}
+
+/* ─── 13. Tech screen: action button palette ────────────────────────
+ * Primary = Pause (dark sage fill, white text — most-used in-session).
+ * Secondary = Complete / Notes (white bg, sage text, sage border).
+ * Play = Up Next / Help card play icon (same as primary, disabled via
+ *        [disabled] attribute selector so no extra JS class needed).
+ */
+.ops-page-tech #ops-view .ops-tech-action-primary {
+  background-color: var(--sage);
+  color: var(--white);
+  border: 1px solid transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.ops-page-tech #ops-view .ops-tech-action-primary:hover:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .ops-tech-action-primary:active:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .ops-tech-action-secondary {
+  background-color: var(--surface-card);
+  color: var(--sage);
+  border: 1px solid var(--border-md);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.ops-page-tech #ops-view .ops-tech-action-secondary:hover:not([disabled]) {
+  background-color: var(--sand);
+}
+.ops-page-tech #ops-view .ops-tech-action-primary[disabled],
+.ops-page-tech #ops-view .ops-tech-action-secondary[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ops-page-tech #ops-view .ops-tech-play-btn {
+  background-color: var(--sage);
+  color: var(--white);
+  border: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.ops-page-tech #ops-view .ops-tech-play-btn:hover:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .ops-tech-play-btn[disabled] {
+  background-color: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* ─── 15. Tech screen: slate-work-btn system ────────────────────────
+ * Base + variant classes for the Tech page work-action buttons.
+ * Base sets shape/layout; variants add color.
+ * Active-card buttons keep Tailwind flex-col/py-5 for icon-above-text.
+ * Up Next button uses row layout from the base.
+ */
+.ops-page-tech #ops-view .slate-work-btn {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.ops-page-tech #ops-view .slate-work-btn--start {
+  background-color: var(--slate-redwood);
+  color: var(--white);
+}
+.ops-page-tech #ops-view .slate-work-btn--start:hover:not([disabled]) {
+  background-color: var(--slate-redwood-dark);
+}
+.ops-page-tech #ops-view .slate-work-btn--resume {
+  background-color: var(--sage);
+  color: var(--white);
+}
+.ops-page-tech #ops-view .slate-work-btn--resume:hover:not([disabled]) {
+  background-color: var(--sage-mid);
+}
+.ops-page-tech #ops-view .slate-work-btn--stop {
+  background-color: var(--slate-flag);
+  color: var(--white);
+}
+.ops-page-tech #ops-view .slate-work-btn--stop:hover:not([disabled]) {
+  background-color: var(--slate-flag-ink);
+}
+.ops-page-tech #ops-view .slate-work-btn--secondary {
+  background-color: var(--surface-card);
+  color: var(--sage);
+  border-color: var(--border-md);
+}
+.ops-page-tech #ops-view .slate-work-btn--secondary:hover:not([disabled]) {
+  background-color: var(--sand);
+}
+.ops-page-tech #ops-view .slate-work-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── 16. Tech screen: job labor progress gauge ─────────────────────
+ * Compact build-progress block shown inside the Active Labor card,
+ * below the elapsed timer, above the action buttons.
+ * Job-costing visibility only — not payroll.
+ */
+.slate-job-progress {
+  margin: 10px 16px 0;
+}
+.slate-job-progress__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.slate-job-progress__label {
+  color: var(--slate-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.slate-job-progress__value {
+  color: var(--slate-ink);
+  font-weight: 500;
+}
+.slate-job-progress__percent {
+  color: var(--slate-ink-muted);
+  margin-left: 4px;
+}
+.slate-progress-bar {
+  height: 6px;
+  background: var(--slate-sand);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.slate-progress-bar__fill {
+  height: 100%;
+  background: var(--sage);
+  transition: width 120ms ease;
+}
+.slate-progress-bar__fill.warn {
+  background: var(--arches);
+}
+.slate-progress-bar__fill.over {
+  background: var(--slate-flag);
+}
+
+/* ─── 14. Portal page container ─────────────────────────────────────
+ * Full-page scroll wrapper for /ops/* views. Mirrors Dealer Portal layout.
+ */
+.slate-portal {
+  padding: var(--slate-space-2xl);
+  max-width: var(--slate-shell-maxwidth);
+  box-sizing: border-box;
+  background-color: var(--slate-surface-page);
+}
+
+/* ─── 15. Card surface ──────────────────────────────────────────────
+ * White card with divider border; replaces shadow-sm + rounded-xl soup.
+ */
+.slate-card {
+  background-color: var(--slate-surface);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--slate-space-xl);
+}
+.slate-card__header {
+  padding: var(--slate-space-lg) var(--slate-space-xl);
+  border-bottom: var(--slate-border);
+}
+.slate-card__title {
+  font-size: var(--slate-text-md);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink);
+  margin: 0;
+  line-height: var(--slate-leading-tight);
+}
+
+/* ─── 16. KPI grid + card ───────────────────────────────────────────
+ * Responsive grid of metric summary cards.
+ */
+.slate-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--slate-space-lg);
+  margin-bottom: var(--slate-space-xl);
+}
+/* 4-column fixed layout for pages with many KPI cards (e.g. Executive) — desktop only */
+@media (min-width: 901px) {
+  .slate-kpi-grid--exec {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.slate-kpi-card {
+  background-color: var(--slate-surface);
+  border: var(--slate-border) !important;
+  border-radius: var(--slate-radius-lg);
+  padding: var(--slate-space-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 112px;
+}
+.slate-kpi-card__label {
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  color: var(--slate-ink-muted);
+}
+.slate-kpi-card__value {
+  font-size: var(--slate-text-2xl);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink);
+  line-height: var(--slate-leading-tight);
+}
+.slate-kpi-card__sub {
+  font-size: var(--slate-text-xs);
+  color: var(--slate-ink-muted);
+}
+
+/* ─── 17. Table ─────────────────────────────────────────────────────
+ * Semantic table; all spacing and color via tokens. No utility soup.
+ */
+.slate-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--slate-text-sm);
+  text-align: left;
+}
+.slate-table thead {
+  background-color: var(--slate-surface-page);
+}
+.slate-table thead th {
+  padding: var(--slate-space-md) var(--slate-space-xl);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  color: var(--slate-ink-muted);
+  border-bottom: var(--slate-border);
+}
+.slate-table tbody tr {
+  border-bottom: var(--slate-border-soft);
+}
+.slate-table tbody tr:hover {
+  background-color: var(--slate-sage-wash);
+}
+.slate-table tbody td {
+  padding: var(--slate-space-md) var(--slate-space-xl);
+  color: var(--slate-ink-muted);
+}
+.slate-table__lead {
+  font-weight: var(--slate-weight-medium) !important;
+  color: var(--slate-ink) !important;
+}
+.slate-table__num {
+  font-variant-numeric: tabular-nums;
+}
+.slate-table__empty {
+  padding: var(--slate-space-3xl) var(--slate-space-xl);
+  text-align: center;
+  color: var(--slate-ink-muted);
+  font-style: italic;
+}
+
+/* ─── 18. Button component ──────────────────────────────────────────
+ * Semantic button variants mirroring Dealer Portal. No blue/purple.
+ */
+.slate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-xs);
+  padding: var(--slate-space-sm) var(--slate-space-lg);
+  border-radius: var(--slate-radius-md);
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--slate-duration-normal) var(--slate-ease),
+              border-color var(--slate-duration-normal) var(--slate-ease);
+  text-decoration: none;
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: var(--slate-leading-tight);
+}
+.slate-btn--primary {
+  background-color: var(--slate-sage);
+  color: var(--slate-surface);
+  border-color: var(--slate-sage);
+}
+.slate-btn--primary:hover:not([disabled]) {
+  background-color: var(--slate-sage-ink);
+  border-color: var(--slate-sage-ink);
+}
+.slate-btn--secondary {
+  background-color: var(--slate-surface);
+  color: var(--slate-sage);
+  border-color: var(--slate-divider);
+}
+.slate-btn--secondary:hover:not([disabled]) {
+  background-color: var(--slate-sage-wash);
+}
+.slate-btn--outline {
+  background-color: transparent;
+  color: var(--slate-ink);
+  border-color: var(--slate-divider);
+}
+.slate-btn--outline:hover:not([disabled]) {
+  background-color: var(--slate-surface-page);
+}
+.slate-btn[disabled],
+.slate-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── 19. Status badge ──────────────────────────────────────────────
+ * Inline status pill. No blue/purple/pink — only sage palette.
+ */
+.slate-status {
+  display: inline-block;
+  padding: var(--slate-space-2xs) var(--slate-space-sm);
+  border-radius: var(--slate-radius-sm);
+  font-size: var(--slate-text-micro);
+  font-weight: var(--slate-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--slate-tracking-label);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.slate-status--neutral {
+  background-color: var(--slate-surface-page);
+  color: var(--slate-ink-muted);
+  border: var(--slate-border);
+}
+.slate-status--attention {
+  background-color: var(--slate-arches-wash);
+  color: var(--slate-arches-ink);
+}
+.slate-status--healthy {
+  background-color: var(--slate-redwood-wash);
+  color: var(--slate-redwood);
+}
+.slate-status--critical {
+  background-color: var(--slate-flag-wash);
+  color: var(--slate-flag);
+}
+
+/* ─── 20. Error banner ──────────────────────────────────────────────
+ * Inline error message; replaces Tailwind red-50 utility soup.
+ */
+.ops-banner-error {
+  background-color: var(--slate-flag-wash);
+  border: 1px solid var(--slate-flag);
+  color: var(--slate-flag);
+  padding: var(--slate-space-md) var(--slate-space-lg);
+  border-radius: var(--slate-radius-md);
+  font-size: var(--slate-text-sm);
+  margin-bottom: var(--slate-space-lg);
+}
+
+/* ─── 21. Sub-navigation tabs (shared: Purchasing + Executive) ───────
+ * Underline-style horizontal tab row. Sourced from purchasing.css so
+ * the pattern works on all pages via ops-shell.css (always loaded).
+ * !important on border/background overrides WP theme button defaults.
+ */
+.pur-subnav {
+  display: flex;
+  gap: 0;
+  border-bottom: var(--slate-border);
+  margin-bottom: var(--slate-space-xl);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pur-subnav::-webkit-scrollbar { display: none; }
+
+.pur-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--slate-space-md) var(--slate-space-lg);
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  border-bottom: var(--slate-border-thick) solid transparent;
+  margin-bottom: -1px;
+  font-size: var(--slate-text-sm);
+  font-weight: var(--slate-weight-medium);
+  color: var(--slate-ink-muted);
+  font-family: var(--slate-font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--slate-duration-fast) var(--slate-ease), border-color var(--slate-duration-fast) var(--slate-ease);
+  border-radius: 0;
+  outline: none;
+}
+
+.pur-tab:hover {
+  color: var(--slate-ink);
+}
+
+.pur-tab.active {
+  color: var(--slate-sage);
+  border-bottom-color: var(--slate-sage);
+}
+
+.pur-tab .material-symbols-outlined {
+  font-size: var(--slate-text-md);
+  line-height: 1;
+}
+
+/* ─── 22. CS split-view layout ──────────────────────────────────────────
+ * Two-column layout: scrollable jobs list (left) + sticky detail panel (right).
+ * .ops-cs-split-page wraps the whole CS page; .ops-cs-split-body is the row below
+ * the header; .ops-cs-left/.ops-cs-right are the two columns.
+ */
+
+/* Give #ops-view full height on the CS route so columns scroll independently */
+.ops-page-cs .ops-content > #ops-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ops-cs-split-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--slate-surface-page);
+}
+
+.ops-cs-split-page .ops-page-header {
+  flex-shrink: 0;
+  padding-left: var(--slate-space-2xl);
+  padding-right: var(--slate-space-2xl);
+  padding-top: var(--slate-space-xl);
+  padding-bottom: var(--slate-space-lg);
+  margin-bottom: 0;
+}
+
+.ops-cs-split-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: var(--slate-space-lg);
+  padding: var(--slate-space-lg) var(--slate-space-2xl) var(--slate-space-2xl);
+  overflow: hidden;
+}
+
+.ops-cs-left {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.ops-cs-right {
+  width: 360px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+/* Empty panel — "Select a job" state */
+.ops-cs-empty-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  color: var(--slate-ink-subtle);
+}
+
+/* Top border divider above delete/save row */
+.ops-cs-border-t {
+  border-top: 1px solid var(--slate-divider-soft);
+  padding-top: var(--slate-space-md);
+}
+
+/* In split view, cards fill their column naturally — no forced bottom margin */
+.ops-cs-split-page .ops-cs-card {
+  margin-bottom: 0 !important;
+}
+
+/* Page-wide row spacing: compact table cells for density */
+.ops-cs-split-page .ops-cs-row-hover td,
+.ops-cs-split-page .ops-cs-row-selected td {
+  padding-top: var(--slate-space-sm) !important;
+  padding-bottom: var(--slate-space-sm) !important;
+}
+
+.ops-page-tech #ops-view .ops-tech-logo,
+.ops-page-tech #ops-view .slate-header-brand img,
+.ops-page-tech #ops-view img[src*="Slate-Logo-White-CMYK.png"] {
+  width: 82px;
+  height: auto;
+  display: block;
+}

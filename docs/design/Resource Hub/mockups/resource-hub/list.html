@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Resource Hub — Library</title>
+<link rel="stylesheet" href="style.css" />
+<template id="__bundler_thumbnail" data-bg-color="#1d2823">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#1d2823"/>
+    <rect x="120" y="220" width="960" height="120" rx="10" fill="#f1ede3"/>
+    <rect x="120" y="360" width="960" height="100" rx="10" fill="#f1ede3"/>
+    <rect x="120" y="480" width="960" height="100" rx="10" fill="#f1ede3"/>
+    <rect x="160" y="260" width="120" height="14" rx="4" fill="#b76728"/>
+    <rect x="160" y="290" width="420" height="22" rx="4" fill="#1d2823"/>
+    <circle cx="1020" cy="290" r="14" fill="#b76728"/>
+  </svg>
+</template>
+</head>
+<body>
+<div class="rh-app" data-screen-label="Resource Hub — list">
+  <header class="rh-topbar">
+    <div class="rh-topbar__brand">/SLATE <span>·</span> Resource Hub</div>
+    <div class="rh-topbar__build">Slate Ops v0.58.1</div>
+  </header>
+
+  <main class="rh-page">
+    <div class="rh-page__head">
+      <div class="rh-eyebrow">Build floor / shared</div>
+      <h1 class="rh-page__title">Resource library</h1>
+      <p class="rh-page__sub">Vendor docs, install guides, and Slate-authored references for the build floor.</p>
+    </div>
+
+    <nav class="rh-tabs" aria-label="Resource Hub sections">
+      <button class="rh-tab" type="button" aria-current="page">Library <span class="rh-tab__count">42</span></button>
+      <button class="rh-tab" type="button">Slate-authored <span class="rh-tab__count">11</span></button>
+      <button class="rh-tab" type="button">Recently updated <span class="rh-tab__count">8</span></button>
+    </nav>
+
+    <div class="rh-sticky">
+      <label class="rh-search">
+        <svg class="rh-search__icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="11" y1="11" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input class="rh-search__input" type="search" placeholder="Search SKU, title, vendor…" />
+        <span class="rh-search__kbd">⌘K</span>
+      </label>
+      <div class="rh-chips" role="toolbar" aria-label="Filters">
+        <button class="rh-chip" type="button" aria-pressed="false">Vendor <span class="rh-chip__caret">▾</span></button>
+        <button class="rh-chip" type="button" aria-pressed="true">Doc type · Install guide <span class="rh-chip__caret">×</span></button>
+        <button class="rh-chip" type="button" aria-pressed="false">Chassis <span class="rh-chip__caret">▾</span></button>
+        <button class="rh-chip" type="button" aria-pressed="false">Reviewed by Slate <span class="rh-chip__caret">▾</span></button>
+        <button class="rh-chip" type="button" aria-pressed="false">Needs review <span class="rh-chip__caret">▾</span></button>
+      </div>
+    </div>
+
+    <div class="rh-list-head" aria-hidden="true">
+      <div class="rh-list-head__cell">SKU</div>
+      <div class="rh-list-head__cell">Title</div>
+      <div class="rh-list-head__cell">Doc type</div>
+      <div class="rh-list-head__cell">Chassis</div>
+      <div class="rh-list-head__cell">Updated</div>
+      <div class="rh-list-head__cell" style="text-align:right">Status</div>
+    </div>
+
+    <ul class="rh-list">
+      <li class="rh-card">
+        <div class="rh-card__sku">SP0114B</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">Sprinter Standard Roof Rack — 144 HR</h3>
+          <div class="rh-card__vendor">Flatline Van Co</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">Install guide</span></div>
+        <div class="rh-card__chassis">Sprinter 144 HR</div>
+        <div class="rh-card__updated">Updated Apr 28</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--ready"><span class="rh-pill__dot"></span>Reviewed by Slate</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">AW2231</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">Wayfarer bed-mount install — 170 HR</h3>
+          <div class="rh-card__vendor">Adventure Wagon</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">Install guide</span></div>
+        <div class="rh-card__chassis">Sprinter 170 HR</div>
+        <div class="rh-card__updated">Updated Apr 22</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">SL-QC-018</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">Pre-delivery QC checklist — Transit AWD</h3>
+          <div class="rh-card__vendor">Slate-authored</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">QC checklist</span></div>
+        <div class="rh-card__chassis">Transit AWD</div>
+        <div class="rh-card__updated">Updated Apr 19</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--neutral">Current</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">FL0902</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">144 HR rear cabinet — spec sheet rev. C</h3>
+          <div class="rh-card__vendor">Flatline Van Co</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">Spec sheet</span></div>
+        <div class="rh-card__chassis">Sprinter 144 HR</div>
+        <div class="rh-card__updated">Updated Apr 14</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--ready"><span class="rh-pill__dot"></span>Reviewed by Slate</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">SL-CRT-007</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">FMVSS 302 flame certification — upholstery batch 24-A</h3>
+          <div class="rh-card__vendor">Slate-authored</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">Cert</span></div>
+        <div class="rh-card__chassis">All chassis</div>
+        <div class="rh-card__updated">Updated Apr 09</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--neutral">Current</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">AW2107</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">ProMaster overhead cabinet — install rev. 4</h3>
+          <div class="rh-card__vendor">Adventure Wagon</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">Install guide</span></div>
+        <div class="rh-card__chassis">ProMaster 159 HR</div>
+        <div class="rh-card__updated">Updated Apr 02</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--ready"><span class="rh-pill__dot"></span>Reviewed by Slate</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">SDS-LIO-003</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">Lithium house battery — safety data sheet</h3>
+          <div class="rh-card__vendor">Adventure Wagon</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">SDS</span></div>
+        <div class="rh-card__chassis">All chassis</div>
+        <div class="rh-card__updated">Updated Mar 28</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--ready"><span class="rh-pill__dot"></span>Reviewed by Slate</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">FL1018</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">170 HR slider window cutout — template</h3>
+          <div class="rh-card__vendor">Flatline Van Co</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">Spec sheet</span></div>
+        <div class="rh-card__chassis">Sprinter 170 HR</div>
+        <div class="rh-card__updated">Updated Mar 22</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--neutral">Current</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">SL-QC-014</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">Electrical pre-delivery QC — 12V house systems</h3>
+          <div class="rh-card__vendor">Slate-authored</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">QC checklist</span></div>
+        <div class="rh-card__chassis">All chassis</div>
+        <div class="rh-card__updated">Updated Mar 18</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--ready"><span class="rh-pill__dot"></span>Reviewed by Slate</span></div>
+      </li>
+
+      <li class="rh-card">
+        <div class="rh-card__sku">AW1988</div>
+        <div class="rh-card__titlewrap">
+          <h3 class="rh-card__title">144 HR floor track — torque spec</h3>
+          <div class="rh-card__vendor">Adventure Wagon</div>
+        </div>
+        <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc">Spec sheet</span></div>
+        <div class="rh-card__chassis">Sprinter 144 HR</div>
+        <div class="rh-card__updated">Updated Mar 11</div>
+        <div class="rh-card__review"><span class="rh-pill rh-pill--neutral">Current</span></div>
+      </li>
+    </ul>
+  </main>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

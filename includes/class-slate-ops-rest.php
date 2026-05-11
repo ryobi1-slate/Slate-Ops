@@ -435,6 +435,26 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'create_quote_from_bom'],
       ]);
 
+      // ── CS Queue tab (Shop Queue) ───────────────────────────────────
+      register_rest_route($ns, '/cs/queue', [
+        [
+          'methods'             => 'GET',
+          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'callback'            => [__CLASS__, 'cs_queue_list'],
+        ],
+        [
+          'methods'             => 'POST',
+          'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+          'callback'            => [__CLASS__, 'cs_queue_save'],
+        ],
+      ]);
+
+      register_rest_route($ns, '/cs/demo-seed', [
+        'methods'             => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'callback'            => [__CLASS__, 'cs_demo_seed'],
+      ]);
+
       // ── Executive dashboard ─────────────────────────────────────────
       register_rest_route($ns, '/executive/labor-summary', [
         'methods'             => 'GET',
@@ -1180,6 +1200,9 @@ return ['ok' => true, 'id' => $id];
     return [
       'roles' => slate_ops_get_role_page_access(),
       'defaults' => slate_ops_get_default_role_page_access(),
+      'features' => Slate_Ops_Utils::get_feature_flags(),
+      'feature_defaults' => Slate_Ops_Utils::get_default_feature_flags(),
+      'page_labels' => Slate_Ops_Utils::get_page_labels(),
     ];
   }
 
@@ -1195,7 +1218,17 @@ return ['ok' => true, 'id' => $id];
     // Safety rails: never remove Admin/Settings from admin role.
     $next['admin'] = array_values(array_unique(array_merge($next['admin'] ?? [], ['admin', 'settings'])));
     update_option('slate_ops_role_page_access', $next, false);
-    return ['ok' => true, 'roles' => slate_ops_get_role_page_access()];
+
+    if (array_key_exists('features', $body)) {
+      $features = Slate_Ops_Utils::sanitize_feature_flags($body['features']);
+      update_option(Slate_Ops_Utils::FEATURE_FLAGS_OPTION, $features, false);
+    }
+
+    return [
+      'ok' => true,
+      'roles' => slate_ops_get_role_page_access(),
+      'features' => Slate_Ops_Utils::get_feature_flags(),
+    ];
   }
 
   public static function list_jobs($req) {
@@ -3871,6 +3904,379 @@ self::maybe_push_dealer_portal_status($job);
       'count'    => count($segments),
       'segments' => $segments,
     ]);
+  }
+
+  // ── CS Queue tab (Shop Queue) ───────────────────────────────────────
+  //
+  // Open jobs the CS team is actively sequencing for the shop. Tech reads
+  // these via the existing /jobs endpoint (read-only); only CS / Supervisor
+  // / Admin may write through these handlers.
+  //
+  // Queue scope: all non-archived CS-visible active jobs, including intake
+  // work that still needs assignment or an SO. Closed/cancelled jobs are excluded.
+
+  private static function cs_queue_active_statuses(): array {
+    return [
+      Slate_Ops_Statuses::INTAKE,
+      Slate_Ops_Statuses::NEEDS_SO,
+      Slate_Ops_Statuses::READY_FOR_BUILD,
+      Slate_Ops_Statuses::SCHEDULED,
+      Slate_Ops_Statuses::IN_PROGRESS,
+      Slate_Ops_Statuses::BLOCKED,
+      Slate_Ops_Statuses::QC,
+      Slate_Ops_Statuses::PENDING_QC,
+    ];
+  }
+
+  /**
+   * GET /cs/queue — list open jobs for the CS Queue tab.
+   */
+  public static function cs_queue_list($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $statuses     = self::cs_queue_active_statuses();
+    $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
+
+    $sql = "SELECT job_id, so_number, customer_name, dealer_name,
+                   status, parts_status, promised_date, requested_date,
+                   target_ship_date, scheduled_start, assigned_user_id,
+                   queue_order, queue_visible, queue_note,
+                   queue_updated_at, queue_updated_by, queue_priority,
+                   updated_at
+              FROM $t
+             WHERE archived_at IS NULL
+               AND status IN ($placeholders)
+             ORDER BY assigned_user_id IS NULL, assigned_user_id ASC,
+                      (queue_order IS NULL), queue_order ASC,
+                      queue_priority ASC, updated_at DESC";
+
+    $rows = $wpdb->get_results($wpdb->prepare($sql, $statuses), ARRAY_A) ?: [];
+
+    $out = [];
+    foreach ($rows as $r) {
+      $assigned_id = isset($r['assigned_user_id']) && $r['assigned_user_id'] !== null
+        ? (int) $r['assigned_user_id'] : null;
+      $updated_by_id = isset($r['queue_updated_by']) && $r['queue_updated_by'] !== null
+        ? (int) $r['queue_updated_by'] : null;
+
+      $due_date = $r['promised_date'] ?: ($r['target_ship_date'] ?: $r['requested_date']);
+
+      $out[] = [
+        'id'                => (int) $r['job_id'],
+        'job_number'        => $r['so_number'] ?: ('JOB-' . (int) $r['job_id']),
+        'so_number'         => $r['so_number'],
+        'customer'          => $r['customer_name'],
+        'dealer'            => $r['dealer_name'],
+        'status'            => $r['status'],
+        'status_label'      => Slate_Ops_Statuses::label((string) $r['status']),
+        'parts_status'      => $r['parts_status'],
+        'due_date'          => $due_date,
+        'promised_date'     => $r['promised_date'],
+        'scheduled_start'   => $r['scheduled_start'],
+        'assigned_user_id'  => $assigned_id,
+        'assigned_tech'     => $assigned_id ? Slate_Ops_Utils::user_display($assigned_id) : '',
+        'queue_order'       => isset($r['queue_order']) && $r['queue_order'] !== null ? (int) $r['queue_order'] : null,
+        'queue_visible'     => (int) ($r['queue_visible'] ?? 1) === 1,
+        'queue_note'        => (string) ($r['queue_note'] ?? ''),
+        'queue_priority'    => isset($r['queue_priority']) ? (int) $r['queue_priority'] : 3,
+        'queue_updated_at'  => $r['queue_updated_at'],
+        'queue_updated_by'  => $updated_by_id,
+        'queue_updated_by_name' => $updated_by_id ? Slate_Ops_Utils::user_display($updated_by_id) : '',
+      ];
+    }
+
+    return rest_ensure_response([
+      'ok'   => true,
+      'jobs' => $out,
+    ]);
+  }
+
+  /**
+   * POST /cs/queue — bulk save queue updates.
+   *
+   * Body: { "updates": [
+   *   { "id": 123, "queue_order": 1, "queue_visible": true,
+   *     "queue_note": "...", "assigned_user_id": 7 },
+   *   ...
+   * ] }
+   *
+   * Only CS / Supervisor / Admin may write. The assigned_user_id field is
+   * accepted but optional — it lets dashboards that already do tech
+   * assignment reuse this save path; otherwise it's ignored.
+   */
+  public static function cs_queue_save($req) {
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $body = $req->get_json_params();
+    if (!is_array($body)) $body = [];
+
+    $updates = $body['updates'] ?? [];
+    if (!is_array($updates) || empty($updates)) {
+      return new WP_Error('invalid_payload', 'updates array required.', ['status' => 400]);
+    }
+
+    $now    = Slate_Ops_Utils::now_gmt();
+    $me     = (int) get_current_user_id();
+    $saved  = 0;
+    $errors = [];
+
+    foreach ($updates as $row) {
+      if (!is_array($row)) continue;
+
+      $job_id = isset($row['id']) ? (int) $row['id'] : 0;
+      if ($job_id <= 0) continue;
+
+      $job = self::job_by_id($job_id);
+      if (!$job) {
+        $errors[] = ['id' => $job_id, 'error' => 'not_found'];
+        continue;
+      }
+
+      $update = [];
+
+      if (array_key_exists('queue_order', $row)) {
+        $qo = self::parse_queue_order($row, 'queue_order');
+        if ($qo instanceof WP_Error) {
+          $errors[] = ['id' => $job_id, 'error' => 'invalid_queue_order'];
+          continue;
+        }
+        $update['queue_order'] = $qo;
+      }
+
+      if (array_key_exists('queue_visible', $row)) {
+        $update['queue_visible'] = self::truthy($row['queue_visible']) ? 1 : 0;
+      }
+
+      if (array_key_exists('queue_note', $row)) {
+        $note = sanitize_textarea_field((string) ($row['queue_note'] ?? ''));
+        if (strlen($note) > 1000) {
+          $note = substr($note, 0, 1000);
+        }
+        $update['queue_note'] = $note !== '' ? $note : null;
+      }
+
+      // Optional tech assignment — only if explicitly provided.
+      if (array_key_exists('assigned_user_id', $row)) {
+        $aid = $row['assigned_user_id'];
+        $update['assigned_user_id'] = ($aid === null || $aid === '' || (int) $aid <= 0)
+          ? null : (int) $aid;
+      }
+
+      if (empty($update)) continue;
+
+      $update['queue_updated_at'] = $now;
+      $update['queue_updated_by'] = $me ?: null;
+      $update['updated_at']       = $now;
+
+      $ok = $wpdb->update($t, $update, ['job_id' => $job_id]);
+      if ($ok === false) {
+        $errors[] = ['id' => $job_id, 'error' => 'db_error'];
+        continue;
+      }
+
+      $audit_fields = $update;
+      unset($audit_fields['updated_at']);
+      Slate_Ops_Activity_Log::append('job', $job_id, 'cs_queue_update', $audit_fields);
+
+      $saved++;
+    }
+
+    return rest_ensure_response([
+      'ok'     => empty($errors),
+      'saved'  => $saved,
+      'errors' => $errors,
+    ]);
+  }
+
+  private static function cs_demo_seed_allowed(): bool {
+    $host = isset($_SERVER['HTTP_HOST']) ? strtolower(sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST']))) : '';
+    $host = preg_replace('/:\d+$/', '', $host);
+
+    return in_array($host, ['localhost', '127.0.0.1', '::1', '[::1]'], true)
+      || (defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local')
+      || (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'local');
+  }
+
+  private static function cs_demo_tech_user(string $login, string $name, string $email): int {
+    $user_id = username_exists($login);
+    if (!$user_id) {
+      $existing_email = email_exists($email);
+      if ($existing_email) {
+        $user_id = (int) $existing_email;
+      }
+    }
+
+    if (!$user_id) {
+      $user_id = wp_insert_user([
+        'user_login'   => $login,
+        'user_pass'    => wp_generate_password(20, true),
+        'user_email'   => $email,
+        'display_name' => $name,
+        'first_name'   => strtok($name, ' ') ?: $name,
+        'role'         => 'slate_ops_tech',
+      ]);
+    }
+
+    if (is_wp_error($user_id)) {
+      return 0;
+    }
+
+    $user = new WP_User((int) $user_id);
+    if ($user->exists()) {
+      $user->set_role('slate_ops_tech');
+      wp_update_user([
+        'ID'           => (int) $user_id,
+        'display_name' => $name,
+        'user_email'   => $email,
+      ]);
+    }
+
+    return (int) $user_id;
+  }
+
+  /**
+   * POST /cs/demo-seed — reset the local CS dashboard demo state.
+   *
+   * This is intentionally local-only. It recreates a compact warning demo:
+   * duplicate queue numbers, a parts-hold job at #1, and a scheduled job
+   * with no tech.
+   */
+  public static function cs_demo_seed($req) {
+    if (!self::cs_demo_seed_allowed()) {
+      return new WP_Error('local_only', 'Demo seed is only available on the local WordPress environment.', ['status' => 403]);
+    }
+
+    global $wpdb;
+    $t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $techs = [
+      'marco' => self::cs_demo_tech_user('demo-tech-marco', 'Marco Rivera', 'demo-tech-marco@example.test'),
+      'jamie' => self::cs_demo_tech_user('demo-tech-jamie', 'Jamie Park', 'demo-tech-jamie@example.test'),
+      'priya' => self::cs_demo_tech_user('demo-tech-priya', 'Priya Shah', 'demo-tech-priya@example.test'),
+    ];
+
+    if (in_array(0, $techs, true)) {
+      return new WP_Error('demo_user_failed', 'Could not create local demo tech users.', ['status' => 500]);
+    }
+
+    $demo_customers = [
+      'Steve Smith',
+      'Demo Alpine Vans',
+      'Demo Northstar Fleet',
+      'Demo Cascade Outfitters',
+      'Demo Harbor RV',
+    ];
+    $customer_placeholders = implode(',', array_fill(0, count($demo_customers), '%s'));
+    $delete_sql = "DELETE FROM $t WHERE (customer_name IN ($customer_placeholders) OR so_number = %s) AND source = %s";
+    $delete_args = array_merge($demo_customers, ['S-ORD999005', 'manual']);
+    $wpdb->query($wpdb->prepare($delete_sql, $delete_args));
+
+    $now = Slate_Ops_Utils::now_gmt();
+    $me  = (int) get_current_user_id();
+    $rows = [
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Steve Smith',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'NOT_READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => null,
+        'queue_order'      => null,
+        'queue_note'       => 'Unassigned intake job for queue grouping.',
+        'estimated_minutes'=> 90,
+      ],
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Demo Alpine Vans',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'NOT_READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => $techs['marco'],
+        'queue_order'      => 1,
+        'queue_note'       => 'Duplicate #1 and parts hold warning.',
+        'estimated_minutes'=> 180,
+      ],
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Demo Northstar Fleet',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => $techs['marco'],
+        'queue_order'      => 1,
+        'queue_note'       => 'Duplicate #1 warning.',
+        'estimated_minutes'=> 120,
+      ],
+      [
+        'so_number'        => null,
+        'customer_name'    => 'Demo Cascade Outfitters',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'NOT_READY',
+        'status'           => Slate_Ops_Statuses::INTAKE,
+        'assigned_user_id' => $techs['priya'],
+        'queue_order'      => 1,
+        'queue_note'       => 'Parts hold at queue #1 warning.',
+        'estimated_minutes'=> 150,
+      ],
+      [
+        'so_number'        => 'S-ORD999005',
+        'customer_name'    => 'Demo Harbor RV',
+        'dealer_name'      => 'Local demo',
+        'job_type'         => 'PARTS_ONLY',
+        'parts_status'     => 'READY',
+        'status'           => Slate_Ops_Statuses::SCHEDULED,
+        'assigned_user_id' => null,
+        'queue_order'      => 2,
+        'queue_note'       => 'Scheduled job with no tech warning.',
+        'estimated_minutes'=> 240,
+      ],
+    ];
+
+    $ids = [];
+    foreach ($rows as $row) {
+      $inserted = $wpdb->insert($t, array_merge([
+        'source'            => 'manual',
+        'created_from'      => 'manual',
+        'status_updated_at' => $now,
+        'priority'          => 3,
+        'queue_priority'    => 3,
+        'queue_visible'     => 1,
+        'queue_updated_at'  => $now,
+        'queue_updated_by'  => $me ?: null,
+        'dealer_status'     => 'waiting',
+        'created_by'        => $me ?: null,
+        'created_at'        => $now,
+        'updated_at'        => $now,
+      ], $row));
+
+      if (!$inserted) {
+        return new WP_Error('demo_job_failed', $wpdb->last_error ?: 'Could not create local demo jobs.', ['status' => 500]);
+      }
+
+      $ids[] = (int) $wpdb->insert_id;
+    }
+
+    return rest_ensure_response([
+      'ok'      => true,
+      'job_ids' => $ids,
+      'techs'   => $techs,
+    ]);
+  }
+
+  /**
+   * Loose truthy parser for JSON booleans posted by the dashboard.
+   */
+  private static function truthy($v): bool {
+    if (is_bool($v))   return $v;
+    if (is_int($v))    return $v !== 0;
+    if (is_string($v)) return in_array(strtolower(trim($v)), ['1','true','yes','on'], true);
+    return false;
   }
 
 }

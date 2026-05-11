@@ -39,10 +39,10 @@ if (!function_exists('ops_nav_link')) {
     $allowed = Slate_Ops_Utils::user_allowed_pages();
 
     if (in_array('executive', $allowed, true)) :
-      ops_nav_link('/ops/exec',     '/exec',     'dashboard',      'Executive');
+      ops_nav_link('/ops/exec',         '/exec',          'dashboard',      'Executive');
     endif;
-    if (in_array('cs', $allowed, true)) :
-      ops_nav_link('/ops/cs',       '/cs',       'person',         'CS');
+    if (in_array('cs-dashboard', $allowed, true)) :
+      ops_nav_link('/ops/cs-dashboard', '/cs-dashboard',  'person',         'CS');
     endif;
     if (in_array('tech', $allowed, true)) :
       ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech');
@@ -52,6 +52,9 @@ if (!function_exists('ops_nav_link')) {
     endif;
     if (in_array('purchasing', $allowed, true)) :
       ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
+    endif;
+    if (in_array('resource-hub', $allowed, true)) :
+      ops_nav_link('/ops/resource-hub', '/resource-hub', 'folder_open', 'Resource hub');
     endif;
     if (in_array('admin', $allowed, true)) :
       ops_nav_link('/ops/admin',    '/admin',    'shield',         'Admin');

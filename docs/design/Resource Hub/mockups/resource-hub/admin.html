@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slate Ops — Admin</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+<div class="rh-app rh-shell" data-screen-label="Admin — with Resource Hub section">
+  <header class="rh-topbar">
+    <div class="rh-topbar__brand">/SLATE</div>
+    <div class="rh-topbar__right">
+      <span class="rh-topbar__build">Slate Ops v0.58.1</span>
+      <span class="rh-avatar" aria-hidden="true">AD</span>
+    </div>
+  </header>
+
+  <div class="rh-shell__body">
+    <aside class="rh-side" aria-label="Primary">
+      <div class="rh-side__top">
+        <button class="rh-side__collapse" type="button" aria-label="Collapse sidebar">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><polyline points="10,3 5,8 10,13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="rh-side__group-label">Navigate</div>
+      <ul class="rh-side__nav">
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="10" y="2" width="6" height="6" rx="1"/><rect x="2" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>Executive</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>CS</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 11.5a5.5 5.5 0 1 1 -8.6-6.6"/><path d="M11 4l3 0 0 3"/></svg>CS (legacy)</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 4.5l2 2-7 7-3 .5.5-3z"/><path d="M10 6l2 2"/></svg>Tech</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3.5" width="13" height="12" rx="1.5"/><line x1="2.5" y1="7.5" x2="15.5" y2="7.5"/><line x1="6" y1="2" x2="6" y2="5"/><line x1="12" y1="2" x2="12" y2="5"/></svg>Schedule</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l2 9h9l1.5-6H6"/><circle cx="7" cy="15" r="1.2"/><circle cx="14" cy="15" r="1.2"/></svg>Purchasing</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5.5a1 1 0 0 1 1-1h3.5l1.5 2H15a1 1 0 0 1 1 1V14a1 1 0 0 1 -1 1H3a1 1 0 0 1 -1-1z"/></svg>Resource hub</button></li>
+        <li><button class="rh-side__item" type="button" aria-current="page"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2 L15 5 V9.5 C15 13 12.5 15.3 9 16 C5.5 15.3 3 13 3 9.5 V5 Z"/></svg>Admin</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><path d="M9 1v2 M9 15v2 M1 9h2 M15 9h2 M3.5 3.5l1.5 1.5 M13 13l1.5 1.5 M3.5 14.5l1.5-1.5 M13 5l1.5-1.5"/></svg>Settings</button></li>
+        <li><button class="rh-side__item" type="button"><svg class="rh-side__icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3.5" width="14" height="9" rx="1"/><line x1="6" y1="15.5" x2="12" y2="15.5"/><line x1="9" y1="12.5" x2="9" y2="15.5"/></svg>Monitor</button></li>
+      </ul>
+      <div class="rh-side__spacer"></div>
+      <div class="rh-side__user">
+        <div>
+          <div class="rh-side__user-name">admin</div>
+          <div class="rh-side__user-role">Admin</div>
+        </div>
+        <button class="rh-side__signout" type="button" aria-label="Sign out">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3.5V2.5a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1"/><polyline points="10,4 12.5,7 10,10"/><line x1="6" y1="7" x2="12" y2="7"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="rh-main">
+      <div class="rh-main__head">
+        <h1 class="rh-main__title">Admin</h1>
+        <p class="rh-main__sub">Ops role management and system overview.</p>
+      </div>
+
+      <section class="rh-stats" aria-label="Overview">
+        <div class="rh-stat">
+          <div class="rh-stat__label">Active jobs</div>
+          <div class="rh-stat__value">1</div>
+        </div>
+        <div class="rh-stat">
+          <div class="rh-stat__label">In progress</div>
+          <div class="rh-stat__value">0</div>
+        </div>
+        <div class="rh-stat">
+          <div class="rh-stat__label">Ready for closeout</div>
+          <div class="rh-stat__value">0</div>
+        </div>
+        <div class="rh-stat">
+          <div class="rh-stat__label">Unscheduled</div>
+          <div class="rh-stat__value">0</div>
+        </div>
+        <div class="rh-stat">
+          <div class="rh-stat__label">Users</div>
+          <div class="rh-stat__value">4</div>
+        </div>
+      </section>
+
+      <!-- Users & Ops Roles -->
+      <section class="rh-section" aria-labelledby="users-section">
+        <div class="rh-section__head">
+          <div>
+            <h2 class="rh-section__title" id="users-section">Users &amp; Ops Roles</h2>
+          </div>
+          <div class="rh-section__actions">
+            <button class="rh-extbtn" type="button">
+              WP Admin
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4.5 2.5h-2v7h7v-2"/><polyline points="6.5,2.5 9.5,2.5 9.5,5.5"/><line x1="9.5" y1="2.5" x2="5.5" y2="6.5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="rh-section__body">
+          <table class="rh-users-table">
+            <thead><tr><th>Name</th><th>Email</th><th style="text-align:right">Ops role</th></tr></thead>
+            <tbody>
+              <tr><td class="rh-cell--name">admin</td><td class="rh-cell--email"><a href="#">wordpress@example.com</a></td><td style="text-align:right"><select class="rh-select"><option>No Role</option><option>Tech</option><option>CS</option><option>Admin</option></select></td></tr>
+              <tr><td class="rh-cell--name">Jamie Park</td><td class="rh-cell--email"><a href="#">demo-tech-jamie@example.test</a></td><td style="text-align:right"><select class="rh-select"><option>No Role</option><option selected>Tech</option><option>CS</option><option>Admin</option></select></td></tr>
+              <tr><td class="rh-cell--name">Marco Rivera</td><td class="rh-cell--email"><a href="#">demo-tech-marco@example.test</a></td><td style="text-align:right"><select class="rh-select"><option>No Role</option><option selected>Tech</option><option>CS</option><option>Admin</option></select></td></tr>
+              <tr><td class="rh-cell--name">Priya Shah</td><td class="rh-cell--email"><a href="#">demo-tech-priya@example.test</a></td><td style="text-align:right"><select class="rh-select"><option>No Role</option><option selected>Tech</option><option>CS</option><option>Admin</option></select></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Resource Hub admin section -->
+      <section class="rh-section" aria-labelledby="rh-section">
+        <div class="rh-section__head">
+          <div>
+            <h2 class="rh-section__title" id="rh-section">Resource Hub</h2>
+            <p class="rh-section__sub">Vendor docs awaiting Slate review, plus add a new resource to the library.</p>
+          </div>
+          <div class="rh-section__actions">
+            <button class="rh-btn" type="button">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 9.5v-7l4 1 4-1v7l-4 1z"/><line x1="6" y1="3.5" x2="6" y2="10.5"/></svg>
+              Open library
+            </button>
+            <button class="rh-btn rh-btn--primary" id="open-add" type="button">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><line x1="6" y1="2" x2="6" y2="10"/><line x1="2" y1="6" x2="10" y2="6"/></svg>
+              Add resource
+            </button>
+          </div>
+        </div>
+
+        <div class="rh-rh-meta">
+          <div class="rh-rh-stat"><div class="rh-rh-stat__label">Pending review</div><div class="rh-rh-stat__value">6</div></div>
+          <div class="rh-rh-stat"><div class="rh-rh-stat__label">Total resources</div><div class="rh-rh-stat__value">42</div></div>
+          <div class="rh-rh-stat"><div class="rh-rh-stat__label">Slate-authored</div><div class="rh-rh-stat__value">11</div></div>
+          <div class="rh-rh-stat"><div class="rh-rh-stat__label">Reviewed last 7 days</div><div class="rh-rh-stat__value">5</div></div>
+        </div>
+
+        <!-- Tablet/monitor: table -->
+        <div class="rh-pending-table-wrap">
+          <table class="rh-pending-table">
+            <thead>
+              <tr>
+                <th data-sortable aria-sort="ascending">Vendor <span class="rh-sort__arrow">↑</span></th>
+                <th data-sortable aria-sort="none">SKU <span class="rh-sort__arrow">↕</span></th>
+                <th data-sortable aria-sort="none">Title <span class="rh-sort__arrow">↕</span></th>
+                <th data-sortable aria-sort="none">Vendor revision <span class="rh-sort__arrow">↕</span></th>
+                <th data-sortable aria-sort="none">Status <span class="rh-sort__arrow">↕</span></th>
+                <th class="rh-cell--action">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-review="AW2014">
+                <td class="rh-cell--vendor">Adventure Wagon</td>
+                <td class="rh-cell--mono">AW2014</td>
+                <td class="rh-cell--title">Transit AWD floor track — torque chart</td>
+                <td class="rh-cell--mono">Rev. 3 · 2026-03-29</td>
+                <td><span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span></td>
+                <td class="rh-cell--action"><button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="AW2014">Review</button></td>
+              </tr>
+              <tr data-review="AW2231">
+                <td class="rh-cell--vendor">Adventure Wagon</td>
+                <td class="rh-cell--mono">AW2231</td>
+                <td class="rh-cell--title">Wayfarer bed-mount install — 170 HR</td>
+                <td class="rh-cell--mono">Rev. 5 · 2026-04-22</td>
+                <td><span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span></td>
+                <td class="rh-cell--action"><button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="AW2231">Review</button></td>
+              </tr>
+              <tr data-review="AW2298">
+                <td class="rh-cell--vendor">Adventure Wagon</td>
+                <td class="rh-cell--mono">AW2298</td>
+                <td class="rh-cell--title">ProMaster ceiling fan — wiring rev. 2</td>
+                <td class="rh-cell--mono">Rev. 2 · 2026-04-08</td>
+                <td><span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span></td>
+                <td class="rh-cell--action"><button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="AW2298">Review</button></td>
+              </tr>
+              <tr data-review="FL0974">
+                <td class="rh-cell--vendor">Flatline Van Co</td>
+                <td class="rh-cell--mono">FL0974</td>
+                <td class="rh-cell--title">144 HR insulation kit — SDS update</td>
+                <td class="rh-cell--mono">Rev. C · 2026-04-01</td>
+                <td><span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span></td>
+                <td class="rh-cell--action"><button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="FL0974">Review</button></td>
+              </tr>
+              <tr data-review="FL1142">
+                <td class="rh-cell--vendor">Flatline Van Co</td>
+                <td class="rh-cell--mono">FL1142</td>
+                <td class="rh-cell--title">170 HR ladder mount — install rev. B</td>
+                <td class="rh-cell--mono">Rev. B · 2026-04-12</td>
+                <td><span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span></td>
+                <td class="rh-cell--action"><button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="FL1142">Review</button></td>
+              </tr>
+              <tr data-review="SP0114B">
+                <td class="rh-cell--vendor">Flatline Van Co</td>
+                <td class="rh-cell--mono">SP0114B</td>
+                <td class="rh-cell--title">Sprinter Standard Roof Rack — 144 HR</td>
+                <td class="rh-cell--mono">Rev. D · 2026-03-04</td>
+                <td><span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span></td>
+                <td class="rh-cell--action"><button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="SP0114B">Review</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Phone: cards -->
+        <div class="rh-pending-cards">
+          <article class="rh-queue-card">
+            <div class="rh-queue-card__head">
+              <div>
+                <div class="rh-queue-card__vendor">Flatline Van Co</div>
+                <h3 class="rh-queue-card__title">Sprinter Standard Roof Rack — 144 HR</h3>
+                <div class="rh-queue-card__sku">SP0114B</div>
+              </div>
+              <span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs review</span>
+            </div>
+            <div class="rh-queue-card__rev">Rev. D · 2026-03-04</div>
+            <div class="rh-queue-card__action">
+              <button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="SP0114B">Review</button>
+            </div>
+          </article>
+          <article class="rh-queue-card">
+            <div class="rh-queue-card__head">
+              <div>
+                <div class="rh-queue-card__vendor">Adventure Wagon</div>
+                <h3 class="rh-queue-card__title">Wayfarer bed-mount install — 170 HR</h3>
+                <div class="rh-queue-card__sku">AW2231</div>
+              </div>
+              <span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs review</span>
+            </div>
+            <div class="rh-queue-card__rev">Rev. 5 · 2026-04-22</div>
+            <div class="rh-queue-card__action">
+              <button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="AW2231">Review</button>
+            </div>
+          </article>
+          <article class="rh-queue-card">
+            <div class="rh-queue-card__head">
+              <div>
+                <div class="rh-queue-card__vendor">Flatline Van Co</div>
+                <h3 class="rh-queue-card__title">170 HR ladder mount — install rev. B</h3>
+                <div class="rh-queue-card__sku">FL1142</div>
+              </div>
+              <span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs review</span>
+            </div>
+            <div class="rh-queue-card__rev">Rev. B · 2026-04-12</div>
+            <div class="rh-queue-card__action">
+              <button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-review-trigger="FL1142">Review</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Add resource modal                                            -->
+  <!-- ============================================================ -->
+  <div class="rh-overlay" id="add-modal" hidden role="dialog" aria-labelledby="add-title" aria-modal="true">
+    <div class="rh-modal">
+      <div class="rh-modal__head">
+        <div>
+          <h2 class="rh-modal__title" id="add-title">Add resource</h2>
+          <p class="rh-modal__sub">Vendor docs land in the review queue. Slate-authored docs publish straight to the library.</p>
+        </div>
+        <button class="rh-modal__close" type="button" data-dismiss aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg>
+        </button>
+      </div>
+      <div class="rh-modal__body">
+        <div class="rh-field">
+          <span class="rh-field__label">Source</span>
+          <div class="rh-segment" role="tablist" aria-label="Source">
+            <button class="rh-segment__btn" type="button" aria-pressed="true" id="src-vendor">Vendor doc</button>
+            <button class="rh-segment__btn" type="button" aria-pressed="false" id="src-slate">Slate-authored</button>
+          </div>
+          <span class="rh-field__hint" id="src-hint">Vendor doc — lands in the review queue with status <em>Needs Slate review</em>.</span>
+        </div>
+
+        <div class="rh-field">
+          <span class="rh-field__label">PDF</span>
+          <div class="rh-drop">
+            <div class="rh-drop__icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 13l5-5 5 5"/><line x1="10" y1="8" x2="10" y2="16"/><path d="M3 16h14"/></svg>
+            </div>
+            <div class="rh-drop__title">Drop a PDF or image here</div>
+            <div class="rh-drop__sub">Up to 25 MB · pdf, jpg, png</div>
+            <span class="rh-drop__pick">Choose file</span>
+          </div>
+        </div>
+
+        <div class="rh-field-grid">
+          <div class="rh-field">
+            <label class="rh-field__label" for="f-sku">SKU</label>
+            <input class="rh-input rh-input--mono" type="text" id="f-sku" placeholder="e.g. SP0114B" />
+          </div>
+          <div class="rh-field">
+            <label class="rh-field__label" for="f-vendor">Vendor</label>
+            <select class="rh-select" id="f-vendor" style="min-width:0;width:100%">
+              <option>Flatline Van Co</option>
+              <option>Adventure Wagon</option>
+              <option>Slate-authored</option>
+              <option>Other…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="rh-field-grid">
+          <div class="rh-field">
+            <label class="rh-field__label" for="f-doctype">Doc type</label>
+            <select class="rh-select" id="f-doctype" style="min-width:0;width:100%">
+              <option>Install guide</option>
+              <option>Spec sheet</option>
+              <option>QC checklist</option>
+              <option>Cert</option>
+              <option>SDS</option>
+            </select>
+          </div>
+          <div class="rh-field">
+            <label class="rh-field__label" for="f-rev">Vendor revision</label>
+            <input class="rh-input rh-input--mono" type="text" id="f-rev" placeholder="Rev. D · 2026-03-04" />
+          </div>
+        </div>
+
+        <div class="rh-field">
+          <span class="rh-field__label">Chassis applicability</span>
+          <div class="rh-multi" role="group" aria-label="Chassis">
+            <button class="rh-multi__chip" type="button" aria-pressed="true">Sprinter 144 HR <span class="rh-multi__chip__x">×</span></button>
+            <button class="rh-multi__chip" type="button" aria-pressed="false">Sprinter 170 HR</button>
+            <button class="rh-multi__chip" type="button" aria-pressed="false">Transit AWD</button>
+            <button class="rh-multi__chip" type="button" aria-pressed="false">ProMaster 159 HR</button>
+            <button class="rh-multi__chip" type="button" aria-pressed="false">All chassis</button>
+          </div>
+        </div>
+
+        <div class="rh-field">
+          <label class="rh-field__label" for="f-title">Title</label>
+          <input class="rh-input" type="text" id="f-title" placeholder="e.g. Sprinter Standard Roof Rack — 144 HR" />
+        </div>
+
+        <div class="rh-field">
+          <label class="rh-field__label" for="f-notes">Initial Slate notes <span class="rh-mute" style="font-weight:500;letter-spacing:0;text-transform:none">(optional — you can add them in review)</span></label>
+          <textarea class="rh-textarea" id="f-notes" placeholder="What should techs watch for? Hardware quirks, vendor errata, sealant call-outs…"></textarea>
+        </div>
+      </div>
+      <div class="rh-modal__foot">
+        <button class="rh-btn rh-btn--ghost" type="button" data-dismiss>Cancel</button>
+        <div class="rh-row">
+          <button class="rh-btn" type="button">Save draft</button>
+          <button class="rh-btn rh-btn--primary" type="button">Add to queue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Review drawer                                                 -->
+  <!-- ============================================================ -->
+  <div class="rh-drawer-overlay" id="review-drawer" hidden role="dialog" aria-labelledby="review-title" aria-modal="true">
+    <aside class="rh-drawer">
+      <div class="rh-drawer__head">
+        <div class="rh-drawer__head-info">
+          <span class="rh-drawer__sku" id="review-sku">SP0114B</span>
+          <h2 class="rh-drawer__title" id="review-title">Sprinter Standard Roof Rack — 144 HR</h2>
+          <div class="rh-drawer__pillrow">
+            <span class="rh-pill rh-pill--parts"><span class="rh-pill__dot"></span>Needs Slate review</span>
+            <span class="rh-pill rh-pill--qc">Install guide</span>
+            <span class="rh-pill rh-pill--neutral">Flatline Van Co · Rev. D</span>
+          </div>
+        </div>
+        <button class="rh-modal__close" type="button" data-dismiss aria-label="Close drawer">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg>
+        </button>
+      </div>
+
+      <div class="rh-drawer__body">
+        <div class="rh-drawer__pdf">
+          <div class="rh-drawer__pdf-thumb">
+            <div class="rh-pdf__icon" aria-hidden="true">PDF</div>
+            <div class="rh-drawer__pdf-name">SP0114B_install_revD.pdf</div>
+            <div class="rh-mute" style="font-size:11px">4.2 MB · 18 pages</div>
+            <button class="rh-btn rh-btn--sm" type="button" style="margin-top:8px">Open PDF in new tab</button>
+          </div>
+          <div class="rh-mute" style="font-size:11px">Source: vendor-portal / FL-2026-03</div>
+        </div>
+
+        <div class="rh-drawer__notes">
+          <div class="rh-field">
+            <span class="rh-field__label">Slate notes for techs</span>
+            <textarea class="rh-textarea" rows="6" placeholder="Hardware variants, sealant call-outs, vendor errata, references to attached photos…">Vendor torque spec on the front foot bracket reads 22 ft-lb — that's correct for the M8 bolt called out, but on builds before VIN suffix HJ4471 the bracket ships with M10 hardware. Confirm before torquing; if M10, use 32 ft-lb per the table on p. 9.
+
+- Vendor diagram p. 6 shows the rear crossbar 18" from the slider — current production is 22". Measure off the d-pillar.
+- Sealant: vendor says any butyl. Use only 3M 08509 — others have caused leaks on the 144 HR rain channel.</textarea>
+          </div>
+
+          <div class="rh-field">
+            <span class="rh-field__label">QC checks</span>
+            <div class="rh-checklist">
+              <button class="rh-checklist__item" type="button" aria-checked="true" role="checkbox">
+                <span class="rh-checklist__box"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,8.5 9,3"/></svg></span>
+                <span class="rh-checklist__label">Torque values verified against current production hardware</span>
+              </button>
+              <button class="rh-checklist__item" type="button" aria-checked="true" role="checkbox">
+                <span class="rh-checklist__box"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,8.5 9,3"/></svg></span>
+                <span class="rh-checklist__label">Hardware variants noted (M8 / M10 split by VIN)</span>
+              </button>
+              <button class="rh-checklist__item" type="button" aria-checked="false" role="checkbox">
+                <span class="rh-checklist__box"></span>
+                <span class="rh-checklist__label">Sealant / adhesive specified</span>
+              </button>
+              <button class="rh-checklist__item" type="button" aria-checked="false" role="checkbox">
+                <span class="rh-checklist__box"></span>
+                <span class="rh-checklist__label">Photos / diagrams attached for tricky steps</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="rh-field">
+            <span class="rh-field__label">Slate attachments</span>
+            <div class="rh-attach-grid">
+              <div class="rh-attach-tile rh-attach-tile--filled">
+                <div class="rh-attach-tile__img">photo · bracket detail</div>
+                <div class="rh-attach-tile__cap">Front foot — M10 callout</div>
+              </div>
+              <div class="rh-attach-tile rh-attach-tile--filled">
+                <div class="rh-attach-tile__img">diagram · crossbar</div>
+                <div class="rh-attach-tile__cap">Crossbar position annotated</div>
+              </div>
+              <button class="rh-attach-tile" type="button">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></svg>
+                <span>Add photo or diagram</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rh-drawer__foot">
+        <button class="rh-btn rh-btn--ghost" type="button" data-dismiss>Cancel</button>
+        <div class="rh-drawer__foot-right">
+          <button class="rh-btn" type="button">Save draft</button>
+          <button class="rh-btn" type="button">Request changes from vendor</button>
+          <button class="rh-btn rh-btn--primary" type="button">Approve &amp; publish</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="mockup.js"></script>
+<script>
+(function () {
+  // Open add modal
+  var addBtn = document.getElementById('open-add');
+  var addModal = document.getElementById('add-modal');
+  if (addBtn && addModal) addBtn.addEventListener('click', function () { addModal.hidden = false; });
+
+  // Source segment toggle
+  var srcVendor = document.getElementById('src-vendor');
+  var srcSlate  = document.getElementById('src-slate');
+  var srcHint   = document.getElementById('src-hint');
+  function setSrc(vendor) {
+    srcVendor.setAttribute('aria-pressed', vendor ? 'true' : 'false');
+    srcSlate .setAttribute('aria-pressed', vendor ? 'false' : 'true');
+    srcHint.innerHTML = vendor
+      ? 'Vendor doc — lands in the review queue with status <em>Needs Slate review</em>.'
+      : 'Slate-authored — publishes straight to the library, marked <em>Reviewed by Slate</em>.';
+    var btn = document.querySelector('.rh-modal__foot .rh-btn--primary');
+    if (btn) btn.textContent = vendor ? 'Add to queue' : 'Publish to library';
+  }
+  if (srcVendor) srcVendor.addEventListener('click', function () { setSrc(true); });
+  if (srcSlate)  srcSlate .addEventListener('click', function () { setSrc(false); });
+
+  // Multi-select chips in modal
+  document.querySelectorAll('.rh-multi__chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var on = chip.getAttribute('aria-pressed') === 'true';
+      chip.setAttribute('aria-pressed', on ? 'false' : 'true');
+      var x = chip.querySelector('.rh-multi__chip__x');
+      if (!on && !x) {
+        var sx = document.createElement('span');
+        sx.className = 'rh-multi__chip__x';
+        sx.textContent = '×';
+        chip.appendChild(document.createTextNode(' '));
+        chip.appendChild(sx);
+      } else if (on && x) {
+        x.remove();
+      }
+    });
+  });
+
+  // Review drawer
+  var drawer = document.getElementById('review-drawer');
+  document.querySelectorAll('[data-review-trigger]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var sku = btn.getAttribute('data-review-trigger');
+      // Update drawer title from row, if available
+      var row = document.querySelector('tr[data-review="' + sku + '"], .rh-queue-card');
+      var titleEl = document.getElementById('review-title');
+      var skuEl = document.getElementById('review-sku');
+      if (sku && skuEl) skuEl.textContent = sku;
+      // Try to read a title near the trigger
+      var card = btn.closest('tr, article');
+      if (card) {
+        var titleSrc = card.querySelector('.rh-cell--title, .rh-queue-card__title');
+        if (titleSrc && titleEl) titleEl.textContent = titleSrc.textContent.trim();
+      }
+      drawer.hidden = false;
+    });
+  });
+
+  // Checklist toggles
+  document.querySelectorAll('.rh-checklist__item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      var on = item.getAttribute('aria-checked') === 'true';
+      item.setAttribute('aria-checked', on ? 'false' : 'true');
+      var box = item.querySelector('.rh-checklist__box');
+      if (box) {
+        if (on) {
+          box.innerHTML = '';
+        } else {
+          box.innerHTML = '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,8.5 9,3"/></svg>';
+        }
+      }
+    });
+  });
+
+  // Dismiss any overlay
+  document.querySelectorAll('[data-dismiss]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var overlay = el.closest('.rh-overlay, .rh-drawer-overlay');
+      if (overlay) overlay.hidden = true;
+    });
+  });
+  // Click outside modal/drawer = close (only on overlay itself)
+  document.querySelectorAll('.rh-overlay, .rh-drawer-overlay').forEach(function (overlay) {
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.hidden = true;
+    });
+  });
+})();
+</script>
+</body>
+</html>

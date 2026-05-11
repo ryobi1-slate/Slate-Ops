@@ -283,14 +283,14 @@ body.slate-ops {
   appearance: none;
   background: transparent !important;
   border-radius: var(--slate-radius-sm);
-  color: var(--slate-sage);
+  color: var(--slate-ink-subtle) !important;
   cursor: pointer;
   padding: 0;
   transition: color var(--slate-duration-fast) var(--slate-ease);
 }
 
 .ops-sidebar-collapse-btn:hover {
-  color: var(--slate-redwood);
+  color: var(--slate-ink) !important;
 }
 
 .ops-sidebar-collapse-btn:focus-visible {
@@ -483,83 +483,6 @@ html.ops-sidebar-collapsed .ops-sidebar-footer {
   height: 24px;
   width: auto;
   display: block;
-}
-
-/* User avatar — <details>/<summary> dropdown */
-details.ops-topbar__account > summary {
-  list-style: none;
-  cursor: pointer;
-}
-details.ops-topbar__account > summary::-webkit-details-marker { display: none; }
-
-.ops-topbar__avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--slate-radius-full);
-  background: var(--slate-sage);
-  color: var(--slate-surface);
-  font-size: var(--slate-text-micro);
-  font-weight: var(--slate-weight-medium);
-  letter-spacing: 0.04em;
-  font-family: var(--font-sans);
-  transition: background var(--slate-duration-fast) var(--slate-ease);
-  user-select: none;
-}
-
-.ops-topbar__avatar:hover {
-  background: var(--slate-sage-ink);
-}
-
-.ops-topbar__dropdown {
-  display: none;
-  position: absolute;
-  top: calc(100% + var(--slate-space-sm));
-  right: 0;
-  min-width: 180px;
-  background: var(--slate-surface);
-  border: 1px solid var(--slate-divider);
-  border-radius: var(--slate-radius-lg);
-  box-shadow: var(--slate-shadow-pop);
-  padding: var(--slate-space-md);
-  z-index: var(--slate-z-dropdown);
-}
-
-details.ops-topbar__account[open] .ops-topbar__dropdown {
-  display: block;
-}
-
-.ops-topbar__dropdown-name {
-  font-size: var(--slate-text-sm);
-  font-weight: var(--slate-weight-medium);
-  color: var(--slate-ink);
-}
-
-.ops-topbar__dropdown-role {
-  font-size: var(--slate-text-xs);
-  color: var(--slate-ink-muted);
-  margin-top: var(--slate-space-2xs);
-}
-
-.ops-topbar__dropdown-divider {
-  border: none;
-  border-top: 1px solid var(--slate-divider);
-  margin: var(--slate-space-sm) 0;
-}
-
-.ops-topbar__dropdown-link {
-  display: block;
-  font-size: var(--slate-text-sm);
-  color: var(--slate-ink-muted);
-  text-decoration: none;
-  padding: var(--slate-space-2xs) 0;
-  transition: color var(--slate-duration-fast) var(--slate-ease);
-}
-
-.ops-topbar__dropdown-link:hover {
-  color: var(--slate-sage);
 }
 
 /* Page title — populated by JS via setPageTitle() */
@@ -865,16 +788,80 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
  * On mobile the Ops sidebar is hidden — the tech panel is self-contained.
  */
 .ops-page-tech .ops-header  { display: none; }
+
+/* Tech route uses normal document/body scrolling — not a nested .ops-content
+ * scroller. Android Chrome / Firefox were trapping the viewport when the
+ * "Help on Another Job" list expanded inside the nested scroll container.
+ * Unlock the whole chain (shell → shell-body → body → content → #ops-view →
+ * React wrappers) so the document is the single scroller on every device. */
+/* Body is the document scroll container on Tech (root scroll container).
+ * Inner shell wrappers stay overflow: visible so nothing nested can trap
+ * a touch drag on Android. */
+body.slate-ops.ops-page-tech {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body.slate-ops.ops-page-tech .ops-shell-body,
+body.slate-ops.ops-page-tech .ops-body {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
+  height: auto;
+  max-height: none;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
 .ops-page-tech .ops-content {
   padding: 0;
-  overflow: hidden;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
 }
 .ops-page-tech .ops-content > #ops-view {
-  height: 100%;
+  height: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
+.ops-page-tech .ops-content > #ops-view,
+.ops-page-tech .ops-content > #ops-view > div,
+.ops-page-tech .ops-content > #ops-view > div > main {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+/* Tailwind utility overrides — applied at all viewport sizes so desktop
+ * Tech doesn't re-trap scrolling when the React bundle renders wrappers
+ * with h-screen / min-h-screen / overflow-hidden / overflow-y-auto. */
+.ops-page-tech #ops-view .h-screen,
+.ops-page-tech #ops-view .min-h-screen,
+.ops-page-tech #ops-view [class~="h-screen"],
+.ops-page-tech #ops-view [class~="min-h-screen"] {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.ops-page-tech #ops-view .overflow-hidden,
+.ops-page-tech #ops-view .overflow-y-auto,
+.ops-page-tech #ops-view [class~="overflow-hidden"],
+.ops-page-tech #ops-view [class~="overflow-y-auto"] {
+  overflow: visible;
+  max-height: none;
+}
 @media (max-width: 900px) {
   .ops-page-tech .ops-sidebar {
     display: none !important;
@@ -1229,6 +1216,23 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 }
 .slate-btn--outline:hover:not([disabled]) {
   background-color: var(--slate-surface-page);
+}
+
+/* Legacy Ops controls use .btn.secondary. Keep them in the Slate palette so
+   WordPress/theme button defaults cannot reintroduce pink outlines. */
+body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary) {
+  background: var(--slate-surface) !important;
+  border: 1px solid var(--slate-divider-strong) !important;
+  color: var(--slate-sage-ink) !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):hover,
+body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):focus-visible {
+  background: var(--slate-surface-page) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
 }
 .slate-btn[disabled],
 .slate-btn:disabled {
@@ -1931,4 +1935,20 @@ details.ops-topbar__account[open] .ops-topbar__dropdown {
 .ops-page-admin #ops-page-access-save:hover,
 .ops-page-admin #ops-page-access-save:focus-visible {
   background-color: var(--slate-sage-ink) !important;
+}
+
+/* =========== EMBED MODE =========== */
+/*
+ * Applied when /ops/* is loaded with ?embed=1 (e.g. inside the CS Dashboard's
+ * Workspace iframe). Topbar + sidebar are suppressed in PHP; this block
+ * normalises the body and forces the embedded background to match the
+ * cream `.ops-content` of the parent dashboard so there is no visible seam
+ * across the iframe boundary. Without this rule the embedded body would
+ * paint `--sand` (#f4f1e8), one shade lighter than the parent's cream
+ * `--slate-surface-page` (#F5F3ED).
+ */
+body.slate-ops.ops-embed {
+  margin: 0;
+  padding: 0;
+  background: var(--slate-surface-page);
 }

@@ -3,6 +3,7 @@ if (!defined('ABSPATH')) exit;
 
 class Slate_Ops_Utils {
   const ROLE_PAGE_ACCESS_OPTION = 'slate_ops_role_page_access';
+  const FEATURE_FLAGS_OPTION = 'slate_ops_feature_flags';
 
   // ── Role-level capabilities ──────────────────────────────────────────────
   const CAP_ACCESS     = 'slate_ops_access';      // base gate — every ops role has this
@@ -220,8 +221,14 @@ class Slate_Ops_Utils {
     // get_role_page_access() already sanitizes each role's slug list.
     $byRole = isset($matrix[$role]) && is_array($matrix[$role]) ? $matrix[$role] : [];
 
+    $features = self::get_feature_flags();
+
     // Hard safety rails: admin / settings / purchasing remain capability-gated.
+    // Feature availability is the global on/off layer. Page Access by Role
+    // can only expose pages that are enabled here.
     $pages = array_values(array_filter($byRole, function ($slug) {
+      $features = self::get_feature_flags();
+      if (empty($features[$slug])) return false;
       if ($slug === 'admin')      return current_user_can(self::CAP_ADMIN);
       if ($slug === 'settings')   return current_user_can(self::CAP_MANAGE_SETTINGS);
       if ($slug === 'purchasing') return current_user_can(self::CAP_MANAGE_SETTINGS);
@@ -235,18 +242,94 @@ class Slate_Ops_Utils {
     if (current_user_can(self::CAP_MANAGE_SETTINGS)) {
       $pages[] = 'settings';
     }
+    if (current_user_can(self::CAP_ADMIN)) {
+      $pages[] = 'resource-hub';
+    }
 
-    return array_values(array_unique($pages));
+    return array_values(array_filter(array_unique($pages), function ($slug) use ($features) {
+      return !empty($features[$slug]);
+    }));
+  }
+
+  public static function get_page_labels() {
+    return [
+      'executive'    => 'Executive',
+      'cs-dashboard' => 'CS Dashboard',
+      'tech'         => 'Tech',
+      'schedule'     => 'Schedule',
+      'purchasing'   => 'Purchasing',
+      'resource-hub' => 'Resource hub',
+      'admin'        => 'Admin',
+      'settings'     => 'Settings',
+      'monitor'      => 'Monitor',
+    ];
+  }
+
+  public static function get_default_feature_flags() {
+    return [
+      'executive'    => true,
+      'cs'           => false,
+      'cs-dashboard' => true,
+      'tech'         => true,
+      'schedule'     => self::scheduler_launch_enabled(),
+      'purchasing'   => false,
+      'resource-hub' => true,
+      'admin'        => true,
+      'settings'     => true,
+      'monitor'      => true,
+    ];
+  }
+
+  public static function get_feature_flags() {
+    $defaults = self::get_default_feature_flags();
+    $saved = get_option(self::FEATURE_FLAGS_OPTION, []);
+    if (!is_array($saved)) return $defaults;
+
+    $out = [];
+    foreach ($defaults as $slug => $enabled) {
+      $out[$slug] = array_key_exists($slug, $saved) ? (bool) $saved[$slug] : (bool) $enabled;
+    }
+
+    // The admin controls must remain reachable for administrators.
+    $out['cs'] = false;
+    $out['admin'] = true;
+    $out['settings'] = true;
+
+    return $out;
+  }
+
+  public static function sanitize_feature_flags($flags) {
+    $defaults = self::get_default_feature_flags();
+    $in = is_array($flags) ? $flags : [];
+    $out = [];
+    foreach ($defaults as $slug => $default) {
+      $out[$slug] = array_key_exists($slug, $in) ? (bool) $in[$slug] : (bool) $default;
+    }
+    $out['cs'] = false;
+    $out['admin'] = true;
+    $out['settings'] = true;
+    return $out;
   }
 
   public static function get_default_role_page_access() {
+    // `cs-dashboard` is the canonical CS surface. The legacy `cs` slug remains
+    // in the sanitizer for direct-route fallback compatibility, but it is no
+    // longer exposed in default navigation or feature controls.
+    //
+    // Scheduler is intentionally absent from non-admin defaults for the
+    // initial CS/Tech production launch.
     return [
-      'admin'      => ['executive', 'cs', 'tech', 'schedule', 'purchasing', 'admin', 'settings', 'monitor'],
-      'supervisor' => ['executive', 'cs', 'tech', 'schedule', 'purchasing', 'monitor'],
-      'cs'         => ['cs', 'schedule'],
-      'tech'       => ['tech', 'schedule', 'monitor'],
-      'executive'  => ['executive', 'schedule', 'monitor'],
+      'admin'      => ['executive', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'resource-hub', 'admin', 'settings', 'monitor'],
+      'supervisor' => ['executive', 'cs-dashboard', 'tech', 'purchasing', 'resource-hub', 'monitor'],
+      'cs'         => ['cs-dashboard', 'resource-hub'],
+      'tech'       => ['tech', 'resource-hub', 'monitor'],
+      'executive'  => ['executive', 'resource-hub', 'monitor'],
     ];
+  }
+
+  public static function scheduler_launch_enabled() {
+    $enabled = defined('SLATE_OPS_ENABLE_SCHEDULER') && SLATE_OPS_ENABLE_SCHEDULER;
+    return (bool) apply_filters('slate_ops_enable_scheduler', $enabled);
   }
 
   public static function get_role_page_access() {
@@ -266,7 +349,7 @@ class Slate_Ops_Utils {
   }
 
   public static function sanitize_page_slugs($slugs) {
-    $valid = ['executive','cs','tech','schedule','purchasing','admin','settings','monitor'];
+    $valid = ['executive','cs','cs-dashboard','tech','schedule','purchasing','resource-hub','admin','settings','monitor'];
     $in = is_array($slugs) ? $slugs : [];
     $out = [];
     foreach ($in as $slug) {
@@ -319,54 +402,6 @@ class Slate_Ops_Utils {
 
   public static function cs_created_from_values() {
     return ['portal', 'manual'];
-  }
-
-  /**
-   * Returns the set of WordPress users qualified to be assigned as the
-   * Tech on a job — i.e. users with the slate_ops_tech / slate_tech role
-   * or the slate_ops_tech capability. Page Access by Role does NOT grant
-   * tech assignability — it controls page visibility only.
-   *
-   * Output is shaped for dropdown use:
-   *   [ ['id' => int, 'name' => string], ... ]
-   * Sorted by display name. Display names are returned as-is and should
-   * be escaped on render by the caller.
-   */
-  public static function tech_user_options(): array {
-    // Prefer the meta_query on capability, which catches role grants AND
-    // any user with the cap added directly. Then union with role-based
-    // queries to cover any user who has a role but a quirky cap state.
-    $by_cap = get_users([
-      'capability' => self::CAP_TECH,
-      'orderby'    => 'display_name',
-      'order'      => 'ASC',
-      'number'     => -1,
-    ]);
-    $by_role = get_users([
-      'role__in' => ['slate_ops_tech', 'slate_tech'],
-      'orderby'  => 'display_name',
-      'order'    => 'ASC',
-      'number'   => -1,
-    ]);
-
-    $seen = [];
-    $out  = [];
-    foreach (array_merge($by_cap, $by_role) as $u) {
-      $id = (int) $u->ID;
-      if (isset($seen[$id])) continue;
-      // Defensive cap check — current_user filters above can be loose.
-      if (!user_can($u, self::CAP_TECH)
-          && !in_array('slate_ops_tech', (array) $u->roles, true)
-          && !in_array('slate_tech', (array) $u->roles, true)) {
-        continue;
-      }
-      $seen[$id] = true;
-      $out[] = ['id' => $id, 'name' => (string) $u->display_name];
-    }
-    usort($out, function ($a, $b) {
-      return strcasecmp($a['name'], $b['name']);
-    });
-    return $out;
   }
 
   public static function cs_parts_statuses() {

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Capture frame</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #2a2a2a; }
+  #wrap { display: inline-block; background: #2a2a2a; }
+  iframe { display: block; border: 0; background: #f1ede3; }
+</style>
+</head>
+<body>
+<div id="wrap"><iframe id="frame" src="" frameborder="0"></iframe></div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const src = params.get('src') || 'list.html';
+  const w = parseInt(params.get('w') || '1280', 10);
+  const h = parseInt(params.get('h') || '900', 10);
+  const f = document.getElementById('frame');
+  f.style.width  = w + 'px';
+  f.style.height = h + 'px';
+  f.src = src;
+  window.setSize = function(width, height) {
+    f.style.width = width + 'px';
+    f.style.height = (height || h) + 'px';
+    return new Promise(r => setTimeout(r, 250));
+  };
+  window.setSrc = function(src, width, height) {
+    f.style.width = width + 'px';
+    f.style.height = (height || 900) + 'px';
+    return new Promise(r => {
+      f.onload = () => setTimeout(r, 400);
+      f.src = src;
+    });
+  };
+  window.fitContent = function() {
+    try {
+      const doc = f.contentDocument;
+      const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+      f.style.height = h + 'px';
+    } catch (e) {}
+  };
+</script>
+</body>
+</html>
