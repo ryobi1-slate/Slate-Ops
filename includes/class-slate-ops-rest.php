@@ -1938,11 +1938,31 @@ foreach ($rows as &$r) {
    * @return WP_Error|null  WP_Error (HTTP 422) on failure, null on pass.
    */
   private static function check_ready_for_build_gate(array $job, array $update = []): ?WP_Error {
-    if (!isset($update['status']) || $update['status'] !== 'READY_FOR_BUILD') {
+    $data = array_merge($job, $update);
+    $status = Slate_Ops_Statuses::normalize((string)($data['status'] ?? ''));
+    if ($status !== Slate_Ops_Statuses::READY_FOR_BUILD) {
       return null;
     }
 
-    $data    = array_merge($job, $update);
+    $readiness_fields = [
+      'status',
+      'customer_name',
+      'dealer_name',
+      'so_number',
+      'estimated_minutes',
+      'parts_status',
+    ];
+    $touches_readiness = false;
+    foreach ($readiness_fields as $field) {
+      if (array_key_exists($field, $update)) {
+        $touches_readiness = true;
+        break;
+      }
+    }
+    if (!$touches_readiness) {
+      return null;
+    }
+
     $missing = [];
 
     // customer or dealer name required
