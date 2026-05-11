@@ -655,42 +655,24 @@
   gap: 4px;
 }
 .cs-beta-chip {
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  text-transform: none;
-  /* !important on border + background + color so the WP theme's
-     default <button> styling can't bleed through (the same pattern
-     ops-shell.css uses for .pur-tab and .ops-btn-* — without it the
-     chips render with the theme's default button outline). */
-  border: 1px solid var(--slate-divider-strong) !important;
-  background: var(--slate-surface) !important;
-  color: var(--slate-ink) !important;
-  border-radius: 2px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  -webkit-appearance: none;
-  appearance: none;
-  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
-}
-.cs-beta-chip:hover {
-  border-color: var(--slate-sage) !important;
-  color: var(--slate-ink) !important;
+  justify-content: center;
+  min-height: 32px;
 }
 .cs-beta-chip.is-active {
   background: var(--slate-sage) !important;
   border-color: var(--slate-sage) !important;
   color: var(--slate-surface) !important;
-  font-weight: 500;
+}
+.cs-beta-chip.is-active:hover {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: var(--slate-surface) !important;
 }
 .cs-beta-chip__count {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  color: var(--slate-ink-subtle);
+  color: inherit;
   font-variant-numeric: tabular-nums;
   margin-left: 2px;
 }

@@ -333,19 +333,19 @@ $health_tone_class_map = [
           <input type="search" id="cs-beta-search" placeholder="Search jobs…" autocomplete="off">
         </label>
         <div class="cs-beta__chips" id="cs-beta-chips" role="tablist" aria-label="Filter queue">
-          <button type="button" class="cs-beta-chip is-active" data-filter="all" role="tab" aria-selected="true">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip is-active" data-filter="all" role="tab" aria-selected="true">
             <span>All</span><span class="cs-beta-chip__count" data-count="all">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="scheduled" role="tab" aria-selected="false">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="scheduled" role="tab" aria-selected="false">
             <span>Scheduled</span><span class="cs-beta-chip__count" data-count="scheduled">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="blocked" role="tab" aria-selected="false">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="blocked" role="tab" aria-selected="false">
             <span>Blocked</span><span class="cs-beta-chip__count" data-count="blocked">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
             <span>Ready for Closeout</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
             <span>Unassigned</span><span class="cs-beta-chip__count" data-count="unassigned">0</span>
           </button>
         </div>

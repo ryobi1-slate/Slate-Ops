@@ -1167,6 +1167,74 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
 .slate-btn--danger   { background:var(--slate-flag);    border-color:var(--slate-flag);    color:#fff; }
 .slate-btn--danger:hover  { background:var(--slate-flag-ink); border-color:var(--slate-flag-ink); }
 
+body.slate-ops :where(a.slate-btn, button.slate-btn, .slate-btn) {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+body.slate-ops :where(.slate-btn--primary) {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+body.slate-ops :where(.slate-btn--primary:hover:not(:disabled):not([aria-disabled="true"])) {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: #fff !important;
+}
+
+body.slate-ops :where(.slate-btn--accent) {
+  background: var(--slate-arches) !important;
+  border-color: var(--slate-arches) !important;
+  color: #fff !important;
+}
+
+body.slate-ops :where(.slate-btn--accent:hover:not(:disabled):not([aria-disabled="true"])) {
+  background: var(--slate-arches-ink) !important;
+  border-color: var(--slate-arches-ink) !important;
+  color: #fff !important;
+}
+
+body.slate-ops :where(.slate-btn--secondary) {
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-divider-strong) !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops :where(.slate-btn--secondary:hover:not(:disabled):not([aria-disabled="true"])) {
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops :where(.slate-btn--ghost) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--slate-ink-muted) !important;
+}
+
+body.slate-ops :where(.slate-btn--ghost:hover:not(:disabled):not([aria-disabled="true"])) {
+  background: var(--slate-sage-wash) !important;
+  border-color: transparent !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops :where(.slate-btn--danger) {
+  background: var(--slate-flag) !important;
+  border-color: var(--slate-flag) !important;
+  color: #fff !important;
+}
+
+body.slate-ops :where(.slate-btn--danger:hover:not(:disabled):not([aria-disabled="true"])) {
+  background: var(--slate-flag-ink) !important;
+  border-color: var(--slate-flag-ink) !important;
+  color: #fff !important;
+}
+
 /* Legacy Ops controls use .btn.secondary. Keep them in the Slate palette so
    WordPress/theme button defaults cannot reintroduce pink outlines. */
 body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary) {
@@ -1185,6 +1253,13 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 }
 .slate-btn[disabled],
 .slate-btn[aria-disabled="true"]{ opacity:.45; cursor:not-allowed; pointer-events:none; }
+
+body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: .45 !important;
+  pointer-events: none !important;
+}
 
 /* ─── 19. Status badge ──────────────────────────────────────────────
  * One status pill atom with five tones.
