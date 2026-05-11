@@ -553,12 +553,12 @@
 }
 
 
-/* =========== CS WORKSPACE (BETA) TAB =========== */
+/* =========== CS WORKSPACE TAB =========== */
 /*
- * Phase 1 combined Workspace + Queue surface. All styles are scoped under
- * `.cs-beta` so they don't bleed into the existing Workspace iframe or
- * Queue tab. Tokens come from ops-shell.css; no pink/magenta. Arches is
- * reserved for warnings; selection uses Sand/Sage washes.
+ * CS Workspace queue/detail surface. All styles are scoped under `.cs-beta`
+ * for now to avoid changing established selectors. Tokens come from
+ * ops-shell.css; no pink/magenta. Arches is reserved for warnings; selection
+ * uses Sand/Sage washes.
  */
 
 .cs-beta {

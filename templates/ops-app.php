@@ -3,7 +3,8 @@
  * Slate Ops — main shell template.
  *
  * Served for every /ops/* request via the template_include filter.
- * All page content is rendered by assets/react/app.js (React) into #ops-view.
+ * Hybrid shell: standalone PHP templates render selected routes, and the
+ * legacy React app mounts into #ops-view for the remaining routes.
  *
  * Layout is assembled from shared partials in includes/ui/:
  *   layout-shell.php  — <html><head><body> wrapper
@@ -53,10 +54,9 @@ $route_map = [
 $page_slug = $route_map[$_ops_route] ?? null;
 $is_blocked = $page_slug && !slate_ops_current_user_can_access_ops_page($page_slug);
 
-// Embed mode: ?embed=1 strips topbar + sidebar so the page renders cleanly
-// inside an iframe (used by the CS Dashboard's Workspace tab to bridge the
-// legacy React /ops/cs page). Presentation flag only — access checks are
-// unaffected.
+// Embed mode: ?embed=1 strips topbar + sidebar so legacy React routes can
+// render inside an iframe when needed. Presentation flag only — access checks
+// are unaffected.
 $is_embed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 
 // `exec` is the canonical Executive route; only that path renders the
@@ -77,9 +77,9 @@ if ($is_blocked) : ?>
     </div>
   </section>
 <?php elseif ($page_slug === 'cs-dashboard') :
-  // Server-rendered page (Phase 1, stub data). React app is not enqueued
-  // for this route in slate-ops.php; the empty #ops-view div above is a
-  // harmless sibling.
+  // Server-rendered CS Dashboard with the CS Workspace tab. React app is not
+  // enqueued for this route in slate-ops.php; the empty #ops-view div above
+  // is a harmless sibling.
   include SLATE_OPS_PATH . 'templates/pages/cs-dashboard.php';
 elseif ($is_executive_page) :
   // Server-rendered Executive Dashboard V2 (Purchasing pattern).
