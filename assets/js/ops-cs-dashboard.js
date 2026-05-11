@@ -320,6 +320,7 @@
     'vin_last8', 'notes',
     'parts_status', 'estimated_hours', 'requested_date'
   ];
+  var BETA_QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
   function betaIsJobField(name) { return BETA_JOB_FIELDS.indexOf(name) >= 0; }
 
   function betaApi() {
@@ -1599,10 +1600,6 @@
     if (!api || !grid) return;
     var id = parseInt(grid.getAttribute('data-job-id'), 10);
     if (!id || isNaN(id)) return;
-    if (betaState.edits[id]) {
-      showToast('Save or discard row edits before changing status.');
-      return;
-    }
 
     var actionMap = {
       NEEDS_SO: {
@@ -1618,7 +1615,9 @@
     var btn = action.selector ? grid.querySelector(action.selector) : null;
     if (btn) btn.disabled = true;
 
-    fetch(api.root + '/jobs/' + id, {
+    betaSaveSelectedEdits(id)
+      .then(function () {
+        return fetch(api.root + '/jobs/' + id, {
       method: 'PATCH',
       credentials: 'same-origin',
       headers: {
@@ -1627,7 +1626,8 @@
         'Accept':       'application/json'
       },
       body: JSON.stringify({ status: status })
-    })
+        });
+      })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (res) {
         if (!res.ok) {
@@ -1643,6 +1643,81 @@
         showToast(err && err.message ? err.message : 'Status update failed');
         if (btn) btn.disabled = false;
       });
+  }
+
+  function betaPruneEdits(id, fields) {
+    var bag = betaState.edits[id];
+    if (!bag) return;
+    fields.forEach(function (f) { delete bag[f]; });
+    if (Object.keys(bag).length === 0) delete betaState.edits[id];
+  }
+
+  function betaSaveSelectedEdits(id) {
+    var api = betaApi();
+    var e = betaState.edits[id];
+    if (!api || !e) return Promise.resolve();
+
+    var qBody = { id: id };
+    var jBody = {};
+    var hasQ = false;
+    var hasJ = false;
+    Object.keys(e).forEach(function (field) {
+      var v = e[field];
+      if (betaIsJobField(field)) {
+        jBody[field] = v == null ? '' : v;
+        hasJ = true;
+      } else {
+        qBody[field] = field === 'queue_visible' ? !!v : v;
+        hasQ = true;
+      }
+    });
+
+    var step = Promise.resolve();
+    if (hasQ) {
+      step = step.then(function () {
+        return fetch(api.root + '/cs/queue', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify({ updates: [qBody] })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+          .then(function (res) {
+            if (!res.ok || !res.body || !res.body.ok) {
+              throw new Error('Queue save failed');
+            }
+            betaPruneEdits(id, BETA_QUEUE_FIELDS);
+          });
+      });
+    }
+
+    if (hasJ) {
+      step = step.then(function () {
+        return fetch(api.root + '/jobs/' + id, {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify(jBody)
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+          .then(function (res) {
+            if (!res.ok) {
+              throw new Error((res.body && (res.body.message || res.body.code)) || 'Job save failed');
+            }
+            betaPruneEdits(id, BETA_JOB_FIELDS);
+          });
+      });
+    }
+
+    return step;
   }
 
   function betaCloseoutPayload(grid) {
@@ -1663,17 +1738,15 @@
     if (!api || !grid) return;
     var id = parseInt(grid.getAttribute('data-job-id'), 10);
     if (!id || isNaN(id)) return;
-    if (betaState.edits[id]) {
-      showToast('Save or discard row edits before changing status.');
-      return;
-    }
 
     var payload = betaCloseoutPayload(grid);
     payload.status = status;
 
     var btn = grid.querySelector(status === 'COMPLETE' ? '[data-action="beta-mark-closed"]' : '[data-action="beta-mark-awaiting"]');
     if (btn) btn.disabled = true;
-    fetch(api.root + '/jobs/' + id, {
+    betaSaveSelectedEdits(id)
+      .then(function () {
+        return fetch(api.root + '/jobs/' + id, {
       method: 'PATCH',
       credentials: 'same-origin',
       headers: {
@@ -1682,7 +1755,8 @@
         'Accept':       'application/json'
       },
       body: JSON.stringify(payload)
-    })
+        });
+      })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (res) {
         if (!res.ok) {
