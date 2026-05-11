@@ -94,6 +94,23 @@
   --slate-surface-tint:    #FAFAF7;
   --slate-surface-page:    #F5F3ED;
 
+  /* Shared status pill tones */
+  --slate-pill-neutral-bg:  #F0EDE3;
+  --slate-pill-neutral-fg:  var(--slate-ink-muted);
+  --slate-pill-neutral-br:  var(--slate-divider);
+  --slate-pill-info-bg:     var(--slate-sage-wash);
+  --slate-pill-info-fg:     var(--slate-sage-ink);
+  --slate-pill-info-br:     #D8DDD8;
+  --slate-pill-ok-bg:       var(--slate-redwood-wash);
+  --slate-pill-ok-fg:       var(--slate-redwood);
+  --slate-pill-ok-br:       #C7D8CF;
+  --slate-pill-warn-bg:     var(--slate-arches-wash);
+  --slate-pill-warn-fg:     var(--slate-arches-ink);
+  --slate-pill-warn-br:     #EAD0A7;
+  --slate-pill-danger-bg:   var(--slate-flag-wash);
+  --slate-pill-danger-fg:   var(--slate-flag-ink);
+  --slate-pill-danger-br:   #E4BDBD;
+
   --slate-radius-none:     0;
   --slate-radius-sm:       3px;
   --slate-radius-md:       5px;
@@ -1746,6 +1763,169 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
   color: #fff;
 }
 .ops-pw-btn--primary:hover { background: var(--sage-mid); }
+
+/* ─── Shared Slate pills ──────────────────────────────────────────────────
+ * One visual language for compact status/count pills across Purchasing,
+ * CS, Executive, and Resource Hub. Page bundles keep their class names;
+ * these rules normalize shape, type, and tone.
+ */
+.pur-badge,
+.rh-pill,
+.rh-meta-pill,
+.pill,
+.ops-badge-ready,
+.ops-badge-partial,
+.ops-badge-not-ready,
+.ops-badge-hold,
+.ops-badge-status-intake,
+.ops-badge-status-needs-so,
+.ops-badge-status-scheduled,
+.ops-badge-status-inprogress,
+.ops-badge-status-complete,
+.ops-badge-status-hold,
+.ops-badge-status-pending-qc,
+.ops-badge-status-ready-for-build,
+.ops-badge-status-queued,
+.ops-badge-status-ready-for-pickup,
+.ops-badge-status-delayed,
+.ops-badge-status-blocked,
+.ops-badge-status-qc,
+.ops-badge-status-cancelled,
+.so-exec .tag,
+.so-exec .count-pill,
+.ops-status-badge,
+.ops-parts-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-height: 22px !important;
+  padding: 3px 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1 !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
+  box-shadow: none !important;
+}
+
+.so-exec .count-pill,
+.rh-meta-pill {
+  color: var(--slate-pill-neutral-fg) !important;
+  background: var(--slate-pill-neutral-bg) !important;
+  border-color: var(--slate-pill-neutral-br) !important;
+}
+
+.pur-badge--active,
+.pur-badge--approved,
+.pur-badge--acknowledged,
+.pur-badge--connected,
+.pur-badge--ordered,
+.pur-badge--received,
+.rh-pill--ready,
+.pill--ready,
+.pill--pickup,
+.ops-badge-ready,
+.ops-badge-status-complete,
+.ops-badge-status-ready-for-pickup,
+.ops-status-badge--complete,
+.ops-status-badge--ready-for-pickup,
+.ops-parts-badge--ready,
+.so-exec .tag.ok {
+  color: var(--slate-pill-ok-fg) !important;
+  background: var(--slate-pill-ok-bg) !important;
+  border-color: var(--slate-pill-ok-br) !important;
+}
+
+.pur-badge--pending,
+.pur-badge--partial,
+.pur-badge--preview,
+.pur-badge--review,
+.pur-badge--held,
+.pur-badge--hold,
+.pur-badge--missing_info,
+.rh-meta-pill--warn,
+.rh-pill--parts,
+.pill--parts,
+.ops-badge-partial,
+.ops-badge-hold,
+.ops-badge-status-pending-qc,
+.ops-badge-status-qc,
+.ops-badge-status-needs-so,
+.ops-status-badge--pending-qc,
+.ops-status-badge--qc,
+.ops-status-badge--needs-so,
+.ops-status-badge--on-hold,
+.ops-parts-badge--partial,
+.ops-parts-badge--hold,
+.ops-parts-badge,
+.so-exec .tag.warn,
+.so-exec .tag.watch {
+  color: var(--slate-pill-warn-fg) !important;
+  background: var(--slate-pill-warn-bg) !important;
+  border-color: var(--slate-pill-warn-br) !important;
+}
+
+.pur-badge--rejected,
+.pur-badge--disconnected,
+.pur-badge--cancelled,
+.pill--blocked,
+.ops-badge-not-ready,
+.ops-badge-status-hold,
+.ops-badge-status-delayed,
+.ops-badge-status-blocked,
+.ops-status-badge--blocked,
+.ops-status-badge--returned-to-cs,
+.ops-status-badge--delayed,
+.ops-parts-badge--not-ready,
+.so-exec .tag.crit {
+  color: var(--slate-pill-danger-fg) !important;
+  background: var(--slate-pill-danger-bg) !important;
+  border-color: var(--slate-pill-danger-br) !important;
+}
+
+.pur-badge--draft,
+.pur-badge--submitted,
+.pur-badge--inactive,
+.pur-badge--closed,
+.rh-pill--neutral,
+.rh-pill--qc,
+.pill--neutral,
+.pill--qc,
+.ops-badge-status-intake,
+.ops-badge-status-scheduled,
+.ops-badge-status-ready-for-build,
+.ops-badge-status-queued,
+.ops-badge-status-inprogress,
+.ops-badge-status-cancelled,
+.ops-status-badge--intake,
+.ops-status-badge--scheduled,
+.ops-status-badge--ready-for-build,
+.ops-status-badge--queued,
+.ops-status-badge--in-progress,
+.ops-status-badge--cancelled,
+.ops-parts-badge--unknown,
+.so-exec .tag,
+.so-exec .tag.muted,
+.so-exec .tag.normal {
+  color: var(--slate-pill-info-fg) !important;
+  background: var(--slate-pill-info-bg) !important;
+  border-color: var(--slate-pill-info-br) !important;
+}
+
+.rh-pill__dot,
+.so-exec .tag .dot {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 999px !important;
+  background: currentColor !important;
+  flex: 0 0 auto !important;
+}
 
 /* ─── Success toast ────────────────────────────────────────────────────────── */
 .ops-toast {
