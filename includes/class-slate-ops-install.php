@@ -84,6 +84,7 @@ class Slate_Ops_Install {
     $pur_orders      = $wpdb->prefix . 'slate_ops_pur_orders';
     $pur_order_lines = $wpdb->prefix . 'slate_ops_pur_order_lines';
     $pur_sync_log    = $wpdb->prefix . 'slate_ops_pur_sync_log';
+    $resources       = $wpdb->prefix . 'slate_ops_resources';
 
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -662,6 +663,43 @@ KEY awaiting_idx (awaiting_direction)
       KEY status_idx (status)
     ) $charset_collate;";
 
+    // ── Resource Hub knowledge base ───────────────────
+
+    $sql_resources = "CREATE TABLE $resources (
+      resource_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      resource_key VARCHAR(80) NOT NULL,
+      sku VARCHAR(64) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      vendor VARCHAR(255) NULL,
+      doc_type VARCHAR(60) NOT NULL DEFAULT 'Reference',
+      chassis VARCHAR(255) NULL,
+      audience LONGTEXT NULL,
+      status_key VARCHAR(30) NOT NULL DEFAULT 'draft',
+      source_type VARCHAR(20) NOT NULL DEFAULT 'vendor',
+      vendor_revision VARCHAR(120) NULL,
+      last_review VARCHAR(120) NULL,
+      source VARCHAR(255) NULL,
+      file_name VARCHAR(255) NULL,
+      file_url TEXT NULL,
+      file_meta VARCHAR(120) NULL,
+      notes LONGTEXT NULL,
+      attachments LONGTEXT NULL,
+      related LONGTEXT NULL,
+      created_by BIGINT UNSIGNED NULL,
+      updated_by BIGINT UNSIGNED NULL,
+      reviewed_by BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      reviewed_at DATETIME NULL,
+      PRIMARY KEY (resource_id),
+      UNIQUE KEY resource_key_idx (resource_key),
+      KEY sku_idx (sku),
+      KEY status_idx (status_key),
+      KEY source_type_idx (source_type),
+      KEY doc_type_idx (doc_type),
+      KEY updated_idx (updated_at)
+    ) $charset_collate;";
+
     // ── Run all dbDelta ─────────────────────────────────
 
     dbDelta($sql_jobs);
@@ -692,6 +730,7 @@ KEY awaiting_idx (awaiting_direction)
     dbDelta($sql_pur_orders);
     dbDelta($sql_pur_order_lines);
     dbDelta($sql_pur_sync_log);
+    dbDelta($sql_resources);
 
     // ── Data migrations ─────────────────────────────────
 

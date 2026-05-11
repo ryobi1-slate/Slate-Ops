@@ -233,6 +233,14 @@ $resources = [
   ],
 ];
 
+if (class_exists('Slate_Ops_Resource_Hub')) {
+  Slate_Ops_Resource_Hub::maybe_seed($resources);
+  $stored_resources = Slate_Ops_Resource_Hub::list_for_current_user();
+  if (!empty($stored_resources)) {
+    $resources = $stored_resources;
+  }
+}
+
 $review_queue = array_values(array_filter($resources, function ($resource) {
   return isset($resource['status_key']) && $resource['status_key'] === 'needs_review';
 }));
@@ -413,6 +421,16 @@ $recent_count = count(array_filter($resources, function ($resource) {
               <button class="rh-multi__chip" type="button" data-rh-chassis="Transit AWD" aria-pressed="false">Transit AWD</button>
               <button class="rh-multi__chip" type="button" data-rh-chassis="ProMaster 159 HR" aria-pressed="false">ProMaster 159 HR</button>
               <button class="rh-multi__chip" type="button" data-rh-chassis="All chassis" aria-pressed="false">All chassis</button>
+            </div>
+          </div>
+
+          <div class="rh-field">
+            <span class="rh-field__label">Audience visibility</span>
+            <div class="rh-multi" role="group" aria-label="Audience visibility">
+              <button class="rh-multi__chip" type="button" data-rh-audience="tech" aria-pressed="true">Tech <span class="rh-multi__chip__x">x</span></button>
+              <button class="rh-multi__chip" type="button" data-rh-audience="cs" aria-pressed="true">CS <span class="rh-multi__chip__x">x</span></button>
+              <button class="rh-multi__chip" type="button" data-rh-audience="slate_sales" aria-pressed="false">Slate sales</button>
+              <button class="rh-multi__chip" type="button" data-rh-audience="dealer_sales" aria-pressed="false">Dealer sales</button>
             </div>
           </div>
 

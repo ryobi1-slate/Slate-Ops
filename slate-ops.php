@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.58.2
+ * Version: 0.58.3
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.58.2');
+define('SLATE_OPS_VERSION', '0.58.3');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -41,6 +41,7 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-timelogs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-jobs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-schedule.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-work-centers.php';
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-resource-hub.php';
 
 // CS / Supervisor Operations Dashboard data layer (Phase 1: stub data)
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-cs.php';
@@ -58,6 +59,7 @@ require_once SLATE_OPS_PATH . 'includes/class-slate-ops-clickup.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-purchasing.php';
 require_once SLATE_OPS_PATH . 'includes/integration/class-slate-ops-pa-events.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-purchasing-rest.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-resource-hub-rest.php';
 
 if ( is_admin() ) {
     require_once SLATE_OPS_PATH . 'includes/admin/class-clickup-import-admin.php';
@@ -76,6 +78,7 @@ add_action('init', ['Slate_Ops_Install', 'maybe_upgrade']);
 add_action('init', ['Slate_Ops_Routes', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_Purchasing_REST', 'register_routes']);
+add_action('rest_api_init', ['Slate_Ops_Resource_Hub_REST', 'register_routes']);
 
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
@@ -163,6 +166,16 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('slate-ops-resource-hub',  SLATE_OPS_URL . 'assets/css/resource-hub.css', ['slate-ops-shell'], $ver_rh_css);
     $enqueue_design_language(['slate-ops-resource-hub']);
     wp_enqueue_script('slate-ops-resource-hub', SLATE_OPS_URL . 'assets/js/resource-hub.js',   [],                  $ver_rh_js,  true);
+    wp_localize_script('slate-ops-resource-hub', 'slateOpsResourceHub', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'user' => [
+        'id' => get_current_user_id(),
+        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+      ],
+    ]);
   } elseif ($is_audit_log) {
     $route_blocked_audit_log = !slate_ops_current_user_can_access_ops_page('admin');
     if ($route_blocked_audit_log) {

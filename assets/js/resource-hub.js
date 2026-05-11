@@ -7,39 +7,13 @@
   var titleEl = document.getElementById('ops-page-title');
   if (titleEl) titleEl.textContent = 'Resource hub';
 
-  var STORAGE_KEY = 'slate_ops_resource_hub_resources';
   var dataEl = document.getElementById('slate-resource-hub-data');
+  var config = window.slateOpsResourceHub || {};
+  var api = config.api || {};
   var payload = { resources: [], canReview: false };
   try {
     payload = JSON.parse(dataEl ? dataEl.textContent : '{}') || payload;
   } catch (err) {}
-
-  function storedResources() {
-    try {
-      var saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]');
-      return Array.isArray(saved) ? saved : [];
-    } catch (err) {
-      return [];
-    }
-  }
-
-  function mergeResources(base, saved) {
-    var seen = {};
-    var merged = [];
-    saved.concat(base).forEach(function (resource) {
-      if (!resource || !resource.id || seen[resource.id]) return;
-      seen[resource.id] = true;
-      merged.push(resource);
-    });
-    return merged;
-  }
-
-  function persistResources() {
-    if (!state.canReview) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.resources));
-    } catch (err) {}
-  }
 
   var state = {
     tab: 'library',
@@ -50,9 +24,35 @@
     source: 'vendor',
     addFile: null,
     sort: { key: 'vendor', dir: 'ascending' },
-    resources: mergeResources(Array.isArray(payload.resources) ? payload.resources.slice() : [], storedResources()),
+    resources: Array.isArray(payload.resources) ? payload.resources.slice() : [],
     canReview: !!payload.canReview
   };
+
+  function apiFetch(path, options) {
+    if (!api.root || !api.nonce) {
+      return Promise.reject(new Error('Resource Hub API is not configured.'));
+    }
+    options = options || {};
+    var headers = options.headers || {};
+    headers['X-WP-Nonce'] = api.nonce;
+    headers.Accept = 'application/json';
+    if (options.body && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return window.fetch(api.root.replace(/\/$/, '') + path, Object.assign({}, options, {
+      credentials: 'same-origin',
+      headers: headers
+    })).then(function (response) {
+      return response.json().catch(function () {
+        return {};
+      }).then(function (json) {
+        if (!response.ok || json.ok === false) {
+          throw new Error(json.message || json.error || 'Resource Hub request failed.');
+        }
+        return json;
+      });
+    });
+  }
 
   var els = {
     tabs: Array.prototype.slice.call(root.querySelectorAll('[data-rh-tab]')),
@@ -88,17 +88,12 @@
 
   function byId(id) {
     return state.resources.find(function (resource) {
-      return resource.id === id;
+      return resource.id === id || resource.resource_key === id;
     }) || null;
   }
 
   function todayIso() {
     return new Date().toISOString().slice(0, 10);
-  }
-
-  function updatedLabel() {
-    var now = new Date();
-    return 'Updated ' + now.toLocaleString('en-US', { month: 'short', day: '2-digit' });
   }
 
   function formatBytes(bytes) {
@@ -251,6 +246,12 @@
     return selected.length ? selected.join(', ') : 'All chassis';
   }
 
+  function selectedAudience() {
+    var selected = Array.prototype.slice.call(root.querySelectorAll('[data-rh-audience][aria-pressed="true"]'))
+      .map(function (chip) { return chip.getAttribute('data-rh-audience'); });
+    return selected.length ? selected : ['tech', 'cs'];
+  }
+
   function resetAddForm() {
     state.source = 'vendor';
     setSource('vendor');
@@ -259,6 +260,11 @@
     if (els.addForm) els.addForm.reset();
     Array.prototype.slice.call(root.querySelectorAll('[data-rh-chassis]')).forEach(function (chip, index) {
       chip.setAttribute('aria-pressed', index === 0 ? 'true' : 'false');
+      renderMultiChip(chip);
+    });
+    Array.prototype.slice.call(root.querySelectorAll('[data-rh-audience]')).forEach(function (chip) {
+      var audience = chip.getAttribute('data-rh-audience');
+      chip.setAttribute('aria-pressed', audience === 'tech' || audience === 'cs' ? 'true' : 'false');
       renderMultiChip(chip);
     });
   }
@@ -296,36 +302,40 @@
     var fileName = state.addFile ? state.addFile.name : sku + '_resource.pdf';
     var id = sku.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
     var statusKey = draftOnly ? 'draft' : (sourceType === 'vendor' ? 'needs_review' : 'reviewed');
-    var status = draftOnly ? 'Draft' : (sourceType === 'vendor' ? 'Needs Slate review' : 'Reviewed by Slate');
     var resource = {
-      id: id,
+      resource_key: id,
       sku: sku,
       title: title,
       vendor: sourceType === 'slate' ? 'Slate-authored' : formValue('vendor'),
       doc_type: formValue('doc_type'),
       chassis: selectedChassis(),
-      updated_label: updatedLabel(),
-      updated_date: todayIso(),
-      status: status,
       status_key: statusKey,
       source_type: sourceType,
       vendor_revision: formValue('vendor_revision') || 'Rev. pending - ' + todayIso(),
       last_review: sourceType === 'slate' && !draftOnly ? todayIso() + ' - Slate admin' : 'Not reviewed',
       source: sourceType === 'slate' ? 'Slate-authored upload' : 'Admin upload',
-      file: fileName + ' - ' + (state.addFile ? fileLabel(state.addFile) : 'file pending'),
+      file_name: fileName + ' - ' + (state.addFile ? fileLabel(state.addFile) : 'file pending'),
+      file_meta: state.addFile ? fileLabel(state.addFile) : 'file pending',
       notes: notesValue ? notesValue.split(/\n+/).filter(Boolean) : [],
       attachments: [],
-      related: []
+      related: [],
+      audience: selectedAudience()
     };
 
-    state.resources.unshift(resource);
-    persistResources();
-    closeOverlays();
-    renderList();
-    renderQueue();
-    updateTabCounts();
-    showNotice(draftOnly ? 'Draft added to the library.' : (sourceType === 'vendor' ? 'Resource added to the review queue.' : 'Resource published to the library.'));
-    if (sourceType === 'vendor' && !draftOnly) setTab('queue');
+    apiFetch('/resource-hub', {
+      method: 'POST',
+      body: JSON.stringify(resource)
+    }).then(function (json) {
+      state.resources.unshift(json.resource);
+      closeOverlays();
+      renderList();
+      renderQueue();
+      updateTabCounts();
+      showNotice(draftOnly ? 'Draft added to the library.' : (sourceType === 'vendor' ? 'Resource added to the review queue.' : 'Resource published to the library.'));
+      if (sourceType === 'vendor' && !draftOnly) setTab('queue');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not save resource.');
+    });
   }
 
   function resourceCard(resource) {
@@ -519,14 +529,17 @@
     return '<th data-rh-sort="' + esc(key) + '" aria-sort="' + (active ? esc(state.sort.dir) : 'none') + '">' + esc(label) + ' <span class="material-symbols-outlined rh-sort__arrow">' + arrow + '</span></th>';
   }
 
-  function markReviewed(id) {
-    var resource = byId(id);
-    if (!resource || !state.canReview) return;
-    resource.status_key = 'reviewed';
-    resource.status = 'Reviewed by Slate';
-    resource.last_review = 'Reviewed in this session';
-    renderQueue();
-    renderList();
+  function replaceResource(resource) {
+    if (!resource || !resource.id) return;
+    var replaced = false;
+    state.resources = state.resources.map(function (item) {
+      if (item.id === resource.id) {
+        replaced = true;
+        return resource;
+      }
+      return item;
+    });
+    if (!replaced) state.resources.unshift(resource);
   }
 
   function checklistItem(label, checked) {
@@ -608,28 +621,43 @@
     var resource = byId(state.reviewId);
     var textarea = root.querySelector('[data-rh-review-notes]');
     if (!resource || !textarea) return;
-    resource.notes = textarea.value.split(/\n+/).map(function (line) { return line.trim(); }).filter(Boolean);
-    resource.updated_date = todayIso();
-    resource.updated_label = updatedLabel();
-    persistResources();
-    renderList();
-    renderQueue();
-    showNotice('Review draft saved.');
+    apiFetch('/resource-hub/' + encodeURIComponent(resource.id), {
+      method: 'PATCH',
+      body: JSON.stringify({
+        notes: textarea.value.split(/\n+/).map(function (line) { return line.trim(); }).filter(Boolean),
+        attachments: resource.attachments || []
+      })
+    }).then(function (json) {
+      replaceResource(json.resource);
+      renderList();
+      renderQueue();
+      showNotice('Review draft saved.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not save review draft.');
+    });
   }
 
   function approveReview() {
     var resource = byId(state.reviewId);
     if (!resource) return;
-    saveReviewDraft();
-    resource.status_key = 'reviewed';
-    resource.status = 'Reviewed by Slate';
-    resource.last_review = todayIso() + ' - Slate admin';
-    persistResources();
-    closeOverlays();
-    renderList();
-    renderQueue();
-    updateTabCounts();
-    showNotice('Resource approved and published.');
+    var textarea = root.querySelector('[data-rh-review-notes]');
+    apiFetch('/resource-hub/' + encodeURIComponent(resource.id), {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status_key: 'reviewed',
+        notes: textarea ? textarea.value.split(/\n+/).map(function (line) { return line.trim(); }).filter(Boolean) : (resource.notes || []),
+        attachments: resource.attachments || []
+      })
+    }).then(function (json) {
+      replaceResource(json.resource);
+      closeOverlays();
+      renderList();
+      renderQueue();
+      updateTabCounts();
+      showNotice('Resource approved and published.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not approve resource.');
+    });
   }
 
   function addReviewAttachment(file) {
@@ -641,9 +669,18 @@
       meta: fileLabel(file),
       label: file.type && file.type.indexOf('image/') === 0 ? 'Image' : file.type && file.type.indexOf('video/') === 0 ? 'Video' : 'File'
     });
-    persistResources();
-    renderReviewDrawer(resource);
-    showNotice('Attachment added to review draft.');
+    apiFetch('/resource-hub/' + encodeURIComponent(resource.id), {
+      method: 'PATCH',
+      body: JSON.stringify({
+        attachments: resource.attachments
+      })
+    }).then(function (json) {
+      replaceResource(json.resource);
+      renderReviewDrawer(json.resource);
+      showNotice('Attachment added to review draft.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not save attachment.');
+    });
   }
 
   function renderMultiChip(chip) {
@@ -695,6 +732,14 @@
       var on = multi.getAttribute('aria-pressed') === 'true';
       multi.setAttribute('aria-pressed', on ? 'false' : 'true');
       renderMultiChip(multi);
+      return;
+    }
+
+    var audience = event.target.closest('[data-rh-audience]');
+    if (audience) {
+      var audienceOn = audience.getAttribute('aria-pressed') === 'true';
+      audience.setAttribute('aria-pressed', audienceOn ? 'false' : 'true');
+      renderMultiChip(audience);
       return;
     }
 
