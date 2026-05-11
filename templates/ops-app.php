@@ -37,7 +37,7 @@ $user = wp_get_current_user();
 // Route-specific body class — used for layout overrides (e.g. tech full-screen panel).
 $_ops_path  = Slate_Ops_Routes::current_path(); // e.g. "tech", "cs", "schedule/…"
 $_ops_route = strtok($_ops_path, '/');           // first segment only
-$page_class = $_ops_route ? 'ops-page-' . sanitize_html_class($_ops_route) : '';
+$page_class = $_ops_route ? 'ops-page-' . sanitize_html_class($_ops_route) : 'ops-page-exec';
 $route_map = [
   ''             => 'executive',
   'exec'         => 'executive',
@@ -59,10 +59,10 @@ $is_blocked = $page_slug && !slate_ops_current_user_can_access_ops_page($page_sl
 // are unaffected.
 $is_embed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 
-// `exec` is the canonical Executive route; only that path renders the
-// server-side Executive Dashboard V2 template. The empty `/ops/` path
-// keeps its legacy React-app behavior.
-$is_executive_page = ($_ops_route === 'exec');
+// `exec` is the canonical Executive route, and the empty `/ops/` path
+// renders the same server-side dashboard so live never falls back to the
+// retired React Executive screen.
+$is_executive_page = ($_ops_route === '' || $_ops_route === 'exec');
 $is_resource_hub_page = ($_ops_route === 'resource-hub');
 
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)

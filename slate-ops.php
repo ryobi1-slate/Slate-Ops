@@ -92,7 +92,7 @@ add_action('wp_enqueue_scripts', function() {
   $current_path = Slate_Ops_Routes::current_path();
   $is_purchasing   = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
   $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
-  $is_executive    = ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
+  $is_executive    = ($current_path === '' || $current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
   $is_resource_hub = ($current_path === 'resource-hub' || strncmp($current_path, 'resource-hub/', 13) === 0);
   $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
 
