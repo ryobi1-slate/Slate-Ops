@@ -654,34 +654,6 @@ html.ops-sidebar-collapsed .ops-sidebar-footer {
   box-shadow: 0 0 0 1px var(--slate-arches);
 }
 
-/* Parts status badges */
-.ops-badge-ready     { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
-.ops-badge-partial   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-.ops-badge-not-ready { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
-
-/* Job status badges — legacy names */
-.ops-badge-status-intake     { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
-.ops-badge-status-scheduled  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
-.ops-badge-status-inprogress { background-color: var(--slate-sage);         color: var(--slate-surface); }
-.ops-badge-status-complete   { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
-.ops-badge-status-hold       { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
-.ops-badge-status-pending-qc { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-
-/* Job status badges — canonical names */
-.ops-badge-status-ready-for-build  { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
-.ops-badge-status-queued           { background-color: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
-.ops-badge-status-ready-for-pickup { background-color: var(--slate-redwood-wash); color: var(--slate-redwood); }
-.ops-badge-status-delayed          { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
-
-/* v2 status badges */
-.ops-badge-status-needs-so   { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-.ops-badge-status-blocked    { background-color: var(--slate-flag-wash);    color: var(--slate-flag); }
-.ops-badge-status-qc         { background-color: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-.ops-badge-status-cancelled  { background-color: var(--slate-surface-tint); color: var(--slate-ink-muted); }
-
-/* Parts status badge — hold is distinct from not-ready */
-.ops-badge-hold { background-color: var(--slate-arches-wash); color: var(--slate-arches-ink); }
-
 /* Inline text link (Reset filters) */
 .ops-cs-reset-link { color: var(--slate-ink-muted); }
 .ops-cs-reset-link:hover { color: var(--slate-arches); }
@@ -696,30 +668,6 @@ html.ops-sidebar-collapsed .ops-sidebar-footer {
 .ops-cs-input   { border-radius: var(--slate-radius-md) !important; }
 .ops-btn-arches-solid { border-radius: var(--slate-radius-md) !important; }
 .ops-btn-arches       { border-radius: var(--slate-radius-md) !important; }
-
-/* Badge pills — fully rounded */
-.ops-badge-ready,
-.ops-badge-partial,
-.ops-badge-not-ready,
-.ops-badge-hold,
-.ops-badge-status-intake,
-.ops-badge-status-needs-so,
-.ops-badge-status-scheduled,
-.ops-badge-status-inprogress,
-.ops-badge-status-complete,
-.ops-badge-status-hold,
-.ops-badge-status-pending-qc,
-.ops-badge-status-ready-for-build,
-.ops-badge-status-queued,
-.ops-badge-status-ready-for-pickup,
-.ops-badge-status-delayed,
-.ops-badge-status-blocked,
-.ops-badge-status-qc,
-.ops-badge-status-cancelled {
-  border-radius: 999px !important;
-  padding-left: 10px !important;
-  padding-right: 10px !important;
-}
 
 /* Table row dividers */
 .ops-cs-row-hover,
@@ -1193,47 +1141,31 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
  * Semantic button variants mirroring Dealer Portal. No blue/purple.
  */
 .slate-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--slate-space-xs);
-  padding: var(--slate-space-sm) var(--slate-space-lg);
-  border-radius: var(--slate-radius-md);
-  font-size: var(--slate-text-sm);
-  font-weight: var(--slate-weight-medium);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: background-color var(--slate-duration-normal) var(--slate-ease),
-              border-color var(--slate-duration-normal) var(--slate-ease);
-  text-decoration: none;
-  -webkit-appearance: none;
-  appearance: none;
-  line-height: var(--slate-leading-tight);
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 14px;
+  border-radius:8px;
+  font:500 13px/1.2 var(--font-sans);
+  border:1px solid transparent; background:transparent; color:inherit;
+  cursor:pointer; text-decoration:none; white-space:nowrap;
+  transition: background-color 140ms, border-color 140ms, color 140ms;
 }
-.slate-btn--primary {
-  background-color: var(--slate-sage);
-  color: var(--slate-surface);
-  border-color: var(--slate-sage);
-}
-.slate-btn--primary:hover:not([disabled]) {
-  background-color: var(--slate-sage-ink);
-  border-color: var(--slate-sage-ink);
-}
-.slate-btn--secondary {
-  background-color: var(--slate-surface);
-  color: var(--slate-sage);
-  border-color: var(--slate-divider);
-}
-.slate-btn--secondary:hover:not([disabled]) {
-  background-color: var(--slate-sage-wash);
-}
-.slate-btn--outline {
-  background-color: transparent;
-  color: var(--slate-ink);
-  border-color: var(--slate-divider);
-}
-.slate-btn--outline:hover:not([disabled]) {
-  background-color: var(--slate-surface-page);
-}
+.slate-btn .material-symbols-outlined{ font-size:16px; line-height:1; flex-shrink:0; }
+.slate-btn--sm{ padding:5px 10px; font-size:12px; }
+
+.slate-btn--primary  { background:var(--slate-sage);    border-color:var(--slate-sage);    color:#fff; }
+.slate-btn--primary:hover { background:var(--slate-sage-ink); border-color:var(--slate-sage-ink); }
+
+.slate-btn--accent   { background:var(--slate-arches);  border-color:var(--slate-arches);  color:#fff; }
+.slate-btn--accent:hover  { background:var(--slate-arches-ink); border-color:var(--slate-arches-ink); }
+
+.slate-btn--secondary{ background:var(--slate-surface); border-color:var(--slate-divider-strong); color:var(--slate-ink); }
+.slate-btn--secondary:hover{ background:var(--slate-surface-tint); border-color:var(--slate-sage); }
+
+.slate-btn--ghost    { background:transparent; border-color:transparent; color:var(--slate-ink-muted); }
+.slate-btn--ghost:hover{ background:var(--slate-sage-wash); color:var(--slate-ink); }
+
+.slate-btn--danger   { background:var(--slate-flag);    border-color:var(--slate-flag);    color:#fff; }
+.slate-btn--danger:hover  { background:var(--slate-flag-ink); border-color:var(--slate-flag-ink); }
 
 /* Legacy Ops controls use .btn.secondary. Keep them in the Slate palette so
    WordPress/theme button defaults cannot reintroduce pink outlines. */
@@ -1252,42 +1184,42 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
   color: var(--slate-sage-ink) !important;
 }
 .slate-btn[disabled],
-.slate-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
+.slate-btn[aria-disabled="true"]{ opacity:.45; cursor:not-allowed; pointer-events:none; }
 
 /* ─── 19. Status badge ──────────────────────────────────────────────
- * Inline status pill. No blue/purple/pink — only sage palette.
+ * One status pill atom with five tones.
  */
-.slate-status {
-  display: inline-block;
-  padding: var(--slate-space-2xs) var(--slate-space-sm);
-  border-radius: var(--slate-radius-sm);
-  font-size: var(--slate-text-micro);
-  font-weight: var(--slate-weight-medium);
-  text-transform: uppercase;
-  letter-spacing: var(--slate-tracking-label);
-  white-space: nowrap;
-  line-height: 1.6;
+.pill,
+.ops-status-badge,
+.slate-status,
+.ops-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 9px 3px 7px;
+  border-radius:999px;
+  font:600 10.5px/1.4 var(--font-sans);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  border:1px solid transparent;
+  white-space:nowrap;
 }
-.slate-status--neutral {
-  background-color: var(--slate-surface-page);
-  color: var(--slate-ink-muted);
-  border: var(--slate-border);
+.pill::before,
+.ops-status-badge::before,
+.slate-status::before,
+.ops-badge::before {
+  content:""; width:6px; height:6px; border-radius:50%;
+  background:currentColor; opacity:.85; flex-shrink:0;
 }
-.slate-status--attention {
-  background-color: var(--slate-arches-wash);
-  color: var(--slate-arches-ink);
-}
-.slate-status--healthy {
-  background-color: var(--slate-redwood-wash);
-  color: var(--slate-redwood);
-}
-.slate-status--critical {
-  background-color: var(--slate-flag-wash);
-  color: var(--slate-flag);
-}
+
+.pill--neutral, .ops-status-badge--neutral, .slate-status--neutral, .ops-badge-neutral
+  { background:var(--slate-divider-soft);   color:var(--slate-ink-muted);   border-color:var(--slate-divider); }
+.pill--info,    .ops-status-badge--info,    .slate-status--info,    .ops-badge-info
+  { background:var(--slate-sage-wash);      color:var(--slate-sage-ink);    border-color:#D8DDD8; }
+.pill--success, .ops-status-badge--success, .slate-status--success, .ops-badge-success
+  { background:var(--slate-redwood-wash);   color:var(--slate-redwood);     border-color:#C7D8CF; }
+.pill--warn,    .ops-status-badge--warn,    .slate-status--warn,    .ops-badge-warn
+  { background:var(--slate-arches-wash);    color:var(--slate-arches-ink);  border-color:#EAD0A7; }
+.pill--danger,  .ops-status-badge--danger,  .slate-status--danger,  .ops-badge-danger
+  { background:var(--slate-flag-wash);      color:var(--slate-flag-ink);    border-color:#E4BDBD; }
 
 /* ─── 20. Error banner ──────────────────────────────────────────────
  * Inline error message; replaces Tailwind red-50 utility soup.
@@ -1596,82 +1528,6 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
   border: var(--slate-border-soft);
 }
 
-/* ─── CS job row: ops-status-badge ─────────────────────────────────────────
- * Pill badge generated by the card-row renderer. Class pattern:
- * ops-status-badge ops-status-badge--{status-slug}
- */
-.ops-status-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  min-height: 20px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  background-color: var(--slate-surface-tint);
-  color: var(--slate-ink-muted);
-  border: 1px solid var(--slate-divider-soft);
-}
-.ops-status-badge--intake,
-.ops-status-badge--ready-for-build,
-.ops-status-badge--scheduled,
-.ops-status-badge--queued,
-.ops-status-badge--ready-for-supervisor-review {
-  background-color: var(--slate-sage-wash);
-  color: var(--slate-sage-ink);
-  border-color: var(--slate-divider);
-}
-.ops-status-badge--in-progress,
-.ops-status-badge--complete,
-.ops-status-badge--ready-for-pickup {
-  background-color: var(--slate-redwood-wash);
-  color: var(--slate-redwood);
-  border-color: var(--slate-divider);
-}
-.ops-status-badge--blocked,
-.ops-status-badge--returned-to-cs,
-.ops-status-badge--delayed {
-  background-color: var(--slate-flag-wash);
-  color: var(--slate-flag);
-  border-color: var(--slate-divider);
-}
-.ops-status-badge--on-hold,
-.ops-status-badge--qc,
-.ops-status-badge--pending-qc,
-.ops-status-badge--needs-so {
-  background-color: var(--slate-arches-wash);
-  color: var(--slate-arches-ink);
-  border-color: var(--slate-divider);
-}
-.ops-status-badge--cancelled {
-  background-color: var(--slate-surface-tint);
-  color: var(--slate-ink-muted);
-  border-color: var(--slate-divider-soft);
-}
-
-/* ─── CS job row: ops-parts-badge ──────────────────────────────────────────
- * Parts status pill rendered beside the status badge in card rows.
- */
-.ops-parts-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  min-height: 20px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  background-color: var(--slate-arches-wash);
-  color: var(--slate-arches-ink);
-  border: 1px solid var(--slate-divider-soft);
-}
-
 .ops-page-tech #ops-view .ops-tech-logo,
 .ops-page-tech #ops-view .slate-header-brand img,
 .ops-page-tech #ops-view img[src*="Slate-Logo-White-CMYK.png"] {
@@ -1771,8 +1627,13 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
  */
 .pur-badge,
 .rh-pill,
-.rh-meta-pill,
 .pill,
+.ops-status-badge,
+.slate-status,
+.ops-badge,
+.badge,
+.badge-parts,
+.ops-parts-badge,
 .ops-badge-ready,
 .ops-badge-partial,
 .ops-badge-not-ready,
@@ -1791,31 +1652,76 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 .ops-badge-status-blocked,
 .ops-badge-status-qc,
 .ops-badge-status-cancelled,
-.so-exec .tag,
-.so-exec .count-pill,
-.ops-status-badge,
-.ops-parts-badge {
+.so-exec .tag {
   display: inline-flex !important;
   align-items: center !important;
-  justify-content: center !important;
   gap: 6px !important;
-  min-height: 22px !important;
-  padding: 3px 10px !important;
+  padding: 3px 9px 3px 7px !important;
   border: 1px solid transparent !important;
   border-radius: 999px !important;
   font-family: var(--font-sans) !important;
-  font-size: 11px !important;
+  font-size: 10.5px !important;
   font-weight: 600 !important;
-  letter-spacing: 0.01em !important;
-  line-height: 1 !important;
-  text-transform: none !important;
+  letter-spacing: .06em !important;
+  line-height: 1.4 !important;
+  text-transform: uppercase !important;
   white-space: nowrap !important;
   font-variant-numeric: tabular-nums !important;
   box-shadow: none !important;
 }
 
+.pur-badge::before,
+.rh-pill::before,
+.pill::before,
+.ops-status-badge::before,
+.slate-status::before,
+.ops-badge::before,
+.badge::before,
+.badge-parts::before,
+.ops-parts-badge::before,
+.ops-badge-ready::before,
+.ops-badge-partial::before,
+.ops-badge-not-ready::before,
+.ops-badge-hold::before,
+.ops-badge-status-intake::before,
+.ops-badge-status-needs-so::before,
+.ops-badge-status-scheduled::before,
+.ops-badge-status-inprogress::before,
+.ops-badge-status-complete::before,
+.ops-badge-status-hold::before,
+.ops-badge-status-pending-qc::before,
+.ops-badge-status-ready-for-build::before,
+.ops-badge-status-queued::before,
+.ops-badge-status-ready-for-pickup::before,
+.ops-badge-status-delayed::before,
+.ops-badge-status-blocked::before,
+.ops-badge-status-qc::before,
+.ops-badge-status-cancelled::before,
+.so-exec .tag::before {
+  content: "" !important;
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: currentColor !important;
+  opacity: .85 !important;
+  flex-shrink: 0 !important;
+}
+
 .so-exec .count-pill,
 .rh-meta-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 3px 9px !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: .06em !important;
+  line-height: 1.4 !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
   color: var(--slate-pill-neutral-fg) !important;
   background: var(--slate-pill-neutral-bg) !important;
   border-color: var(--slate-pill-neutral-br) !important;
@@ -1827,15 +1733,23 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 .pur-badge--connected,
 .pur-badge--ordered,
 .pur-badge--received,
+.pur-badge--shipped,
 .rh-pill--ready,
+.pill--success,
 .pill--ready,
 .pill--pickup,
+.slate-status--healthy,
+.slate-status--success,
+.ops-status-badge--success,
+.ops-badge-success,
 .ops-badge-ready,
 .ops-badge-status-complete,
 .ops-badge-status-ready-for-pickup,
 .ops-status-badge--complete,
 .ops-status-badge--ready-for-pickup,
 .ops-parts-badge--ready,
+.badge.complete,
+.badge-parts.parts-ready,
 .so-exec .tag.ok {
   color: var(--slate-pill-ok-fg) !important;
   background: var(--slate-pill-ok-bg) !important;
@@ -1851,7 +1765,12 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 .pur-badge--missing_info,
 .rh-meta-pill--warn,
 .rh-pill--parts,
+.pill--warn,
 .pill--parts,
+.slate-status--attention,
+.slate-status--warn,
+.ops-status-badge--warn,
+.ops-badge-warn,
 .ops-badge-partial,
 .ops-badge-hold,
 .ops-badge-status-pending-qc,
@@ -1860,10 +1779,10 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 .ops-status-badge--pending-qc,
 .ops-status-badge--qc,
 .ops-status-badge--needs-so,
-.ops-status-badge--on-hold,
 .ops-parts-badge--partial,
 .ops-parts-badge--hold,
-.ops-parts-badge,
+.badge.qc,
+.badge-parts.parts-partial,
 .so-exec .tag.warn,
 .so-exec .tag.watch {
   color: var(--slate-pill-warn-fg) !important;
@@ -1873,8 +1792,12 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 
 .pur-badge--rejected,
 .pur-badge--disconnected,
-.pur-badge--cancelled,
+.pill--danger,
 .pill--blocked,
+.slate-status--critical,
+.slate-status--danger,
+.ops-status-badge--danger,
+.ops-badge-danger,
 .ops-badge-not-ready,
 .ops-badge-status-hold,
 .ops-badge-status-delayed,
@@ -1882,7 +1805,12 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 .ops-status-badge--blocked,
 .ops-status-badge--returned-to-cs,
 .ops-status-badge--delayed,
+.ops-status-badge--on-hold,
 .ops-parts-badge--not-ready,
+.badge.blocked,
+.badge.hold,
+.badge-parts.parts-hold,
+.badge-parts.parts-not-ready,
 .so-exec .tag.crit {
   color: var(--slate-pill-danger-fg) !important;
   background: var(--slate-pill-danger-bg) !important;
@@ -1890,26 +1818,45 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 }
 
 .pur-badge--draft,
-.pur-badge--submitted,
 .pur-badge--inactive,
 .pur-badge--closed,
+.pur-badge--cancelled,
 .rh-pill--neutral,
-.rh-pill--qc,
 .pill--neutral,
+.slate-status--neutral,
+.ops-status-badge--neutral,
+.ops-badge-neutral,
+.ops-badge-status-cancelled,
+.ops-status-badge--cancelled,
+.badge.cancelled {
+  color: var(--slate-pill-neutral-fg) !important;
+  background: var(--slate-pill-neutral-bg) !important;
+  border-color: var(--slate-pill-neutral-br) !important;
+}
+
+.pur-badge--submitted,
+.rh-pill--qc,
+.pill--info,
 .pill--qc,
+.slate-status--info,
+.ops-status-badge--info,
+.ops-badge-info,
 .ops-badge-status-intake,
 .ops-badge-status-scheduled,
 .ops-badge-status-ready-for-build,
 .ops-badge-status-queued,
 .ops-badge-status-inprogress,
-.ops-badge-status-cancelled,
 .ops-status-badge--intake,
 .ops-status-badge--scheduled,
 .ops-status-badge--ready-for-build,
 .ops-status-badge--queued,
 .ops-status-badge--in-progress,
-.ops-status-badge--cancelled,
 .ops-parts-badge--unknown,
+.ops-parts-badge,
+.badge.intake,
+.badge.needs-so,
+.badge.scheduled,
+.badge.progress,
 .so-exec .tag,
 .so-exec .tag.muted,
 .so-exec .tag.normal {
@@ -1920,11 +1867,7 @@ body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):foc
 
 .rh-pill__dot,
 .so-exec .tag .dot {
-  width: 5px !important;
-  height: 5px !important;
-  border-radius: 999px !important;
-  background: currentColor !important;
-  flex: 0 0 auto !important;
+  display: none !important;
 }
 
 /* ─── Success toast ────────────────────────────────────────────────────────── */
@@ -2131,4 +2074,11 @@ body.slate-ops.ops-embed {
   margin: 0;
   padding: 0;
   background: var(--slate-surface-page);
+}
+
+/* DO NOT OVERRIDE — see Style Guide §04 */
+.pill, .ops-status-badge, .slate-status, .ops-badge {
+  border-radius: 999px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
 }

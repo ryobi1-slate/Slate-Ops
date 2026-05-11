@@ -41,11 +41,11 @@ $qc            = $payload['qc'];
 $pickup        = $payload['pickup'];
 
 $pill_class_map = [
-  'parts'   => 'pill--parts',
-  'qc'      => 'pill--qc',
-  'pickup'  => 'pill--pickup',
-  'blocked' => 'pill--blocked',
-  'ready'   => 'pill--ready',
+  'parts'   => 'pill--danger',
+  'qc'      => 'pill--warn',
+  'pickup'  => 'pill--success',
+  'blocked' => 'pill--danger',
+  'ready'   => 'pill--success',
   'neutral' => 'pill--neutral',
 ];
 

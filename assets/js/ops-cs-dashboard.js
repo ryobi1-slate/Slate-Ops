@@ -496,21 +496,21 @@
   // overview's existing pills.
   function statusPillClass(status) {
     switch (status) {
-      case 'BLOCKED':         return 'pill--blocked';
-      case 'SCHEDULED':       return 'pill--ready';
-      case 'IN_PROGRESS':     return 'pill--qc';
+      case 'BLOCKED':         return 'pill--danger';
+      case 'SCHEDULED':       return 'pill--info';
+      case 'IN_PROGRESS':     return 'pill--info';
       case 'QC':
-      case 'PENDING_QC':      return 'pill--qc';
-      case 'READY_FOR_BUILD': return 'pill--ready';
+      case 'PENDING_QC':      return 'pill--warn';
+      case 'READY_FOR_BUILD': return 'pill--info';
       default:                return 'pill--neutral';
     }
   }
 
   function partsPillClass(ps) {
-    if (betaIsPartsHold(ps))                              return 'pill--blocked';
+    if (betaIsPartsHold(ps))                              return 'pill--danger';
     var v = String(ps || '').toUpperCase();
-    if (v === 'PARTIAL')                                  return 'pill--parts';
-    if (v === 'READY')                                    return 'pill--ready';
+    if (v === 'PARTIAL')                                  return 'pill--warn';
+    if (v === 'READY')                                    return 'pill--success';
     return 'pill--neutral';
   }
 

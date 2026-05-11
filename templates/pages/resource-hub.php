@@ -263,7 +263,7 @@ $recent_count = count(array_filter($resources, function ($resource) {
         <span class="rh-meta-pill"><?php echo esc_html((string) count($resources)); ?> resources</span>
         <?php if ($can_review) : ?>
           <span class="rh-meta-pill rh-meta-pill--warn"><?php echo esc_html((string) count($review_queue)); ?> need review</span>
-          <button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-rh-add-open>
+          <button class="slate-btn slate-btn--accent slate-btn--sm" type="button" data-rh-add-open>
             <span class="material-symbols-outlined" aria-hidden="true">add</span>
             Add resource
           </button>
@@ -306,7 +306,7 @@ $recent_count = count(array_filter($resources, function ($resource) {
 
       <ul class="rh-list" data-rh-list>
         <?php foreach ($resources as $resource) :
-          $status_class = $resource['status_key'] === 'needs_review' ? 'rh-pill--parts' : ($resource['status_key'] === 'reviewed' ? 'rh-pill--ready' : 'rh-pill--neutral');
+          $status_class = $resource['status_key'] === 'needs_review' ? 'pill--warn' : ($resource['status_key'] === 'reviewed' ? 'pill--info' : 'pill--neutral');
           ?>
           <li class="rh-card" data-rh-resource="<?php echo esc_attr($resource['id']); ?>">
             <div class="rh-card__sku"><?php echo esc_html($resource['sku']); ?></div>
@@ -314,7 +314,7 @@ $recent_count = count(array_filter($resources, function ($resource) {
               <h3 class="rh-card__title"><?php echo esc_html($resource['title']); ?></h3>
               <div class="rh-card__vendor"><?php echo esc_html($resource['vendor']); ?></div>
             </div>
-            <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc"><?php echo esc_html($resource['doc_type']); ?></span></div>
+            <div class="rh-card__pillrow"><span class="rh-pill pill--info"><?php echo esc_html($resource['doc_type']); ?></span></div>
             <div class="rh-card__chassis"><?php echo esc_html($resource['chassis']); ?></div>
             <div class="rh-card__updated"><?php echo esc_html($resource['updated_label']); ?></div>
             <div class="rh-card__review"><span class="rh-pill <?php echo esc_attr($status_class); ?>"><?php if ($resource['status_key'] !== 'current') : ?><span class="rh-pill__dot"></span><?php endif; ?><?php echo esc_html($resource['status']); ?></span></div>

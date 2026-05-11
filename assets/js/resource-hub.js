@@ -137,13 +137,13 @@
 
   function statusPill(resource) {
     var key = resource.status_key;
-    var cls = key === 'needs_review' ? 'rh-pill--parts' : key === 'reviewed' ? 'rh-pill--ready' : 'rh-pill--neutral';
+    var cls = key === 'needs_review' ? 'pill--warn' : key === 'reviewed' ? 'pill--info' : 'pill--neutral';
     var dot = key === 'current' ? '' : '<span class="rh-pill__dot"></span>';
     return '<span class="rh-pill ' + cls + '">' + dot + esc(resource.status) + '</span>';
   }
 
   function docPill(resource) {
-    return '<span class="rh-pill rh-pill--qc">' + esc(resource.doc_type) + '</span>';
+    return '<span class="rh-pill pill--info">' + esc(resource.doc_type) + '</span>';
   }
 
   function matchesTab(resource) {
@@ -396,7 +396,7 @@
       '<span class="rh-detail-head__sku">' + esc(resource.sku) + '</span>',
       statusPill(resource),
       docPill(resource),
-      '<span class="rh-pill rh-pill--neutral">' + esc(resource.status_key === 'needs_review' ? 'Pending' : 'Current') + '</span>',
+      '<span class="rh-pill pill--neutral">' + esc(resource.status_key === 'needs_review' ? 'Pending' : 'Current') + '</span>',
       '</div>',
       '</div>',
       '<div class="rh-detail-grid">',
@@ -495,7 +495,7 @@
     els.queue.innerHTML = [
       '<div class="rh-page__head">',
       '<div><div class="rh-eyebrow">Engineering / admin</div><h2 class="rh-page__title">Admin queue</h2><p class="rh-page__sub">Vendor docs awaiting Slate review. Add notes, attach floor references, then publish.</p></div>',
-      '<div class="rh-page__actions"><button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-rh-add-open><span class="material-symbols-outlined" aria-hidden="true">add</span>Add resource</button></div>',
+      '<div class="rh-page__actions"><button class="slate-btn slate-btn--accent slate-btn--sm" type="button" data-rh-add-open><span class="material-symbols-outlined" aria-hidden="true">add</span>Add resource</button></div>',
       '</div>',
       '<div class="rh-queue__cards">' + cards + '</div>',
       '<div class="rh-queue__table">',
@@ -553,7 +553,7 @@
     if (els.reviewSku) els.reviewSku.textContent = resource.sku;
     if (els.reviewTitle) els.reviewTitle.textContent = resource.title;
     if (els.reviewPills) {
-      els.reviewPills.innerHTML = statusPill(resource) + docPill(resource) + '<span class="rh-pill rh-pill--neutral">' + esc(resource.vendor + ' - ' + resource.vendor_revision) + '</span>';
+      els.reviewPills.innerHTML = statusPill(resource) + docPill(resource) + '<span class="rh-pill pill--neutral">' + esc(resource.vendor + ' - ' + resource.vendor_revision) + '</span>';
     }
 
     var notesText = (resource.notes || []).join('\n\n');

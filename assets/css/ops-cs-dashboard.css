@@ -226,25 +226,6 @@
   transform: translateX(2px);
 }
 
-/* Status pill */
-.pill {
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-.pill--parts    { background: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-.pill--qc       { background: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
-.pill--pickup   { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
-.pill--blocked  { background: var(--slate-flag-wash);    color: var(--slate-flag); }
-.pill--ready    { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
-.pill--neutral  { background: var(--slate-surface-page); color: var(--slate-ink-muted); border: 1px solid var(--slate-divider); }
-
 /* Operational Health rows */
 .ops-health { padding: 6px 0; }
 .ops-health__row {
@@ -1489,28 +1470,6 @@ select.cs-beta-field__input {
 }
 .cs-beta-detail-loading .material-symbols-outlined { font-size: 16px; }
 
-/* Scoped pill overrides — matches the rounded Purchasing badge treatment.
-   The global `.pill` (used on the Overview tab) is left untouched. */
-.cs-beta .pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  border: 1px solid transparent;
-  line-height: 1;
-  white-space: nowrap;
-}
-.cs-beta .pill--ready    { background: var(--slate-sage-wash);    color: var(--slate-sage-ink);     border-color: #cdd5d0; }
-.cs-beta .pill--qc       { background: var(--slate-redwood-wash); color: var(--slate-redwood);      border-color: #b9cdc3; }
-.cs-beta .pill--parts    { background: var(--slate-arches-wash);  color: var(--slate-arches-ink);   border-color: #e9c79b; }
-.cs-beta .pill--blocked  { background: #f0d9d5;                   color: #651510;                   border-color: #dcb1ac; }
-.cs-beta .pill--pickup   { background: var(--slate-redwood-wash); color: var(--slate-redwood);      border-color: #b9cdc3; }
-.cs-beta .pill--neutral  { background: var(--slate-surface-tint); color: var(--slate-ink-muted);    border-color: var(--slate-divider-strong); }
-
 /* Legacy CS queue density pass.
    Keep the new queue interactions, but tune the list back toward the original
    compact CS table: smaller controls, clearer grid lines, and flatter rows. */
@@ -1654,11 +1613,6 @@ select.cs-beta-field__input {
   width: 24px;
   height: 24px;
   border-radius: 4px;
-}
-
-.cs-beta .pill {
-  padding: 3px 9px;
-  font-size: 10px;
 }
 
 /* Queue typography alignment.

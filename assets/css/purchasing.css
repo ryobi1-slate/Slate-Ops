@@ -299,83 +299,6 @@ body.ops-page-purchasing .ops-header__center {
   padding-left: 17px;
 }
 
-/* ─── 8. Status badges ─── */
-.pur-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-}
-
-.pur-badge--draft {
-  background: var(--slate-sage-wash);
-  color: var(--slate-ink-muted);
-}
-
-.pur-badge--pending {
-  background: var(--slate-arches-wash);
-  color: var(--slate-arches-ink);
-}
-
-.pur-badge--approved {
-  background: var(--slate-redwood-wash);
-  color: var(--slate-redwood);
-}
-
-.pur-badge--rejected {
-  background: var(--slate-flag-wash);
-  color: var(--slate-flag);
-}
-
-.pur-badge--submitted {
-  background: var(--slate-surface-tint);
-  color: var(--slate-ink-muted);
-}
-
-.pur-badge--acknowledged {
-  background: var(--slate-sage-wash);
-  color: var(--slate-sage-ink);
-}
-
-.pur-badge--shipped {
-  background: var(--slate-arches-wash);
-  color: var(--slate-arches-ink);
-}
-
-.pur-badge--partial {
-  background: var(--slate-arches-wash);
-  color: var(--slate-arches-ink);
-}
-
-.pur-badge--active {
-  background: var(--slate-redwood-wash);
-  color: var(--slate-redwood);
-}
-
-.pur-badge--inactive {
-  background: var(--slate-sage-wash);
-  color: var(--slate-ink-subtle);
-}
-
-.pur-badge--connected {
-  background: var(--slate-redwood-wash);
-  color: var(--slate-redwood);
-}
-
-.pur-badge--disconnected {
-  background: var(--slate-flag-wash);
-  color: var(--slate-flag);
-}
-
-.pur-badge--preview {
-  background: var(--slate-arches-wash);
-  color: var(--slate-arches-ink);
-}
-
 /* ─── 9. Empty states ─── */
 .pur-empty {
   padding: 48px 24px;
@@ -974,16 +897,6 @@ body.ops-page-purchasing .ops-header__center {
 }
 
 /* ─── 13. Phase 4 — Vendor readiness + PO drawer ─── */
-
-/* Missing badge variants for existing statuses */
-.pur-badge--review    { background: var(--slate-arches-wash);      color: var(--slate-arches-ink); }
-.pur-badge--held      { background: var(--slate-arches-wash);      color: var(--slate-arches-ink); }
-.pur-badge--ordered   { background: var(--slate-redwood-wash);     color: var(--slate-redwood); }
-.pur-badge--cancelled { background: var(--slate-flag-wash, #fef2f2); color: var(--slate-flag, #b91c1c); }
-.pur-badge--received  { background: var(--slate-redwood-wash);     color: var(--slate-redwood); }
-.pur-badge--closed    { background: var(--slate-sage-wash);        color: var(--slate-ink-subtle); }
-.pur-badge--hold      { background: var(--slate-arches-wash);      color: var(--slate-arches-ink); }
-.pur-badge--missing_info { background: var(--slate-arches-wash);   color: var(--slate-arches-ink); }
 
 /* Vendor summary count chips */
 .pur-vendor-counts {

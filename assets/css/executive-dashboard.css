@@ -304,26 +304,6 @@
 .so-exec .ava-sm.warn { background: rgba(216,107,25,.18); color: var(--warn); }
 .so-exec .ava-sm.crit { background: rgba(138,58,44,.18); color: var(--crit); }
 
-/* ---------- Tags ---- */
-.so-exec .tag {
-	display: inline-flex; align-items: center; gap: 5px;
-	font-family: inherit;
-	font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
-	padding: 2px 6px; border-radius: 2px;
-	background: var(--rule-2); color: var(--ink-2); font-weight: 600;
-}
-.so-exec .tag .dot { width: 5px; height: 5px; }
-.so-exec .tag.muted  { background: var(--rule-2); color: var(--muted); }
-.so-exec .tag.normal { background: var(--rule-2); color: var(--ink-2); }
-.so-exec .tag.ok     { background: rgba(64,79,75,.14); color: var(--slate-sage); }
-.so-exec .tag.ok .dot { background: var(--slate-sage); }
-.so-exec .tag.watch  { background: rgba(216,107,25,.10); color: var(--ink-2); }
-.so-exec .tag.watch .dot { background: var(--warn); }
-.so-exec .tag.warn   { background: rgba(216,107,25,.18); color: var(--warn); }
-.so-exec .tag.warn .dot  { background: var(--warn); }
-.so-exec .tag.crit   { background: rgba(138,58,44,.14); color: var(--crit); }
-.so-exec .tag.crit .dot  { background: var(--crit); }
-
 /* ---------- Arches accent (warn only) ---- */
 .so-exec .arch {
 	width: 8px; height: 8px; flex-shrink: 0; display: inline-block;

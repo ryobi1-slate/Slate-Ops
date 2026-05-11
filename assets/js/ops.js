@@ -3845,9 +3845,9 @@ async function loadAdmin() {
               </div>
 
               <div class="slate-row" style="gap:8px;">
-                <button id="bom-save" class="slate-btn slate-btn--green">Save BOM</button>
-                <button id="bom-clone" class="slate-btn">Clone / Revise</button>
-                <button id="bom-create-quote" class="slate-btn slate-btn--ghost">Create Quote</button>
+                <button id="bom-save" class="slate-btn slate-btn--primary">Save BOM</button>
+                <button id="bom-clone" class="slate-btn slate-btn--secondary">Clone / Revise</button>
+                <button id="bom-create-quote" class="slate-btn slate-btn--secondary">Create Quote</button>
               </div>
             </div>
           </div>
@@ -3856,7 +3856,7 @@ async function loadAdmin() {
             <div class="slate-row" style="justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
               <div class="slate-row" style="gap:8px; align-items:center;">
                 <h3 style="margin:0;">Lines</h3>
-                <button id="bom-add-line" class="slate-btn slate-btn--sm">+ Add Part</button>
+                <button id="bom-add-line" class="slate-btn slate-btn--secondary slate-btn--sm">+ Add Part</button>
                 <datalist id="bom-sku-list"></datalist>
               </div>
               <div class="slate-row" style="gap:18px; flex-wrap:wrap;">
