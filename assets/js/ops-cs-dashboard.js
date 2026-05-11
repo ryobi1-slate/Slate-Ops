@@ -921,6 +921,12 @@
       });
     });
 
+    $$('.cs-beta-row__select', body).forEach(function (select) {
+      select.addEventListener('click', function (e) { e.stopPropagation(); });
+      select.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+      select.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    });
+
     $$('.cs-beta-row__iconbtn[data-action="toggle-visible"]', body).forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -943,7 +949,8 @@
     });
 
     $$('.cs-beta-row', body).forEach(function (row) {
-      row.addEventListener('click', function () {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('input, select, textarea, button, [data-action]')) return;
         var id = parseInt(row.dataset.job, 10);
         selectBetaJob(id);
       });
