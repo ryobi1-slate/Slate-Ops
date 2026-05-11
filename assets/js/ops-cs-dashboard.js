@@ -519,7 +519,9 @@
 
   function fmtDate(s) {
     if (!s) return '—';
-    return String(s).substr(0, 10);
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(s));
+    if (!m) return String(s).substr(0, 10);
+    return parseInt(m[2], 10) + '-' + parseInt(m[3], 10) + '-' + m[1];
   }
 
   function betaPassesChip(j) {
