@@ -1,5 +1,5 @@
 /**
- * Slate Ops — CS / Supervisor Operations Dashboard.
+ * Slate Ops — Customer Service dashboard.
  *
  * Vanilla JS enhancement layer. The page is server-rendered and works
  * with JS off; this file adds re-renders, drawer, animations, keyboard
@@ -12,7 +12,7 @@
   'use strict';
 
   // ─── Initial data from server ─────────────────────────────────────────
-  var data = { priorities: [], health: [], parts: [], qc: [], pickup: [], kpis: {}, subtab_counts: {} };
+  var data = { priorities: [], health: [], parts: [], qc: [], pickup: [], kpis: {} };
   var blob = document.getElementById('cs-dashboard-data');
   if (blob) {
     try { data = JSON.parse(blob.textContent || '{}'); }
@@ -25,7 +25,7 @@
   // ─── State ────────────────────────────────────────────────────────────
   var state = {
     selectedRow: 0,
-    activeTab: 'overview'
+    activeTab: 'queue'
   };
 
   var pillLabel = {
@@ -288,7 +288,7 @@
     });
   }
 
-  // ─── CS Workspace tab ────────────────────────────────────────────────
+  // ─── Job Queue tab ───────────────────────────────────────────────────
   // CS-owned queue/detail surface. Reuses GET/POST /cs/queue for queue
   // fields and PATCH /jobs/{id} for general job fields. Manual queue # input
   // remains the keyboard/accessibility fallback alongside drag/drop.
@@ -334,7 +334,7 @@
     var api = betaApi();
     var body = document.getElementById('cs-beta-body');
     if (!api) {
-      if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>CS Workspace API not available.</span></div>';
+      if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Job Queue API not available.</span></div>';
       return;
     }
     if (!opts || !opts.silent) {
@@ -364,7 +364,7 @@
         var usersRes = results[1];
         betaState.loading = false;
         if (!res.ok || !res.body || !res.body.ok) {
-          if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load CS Workspace.</span></div>';
+          if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load Job Queue.</span></div>';
           return;
         }
         betaState.jobs   = res.body.jobs || [];
@@ -375,7 +375,7 @@
       })
       .catch(function () {
         betaState.loading = false;
-        if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load CS Workspace.</span></div>';
+        if (body) body.innerHTML = '<div class="cs-beta__placeholder cs-beta__placeholder--error"><span class="material-symbols-outlined">error</span><span>Failed to load Job Queue.</span></div>';
       });
   }
 
@@ -778,7 +778,6 @@
           +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech">'
           +       betaTechOptions(j.assigned_user_id)
           +     '</select>'
-          +     (j.status === 'SCHEDULED' && !j.assigned_user_id ? '<span class="cs-beta-row__tag cs-beta-row__tag--warn">No tech</span>' : '')
           +   '</div>'
           +   '<div class="cs-beta-row__due cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</div>'
           +   '<div class="cs-beta-row__note">'
@@ -1466,10 +1465,10 @@
       +       '<span class="material-symbols-outlined">undo</span>'
       +       'Discard row edits'
       +     '</button>'
-      +     '<a class="btn btn--secondary" href="' + escapeHtml(window.location.origin + '/ops/cs/?embed=1') + '" target="_blank" rel="noopener">'
-      +       '<span class="material-symbols-outlined">open_in_new</span>'
-      +       'Open in legacy CS'
-      +     '</a>'
+      +     '<button type="button" class="btn btn--primary" data-action="beta-save-row" id="cs-beta-detail-save"' + (betaState.edits[id] ? '' : ' disabled') + '>'
+      +       '<span class="material-symbols-outlined">save</span>'
+      +       '<span id="cs-beta-detail-save-label">Save edits</span>'
+      +     '</button>'
       +   '</div>'
       + '</section>';
 
@@ -1482,9 +1481,16 @@
       grid.addEventListener('change', betaDetailInputHandler);
       grid.addEventListener('click', function (e) {
         var t = e.target.closest('[data-action="beta-discard-row"]');
-        if (!t) return;
-        e.preventDefault();
-        betaDiscardRowEdits();
+        if (t) {
+          e.preventDefault();
+          betaDiscardRowEdits();
+          return;
+        }
+        t = e.target.closest('[data-action="beta-save-row"]');
+        if (t) {
+          e.preventDefault();
+          saveBeta();
+        }
       });
     }
   }
@@ -1514,6 +1520,8 @@
     else t.classList.remove('is-edited');
     var discard = grid.querySelector('[data-action="beta-discard-row"]');
     if (discard) discard.disabled = !betaState.edits[id];
+    var save = grid.querySelector('[data-action="beta-save-row"]');
+    if (save) save.disabled = !betaState.edits[id];
     if (e.type === 'change' && [
       'assigned_user_id',
       'queue_order',
@@ -1563,9 +1571,8 @@
 
   function updateBetaSaveButton() {
     var btn = document.getElementById('cs-beta-save');
-    if (!btn) return;
     var n = Object.keys(betaState.edits).length;
-    btn.disabled = (n === 0);
+    if (btn) btn.disabled = (n === 0);
     var label = document.getElementById('cs-beta-save-label');
     if (label) {
       var hasJob = false;
@@ -1580,6 +1587,15 @@
       } else {
         label.textContent = (hasJob ? 'Save Changes + Job' : 'Save Changes') + ' (' + n + ')';
       }
+    }
+    var detailBtn = document.getElementById('cs-beta-detail-save');
+    if (detailBtn) {
+      var selected = betaState.selected;
+      detailBtn.disabled = !(selected != null && betaState.edits[selected]);
+    }
+    var detailLabel = document.getElementById('cs-beta-detail-save-label');
+    if (detailLabel) {
+      detailLabel.textContent = 'Save edits';
     }
   }
 
@@ -1691,8 +1707,12 @@
 
     var btn  = document.getElementById('cs-beta-save');
     var lbl  = document.getElementById('cs-beta-save-label');
+    var detailBtn = document.getElementById('cs-beta-detail-save');
+    var detailLbl = document.getElementById('cs-beta-detail-save-label');
     if (btn) btn.disabled = true;
     if (lbl) lbl.textContent = 'Saving…';
+    if (detailBtn) detailBtn.disabled = true;
+    if (detailLbl) detailLbl.textContent = 'Saving…';
 
     var savedQueue = 0;
     var savedJobs  = 0;
@@ -1788,6 +1808,7 @@
         showToast(msg);
         if (btn) btn.disabled = false;
         if (lbl) lbl.textContent = 'Save Changes';
+        if (detailLbl) detailLbl.textContent = 'Save edits';
         // Refresh the queue snapshot so already-saved fields stop
         // flagging dirty in the UI; remaining edits stay queued.
         if (savedQueue > 0 || savedJobs > 0) {
@@ -1848,7 +1869,7 @@
   }
 
   // ── New Job intake modal ────────────────────────────────────────────
-  // Opens from the CS Workspace header, posts to the existing
+  // Opens from the Job Queue header, posts to the existing
   // POST /jobs endpoint (perm_create_jobs = CS / Supervisor / Admin),
   // and reloads the queue on success so the new job lands in the
   // Unassigned group at the top.
@@ -2032,24 +2053,20 @@
   // attach event handlers and trigger the initial bar-fill animation.
   renderPriorities();
   renderHealth();
-  // Parts / QC / Pickup lists are read-only and have no row interactions,
-  // so the server-rendered markup is left in place.
+  if (state.activeTab === 'queue') {
+    activateBeta();
+  }
   setTimeout(animateKPIs, 50);
 
   // Sub-tab hash router. Allows /ops/cs-dashboard#queue and
-  // /ops/cs-dashboard#cs-workspace to land directly on the CS Workspace tab.
+  // /ops/cs-dashboard#cs-workspace to land directly on the Job Queue tab.
   // Legacy Workspace hashes are kept as aliases for saved links.
   var betaHashAliases = {
     'workspace':      'queue',
     'cs-workspace':   'queue',
     'workspace-beta': 'queue',
     'queue':          'queue',
-    'overview':       'overview',
-    'intake':         'intake',
-    'parts':          'parts',
-    'qc':             'qc',
-    'pickup':         'pickup',
-    'exceptions':     'exceptions'
+    'overview':       'overview'
   };
   function applyHashRoute() {
     var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();

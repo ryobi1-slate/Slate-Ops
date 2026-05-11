@@ -44,11 +44,6 @@ if (!function_exists('ops_nav_link')) {
     if (in_array('cs-dashboard', $allowed, true)) :
       ops_nav_link('/ops/cs-dashboard', '/cs-dashboard',  'person',         'CS');
     endif;
-    // Legacy /ops/cs route — only rendered for users explicitly granted the
-    // `cs` slug in the access matrix (default-hidden as of v0.52.0).
-    if (in_array('cs', $allowed, true)) :
-      ops_nav_link('/ops/cs',           '/cs',            'support_agent',  'CS (legacy)');
-    endif;
     if (in_array('tech', $allowed, true)) :
       ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech');
     endif;
