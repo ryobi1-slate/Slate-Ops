@@ -177,6 +177,10 @@
       a.onclick = (e) => {
         e.preventDefault();
         const r = a.getAttribute('data-route');
+        if (r === '/') {
+          window.location.href = '/ops/';
+          return;
+        }
         window.history.pushState({}, '', '/ops' + (r === '/' ? '/' : r));
         router();
       };

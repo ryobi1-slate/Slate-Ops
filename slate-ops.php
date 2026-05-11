@@ -90,9 +90,10 @@ add_action('wp_enqueue_scripts', function() {
   // Narrow check: only the purchasing sub-tree gets the purchasing bundle.
   // Exact match 'purchasing' or sub-paths 'purchasing/…' — nothing else.
   $current_path = Slate_Ops_Routes::current_path();
+  $is_home         = ($current_path === '');
   $is_purchasing   = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
   $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
-  $is_executive    = ($current_path === '' || $current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
+  $is_executive    = ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
   $is_resource_hub = ($current_path === 'resource-hub' || strncmp($current_path, 'resource-hub/', 13) === 0);
   $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
 
@@ -102,7 +103,10 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('slate-ops-design-language', SLATE_OPS_URL . 'assets/css/ops-design-language.css', $deps, $ver);
   };
 
-  if ($is_purchasing) {
+  if ($is_home) {
+    // Ops Home uses shared shell styles only.
+    return;
+  } elseif ($is_purchasing) {
     // Purchasing workspace — standalone vanilla JS; React app is not loaded here.
     $ver_pur_css = file_exists(SLATE_OPS_PATH . 'assets/css/purchasing.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/purchasing.css') : SLATE_OPS_VERSION;
     $ver_pur_js  = file_exists(SLATE_OPS_PATH . 'assets/js/purchasing.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/purchasing.js')   : SLATE_OPS_VERSION;
@@ -274,7 +278,7 @@ add_filter('login_redirect', function($redirect_to, $requested_redirect_to, $use
                 || user_can($user, Slate_Ops_Utils::CAP_VIEW_MONITOR);
 
   if ($is_admin || $is_supervisor || $is_cs) {
-    return esc_url_raw(home_url('/ops/cs-dashboard'));
+    return esc_url_raw(home_url('/ops/'));
   }
   if ($is_tech) {
     return esc_url_raw(home_url('/ops/tech'));

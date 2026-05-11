@@ -36,10 +36,10 @@ $user = wp_get_current_user();
 
 // Route-specific body class — used for layout overrides (e.g. tech full-screen panel).
 $_ops_path  = Slate_Ops_Routes::current_path(); // e.g. "tech", "cs", "schedule/…"
-$_ops_route = strtok($_ops_path, '/');           // first segment only
-$page_class = $_ops_route ? 'ops-page-' . sanitize_html_class($_ops_route) : 'ops-page-exec';
+$_ops_route = $_ops_path === '' ? '' : strtok($_ops_path, '/'); // first segment only
+$page_class = $_ops_route ? 'ops-page-' . sanitize_html_class($_ops_route) : 'ops-page-home';
 $route_map = [
-  ''             => 'executive',
+  ''             => 'home',
   'exec'         => 'executive',
   'cs'           => 'cs',
   'cs-dashboard' => 'cs-dashboard',
@@ -52,17 +52,22 @@ $route_map = [
   'monitor'      => 'monitor',
 ];
 $page_slug = $route_map[$_ops_route] ?? null;
-$is_blocked = $page_slug && !slate_ops_current_user_can_access_ops_page($page_slug);
+$is_home_route = ($_ops_route === '');
+
+if ($is_home_route && $caps['tech'] && !$caps['admin'] && !$caps['supervisor'] && !$caps['cs']) {
+  wp_safe_redirect(home_url('/ops/tech'));
+  exit;
+}
+
+$is_blocked = $page_slug && $page_slug !== 'home' && !slate_ops_current_user_can_access_ops_page($page_slug);
 
 // Embed mode: ?embed=1 strips topbar + sidebar so legacy React routes can
 // render inside an iframe when needed. Presentation flag only — access checks
 // are unaffected.
 $is_embed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 
-// `exec` is the canonical Executive route, and the empty `/ops/` path
-// renders the same server-side dashboard so live never falls back to the
-// retired React Executive screen.
-$is_executive_page = ($_ops_route === '' || $_ops_route === 'exec');
+// `exec` is the canonical Executive route.
+$is_executive_page = ($_ops_route === 'exec');
 $is_resource_hub_page = ($_ops_route === 'resource-hub');
 
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
@@ -76,7 +81,9 @@ if ($is_blocked) : ?>
       <p style="margin:0;color:#5E646B;">You do not have permission to view this Slate Ops page.</p>
     </div>
   </section>
-<?php elseif ($page_slug === 'cs-dashboard') :
+<?php elseif ($page_slug === 'home') :
+  include SLATE_OPS_PATH . 'templates/pages/ops-home.php';
+elseif ($page_slug === 'cs-dashboard') :
   // Server-rendered CS Dashboard with the CS Workspace tab. React app is not
   // enqueued for this route in slate-ops.php; the empty #ops-view div above
   // is a harmless sibling.
