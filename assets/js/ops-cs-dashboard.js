@@ -25,7 +25,7 @@
   // ─── State ────────────────────────────────────────────────────────────
   var state = {
     selectedRow: 0,
-    activeTab: 'queue'
+    activeTab: 'overview'
   };
 
   var pillLabel = {
