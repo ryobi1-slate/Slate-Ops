@@ -1637,7 +1637,8 @@ select.cs-beta-field__input {
 
 .cs-beta-row__so,
 .cs-beta-row__name,
-.cs-beta-row__techselect {
+.cs-beta-row__techselect,
+.cs-beta-row__select {
   font-size: 12.5px;
 }
 
@@ -1652,7 +1653,8 @@ select.cs-beta-field__input {
   gap: 6px;
 }
 
-.cs-beta-row__techselect {
+.cs-beta-row__techselect,
+.cs-beta-row__select {
   height: 26px;
   padding-top: 2px;
   padding-bottom: 2px;
@@ -1711,10 +1713,19 @@ select.cs-beta-field__input {
   color: var(--slate-ink-muted);
 }
 
-.cs-beta-row__techselect {
+.cs-beta-row__techselect,
+.cs-beta-row__select {
   font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 400;
+}
+
+.cs-beta-row__select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--slate-divider-strong);
+  background: var(--slate-surface);
+  color: var(--slate-ink);
 }
 
 @media (min-width: 1101px) {

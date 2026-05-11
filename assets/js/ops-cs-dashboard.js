@@ -318,7 +318,7 @@
   var BETA_JOB_FIELDS = [
     'customer_name', 'dealer_name', 'sales_person',
     'vin_last8', 'notes',
-    'parts_status', 'estimated_hours'
+    'parts_status', 'estimated_hours', 'status'
   ];
   var BETA_QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
   function betaIsJobField(name) { return BETA_JOB_FIELDS.indexOf(name) >= 0; }
@@ -464,8 +464,8 @@
       so_number:        j.so_number,
       customer:         e.customer_name !== undefined ? e.customer_name : j.customer,
       dealer:           e.dealer_name   !== undefined ? e.dealer_name   : j.dealer,
-      status:           j.status,
-      status_label:     j.status_label,
+      status:           e.status !== undefined ? betaStatusKey(e.status) : j.status,
+      status_label:     e.status !== undefined ? betaStatusLabel(e.status) : j.status_label,
       parts_status:     e.parts_status  !== undefined ? e.parts_status  : j.parts_status,
       estimated_minutes: j.estimated_minutes,
       requested_date:   j.requested_date,
@@ -542,6 +542,24 @@
     var v = String(ps || '').toUpperCase();
     if (!v) return '—';
     var map = { READY: 'Ready', PARTIAL: 'Partial', NOT_READY: 'Not ready', HOLD: 'On hold' };
+    return map[v] || v;
+  }
+
+  function betaStatusLabel(status) {
+    var v = betaStatusKey(status);
+    var map = {
+      INTAKE: 'Intake',
+      NEEDS_SO: 'Needs SO',
+      READY_FOR_BUILD: 'Ready for Build',
+      SCHEDULED: 'Scheduled',
+      IN_PROGRESS: 'In Progress',
+      BLOCKED: 'Blocked',
+      QC: 'Ready for Closeout',
+      AWAITING_PICKUP: 'Complete - Awaiting Pickup',
+      COMPLETE: 'Closed',
+      ON_HOLD: 'On Hold',
+      CANCELLED: 'Cancelled'
+    };
     return map[v] || v;
   }
 
@@ -805,8 +823,8 @@
                 + '</div>'
                 : '')
           +   '</div>'
-          +   '<div class="cs-beta-row__status"><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></div>'
-          +   '<div class="cs-beta-row__parts"><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></div>'
+          +   '<div class="cs-beta-row__status">' + betaRowStatusControlHtml(j) + '</div>'
+          +   '<div class="cs-beta-row__parts">' + betaRowPartsControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__tech">'
           +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech">'
           +       betaTechOptions(j.assigned_user_id)
@@ -1568,7 +1586,36 @@
     return missing;
   }
 
-  function betaStatusControlHtml(status, label, readyDeps) {
+  function betaRowStatusControlHtml(j) {
+    var status = betaStatusKey(j.status);
+    var editable = [
+      'INTAKE',
+      'NEEDS_SO',
+      'READY_FOR_BUILD',
+      'QC',
+      'AWAITING_PICKUP'
+    ].indexOf(status) >= 0;
+    if (!editable) {
+      return '<span class="pill ' + statusPillClass(status) + '">' + escapeHtml(j.status_label || betaStatusLabel(status) || '—') + '</span>';
+    }
+    var readyDeps = betaReadyForBuildMissing(j.id, j);
+    return betaStatusControlHtml(status, j.status_label || betaStatusLabel(status), readyDeps, true);
+  }
+
+  function betaRowPartsControlHtml(j) {
+    var status = betaStatusKey(j.status);
+    if (['IN_PROGRESS', 'QC', 'AWAITING_PICKUP', 'COMPLETE', 'CANCELLED'].indexOf(status) >= 0) {
+      return '<span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span>';
+    }
+    var values = ['NOT_READY', 'PARTIAL', 'READY', 'HOLD'];
+    return '<select class="cs-beta-row__select cs-beta-row__partsselect" data-field="parts_status" aria-label="Parts status">'
+      + values.map(function (v) {
+          return '<option value="' + v + '"' + (String(j.parts_status || '').toUpperCase() === v ? ' selected' : '') + '>' + escapeHtml(partsLabel(v)) + '</option>';
+        }).join('')
+      + '</select>';
+  }
+
+  function betaStatusControlHtml(status, label, readyDeps, isRow) {
     var options = [];
     var hint = '';
 
@@ -1605,12 +1652,12 @@
     }
 
     return ''
-      + '<select class="cs-beta-field__input cs-beta-status-select" data-action="beta-status-select" aria-label="Job status">'
+      + '<select class="' + (isRow ? 'cs-beta-row__select cs-beta-row__statusselect' : 'cs-beta-field__input cs-beta-status-select') + '" data-action="beta-status-select" aria-label="Job status">'
       + options.map(function (opt) {
           return '<option value="' + escapeHtml(opt.value) + '"' + (opt.value === status ? ' selected' : '') + (opt.disabled ? ' disabled' : '') + '>' + escapeHtml(opt.label) + '</option>';
         }).join('')
       + '</select>'
-      + (hint ? '<div class="cs-beta-detail-section__hint">' + escapeHtml(hint) + '</div>' : '');
+      + (!isRow && hint ? '<div class="cs-beta-detail-section__hint">' + escapeHtml(hint) + '</div>' : '');
   }
 
   function betaStatusAction(status) {
@@ -1798,13 +1845,19 @@
     if (!t || !t.dataset) return;
     if (t.dataset.action === 'beta-status-select') {
       var nextStatus = String(t.value || '').trim();
-      var currentJob = betaJobById(betaState.selected || 0);
+      var rowEl = t.closest('.cs-beta-row');
+      var rowJobId = rowEl ? parseInt(rowEl.getAttribute('data-job'), 10) : 0;
+      var idForStatus = rowJobId || betaState.selected || 0;
+      var currentJob = betaJobById(idForStatus);
       if (!nextStatus || !currentJob || nextStatus === betaStatusKey(currentJob.status || '')) return;
-      if (nextStatus === 'AWAITING_PICKUP' || nextStatus === 'COMPLETE') {
-        betaCloseoutAction(nextStatus);
-      } else {
-        betaStatusAction(nextStatus);
+      if (rowJobId) {
+        recordBetaEdit(rowJobId, 'status', nextStatus);
+        renderBeta();
+        showToast('Status staged — Save Changes to commit');
+        return;
       }
+      if (nextStatus === 'AWAITING_PICKUP' || nextStatus === 'COMPLETE') betaCloseoutAction(nextStatus);
+      else betaStatusAction(nextStatus);
       return;
     }
     if (!t.dataset.field) return;
@@ -1838,6 +1891,7 @@
       'queue_visible',
       'parts_status',
       'estimated_hours',
+      'status',
       'customer_name',
       'dealer_name'
     ].indexOf(field) >= 0) {
