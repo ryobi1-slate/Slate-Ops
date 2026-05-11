@@ -1569,31 +1569,35 @@
   }
 
   function betaStatusControlHtml(status, label, readyDeps) {
-    var options = [{ value: status, label: label || status, disabled: false }];
+    var options = [];
     var hint = '';
 
-    if (status === 'INTAKE') {
-      options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
+    function addOption(value, optionLabel, disabled) {
       options.push({
-        value: 'READY_FOR_BUILD',
-        label: readyDeps.length ? ('Ready for Build - needs ' + readyDeps.join(', ')) : 'Ready for Build',
-        disabled: readyDeps.length > 0
+        value: value,
+        label: optionLabel,
+        disabled: !!disabled
       });
-    } else if (status === 'NEEDS_SO') {
-      options.push({
-        value: 'READY_FOR_BUILD',
-        label: readyDeps.length ? ('Ready for Build - needs ' + readyDeps.join(', ')) : 'Ready for Build',
-        disabled: readyDeps.length > 0
-      });
-    } else if (status === 'READY_FOR_BUILD') {
-      options.push({ value: 'INTAKE', label: 'Intake', disabled: false });
+    }
+
+    if (status === 'INTAKE' || status === 'NEEDS_SO' || status === 'READY_FOR_BUILD') {
+      addOption('INTAKE', 'Intake', false);
       options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
+      addOption(
+        'READY_FOR_BUILD',
+        readyDeps.length ? ('Ready for Build - needs ' + readyDeps.join(', ')) : 'Ready for Build',
+        status !== 'READY_FOR_BUILD' && readyDeps.length > 0
+      );
     } else if (status === 'QC') {
-      options.push({ value: 'AWAITING_PICKUP', label: 'Complete - Awaiting Pickup', disabled: false });
+      addOption('QC', label || 'Ready for Closeout', false);
+      addOption('AWAITING_PICKUP', 'Complete - Awaiting Pickup', false);
       hint = 'Complete the closeout checklist before moving to pickup.';
     } else if (status === 'AWAITING_PICKUP') {
-      options.push({ value: 'COMPLETE', label: 'Closed', disabled: false });
+      addOption('AWAITING_PICKUP', label || 'Complete - Awaiting Pickup', false);
+      addOption('COMPLETE', 'Closed', false);
       hint = 'Close only after pickup or delivery handoff is complete.';
+    } else {
+      addOption(status, label || status, false);
     }
 
     if (options.length === 1) {
