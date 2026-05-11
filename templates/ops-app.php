@@ -69,6 +69,7 @@ $is_embed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 // `exec` is the canonical Executive route.
 $is_executive_page = ($_ops_route === 'exec');
 $is_resource_hub_page = ($_ops_route === 'resource-hub');
+$is_audit_log_page = ($_ops_path === 'admin/audit');
 
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
 $shell_part = 'open';
@@ -95,6 +96,9 @@ elseif ($is_executive_page) :
 elseif ($is_resource_hub_page) :
   // Server-rendered Resource Hub. React app is not enqueued for this route.
   include SLATE_OPS_PATH . 'templates/pages/resource-hub.php';
+elseif ($is_audit_log_page) :
+  // Server-rendered Audit Log. React app is not enqueued for this route.
+  include SLATE_OPS_PATH . 'templates/pages/audit-log.php';
 endif; ?>
 
 <?php // For all other routes #ops-view is empty — React app (app.js) mounts and renders content at runtime.

@@ -122,6 +122,12 @@ class Slate_Ops_REST {
         ],
       ]);
 
+      register_rest_route($ns, '/audit-log', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_admin'],
+        'callback' => [__CLASS__, 'get_audit_log'],
+      ]);
+
       register_rest_route($ns, '/users', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
@@ -1229,6 +1235,174 @@ return ['ok' => true, 'id' => $id];
       'roles' => slate_ops_get_role_page_access(),
       'features' => Slate_Ops_Utils::get_feature_flags(),
     ];
+  }
+
+  public static function get_audit_log($req) {
+    global $wpdb;
+
+    $tbl_log  = $wpdb->prefix . 'slate_ops_audit_log';
+    $tbl_jobs = $wpdb->prefix . 'slate_ops_jobs';
+    $tbl_u    = $wpdb->users;
+
+    $limit = (int) $req->get_param('limit');
+    if ($limit <= 0) $limit = 50;
+    if ($limit > 200) $limit = 200;
+
+    $page = (int) $req->get_param('page');
+    if ($page <= 0) $page = 1;
+    $offset = ($page - 1) * $limit;
+
+    $where  = ['1=1'];
+    $params = [];
+
+    $entity = sanitize_key((string) $req->get_param('entity_type'));
+    if ($entity !== '' && $entity !== 'all') {
+      $where[] = 'a.entity_type = %s';
+      $params[] = $entity;
+    }
+
+    $action = sanitize_key((string) $req->get_param('action'));
+    if ($action !== '' && $action !== 'all') {
+      $where[] = 'a.action = %s';
+      $params[] = $action;
+    }
+
+    $user_id = (int) $req->get_param('user_id');
+    if ($user_id > 0) {
+      $where[] = 'a.user_id = %d';
+      $params[] = $user_id;
+    }
+
+    $date_from = sanitize_text_field((string) $req->get_param('date_from'));
+    if ($date_from !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_from)) {
+      $where[] = 'a.created_at >= %s';
+      $params[] = $date_from . ' 00:00:00';
+    }
+
+    $date_to = sanitize_text_field((string) $req->get_param('date_to'));
+    if ($date_to !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_to)) {
+      $where[] = 'a.created_at <= %s';
+      $params[] = $date_to . ' 23:59:59';
+    }
+
+    $q = trim(sanitize_text_field((string) $req->get_param('q')));
+    if ($q !== '') {
+      $like = '%' . $wpdb->esc_like($q) . '%';
+      $where[] = "(a.action LIKE %s OR a.field_name LIKE %s OR a.note LIKE %s OR a.old_value LIKE %s OR a.new_value LIKE %s OR CAST(a.entity_id AS CHAR) LIKE %s OR u.display_name LIKE %s OR u.user_email LIKE %s OR j.so_number LIKE %s OR j.customer_name LIKE %s OR j.vin LIKE %s)";
+      array_push($params, $like, $like, $like, $like, $like, $like, $like, $like, $like, $like, $like);
+    }
+
+    $where_sql = implode(' AND ', $where);
+
+    $select_sql = "
+      SELECT a.audit_id, a.entity_type, a.entity_id, a.action, a.field_name,
+             a.old_value, a.new_value, a.note, a.note_type, a.user_id,
+             a.ip_address, a.user_agent, a.created_at,
+             COALESCE(u.display_name, 'System') AS user_name,
+             u.user_email AS user_email,
+             j.so_number, j.customer_name, j.vin
+      FROM {$tbl_log} a
+      LEFT JOIN {$tbl_u} u ON u.ID = a.user_id
+      LEFT JOIN {$tbl_jobs} j ON a.entity_type = 'job' AND j.job_id = a.entity_id
+      WHERE {$where_sql}
+      ORDER BY a.created_at DESC, a.audit_id DESC
+      LIMIT %d OFFSET %d";
+
+    $count_sql = "
+      SELECT COUNT(*)
+      FROM {$tbl_log} a
+      LEFT JOIN {$tbl_u} u ON u.ID = a.user_id
+      LEFT JOIN {$tbl_jobs} j ON a.entity_type = 'job' AND j.job_id = a.entity_id
+      WHERE {$where_sql}";
+
+    $rows = $wpdb->get_results(
+      $wpdb->prepare($select_sql, array_merge($params, [$limit, $offset])),
+      ARRAY_A
+    ) ?: [];
+
+    $total = (int) $wpdb->get_var(
+      empty($params) ? $count_sql : $wpdb->prepare($count_sql, $params)
+    );
+
+    $summary_sql = "
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN a.entity_type = 'job' THEN 1 ELSE 0 END) AS jobs,
+        SUM(CASE WHEN a.entity_type = 'user' THEN 1 ELSE 0 END) AS users,
+        SUM(CASE WHEN a.entity_type IN ('settings','scheduler','work_center') THEN 1 ELSE 0 END) AS system,
+        SUM(CASE WHEN a.action IN ('delete','role_change','update') THEN 1 ELSE 0 END) AS high_signal
+      FROM {$tbl_log} a
+      LEFT JOIN {$tbl_u} u ON u.ID = a.user_id
+      LEFT JOIN {$tbl_jobs} j ON a.entity_type = 'job' AND j.job_id = a.entity_id
+      WHERE {$where_sql}";
+
+    $summary = $wpdb->get_row(
+      empty($params) ? $summary_sql : $wpdb->prepare($summary_sql, $params),
+      ARRAY_A
+    ) ?: [];
+
+    $facets_sql = "SELECT DISTINCT entity_type FROM {$tbl_log} ORDER BY entity_type ASC";
+    $entities = array_values(array_filter(array_map('strval', $wpdb->get_col($facets_sql) ?: [])));
+
+    $actions_sql = "SELECT DISTINCT action FROM {$tbl_log} ORDER BY action ASC";
+    $actions = array_values(array_filter(array_map('strval', $wpdb->get_col($actions_sql) ?: [])));
+
+    $users = get_users([
+      'fields' => ['ID', 'display_name', 'user_email'],
+      'orderby' => 'display_name',
+      'order' => 'ASC',
+    ]);
+
+    return rest_ensure_response([
+      'items' => array_map([__CLASS__, 'normalize_audit_row'], $rows),
+      'pagination' => [
+        'page' => $page,
+        'limit' => $limit,
+        'total' => $total,
+        'pages' => $limit > 0 ? (int) ceil($total / $limit) : 1,
+      ],
+      'summary' => [
+        'total' => (int) ($summary['total'] ?? 0),
+        'jobs' => (int) ($summary['jobs'] ?? 0),
+        'users' => (int) ($summary['users'] ?? 0),
+        'system' => (int) ($summary['system'] ?? 0),
+        'high_signal' => (int) ($summary['high_signal'] ?? 0),
+      ],
+      'facets' => [
+        'entities' => $entities,
+        'actions' => $actions,
+        'users' => array_map(function($u) {
+          return [
+            'id' => (int) $u->ID,
+            'name' => $u->display_name,
+            'email' => $u->user_email,
+          ];
+        }, $users),
+      ],
+    ]);
+  }
+
+  private static function normalize_audit_row($row) {
+    $row['audit_id'] = (int) $row['audit_id'];
+    $row['entity_id'] = (int) $row['entity_id'];
+    $row['user_id'] = $row['user_id'] !== null ? (int) $row['user_id'] : null;
+    $row['old_value'] = self::normalize_audit_value($row['old_value'] ?? null);
+    $row['new_value'] = self::normalize_audit_value($row['new_value'] ?? null);
+    return $row;
+  }
+
+  private static function normalize_audit_value($value) {
+    if ($value === null || $value === '') return $value;
+    $maybe = maybe_unserialize($value);
+    if ($maybe !== $value) return $maybe;
+
+    $trimmed = trim((string) $value);
+    if ($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) {
+      $decoded = json_decode($trimmed, true);
+      if (json_last_error() === JSON_ERROR_NONE) return $decoded;
+    }
+
+    return $value;
   }
 
   public static function list_jobs($req) {

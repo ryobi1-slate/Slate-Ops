@@ -95,6 +95,7 @@ add_action('wp_enqueue_scripts', function() {
   $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
   $is_executive    = ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
   $is_resource_hub = ($current_path === 'resource-hub' || strncmp($current_path, 'resource-hub/', 13) === 0);
+  $is_audit_log    = ($current_path === 'admin/audit');
   $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
 
   $enqueue_design_language = function($deps = ['slate-ops-shell']) {
@@ -162,6 +163,25 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('slate-ops-resource-hub',  SLATE_OPS_URL . 'assets/css/resource-hub.css', ['slate-ops-shell'], $ver_rh_css);
     $enqueue_design_language(['slate-ops-resource-hub']);
     wp_enqueue_script('slate-ops-resource-hub', SLATE_OPS_URL . 'assets/js/resource-hub.js',   [],                  $ver_rh_js,  true);
+  } elseif ($is_audit_log) {
+    $route_blocked_audit_log = !slate_ops_current_user_can_access_ops_page('admin');
+    if ($route_blocked_audit_log) {
+      return;
+    }
+    $ver_audit_css = file_exists(SLATE_OPS_PATH . 'assets/css/audit-log.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/audit-log.css') : SLATE_OPS_VERSION;
+    $ver_audit_js  = file_exists(SLATE_OPS_PATH . 'assets/js/audit-log.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/audit-log.js')   : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-audit-log', SLATE_OPS_URL . 'assets/css/audit-log.css', ['slate-ops-shell'], $ver_audit_css);
+    $enqueue_design_language(['slate-ops-audit-log']);
+    wp_enqueue_script('slate-ops-audit-log', SLATE_OPS_URL . 'assets/js/audit-log.js', [], $ver_audit_js, true);
+    wp_localize_script('slate-ops-audit-log', 'slateOpsAudit', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'urls' => [
+        'ops' => esc_url_raw(home_url('/ops')),
+      ],
+    ]);
   } else {
     $route_map = [
       '' => 'executive', 'exec' => 'executive', 'cs' => 'cs', 'tech' => 'tech',
