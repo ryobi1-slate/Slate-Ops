@@ -1289,6 +1289,7 @@
     $$('.cs-beta-row.is-selected').forEach(function (el) { el.classList.remove('is-selected'); });
     var panel = document.getElementById('cs-beta-detail');
     if (panel) panel.hidden = true;
+    document.body.classList.remove('cs-beta-detail-modal-open');
   }
 
   /**
@@ -1312,9 +1313,17 @@
     var panel = document.getElementById('cs-beta-detail');
     var grid  = document.getElementById('cs-beta-detail-grid');
     if (!panel || !grid) return;
-    if (betaState.selected == null) { panel.hidden = true; return; }
+    if (betaState.selected == null) {
+      panel.hidden = true;
+      document.body.classList.remove('cs-beta-detail-modal-open');
+      return;
+    }
     var snap = betaJobById(betaState.selected);
-    if (!snap) { panel.hidden = true; return; }
+    if (!snap) {
+      panel.hidden = true;
+      document.body.classList.remove('cs-beta-detail-modal-open');
+      return;
+    }
     var j = betaEffectiveJob(snap);
     var id = j.id;
     var det = betaState.jobDetails[id];      // may be undefined while loading
@@ -1326,6 +1335,7 @@
     if (custEl) custEl.textContent = j.customer || '';
 
     panel.hidden = false;
+    document.body.classList.add('cs-beta-detail-modal-open');
     grid.setAttribute('data-job-id', String(id));
 
     // Field helpers — value() reads effective value, cls() flags edited.
@@ -1472,7 +1482,7 @@
       +     '</button>'
       +     '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-save-row" id="cs-beta-detail-save"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">save</span>'
-      +       '<span id="cs-beta-detail-save-label">Save edits</span>'
+      +       '<span id="cs-beta-detail-save-label">Save Changes</span>'
       +     '</button>'
       +   '</div>'
       + '</section>';
@@ -1600,7 +1610,7 @@
     }
     var detailLabel = document.getElementById('cs-beta-detail-save-label');
     if (detailLabel) {
-      detailLabel.textContent = 'Save edits';
+      detailLabel.textContent = 'Save Changes';
     }
   }
 
@@ -1800,6 +1810,7 @@
         betaState.edits             = {};
         betaState.jobDetails        = {};
         betaState.jobDetailsLoading = {};
+        clearBetaSelection();
         loadBeta();
       })
       .catch(function (err) {
@@ -1813,7 +1824,7 @@
         showToast(msg);
         if (btn) btn.disabled = false;
         if (lbl) lbl.textContent = 'Save Changes';
-        if (detailLbl) detailLbl.textContent = 'Save edits';
+        if (detailLbl) detailLbl.textContent = 'Save Changes';
         // Refresh the queue snapshot so already-saved fields stop
         // flagging dirty in the UI; remaining edits stay queued.
         if (savedQueue > 0 || savedJobs > 0) {
@@ -2036,11 +2047,20 @@
     if (e.key !== 'Escape') return;
     var m = document.getElementById('cs-beta-newjob-modal');
     if (m && !m.hidden) betaCloseNewJob();
+    var detail = document.getElementById('cs-beta-detail');
+    if (detail && !detail.hidden) clearBetaSelection();
   });
 
   var betaDetailClose = document.getElementById('cs-beta-detail-close');
   if (betaDetailClose) {
     betaDetailClose.addEventListener('click', clearBetaSelection);
+  }
+  var betaDetailModal = document.getElementById('cs-beta-detail');
+  if (betaDetailModal) {
+    betaDetailModal.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-action="cs-beta-detail-close"]');
+      if (t) { e.preventDefault(); clearBetaSelection(); }
+    });
   }
 
   // Defensive: any row left with draggable="true" after a handle mousedown

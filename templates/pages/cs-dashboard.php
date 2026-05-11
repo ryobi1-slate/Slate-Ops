@@ -365,21 +365,24 @@ $health_tone_class_map = [
         Tech page surfaces only Current Job / Next Job / Up Next. CS owns the full queue order here; techs do not manage it.
       </div>
 
-      <aside class="cs-beta__detail" id="cs-beta-detail" hidden aria-label="Job detail">
-        <div class="cs-beta__detail-bar">
-          <div class="cs-beta__detail-id">
-            <span class="cs-beta__detail-eyebrow">Job Detail</span>
-            <span class="cs-beta__detail-job" id="cs-beta-detail-job">—</span>
-            <span class="cs-beta__detail-cust" id="cs-beta-detail-cust"></span>
+      <div class="cs-beta-modal cs-beta-job-modal" id="cs-beta-detail" hidden role="dialog" aria-modal="true" aria-labelledby="cs-beta-detail-job">
+        <div class="cs-beta-modal__backdrop" data-action="cs-beta-detail-close"></div>
+        <div class="cs-beta-modal__panel cs-beta-job-modal__panel" role="document">
+          <div class="cs-beta-modal__head cs-beta__detail-bar">
+            <div class="cs-beta__detail-id">
+              <span class="cs-beta__detail-eyebrow">Job Detail</span>
+              <span class="cs-beta__detail-job" id="cs-beta-detail-job">—</span>
+              <span class="cs-beta__detail-cust" id="cs-beta-detail-cust"></span>
+            </div>
+            <div class="cs-beta__detail-bar-actions">
+              <button type="button" class="cs-beta__detail-close" id="cs-beta-detail-close" data-action="cs-beta-detail-close" aria-label="Close detail">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
           </div>
-          <div class="cs-beta__detail-bar-actions">
-            <button type="button" class="cs-beta__detail-close" id="cs-beta-detail-close" aria-label="Close detail">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
+          <div class="cs-beta__detail-grid" id="cs-beta-detail-grid"></div>
         </div>
-        <div class="cs-beta__detail-grid" id="cs-beta-detail-grid"></div>
-      </aside>
+      </div>
     </div>
   </div>
 

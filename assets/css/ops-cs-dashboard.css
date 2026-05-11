@@ -546,7 +546,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--slate-space-md);
-  padding-bottom: 240px; /* leave room for sticky bottom detail panel */
   min-width: 0;
 }
 
@@ -1196,27 +1195,28 @@
 .cs-beta-row__iconbtn .material-symbols-outlined { font-size: 16px; }
 .cs-beta-row__iconbtn[aria-pressed="false"] { color: var(--slate-ink-placeholder); }
 
-/* Bottom detail panel — sticky inside the page scroll. Flat redwood
-   header bar, soft divider above, no oversize shadow. */
+/* Job detail modal — shares the New Job modal shell, with a denser editor
+   body and the same explicit Save Changes action. */
+body.cs-beta-detail-modal-open { overflow: hidden; }
+
 .cs-beta__detail {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-  background: var(--slate-surface);
-  border: 1px solid var(--slate-divider);
-  border-radius: 2px;
-  box-shadow: 0 -8px 20px -16px rgba(15, 52, 42, 0.18);
-  margin-top: var(--slate-space-md);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.cs-beta-job-modal .cs-beta-job-modal__panel {
+  width: min(960px, 100%);
+  max-height: calc(100vh - 48px);
 }
 .cs-beta__detail-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 14px;
-  background: var(--slate-redwood);
-  color: var(--slate-sand-wash);
-  border-radius: 2px 2px 0 0;
+  padding: 16px 20px 12px;
+  background: var(--slate-surface-tint);
+  color: var(--slate-ink);
+  border-bottom: 1px solid var(--slate-divider);
 }
 .cs-beta__detail-id {
   display: inline-flex;
@@ -1228,43 +1228,47 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--slate-sand);
-  opacity: 0.8;
+  color: var(--slate-arches);
 }
 .cs-beta__detail-job {
   font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 600;
-  color: var(--slate-sand-wash);
+  color: var(--slate-ink);
 }
 .cs-beta__detail-cust {
   font-size: 13px;
-  color: var(--slate-sand);
+  color: var(--slate-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .cs-beta__detail-close {
   background: transparent !important;
-  border: 1px solid rgba(225, 223, 200, 0.25) !important;
-  color: var(--slate-sand-wash) !important;
-  padding: 4px 6px;
+  border: 1px solid var(--slate-divider) !important;
+  color: var(--slate-ink-muted) !important;
+  width: 30px; height: 30px;
   cursor: pointer;
-  border-radius: var(--slate-radius-sm);
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.cs-beta__detail-close:hover { background: rgba(255, 255, 255, 0.08) !important; }
+.cs-beta__detail-close:hover {
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+  border-color: var(--slate-sage) !important;
+}
 .cs-beta__detail-close .material-symbols-outlined { font-size: 16px; }
 
 .cs-beta__detail-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  padding: 14px 18px 16px;
-  max-height: 320px;
+  padding: 16px 20px;
   overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
 @media (max-width: 1100px) {
   .cs-beta__detail-grid { grid-template-columns: repeat(2, 1fr); }
