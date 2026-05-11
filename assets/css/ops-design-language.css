@@ -260,6 +260,25 @@ body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .focus\:border-prim
   border-color: var(--slate-sage) !important;
 }
 
+/* React legacy Admin/Settings still uses Tailwind primary utility classes on
+   buttons. Beat WP/theme button defaults without changing the components. */
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(button, a)[class*="text-primary"],
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(button, a)[class*="border-primary"] {
+  color: var(--slate-sage-ink) !important;
+  border-color: var(--slate-divider-strong) !important;
+  background-color: var(--slate-surface) !important;
+  box-shadow: none !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(button, a)[class*="text-primary"]:hover,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(button, a)[class*="border-primary"]:hover,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(button, a)[class*="text-primary"]:focus-visible,
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(button, a)[class*="border-primary"]:focus-visible {
+  color: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage) !important;
+  background-color: var(--slate-surface-page) !important;
+}
+
 body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-xl,
 body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-2xl,
 body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-3xl {
