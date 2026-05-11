@@ -260,6 +260,10 @@
     btn.addEventListener('click', function () {
       var target = document.querySelector('.ops-subtab[data-tab="' + btn.dataset.jump + '"]');
       if (target) target.click();
+      if (btn.dataset.filterTarget) {
+        var chip = document.querySelector('.cs-beta-chip[data-filter="' + btn.dataset.filterTarget + '"]');
+        if (chip) chip.click();
+      }
       window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
     });
   });
