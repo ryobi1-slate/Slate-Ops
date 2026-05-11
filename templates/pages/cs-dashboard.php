@@ -174,7 +174,7 @@ $health_tone_class_map = [
         </table>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);">Click any row to view detail · <span class="kbd">↑</span> <span class="kbd">↓</span> to navigate</span>
-          <button class="ops-link">View all open jobs <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" type="button" data-jump="queue" data-filter-target="all">View all open jobs <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -199,7 +199,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);">Updated every 5 minutes</span>
-          <button class="ops-link">Open report <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" type="button" data-jump="queue" data-filter-target="blocked">Review blockers <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -229,7 +229,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['parts']); ?> jobs affected</span>
-          <button class="ops-link" data-jump="queue">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" type="button" data-jump="queue" data-filter-target="blocked">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -254,7 +254,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['qc']); ?> awaiting sign-off</span>
-          <button class="ops-link" data-jump="queue">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" type="button" data-jump="queue" data-filter-target="closeout">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -279,7 +279,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['pickup']); ?> ready · 1 awaiting reply</span>
-          <button class="ops-link" data-jump="queue">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="ops-link" type="button" data-jump="queue" data-filter-target="closeout">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
