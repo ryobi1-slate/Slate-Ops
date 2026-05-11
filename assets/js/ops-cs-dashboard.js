@@ -375,7 +375,11 @@
         betaState.users  = (usersRes && usersRes.ok && usersRes.body && usersRes.body.users) ? usersRes.body.users : [];
         betaState.edits  = {};
         betaState.loaded = true;
+        var autoNumbered = betaAutoNumberMissingQueues();
         renderBeta();
+        if (autoNumbered > 0) {
+          showBetaNotice('Missing queue numbers were filled locally. Review, then Save Changes to commit.', 'info');
+        }
       })
       .catch(function () {
         betaState.loading = false;
@@ -1641,6 +1645,42 @@
     renderBeta();
     showBetaNotice('Queue numbers normalized. Duplicate queue warnings are cleared locally; review the remaining warnings, then Save Changes.', 'success');
     showToast('Queue numbers normalized — Save to commit');
+  }
+
+  function betaAutoNumberMissingQueues() {
+    var jobs   = betaState.jobs.map(betaEffectiveJob);
+    var groups = {};
+    jobs.forEach(function (j) {
+      if (!j.assigned_user_id || !j.queue_visible || j.queue_order != null) return;
+      var key = 'u:' + j.assigned_user_id;
+      (groups[key] = groups[key] || []).push(j);
+    });
+
+    var changed = 0;
+    Object.keys(groups).forEach(function (k) {
+      var assignedId = k.slice(2);
+      var used = {};
+      var maxOrder = 0;
+      jobs.forEach(function (j) {
+        if (String(j.assigned_user_id || '') !== assignedId || !j.queue_visible || j.queue_order == null) return;
+        used[j.queue_order] = true;
+        if (j.queue_order > maxOrder) maxOrder = j.queue_order;
+      });
+
+      groups[k].sort(function (a, b) {
+        return (a.job_number || '').localeCompare(b.job_number || '');
+      });
+
+      var next = maxOrder + 1;
+      groups[k].forEach(function (j) {
+        while (used[next]) next++;
+        recordBetaEdit(j.id, 'queue_order', next);
+        used[next] = true;
+        changed++;
+      });
+    });
+
+    return changed;
   }
 
   function resetBetaDemo() {
