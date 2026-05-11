@@ -36,7 +36,7 @@ if (!function_exists('ops_nav_link')) {
     </div>
   </div>
 
-  <nav class="ops-nav" aria-label="Slate Ops navigation">
+  <nav class="ops-nav" aria-label="Slate OPS navigation">
     <?php
     $allowed = Slate_Ops_Utils::user_allowed_pages();
     $show_ops_home = !($caps['tech'] && !$caps['admin'] && !$caps['supervisor'] && !$caps['cs']);
@@ -48,7 +48,7 @@ if (!function_exists('ops_nav_link')) {
       <?php
 
       if ($show_ops_home) :
-        ops_nav_link('/ops/', '/', 'home', 'Ops Home');
+        ops_nav_link('/ops/', '/', 'home', 'OPS Home');
       endif;
       if (in_array('cs-dashboard', $allowed, true)) :
         ops_nav_link('/ops/cs-dashboard', '/cs-dashboard', 'support_agent', 'CS Workspace');

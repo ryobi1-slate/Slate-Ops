@@ -1,6 +1,6 @@
 <?php
 /**
- * Slate Ops - Ops Home.
+ * Slate OPS - OPS Home.
  *
  * Content-only page template for the bare /ops/ route. The surrounding shell
  * (topbar, sidebar, #ops-view wrapper) is provided by templates/ops-app.php.
@@ -128,10 +128,10 @@ $guidance = [
     <header class="ops-home__header">
       <div>
         <div class="ops-home__eyebrow">Operations / Internal</div>
-        <h1>Ops Home</h1>
+        <h1>OPS Home</h1>
         <p>Quick links, launch notes, and workspace guidance.</p>
       </div>
-      <div class="ops-home__meta" aria-label="Ops Home metadata">
+      <div class="ops-home__meta" aria-label="OPS Home metadata">
         <span class="ops-home__status"><span aria-hidden="true"></span>Updated today</span>
         <span>Build <strong><?php echo esc_html(SLATE_OPS_VERSION); ?></strong></span>
       </div>
@@ -161,7 +161,7 @@ $guidance = [
       </div>
     </section>
 
-    <section class="ops-home__split" aria-label="Ops Home guidance">
+    <section class="ops-home__split" aria-label="OPS Home guidance">
       <div class="ops-home-card">
         <div class="ops-home-card__head">
           <h2>What Changed Recently <span><?php echo esc_html(count($changelog)); ?> entries</span></h2>
