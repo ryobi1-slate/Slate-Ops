@@ -24,6 +24,12 @@
   font-family: var(--font-sans);
   color: var(--slate-ink);
   max-width: 1200px;
+  padding: var(--slate-space-2xl);
+  box-sizing: border-box;
+}
+
+body.ops-page-purchasing .ops-header__center {
+  display: none;
 }
 
 /* ─── 2. Preview mode banner ─── */

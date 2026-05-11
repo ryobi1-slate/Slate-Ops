@@ -1238,7 +1238,7 @@
       selEnd   = ae.selectionEnd   || 0;
     }
 
-    setPageTitle('Purchasing');
+    setPageTitle('');
     setActiveNav();
 
     el.innerHTML =

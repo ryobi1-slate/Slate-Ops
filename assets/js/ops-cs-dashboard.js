@@ -25,7 +25,7 @@
   // ─── State ────────────────────────────────────────────────────────────
   var state = {
     selectedRow: 0,
-    activeTab: 'queue'
+    activeTab: 'overview'
   };
 
   var pillLabel = {
@@ -519,7 +519,9 @@
 
   function fmtDate(s) {
     if (!s) return '—';
-    return String(s).substr(0, 10);
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(s));
+    if (!m) return String(s).substr(0, 10);
+    return parseInt(m[2], 10) + '-' + parseInt(m[3], 10) + '-' + m[1];
   }
 
   function betaPassesChip(j) {
@@ -774,7 +776,6 @@
           +   '<div class="cs-beta-row__status"><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></div>'
           +   '<div class="cs-beta-row__parts"><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></div>'
           +   '<div class="cs-beta-row__tech">'
-          +     '<span class="cs-beta-avatar' + (!j.assigned_user_id ? ' cs-beta-avatar--unassigned' : '') + '" aria-hidden="true">' + escapeHtml(j.assigned_user_id ? betaInitials(j.assigned_tech) : 'UN') + '</span>'
           +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech">'
           +       betaTechOptions(j.assigned_user_id)
           +     '</select>'
