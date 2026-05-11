@@ -565,6 +565,52 @@
   align-items: center;
 }
 
+.cs-beta .slate-btn,
+.cs-beta__filterbar .slate-btn {
+  min-height: 30px;
+  padding: 6px 11px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.cs-beta .slate-btn .material-symbols-outlined,
+.cs-beta__filterbar .slate-btn .material-symbols-outlined {
+  font-size: 15px;
+}
+
+.cs-beta .slate-btn--accent {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
+}
+
+.cs-beta .slate-btn--accent:hover:not(:disabled) {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: var(--slate-surface) !important;
+}
+
+.cs-beta .slate-btn--secondary {
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-divider) !important;
+  color: var(--slate-ink) !important;
+}
+
+.cs-beta .slate-btn--secondary:hover:not(:disabled) {
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-divider-strong) !important;
+  color: var(--slate-ink) !important;
+}
+
+.cs-beta .slate-btn--primary {
+  background: var(--slate-ink-muted) !important;
+  border-color: var(--slate-ink-muted) !important;
+  color: var(--slate-surface) !important;
+}
+
 /* Scoped button polish — keep .btn--primary as Sage save action; replace
    the global .btn--secondary look (sage text on white) with a quieter
    ink/outline so the Save button is the only loud thing in the header. */
@@ -657,16 +703,20 @@
 .cs-beta-chip {
   gap: 6px;
   justify-content: center;
-  min-height: 32px;
+  min-height: 30px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 5px;
+  color: var(--slate-ink-muted) !important;
 }
 .cs-beta-chip.is-active {
-  background: var(--slate-sage) !important;
-  border-color: var(--slate-sage) !important;
+  background: var(--slate-ink) !important;
+  border-color: var(--slate-ink) !important;
   color: var(--slate-surface) !important;
 }
 .cs-beta-chip.is-active:hover {
-  background: var(--slate-sage-ink) !important;
-  border-color: var(--slate-sage-ink) !important;
+  background: var(--slate-ink) !important;
+  border-color: var(--slate-ink) !important;
   color: var(--slate-surface) !important;
 }
 .cs-beta-chip__count {
@@ -1508,7 +1558,7 @@ select.cs-beta-field__input {
 .cs-beta-chip {
   min-height: 30px;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 12px;
 }
 
