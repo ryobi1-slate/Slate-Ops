@@ -128,6 +128,16 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'users'],
       ]);
 
+      // Filtered list: only users with the Tech role/capability. Used to
+      // populate the Assigned Tech dropdown on the CS page so that CS,
+      // Supervisor, and Admin users (who don't also have the Tech role)
+      // are not selectable as the assigned tech.
+      register_rest_route($ns, '/techs', [
+        'methods' => 'GET',
+        'permission_callback' => [__CLASS__, 'perm_cs_or_supervisor_or_admin'],
+        'callback' => [__CLASS__, 'techs'],
+      ]);
+
       register_rest_route($ns, '/dealers', [
         'methods' => 'GET',
         'permission_callback' => [__CLASS__, 'perm_ops'],
@@ -2838,6 +2848,10 @@ return self::get_job(['id' => $job_id]);
       $out[] = ['id' => (int)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email, 'ops_role' => self::get_ops_role_from_user($u)];
     }
     return ['users' => $out];
+  }
+
+  public static function techs($req) {
+    return ['users' => Slate_Ops_Utils::tech_user_options()];
   }
 
   public static function list_dealers($req) {
