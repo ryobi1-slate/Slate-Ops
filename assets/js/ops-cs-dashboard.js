@@ -467,6 +467,7 @@
       status:           j.status,
       status_label:     j.status_label,
       parts_status:     e.parts_status  !== undefined ? e.parts_status  : j.parts_status,
+      estimated_minutes: j.estimated_minutes,
       requested_date:   j.requested_date,
       due_date:         j.due_date,
       promised_date:    j.promised_date,
@@ -1215,11 +1216,14 @@
   function betaOrigFieldValue(id, field) {
     if (betaIsJobField(field)) {
       var det = betaState.jobDetails[id];
-      if (!det) return undefined;
+      var snap = betaJobById(id);
       if (field === 'estimated_hours') {
-        var m = det.estimated_minutes != null ? Number(det.estimated_minutes) : 0;
+        var m = det && det.estimated_minutes != null
+          ? Number(det.estimated_minutes)
+          : (snap && snap.estimated_minutes != null ? Number(snap.estimated_minutes) : 0);
         return m > 0 ? String(+(m / 60).toFixed(2)) : '';
       }
+      if (!det) return undefined;
       if (field === 'vin_last8') {
         return String(det.vin_last8 || det.vin || '');
       }
@@ -1450,7 +1454,7 @@
       +       '<span class="cs-beta-field__label">Estimated Hours</span>'
       +       (det
                 ? '<input type="number" min="0" step="0.25" class="cs-beta-mono cs-beta-field__input' + ec('estimated_hours') + '" data-field="estimated_hours" value="' + fv('estimated_hours') + '" placeholder="—">'
-                : readOnly(det && det.estimated_minutes ? +(det.estimated_minutes / 60).toFixed(2) : null))
+                : readOnly(j.estimated_minutes ? +(j.estimated_minutes / 60).toFixed(2) : null))
       +     '</label>'
       +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
       +       '<dt>Requested</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.requested_date) || j.requested_date)) + '</dd>'

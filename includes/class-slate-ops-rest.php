@@ -4195,7 +4195,8 @@ self::maybe_push_dealer_portal_status($job);
     $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
 
     $sql = "SELECT job_id, so_number, customer_name, dealer_name,
-                   status, parts_status, promised_date, requested_date, actual_completed_at,
+                   status, parts_status, estimated_minutes,
+                   promised_date, requested_date, actual_completed_at,
                    target_ship_date, scheduled_start, assigned_user_id,
                    queue_order, queue_visible, queue_note,
                    queue_updated_at, queue_updated_by, queue_priority,
@@ -4230,6 +4231,7 @@ self::maybe_push_dealer_portal_status($job);
         'status_raw'        => $r['status'],
         'status_label'      => Slate_Ops_Statuses::label($canonical_status),
         'parts_status'      => $r['parts_status'],
+        'estimated_minutes' => isset($r['estimated_minutes']) ? (int) $r['estimated_minutes'] : 0,
         'due_date'          => $due_date,
         'requested_date'    => $r['requested_date'],
         'promised_date'     => $r['promised_date'],
