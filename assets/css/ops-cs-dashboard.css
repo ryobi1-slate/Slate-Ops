@@ -906,11 +906,17 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 .cs-beta-avatar--lg { width: 28px; height: 28px; font-size: 11px; }
 .cs-beta-avatar--sm { width: 18px; height: 18px; font-size: 9px; }
 .cs-beta-avatar--ghost {
   background: var(--slate-divider-strong);
+  color: var(--slate-ink-muted);
+}
+.cs-beta-avatar--unassigned {
+  background: var(--slate-surface-tint);
+  border: 1px solid var(--slate-divider-strong);
   color: var(--slate-ink-muted);
 }
 
