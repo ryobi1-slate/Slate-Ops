@@ -1572,9 +1572,9 @@
         });
       });
       if (n === 0) {
-        label.textContent = 'Save Queue';
+        label.textContent = 'Save Changes';
       } else {
-        label.textContent = (hasJob ? 'Save Queue + Job' : 'Save Queue') + ' (' + n + ')';
+        label.textContent = (hasJob ? 'Save Changes + Job' : 'Save Changes') + ' (' + n + ')';
       }
     }
   }
@@ -1604,7 +1604,7 @@
       });
     });
     renderBeta();
-    showBetaNotice('Queue numbers normalized. Duplicate queue warnings are cleared locally; review the remaining warnings, then Save Queue.', 'success');
+    showBetaNotice('Queue numbers normalized. Duplicate queue warnings are cleared locally; review the remaining warnings, then Save Changes.', 'success');
     showToast('Queue numbers normalized — Save to commit');
   }
 
@@ -1783,7 +1783,7 @@
         else msg = prefix + 'unknown error';
         showToast(msg);
         if (btn) btn.disabled = false;
-        if (lbl) lbl.textContent = 'Save Queue';
+        if (lbl) lbl.textContent = 'Save Changes';
         // Refresh the queue snapshot so already-saved fields stop
         // flagging dirty in the UI; remaining edits stay queued.
         if (savedQueue > 0 || savedJobs > 0) {

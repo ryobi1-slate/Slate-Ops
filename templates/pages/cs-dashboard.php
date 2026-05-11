@@ -333,7 +333,7 @@ $health_tone_class_map = [
           <?php endif; ?>
           <button type="button" class="btn btn--primary" id="cs-beta-save" disabled>
             <span class="material-symbols-outlined">save</span>
-            <span id="cs-beta-save-label">Save Queue</span>
+            <span id="cs-beta-save-label">Save Changes</span>
           </button>
         </div>
       </header>
@@ -341,7 +341,7 @@ $health_tone_class_map = [
       <div class="cs-beta__filterbar">
         <label class="cs-beta__search" for="cs-beta-search">
           <span class="material-symbols-outlined" aria-hidden="true">search</span>
-          <input type="search" id="cs-beta-search" placeholder="Search SO #, customer, dealer, note…" autocomplete="off">
+          <input type="search" id="cs-beta-search" placeholder="Search jobs…" autocomplete="off">
         </label>
         <div class="cs-beta__chips" id="cs-beta-chips" role="tablist" aria-label="Filter queue">
           <button type="button" class="cs-beta-chip is-active" data-filter="all" role="tab" aria-selected="true">

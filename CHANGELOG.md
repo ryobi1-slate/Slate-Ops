@@ -30,7 +30,7 @@
 **`templates/pages/cs-dashboard.php`, `assets/js/ops-cs-dashboard.js`, `assets/css/ops-cs-dashboard.css`:**
 - Added the CS-owned queue foundation on CS Dashboard, now surfaced as the `CS Workspace` sub-tab. Lazy-loads on first activation and renders one card per assigned tech.
 - Filter chips: All / Scheduled / Blocked / Ready for Closeout / Unassigned.
-- Inline edits per row: queue # (number input), queue note (text input), visibility toggle. Save Queue button (disabled until edits) bulk-posts to `/cs/queue`. Normalize Order button re-numbers visible jobs in each tech group to 1, 2, 3 in their current sort.
+- Inline edits per row: queue # (number input), queue note (text input), visibility toggle. Save Changes button (disabled until edits) bulk-posts to `/cs/queue`. Normalize Order button re-numbers visible jobs in each tech group to 1, 2, 3 in their current sort.
 - Warnings bar: duplicate queue # within a tech group (alert) and blocked or parts-hold job at queue #1 (warn).
 - Localized REST root + nonce on the dashboard (`window.slateOpsCsDashboard.api`).
 
