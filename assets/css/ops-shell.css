@@ -1217,6 +1217,23 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
 .slate-btn--outline:hover:not([disabled]) {
   background-color: var(--slate-surface-page);
 }
+
+/* Legacy Ops controls use .btn.secondary. Keep them in the Slate palette so
+   WordPress/theme button defaults cannot reintroduce pink outlines. */
+body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary) {
+  background: var(--slate-surface) !important;
+  border: 1px solid var(--slate-divider-strong) !important;
+  color: var(--slate-sage-ink) !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):hover,
+body.slate-ops :where(a.btn.secondary, button.btn.secondary, .btn.secondary):focus-visible {
+  background: var(--slate-surface-page) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
+}
 .slate-btn[disabled],
 .slate-btn:disabled {
   opacity: 0.45;
