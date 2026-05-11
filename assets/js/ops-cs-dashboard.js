@@ -1636,8 +1636,8 @@
 
     betaSaveSelectedEdits(id)
       .then(function () {
-        return fetch(api.root + '/jobs/' + id, {
-      method: 'PATCH',
+        return fetch(api.root + '/jobs/' + id + '/status', {
+      method: 'POST',
       credentials: 'same-origin',
       headers: {
         'X-WP-Nonce':   api.nonce,
@@ -1765,8 +1765,8 @@
     if (btn) btn.disabled = true;
     betaSaveSelectedEdits(id)
       .then(function () {
-        return fetch(api.root + '/jobs/' + id, {
-      method: 'PATCH',
+        return fetch(api.root + '/jobs/' + id + '/status', {
+      method: 'POST',
       credentials: 'same-origin',
       headers: {
         'X-WP-Nonce':   api.nonce,

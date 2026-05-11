@@ -166,7 +166,7 @@ class Slate_Ops_REST {
       register_rest_route($ns, '/jobs/(?P<id>\d+)', [
         [
           'methods' => 'GET',
-          'permission_callback' => [__CLASS__, 'perm_ops'],
+          'permission_callback' => [__CLASS__, 'perm_ops_or_cs_or_above'],
           'callback' => [__CLASS__, 'get_job'],
         ],
         [
@@ -977,6 +977,11 @@ return ['ok' => true, 'id' => $id];
   /** Any authenticated ops user (viewer, tech, cs, supervisor, admin). */
   public static function perm_ops() {
     return Slate_Ops_Utils::can_access();
+  }
+
+  /** Any ops user, plus CS/admin roles that have CS workspace access. */
+  public static function perm_ops_or_cs_or_above() {
+    return Slate_Ops_Utils::can_access() || Slate_Ops_Utils::can_cs_or_above();
   }
 
   /** Requires slate_ops_update_status (tech, cs, supervisor, admin). */
