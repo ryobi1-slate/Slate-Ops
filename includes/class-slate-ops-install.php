@@ -44,6 +44,9 @@ class Slate_Ops_Install {
     if (!in_array('queue_updated_by', $cols, true)) {
       $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_updated_by` BIGINT UNSIGNED NULL AFTER `queue_updated_at`");
     }
+    if (!in_array('actual_completed_at', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `actual_completed_at` DATETIME NULL AFTER `promised_date`");
+    }
   }
 
   private static function run_install($flush_rewrites = false) {
@@ -137,6 +140,7 @@ scheduled_finish DATETIME NULL,
 scheduled_week VARCHAR(20) NULL,
 requested_date DATE NULL,
 promised_date DATE NULL,
+actual_completed_at DATETIME NULL,
 target_ship_date DATE NULL,
 
 -- v2 status reason fields
@@ -704,6 +708,7 @@ KEY awaiting_idx (awaiting_direction)
     $wpdb->query("UPDATE $jobs SET status = 'QC'               WHERE status = 'PENDING_QC'");
     $wpdb->query("UPDATE $jobs SET status = 'AWAITING_PICKUP'  WHERE status IN ('READY_FOR_PICKUP','COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
     $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status IN ('COMPLETE','COMPLETED')");
+    $wpdb->query("UPDATE $jobs SET actual_completed_at = COALESCE(status_updated_at, updated_at) WHERE status = 'COMPLETE' AND actual_completed_at IS NULL");
     // Migrate scheduling_status column to match canonical job status values.
     $wpdb->query("UPDATE $jobs SET scheduling_status = 'READY_FOR_BUILD' WHERE scheduling_status = 'APPROVED_FOR_SCHEDULING'");
 

@@ -301,7 +301,7 @@
     loading:   false,
     jobs:      [],
     users:     [],
-    edits:     {},        // { id: { queue_order, queue_visible, queue_note, assigned_user_id, customer_name, dealer_name, sales_person, vin_last8, notes, parts_status, estimated_hours, requested_date } }
+    edits:     {},        // { id: { queue_order, queue_visible, queue_note, assigned_user_id, customer_name, dealer_name, sales_person, vin_last8, notes, parts_status, estimated_hours } }
     filter:    'all',
     query:     '',
     selected:  null,      // currently selected job id
@@ -318,7 +318,7 @@
   var BETA_JOB_FIELDS = [
     'customer_name', 'dealer_name', 'sales_person',
     'vin_last8', 'notes',
-    'parts_status', 'estimated_hours', 'requested_date'
+    'parts_status', 'estimated_hours'
   ];
   var BETA_QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
   function betaIsJobField(name) { return BETA_JOB_FIELDS.indexOf(name) >= 0; }
@@ -467,8 +467,10 @@
       status:           j.status,
       status_label:     j.status_label,
       parts_status:     e.parts_status  !== undefined ? e.parts_status  : j.parts_status,
+      requested_date:   j.requested_date,
       due_date:         j.due_date,
       promised_date:    j.promised_date,
+      actual_completed_at: j.actual_completed_at,
       scheduled_start:  j.scheduled_start,
       assigned_user_id: aid,
       assigned_tech:    atech,
@@ -1445,21 +1447,15 @@
       +   '<h4 class="cs-beta-detail-section__title">Scheduling</h4>'
       +   '<div class="cs-beta-detail-fields">'
       +     '<label class="cs-beta-field">'
-      +       '<span class="cs-beta-field__label">Requested Date</span>'
-      +       (det
-                ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
-                : readOnly(det && det.requested_date))
-      +     '</label>'
-      +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Estimated Hours</span>'
       +       (det
                 ? '<input type="number" min="0" step="0.25" class="cs-beta-mono cs-beta-field__input' + ec('estimated_hours') + '" data-field="estimated_hours" value="' + fv('estimated_hours') + '" placeholder="—">'
                 : readOnly(det && det.estimated_minutes ? +(det.estimated_minutes / 60).toFixed(2) : null))
       +     '</label>'
       +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
-      +       '<dt>Due</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</dd>'
-      +       '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.promised_date)) + '</dd>'
-      +       '<dt>Sch. Start</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.scheduled_start)) + '</dd>'
+      +       '<dt>Requested</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.requested_date) || j.requested_date)) + '</dd>'
+      +       '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.promised_date) || j.promised_date)) + '</dd>'
+      +       '<dt>Actual completion</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.actual_completed_at) || j.actual_completed_at)) + '</dd>'
       +       '<dt>Queue #</dt><dd class="cs-beta-mono">' + (j.queue_order == null ? '—' : j.queue_order) + '</dd>'
       +     '</dl>'
       +   '</div>'

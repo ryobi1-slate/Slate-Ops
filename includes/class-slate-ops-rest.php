@@ -1605,19 +1605,6 @@ foreach ($rows as &$r) {
         }
       }
 
-      // Requested date
-      if (array_key_exists('requested_date', $body)) {
-        $val = sanitize_text_field((string)($body['requested_date'] ?? ''));
-        if ($val !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $val)) {
-          return self::validation_error('requested_date', 'invalid_requested_date', 'Date must be YYYY-MM-DD.');
-        }
-        $store = $val ?: null;
-        if ($store !== $job['requested_date']) {
-          $audits[] = ['requested_date', $job['requested_date'], $store];
-          $update['requested_date'] = $store;
-        }
-      }
-
       // VIN
       if (array_key_exists('vin_last8', $body)) {
         $vin = strtoupper(trim(sanitize_text_field((string)($body['vin_last8'] ?? ''))));
@@ -1772,6 +1759,9 @@ foreach ($rows as &$r) {
           $audits[] = ['status', $job['status'], $ns];
           $update['status']            = $ns;
           $update['status_updated_at'] = $now;
+          if ($ns === Slate_Ops_Statuses::COMPLETE && empty($job['actual_completed_at'])) {
+            $update['actual_completed_at'] = $now;
+          }
         }
       }
 
@@ -2416,6 +2406,9 @@ $update = [
   'status_updated_at' => $now,
   'updated_at' => $now,
 ];
+if ($new_status === Slate_Ops_Statuses::COMPLETE && empty($current_job['actual_completed_at'])) {
+  $update['actual_completed_at'] = $now;
+}
 
 // v2: BLOCKED requires block_reason + block_note
 if ($new_status === Slate_Ops_Statuses::BLOCKED) {
@@ -4182,7 +4175,7 @@ self::maybe_push_dealer_portal_status($job);
     $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
 
     $sql = "SELECT job_id, so_number, customer_name, dealer_name,
-                   status, parts_status, promised_date, requested_date,
+                   status, parts_status, promised_date, requested_date, actual_completed_at,
                    target_ship_date, scheduled_start, assigned_user_id,
                    queue_order, queue_visible, queue_note,
                    queue_updated_at, queue_updated_by, queue_priority,
@@ -4218,7 +4211,9 @@ self::maybe_push_dealer_portal_status($job);
         'status_label'      => Slate_Ops_Statuses::label($canonical_status),
         'parts_status'      => $r['parts_status'],
         'due_date'          => $due_date,
+        'requested_date'    => $r['requested_date'],
         'promised_date'     => $r['promised_date'],
+        'actual_completed_at' => $r['actual_completed_at'],
         'scheduled_start'   => $r['scheduled_start'],
         'assigned_user_id'  => $assigned_id,
         'assigned_tech'     => $assigned_id ? Slate_Ops_Utils::user_display($assigned_id) : '',
