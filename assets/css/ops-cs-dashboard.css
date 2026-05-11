@@ -1661,6 +1661,58 @@ select.cs-beta-field__input {
   font-size: 10px;
 }
 
+/* Queue typography alignment.
+   The Job Queue used a more technical/import-table voice than the CS
+   dashboard. Keep the compact row mechanics, but bring row text back to the
+   same sans-serif scale and calmer casing used on the overview cards. */
+.cs-beta-row,
+.cs-beta-list__head {
+  font-family: var(--font-sans);
+}
+
+.cs-beta-row__so,
+.cs-beta-row__so .cs-beta-mono {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--slate-ink);
+}
+
+.cs-beta-row__name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--slate-ink);
+}
+
+.cs-beta-row__sub {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--slate-ink-subtle);
+}
+
+.cs-beta-row__due,
+.cs-beta-row__due.cs-beta-mono,
+.cs-beta-row__notetext,
+.cs-beta-row__techname {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--slate-ink-muted);
+}
+
+.cs-beta-row__techselect {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+
 @media (min-width: 1101px) {
   .cs-beta-list__head,
   .cs-beta-row {
