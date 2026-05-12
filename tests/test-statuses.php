@@ -107,16 +107,16 @@ eq(Slate_Ops_Statuses::normalize('bogus'),              'BOGUS',              'u
 // ── label() ──────────────────────────────────────────────────────────
 
 echo "\nlabel()\n";
-eq(Slate_Ops_Statuses::label('INTAKE'),                    'Intake',           'INTAKE label');
+eq(Slate_Ops_Statuses::label('INTAKE'),                    'Pending',          'INTAKE label');
 eq(Slate_Ops_Statuses::label('READY_FOR_BUILD'),           'Ready for Build',  'READY_FOR_BUILD label');
 eq(Slate_Ops_Statuses::label('QUEUED'),                    'Queued',           'QUEUED label');
 eq(Slate_Ops_Statuses::label('IN_PROGRESS'),               'In Progress',      'IN_PROGRESS label');
-eq(Slate_Ops_Statuses::label('PENDING_QC'),                'Ready for Closeout', 'PENDING_QC label');
+eq(Slate_Ops_Statuses::label('PENDING_QC'),                'Ready to Close',   'PENDING_QC label');
 eq(Slate_Ops_Statuses::label('READY_FOR_PICKUP'),          'Closed',           'READY_FOR_PICKUP label');
 eq(Slate_Ops_Statuses::label('COMPLETE'),                  'Closed',           'COMPLETE label');
 eq(Slate_Ops_Statuses::label('DELAYED'),                   'Delayed',          'DELAYED label');
 eq(Slate_Ops_Statuses::label('ON_HOLD'),                   'On Hold',          'ON_HOLD label');
-eq(Slate_Ops_Statuses::label('PENDING_INTAKE'),            'Intake',           'legacy PENDING_INTAKE → label "Intake"');
+eq(Slate_Ops_Statuses::label('PENDING_INTAKE'),            'Pending',          'legacy PENDING_INTAKE → label "Pending"');
 eq(Slate_Ops_Statuses::label('APPROVED_FOR_SCHEDULING'),   'Ready for Build',  'legacy APPROVED_FOR_SCHEDULING → label');
 eq(Slate_Ops_Statuses::label('SCHEDULED'),                 'Queued',           'legacy SCHEDULED → label "Queued"');
 

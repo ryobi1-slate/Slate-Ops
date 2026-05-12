@@ -68,7 +68,7 @@ class Slate_Ops_Statuses {
 
     /**
      * Statuses CS users are permitted to set manually (Phase 0 CS workflow).
-     * IN_PROGRESS and QC (Ready for Closeout) come from Tech/QC workflow.
+     * IN_PROGRESS and QC (Ready to Close) come from Tech/QC workflow.
      * AWAITING_PICKUP and COMPLETE are CS closeout workflow states.
      */
     public static function cs_settable(): array {
@@ -123,20 +123,20 @@ class Slate_Ops_Statuses {
 
     private static function label_map(): array {
         return [
-            self::INTAKE           => 'Intake',
+            self::INTAKE           => 'Pending',
             self::NEEDS_SO         => 'Needs SO',
             self::READY_FOR_BUILD  => 'Ready for Build',
             self::SCHEDULED        => 'Scheduled',
             self::IN_PROGRESS      => 'In Progress',
             self::BLOCKED          => 'Blocked',
-            self::QC               => 'Ready for Closeout',
+            self::QC               => 'Ready to Close',
             self::AWAITING_PICKUP  => 'Complete - Awaiting Pickup',
             self::COMPLETE         => 'Closed',
             self::ON_HOLD          => 'On Hold',
             self::CANCELLED        => 'Cancelled',
             // Legacy display labels
             self::QUEUED           => 'Scheduled',
-            self::PENDING_QC       => 'Ready for Closeout',
+            self::PENDING_QC       => 'Ready to Close',
             self::READY_FOR_PICKUP => 'Complete - Awaiting Pickup',
             self::DELAYED          => 'Blocked',
         ];

@@ -110,20 +110,20 @@
 
   // Status System v2.0 labels (legacy aliases included for display compatibility)
   const STATUS_LABELS = {
-    INTAKE:           'Intake',
+    INTAKE:           'Pending',
     NEEDS_SO:         'Needs SO',
     READY_FOR_BUILD:  'Ready for Build',
     SCHEDULED:        'Scheduled',
     IN_PROGRESS:      'In Progress',
     BLOCKED:          'Blocked',
-    QC:               'Ready for Closeout',
+    QC:               'Ready to Close',
     AWAITING_PICKUP:  'Complete - Awaiting Pickup',
     COMPLETE:         'Closed',
     ON_HOLD:          'On Hold',
     CANCELLED:        'Cancelled',
     // Legacy aliases
     QUEUED:           'Scheduled',
-    PENDING_QC:       'Ready for Closeout',
+    PENDING_QC:       'Ready to Close',
     READY_FOR_PICKUP: 'Complete - Awaiting Pickup',
     DELAYED:          'Blocked',
   };
@@ -208,10 +208,10 @@
       <div class="card">
         <h2>Dashboard</h2>
         <div class="row">
-          <div class="kpi"><div class="label">Pending Intake</div><div class="value">${counts.pendingIntake}</div></div>
+          <div class="kpi"><div class="label">Pending</div><div class="value">${counts.pendingIntake}</div></div>
           <div class="kpi"><div class="label">Needs SO#</div><div class="value">${counts.needsSo}</div></div>
           <div class="kpi"><div class="label">In Progress</div><div class="value">${counts.inProgress}</div></div>
-          <div class="kpi"><div class="label">Ready for Closeout</div><div class="value">${counts.pendingQc}</div></div>
+          <div class="kpi"><div class="label">Ready to Close</div><div class="value">${counts.pendingQc}</div></div>
         </div>
       </div>
 
@@ -841,7 +841,7 @@
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             ${kpi('In Progress',    byS('IN_PROGRESS').length)}
             ${kpi('Queued',         byS('QUEUED').length)}
-            ${kpi('Ready for Closeout', byS('PENDING_QC').length + byS('QC').length)}
+            ${kpi('Ready to Close', byS('PENDING_QC').length + byS('QC').length)}
             <span style="padding:6px 14px;border-radius:20px;background:rgba(39,174,96,0.13);color:#1a8a4a;font-size:12px;font-weight:700;letter-spacing:.04em;">&#x2022; System Status: Optimal</span>
           </div>
         </div>
@@ -1292,7 +1292,7 @@ function partsLabel(ps) {
 }
 
 // CS-specific status label: shorthand wrapper — labels now uniformly use the
-// Phase 0 wording ("Ready for Closeout"/"Closed") via STATUS_LABELS.
+// Phase 0 wording ("Ready to Close"/"Closed") via STATUS_LABELS.
 function fmtStatusCS(s) {
   return fmtStatus(s);
 }
@@ -1365,7 +1365,7 @@ async function loadCS() {
   // Tech-qualified users only — drives the Assigned Tech dropdown.
   const techList   = techsResp.users || [];
 
-  // Phase 0 KPI counts: Intake / Ready for Build / Ready for Closeout (QC)
+  // Phase 0 KPI counts: Pending / Ready for Build / Ready to Close (QC)
   const kpiIntake     = allJobs.filter(j => (j.status||'').toUpperCase() === 'INTAKE').length;
   const kpiRFB        = allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length;
   const kpiQC         = allJobs.filter(j => ['QC','PENDING_QC'].includes((j.status||'').toUpperCase())).length;
@@ -1456,7 +1456,7 @@ async function loadCS() {
         </div>
         <div class="cs-kpi-row">
           <div class="cs-kpi-card">
-            <div class="cs-kpi-label">Intake</div>
+            <div class="cs-kpi-label">Pending</div>
             <div class="cs-kpi-value">${kpiIntake}</div>
           </div>
           <div class="cs-kpi-card">
@@ -1464,7 +1464,7 @@ async function loadCS() {
             <div class="cs-kpi-value">${kpiRFB}</div>
           </div>
           <div class="cs-kpi-card">
-            <div class="cs-kpi-label">Ready for Closeout</div>
+            <div class="cs-kpi-label">Ready to Close</div>
             <div class="cs-kpi-value">${kpiQC}</div>
           </div>
         </div>
@@ -1612,7 +1612,7 @@ async function openCSDrawer(jobId, isNew, context) {
   // If the current status isn't in CS_SETTABLE_STATUSES (e.g. Ready for
   // Closeout — QC/PENDING_QC), prepend it so the dropdown renders the
   // current status as the selected option. Without this fallback the
-  // browser defaults to the first option (Intake) and saving any change
+  // browser defaults to the first option (Pending) and saving any change
   // (e.g. just notes) would attempt an invalid status transition.
   const statusOptions = (jStatus && !CS_SETTABLE_STATUSES.includes(jStatus))
     ? [jStatus, ...CS_SETTABLE_STATUSES]
@@ -2868,16 +2868,16 @@ async function loadExecutive(){
     { label: 'Ready for Build', value: countByStatus(['READY_FOR_BUILD']) },
     { label: 'Queued', value: countByStatus(['QUEUED']) },
     { label: 'In Progress', value: countByStatus(['IN_PROGRESS']) },
-    { label: 'Ready for Closeout', value: countByStatus(['PENDING_QC','QC']) },
+    { label: 'Ready to Close', value: countByStatus(['PENDING_QC','QC']) },
     { label: 'Awaiting Pickup', value: countByStatus(['AWAITING_PICKUP','READY_FOR_PICKUP']) },
     { label: 'Closed', value: countByStatus(['COMPLETE']) },
   ];
 
   const flowHealth = [
-    { label: 'Intake', value: countByStatus(['INTAKE']) },
+    { label: 'Pending', value: countByStatus(['INTAKE']) },
     { label: 'Ready queue', value: countByStatus(['READY_FOR_BUILD']) },
     { label: 'Active load', value: countByStatus(['IN_PROGRESS', 'QUEUED']) },
-    { label: 'Ready for Closeout', value: countByStatus(['PENDING_QC','QC']) },
+    { label: 'Ready to Close', value: countByStatus(['PENDING_QC','QC']) },
   ];
 
   const exceptions = [
@@ -3260,11 +3260,11 @@ async function loadAdmin() {
         <div class="value">${byS('IN_PROGRESS')}${deltaChip(5, true)}</div>
       </div>
       <div class="stat-tile">
-        <div class="label">Ready for Closeout</div>
+        <div class="label">Ready to Close</div>
         <div class="value">${byS('PENDING_QC') + byS('QC')}${deltaChip(2, false)}</div>
       </div>
       <div class="stat-tile">
-        <div class="label">Intake</div>
+        <div class="label">Pending</div>
         <div class="value">${byS('INTAKE')}${deltaChip(1, true)}</div>
       </div>
       <div class="stat-tile">

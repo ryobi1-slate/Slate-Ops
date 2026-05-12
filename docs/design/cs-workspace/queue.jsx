@@ -8,7 +8,7 @@ function FilterBar({ filter, setFilter, counts, query, setQuery }) {
     { id: 'scheduled', label: 'Scheduled',          count: counts.scheduled },
     { id: 'inprog',    label: 'In Progress',        count: counts.inprog },
     { id: 'blocked',   label: 'Blocked',            count: counts.blocked },
-    { id: 'closeout',  label: 'Ready for Closeout', count: counts.closeout },
+    { id: 'closeout',  label: 'Ready to Close', count: counts.closeout },
     { id: 'unassigned',label: 'Unassigned',         count: counts.unassigned },
     { id: 'parts',     label: 'Parts Hold',         count: counts.parts },
   ];

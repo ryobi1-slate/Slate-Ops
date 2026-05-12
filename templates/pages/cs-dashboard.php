@@ -343,7 +343,7 @@ $health_tone_class_map = [
             <span>Blocked</span><span class="cs-beta-chip__count" data-count="blocked">0</span>
           </button>
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
-            <span>Ready for Closeout</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
+            <span>Ready to Close</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
           </button>
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="pickup" role="tab" aria-selected="false">
             <span>Awaiting Pickup</span><span class="cs-beta-chip__count" data-count="pickup">0</span>

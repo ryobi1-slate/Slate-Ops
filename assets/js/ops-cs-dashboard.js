@@ -549,13 +549,13 @@
   function betaStatusLabel(status) {
     var v = betaStatusKey(status);
     var map = {
-      INTAKE: 'Intake',
+      INTAKE: 'Pending',
       NEEDS_SO: 'Needs SO',
       READY_FOR_BUILD: 'Ready for Build',
       SCHEDULED: 'Scheduled',
       IN_PROGRESS: 'In Progress',
       BLOCKED: 'Blocked',
-      QC: 'Ready for Closeout',
+      QC: 'Ready to Close',
       AWAITING_PICKUP: 'Complete - Awaiting Pickup',
       COMPLETE: 'Closed',
       ON_HOLD: 'On Hold',
@@ -1568,6 +1568,11 @@
         t = e.target.closest('[data-action="beta-save-row"]');
         if (t) {
           e.preventDefault();
+          var detailGrid = document.getElementById('cs-beta-detail-grid');
+          if (betaCanCloseFromDetail(detailGrid)) {
+            betaCloseoutAction('COMPLETE');
+            return;
+          }
           saveBeta();
           return;
         }
@@ -1581,7 +1586,11 @@
     var customer = betaFieldValue(id, 'customer_name') || j.customer || '';
     var dealer = betaFieldValue(id, 'dealer_name') || j.dealer || '';
     if (!String(customer).trim() && !String(dealer).trim()) missing.push('customer or dealer');
-    var est = parseFloat(betaFieldValue(id, 'estimated_hours'));
+    var estRaw = betaFieldValue(id, 'estimated_hours');
+    if (estRaw === '' && !betaIsEdited(id, 'estimated_hours') && j.estimated_minutes) {
+      estRaw = String(Number(j.estimated_minutes) / 60);
+    }
+    var est = parseFloat(estRaw);
     if (!isFinite(est) || est <= 0) missing.push('estimated hours');
     var partsStatus = String(betaFieldValue(id, 'parts_status') || j.parts_status || 'NOT_READY').toUpperCase();
     if (partsStatus === 'NOT_READY') missing.push('parts not ready');
@@ -1632,7 +1641,7 @@
     }
 
     if (status === 'INTAKE' || status === 'NEEDS_SO' || status === 'READY_FOR_BUILD') {
-      addOption('INTAKE', 'Intake', false);
+      addOption('INTAKE', 'Pending', false);
       options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
       addOption(
         'READY_FOR_BUILD',
@@ -1643,7 +1652,7 @@
         controlTitle = 'Ready for Build needs ' + readyDeps.join(', ');
       }
     } else if (status === 'QC') {
-      addOption('QC', label || 'Ready for Closeout', false);
+      addOption('QC', label || 'Ready to Close', false);
       addOption('AWAITING_PICKUP', isRow ? 'Awaiting Pickup' : 'Complete - Awaiting Pickup', false);
       hint = 'Complete the closeout checklist before moving to pickup.';
     } else if (status === 'AWAITING_PICKUP') {
@@ -1905,6 +1914,26 @@
     };
   }
 
+  function betaCloseoutAllChecked(grid) {
+    if (!grid) return false;
+    var checks = $$('[data-closeout-check]', grid);
+    return checks.length > 0 && checks.every(function (input) { return !!input.checked; });
+  }
+
+  function betaDetailStatus(grid) {
+    if (!grid) return '';
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return '';
+    var snap = betaJobById(id);
+    if (!snap) return '';
+    return betaStatusKey(betaEffectiveJob(snap).status);
+  }
+
+  function betaCanCloseFromDetail(grid) {
+    var status = betaDetailStatus(grid);
+    return (status === 'QC' || status === 'AWAITING_PICKUP') && betaCloseoutAllChecked(grid);
+  }
+
   function betaCloseoutAction(status) {
     var api = betaApi();
     var grid = document.getElementById('cs-beta-detail-grid');
@@ -1918,6 +1947,28 @@
     var btn = grid.querySelector(status === 'COMPLETE' ? '[data-action="beta-mark-closed"]' : '[data-action="beta-mark-awaiting"]');
     if (btn) btn.disabled = true;
     betaSaveSelectedEdits(id)
+      .then(function () {
+        var currentStatus = betaDetailStatus(grid);
+        if (status === 'COMPLETE' && currentStatus === 'QC') {
+          var awaitingPayload = Object.assign({}, payload, { status: 'AWAITING_PICKUP' });
+          return fetch(api.root + '/jobs/' + id + '/status', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'X-WP-Nonce':   api.nonce,
+              'Content-Type': 'application/json',
+              'Accept':       'application/json'
+            },
+            body: JSON.stringify(awaitingPayload)
+          })
+            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+            .then(function (res) {
+              if (!res.ok) {
+                throw new Error((res.body && (res.body.message || res.body.code)) || 'Status update failed');
+              }
+            });
+        }
+      })
       .then(function () {
         return fetch(api.root + '/jobs/' + id + '/status', {
       method: 'POST',
@@ -1951,6 +2002,10 @@
   function betaDetailInputHandler(e) {
     var t = e.target;
     if (!t || !t.dataset) return;
+    if (t.hasAttribute('data-closeout-check') || t.hasAttribute('data-closeout-note')) {
+      updateBetaSaveButton();
+      return;
+    }
     if (t.dataset.action === 'beta-status-select') {
       var nextStatus = String(t.value || '').trim();
       var rowEl = t.closest('.cs-beta-row');
@@ -2064,11 +2119,13 @@
     var detailBtn = document.getElementById('cs-beta-detail-save');
     if (detailBtn) {
       var selected = betaState.selected;
-      detailBtn.disabled = !(selected != null && betaState.edits[selected]);
+      var grid = document.getElementById('cs-beta-detail-grid');
+      detailBtn.disabled = !(selected != null && (betaState.edits[selected] || betaCanCloseFromDetail(grid)));
     }
     var detailLabel = document.getElementById('cs-beta-detail-save-label');
     if (detailLabel) {
-      detailLabel.textContent = 'Save Changes';
+      var detailGrid = document.getElementById('cs-beta-detail-grid');
+      detailLabel.textContent = betaCanCloseFromDetail(detailGrid) ? 'Save and Close' : 'Save Changes';
     }
   }
 

@@ -1697,7 +1697,7 @@ foreach ($rows as &$r) {
         $cur = Slate_Ops_Statuses::normalize((string)($job['status'] ?? ''));
         if ($ns !== '' && $ns !== $cur) {
 
-          // Phase 0: CS may not manually set IN_PROGRESS or Ready for Closeout (QC).
+          // Phase 0: CS may not manually set IN_PROGRESS or Ready to Close (QC).
           // Those states come from Tech/QC workflow actions only.
           // Closeout states are CS-settable via controlled actions.
           $cs_restricted = [
