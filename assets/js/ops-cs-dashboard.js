@@ -307,7 +307,8 @@
     selected:  null,      // currently selected job id
     drag:      null,      // { jobId, groupKey } while a drag is active
     jobDetails:        {},  // id → full /jobs/{id} response (cached)
-    jobDetailsLoading: {}   // id → in-flight Promise
+    jobDetailsLoading: {},  // id → in-flight Promise
+    jobDetailsFailed:  {}   // id → last detail fetch failed
   };
 
   // Fields persisted via PATCH /jobs/{id} (Phase 4). The remaining keys
@@ -1316,6 +1317,7 @@
     if (betaState.jobDetailsLoading[id]) return betaState.jobDetailsLoading[id];
     var api = betaApi();
     if (!api) return Promise.reject(new Error('no_api'));
+    delete betaState.jobDetailsFailed[id];
     var p = fetch(api.root + '/jobs/' + id, {
       method: 'GET',
       credentials: 'same-origin',
@@ -1328,10 +1330,12 @@
       .then(function (job) {
         betaState.jobDetails[id] = job || {};
         delete betaState.jobDetailsLoading[id];
+        delete betaState.jobDetailsFailed[id];
         return betaState.jobDetails[id];
       })
       .catch(function (err) {
         delete betaState.jobDetailsLoading[id];
+        betaState.jobDetailsFailed[id] = true;
         throw err;
       });
     betaState.jobDetailsLoading[id] = p;
@@ -1413,23 +1417,15 @@
       return '<div class="cs-beta-detail-readonly">' + (value == null || value === '' ? '—' : escapeHtml(String(value))) + '</div>';
     }
 
-    var partsOptions = ['', 'NOT_READY', 'PARTIAL', 'READY', 'HOLD'].map(function (v) {
-      var label = v === '' ? '—' : (partsLabel(v) || v);
-      var sel = (betaFieldValue(id, 'parts_status') === v) ? ' selected' : '';
-      return '<option value="' + escapeHtml(v) + '"' + sel + '>' + escapeHtml(label) + '</option>';
-    }).join('');
-
     var loadingNote = detailLoading
       ? '<div class="cs-beta-detail-loading"><span class="material-symbols-outlined cs-beta__spinner" aria-hidden="true">progress_activity</span><span>Loading job…</span></div>'
       : '';
-    var loadFailed = !det && !detailLoading
+    var loadFailed = !det && !detailLoading && betaState.jobDetailsFailed[id]
       ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
       : '';
     var status = betaStatusKey(j.status);
     var canMarkAwaiting = status === 'QC';
     var canMarkClosed = status === 'AWAITING_PICKUP';
-    var readyDeps = betaReadyForBuildMissing(id, j);
-    var statusControlHtml = betaStatusControlHtml(status, j.status_label || j.status || '—', readyDeps);
     var closeoutHtml = (canMarkAwaiting || canMarkClosed)
       ? ''
         + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-closeout">'
@@ -1502,7 +1498,7 @@
       +   '</div>'
       + '</section>'
 
-      + '<section class="cs-beta-detail-section">'
+      + '<section class="cs-beta-detail-section cs-beta-detail-section--handoff">'
       +   '<h4 class="cs-beta-detail-section__title">Handoff'
       +     (j._reassigned ? ' <span class="cs-beta-detail-section__hint">staged</span>' : '')
       +   '</h4>'
@@ -1524,22 +1520,6 @@
       +       '<input type="checkbox" data-field="queue_visible"' + (j.queue_visible ? ' checked' : '') + '>'
       +       '<span>Visible on tech queue</span>'
       +     '</label>'
-      +   '</div>'
-      + '</section>'
-
-      + '<section class="cs-beta-detail-section">'
-      +   '<h4 class="cs-beta-detail-section__title">Parts / Status</h4>'
-      +   '<div class="cs-beta-detail-fields">'
-      +     '<label class="cs-beta-field">'
-      +       '<span class="cs-beta-field__label">Parts Status</span>'
-      +       (det
-                ? '<select class="cs-beta-field__input' + ec('parts_status') + '" data-field="parts_status">' + partsOptions + '</select>'
-                : readOnly(partsLabel(j.parts_status)))
-      +     '</label>'
-      +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
-      +       '<dt>Status</dt><dd>' + statusControlHtml + '</dd>'
-      +     '</dl>'
-      +     '<div class="cs-beta-detail-section__hint">CS controls status before build and after tech completion. Tech owns the execution statuses.</div>'
       +   '</div>'
       + '</section>'
 
@@ -1598,10 +1578,14 @@
   function betaReadyForBuildMissing(id, j) {
     var missing = [];
     if (!String(j.so_number || '').trim()) missing.push('SO #');
-    if (!String(betaFieldValue(id, 'customer_name') || j.customer || '').trim()) missing.push('customer');
+    var customer = betaFieldValue(id, 'customer_name') || j.customer || '';
+    var dealer = betaFieldValue(id, 'dealer_name') || j.dealer || '';
+    if (!String(customer).trim() && !String(dealer).trim()) missing.push('customer or dealer');
     var est = parseFloat(betaFieldValue(id, 'estimated_hours'));
     if (!isFinite(est) || est <= 0) missing.push('estimated hours');
-    if (String(betaFieldValue(id, 'parts_status') || '').toUpperCase() !== 'READY') missing.push('parts ready');
+    var partsStatus = String(betaFieldValue(id, 'parts_status') || j.parts_status || 'NOT_READY').toUpperCase();
+    if (partsStatus === 'NOT_READY') missing.push('parts not ready');
+    if (partsStatus === 'HOLD') missing.push('parts on hold');
     return missing;
   }
 
@@ -1637,6 +1621,7 @@
   function betaStatusControlHtml(status, label, readyDeps, isRow) {
     var options = [];
     var hint = '';
+    var controlTitle = '';
 
     function addOption(value, optionLabel, disabled) {
       options.push({
@@ -1654,12 +1639,15 @@
         'Ready for Build',
         status !== 'READY_FOR_BUILD' && readyDeps.length > 0
       );
+      if (readyDeps.length) {
+        controlTitle = 'Ready for Build needs ' + readyDeps.join(', ');
+      }
     } else if (status === 'QC') {
       addOption('QC', label || 'Ready for Closeout', false);
-      addOption('AWAITING_PICKUP', 'Complete - Awaiting Pickup', false);
+      addOption('AWAITING_PICKUP', isRow ? 'Awaiting Pickup' : 'Complete - Awaiting Pickup', false);
       hint = 'Complete the closeout checklist before moving to pickup.';
     } else if (status === 'AWAITING_PICKUP') {
-      addOption('AWAITING_PICKUP', label || 'Complete - Awaiting Pickup', false);
+      addOption('AWAITING_PICKUP', isRow ? 'Awaiting Pickup' : (label || 'Complete - Awaiting Pickup'), false);
       addOption('COMPLETE', 'Closed', false);
       hint = 'Close only after pickup or delivery handoff is complete.';
     } else {
@@ -1671,7 +1659,7 @@
     }
 
     return ''
-      + '<select class="' + (isRow ? 'cs-beta-row__select cs-beta-row__statusselect' : 'cs-beta-field__input cs-beta-status-select') + '" data-action="beta-status-select" aria-label="Job status">'
+      + '<select class="' + (isRow ? 'cs-beta-row__select cs-beta-row__statusselect' : 'cs-beta-field__input cs-beta-status-select') + '" data-action="beta-status-select" aria-label="Job status"' + (controlTitle ? ' title="' + escapeHtml(controlTitle) + '"' : '') + '>'
       + options.map(function (opt) {
           return '<option value="' + escapeHtml(opt.value) + '"' + (opt.value === status ? ' selected' : '') + (opt.disabled ? ' disabled' : '') + '>' + escapeHtml(opt.label) + '</option>';
         }).join('')
@@ -1722,6 +1710,7 @@
         betaState.loaded = false;
         betaState.jobDetails = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
         loadBeta();
       })
       .catch(function (err) {
@@ -1950,6 +1939,7 @@
         betaState.loaded = false;
         betaState.jobDetails = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
         loadBeta();
       })
       .catch(function (err) {
@@ -2177,6 +2167,7 @@
         betaState.edits             = {};
         betaState.jobDetails        = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed  = {};
         showBetaNotice('Demo queue reset. Duplicate, parts-hold, and missing-tech warnings are ready to test.', 'success');
         loadBeta();
         showToast('Demo queue reset');
@@ -2314,6 +2305,7 @@
         betaState.edits             = {};
         betaState.jobDetails        = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed  = {};
         clearBetaSelection();
         loadBeta();
       })
@@ -2335,6 +2327,7 @@
           betaState.loaded            = false;
           betaState.jobDetails        = {};
           betaState.jobDetailsLoading = {};
+          betaState.jobDetailsFailed  = {};
           loadBeta();
         } else {
           updateBetaSaveButton();
@@ -2518,6 +2511,7 @@
         betaState.edits  = {};
         betaState.jobDetails = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
         loadBeta();
       })
       .catch(function (err) {
