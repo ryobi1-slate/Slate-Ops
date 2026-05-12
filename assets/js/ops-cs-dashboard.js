@@ -551,7 +551,7 @@
     var map = {
       INTAKE: 'Pending',
       NEEDS_SO: 'Needs SO',
-      READY_FOR_BUILD: 'Ready for Build',
+      READY_FOR_BUILD: 'Ready to Build',
       SCHEDULED: 'Scheduled',
       IN_PROGRESS: 'In Progress',
       BLOCKED: 'Blocked',
@@ -1569,8 +1569,9 @@
         if (t) {
           e.preventDefault();
           var detailGrid = document.getElementById('cs-beta-detail-grid');
-          if (betaCanCloseFromDetail(detailGrid)) {
-            betaCloseoutAction('COMPLETE');
+          var closeoutTarget = betaCloseoutTarget(detailGrid);
+          if (closeoutTarget) {
+            betaCloseoutAction(closeoutTarget);
             return;
           }
           saveBeta();
@@ -1645,11 +1646,11 @@
       options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
       addOption(
         'READY_FOR_BUILD',
-        'Ready for Build',
+        'Ready to Build',
         status !== 'READY_FOR_BUILD' && readyDeps.length > 0
       );
       if (readyDeps.length) {
-        controlTitle = 'Ready for Build needs ' + readyDeps.join(', ');
+        controlTitle = 'Ready to Build needs ' + readyDeps.join(', ');
       }
     } else if (status === 'QC') {
       addOption('QC', label || 'Ready to Close', false);
@@ -1690,7 +1691,7 @@
       },
       READY_FOR_BUILD: {
         selector: '[data-action="beta-mark-ready-build"]',
-        toast: 'Marked Ready for Build'
+        toast: 'Marked Ready to Build'
       }
     };
     var action = actionMap[status] || {};
@@ -1929,9 +1930,11 @@
     return betaStatusKey(betaEffectiveJob(snap).status);
   }
 
-  function betaCanCloseFromDetail(grid) {
+  function betaCloseoutTarget(grid) {
     var status = betaDetailStatus(grid);
-    return (status === 'QC' || status === 'AWAITING_PICKUP') && betaCloseoutAllChecked(grid);
+    if (status === 'QC' && betaCloseoutAllChecked(grid)) return 'AWAITING_PICKUP';
+    if (status === 'AWAITING_PICKUP') return 'COMPLETE';
+    return '';
   }
 
   function betaCloseoutAction(status) {
@@ -1947,28 +1950,6 @@
     var btn = grid.querySelector(status === 'COMPLETE' ? '[data-action="beta-mark-closed"]' : '[data-action="beta-mark-awaiting"]');
     if (btn) btn.disabled = true;
     betaSaveSelectedEdits(id)
-      .then(function () {
-        var currentStatus = betaDetailStatus(grid);
-        if (status === 'COMPLETE' && currentStatus === 'QC') {
-          var awaitingPayload = Object.assign({}, payload, { status: 'AWAITING_PICKUP' });
-          return fetch(api.root + '/jobs/' + id + '/status', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-              'X-WP-Nonce':   api.nonce,
-              'Content-Type': 'application/json',
-              'Accept':       'application/json'
-            },
-            body: JSON.stringify(awaitingPayload)
-          })
-            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-            .then(function (res) {
-              if (!res.ok) {
-                throw new Error((res.body && (res.body.message || res.body.code)) || 'Status update failed');
-              }
-            });
-        }
-      })
       .then(function () {
         return fetch(api.root + '/jobs/' + id + '/status', {
       method: 'POST',
@@ -2120,12 +2101,15 @@
     if (detailBtn) {
       var selected = betaState.selected;
       var grid = document.getElementById('cs-beta-detail-grid');
-      detailBtn.disabled = !(selected != null && (betaState.edits[selected] || betaCanCloseFromDetail(grid)));
+      detailBtn.disabled = !(selected != null && (betaState.edits[selected] || betaCloseoutTarget(grid)));
     }
     var detailLabel = document.getElementById('cs-beta-detail-save-label');
     if (detailLabel) {
       var detailGrid = document.getElementById('cs-beta-detail-grid');
-      detailLabel.textContent = betaCanCloseFromDetail(detailGrid) ? 'Save and Close' : 'Save Changes';
+      var closeoutTarget = betaCloseoutTarget(detailGrid);
+      detailLabel.textContent = closeoutTarget === 'AWAITING_PICKUP'
+        ? 'Save and Move to Pickup'
+        : (closeoutTarget === 'COMPLETE' ? 'Save and Close' : 'Save Changes');
     }
   }
 

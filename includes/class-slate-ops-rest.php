@@ -1989,7 +1989,7 @@ foreach ($rows as &$r) {
     }
 
     if (!empty($missing)) {
-      $msg = 'Cannot move to Ready for Build. Missing: ' . implode(', ', $missing) . '.';
+      $msg = 'Cannot move to Ready to Build. Missing: ' . implode(', ', $missing) . '.';
       return new WP_Error('not_ready_for_build', $msg, ['status' => 422]);
     }
 

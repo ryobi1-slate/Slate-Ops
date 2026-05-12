@@ -112,7 +112,7 @@
   const STATUS_LABELS = {
     INTAKE:           'Pending',
     NEEDS_SO:         'Needs SO',
-    READY_FOR_BUILD:  'Ready for Build',
+    READY_FOR_BUILD:  'Ready to Build',
     SCHEDULED:        'Scheduled',
     IN_PROGRESS:      'In Progress',
     BLOCKED:          'Blocked',
@@ -1365,7 +1365,7 @@ async function loadCS() {
   // Tech-qualified users only — drives the Assigned Tech dropdown.
   const techList   = techsResp.users || [];
 
-  // Phase 0 KPI counts: Pending / Ready for Build / Ready to Close (QC)
+  // Phase 0 KPI counts: Pending / Ready to Build / Ready to Close (QC)
   const kpiIntake     = allJobs.filter(j => (j.status||'').toUpperCase() === 'INTAKE').length;
   const kpiRFB        = allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length;
   const kpiQC         = allJobs.filter(j => ['QC','PENDING_QC'].includes((j.status||'').toUpperCase())).length;
@@ -1422,7 +1422,7 @@ async function loadCS() {
 
     const filters = [
       {id:'all_active',   label:'All Active',         count: allJobs.filter(j => CS_ACTIVE_STATUSES.includes((j.status||'').toUpperCase())).length},
-      {id:'ready_for_build', label:'Ready for Build',  count: allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length},
+      {id:'ready_for_build', label:'Ready to Build',  count: allJobs.filter(j => (j.status||'').toUpperCase() === 'READY_FOR_BUILD').length},
       {id:'scheduled',    label:'Scheduled',           count: allJobs.filter(j => ['SCHEDULED','QUEUED'].includes((j.status||'').toUpperCase())).length},
       {id:'blocked',      label:'Blocked',             count: allJobs.filter(j => ['BLOCKED','DELAYED'].includes((j.status||'').toUpperCase())).length},
       {id:'on_hold',      label:'On Hold',             count: allJobs.filter(j => (j.status||'').toUpperCase() === 'ON_HOLD').length},
@@ -1460,7 +1460,7 @@ async function loadCS() {
             <div class="cs-kpi-value">${kpiIntake}</div>
           </div>
           <div class="cs-kpi-card">
-            <div class="cs-kpi-label">Ready for Build</div>
+            <div class="cs-kpi-label">Ready to Build</div>
             <div class="cs-kpi-value">${kpiRFB}</div>
           </div>
           <div class="cs-kpi-card">
@@ -2865,7 +2865,7 @@ async function loadExecutive(){
 
   const kpi = [
     { label: 'Needs SO', value: needsSo },
-    { label: 'Ready for Build', value: countByStatus(['READY_FOR_BUILD']) },
+    { label: 'Ready to Build', value: countByStatus(['READY_FOR_BUILD']) },
     { label: 'Queued', value: countByStatus(['QUEUED']) },
     { label: 'In Progress', value: countByStatus(['IN_PROGRESS']) },
     { label: 'Ready to Close', value: countByStatus(['PENDING_QC','QC']) },

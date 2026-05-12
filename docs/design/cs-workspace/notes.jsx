@@ -76,7 +76,7 @@ function DesignNotes() {
               'Remove the Workspace tab\'s legacy CS iframe entirely. Replaced by the detail panel.',
               'Remove the standalone Queue tab. Mark "removing" for one staging cycle, then delete.',
               'Remove "By Tech / All Jobs" toggle in the legacy table — grouping is the default now.',
-              'Remove duplicated header KPIs (Pending / Ready for Build / Ready to Close) — folded into the filter bar counts.',
+              'Remove duplicated header KPIs (Pending / Ready to Build / Ready to Close) — folded into the filter bar counts.',
               'Drop the right-side persistent edit drawer from the legacy iframe.',
             ]}/>
           </Card>

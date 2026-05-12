@@ -125,7 +125,7 @@ class Slate_Ops_Statuses {
         return [
             self::INTAKE           => 'Pending',
             self::NEEDS_SO         => 'Needs SO',
-            self::READY_FOR_BUILD  => 'Ready for Build',
+            self::READY_FOR_BUILD  => 'Ready to Build',
             self::SCHEDULED        => 'Scheduled',
             self::IN_PROGRESS      => 'In Progress',
             self::BLOCKED          => 'Blocked',

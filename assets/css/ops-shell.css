@@ -2677,7 +2677,7 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
   box-shadow: 0 0 0 2px rgba(47,62,57,.22);
 }
 
-/* CS KPI: enforce divider between Ready for Build and Ready to Close. */
+/* CS KPI: enforce divider between Ready to Build and Ready to Close. */
 .ops-page-cs .ops-cs-divide > :nth-child(3) {
   border-left: 1px solid var(--slate-divider-strong);
 }

@@ -449,7 +449,7 @@ $blocks = $exec->get_blockers();
 		<!-- ===== BLOCKS ===== -->
 		<section class="tab-pane" id="pane-blocks" data-screen-label="05 Bottlenecks">
 			<div class="kpi-grid">
-				<div class="kpi"><div class="k-label">Ready For Build</div><div class="k-value"><?php echo (int) $bk['ready_for_build']; ?></div></div>
+				<div class="kpi"><div class="k-label">Ready to Build</div><div class="k-value"><?php echo (int) $bk['ready_for_build']; ?></div></div>
 				<div class="kpi"><div class="k-label">Scheduled</div><div class="k-value"><?php echo (int) $bk['scheduled']; ?></div></div>
 				<div class="kpi"><div class="k-label">In Progress</div><div class="k-value"><?php echo (int) $bk['in_progress']; ?></div></div>
 				<div class="kpi"><div class="k-label">QC</div><div class="k-value"><?php echo (int) $bk['qc']; ?></div></div>

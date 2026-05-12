@@ -95,7 +95,7 @@ class Slate_Ops_Executive {
 		return array(
 			array( 'area' => 'Blocked jobs',                  'count' => 9, 'status' => 'crit',  'owner' => 'Shop lead' ),
 			array( 'area' => 'QC aging > 1 day',              'count' => 2, 'status' => 'watch', 'owner' => 'A. Tran' ),
-			array( 'area' => 'Jobs ready for build',          'count' => 6, 'status' => 'ok',    'owner' => 'Floor' ),
+			array( 'area' => 'Jobs ready to build',           'count' => 6, 'status' => 'ok',    'owner' => 'Floor' ),
 			array( 'area' => 'Jobs ready for pickup',         'count' => 6, 'status' => 'ok',    'owner' => 'CS' ),
 			array( 'area' => 'Schedule risk (WIP > buffer)',  'count' => 4, 'status' => 'warn',  'owner' => 'Ops' ),
 			array( 'area' => 'On hold without owner',         'count' => 2, 'status' => 'warn',  'owner' => null ),
