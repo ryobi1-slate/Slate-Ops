@@ -2841,6 +2841,8 @@ return self::get_job(['id' => $job_id]);
     $user_id = get_current_user_id();
     $body = $req->get_json_params() ?: [];
     $overtime_note = trim(sanitize_textarea_field((string)($body['overtime_note'] ?? $body['note'] ?? '')));
+    $pause_reason = sanitize_key((string)($body['pause_reason'] ?? ''));
+    $pause_note = trim(sanitize_textarea_field((string)($body['pause_note'] ?? '')));
     $segments = $wpdb->prefix . 'slate_ops_time_segments';
     $open = $wpdb->get_row($wpdb->prepare("SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' ORDER BY start_ts DESC LIMIT 1", $user_id), ARRAY_A);
     if (!$open) {
@@ -2865,20 +2867,81 @@ return self::get_job(['id' => $job_id]);
       );
     }
 
+    $pause_map = [
+      'end_of_day'           => null,
+      'waiting_on_parts'     => 'PARTS',
+      'need_help'            => 'LABOR',
+      'vehicle_issue'        => 'ENGINEERING',
+      'customer_cs_question' => 'CUSTOMER',
+      'other'                => 'OTHER',
+    ];
+    if ($pause_reason !== '' && !array_key_exists($pause_reason, $pause_map)) {
+      return new WP_Error('invalid_pause_reason', 'Choose a valid pause reason.', ['status' => 422]);
+    }
+
+    $note_required = in_array($pause_reason, ['need_help', 'vehicle_issue', 'customer_cs_question', 'other'], true);
+    if ($note_required && $pause_note === '') {
+      return new WP_Error('pause_note_required', 'Add a note for this pause reason.', ['status' => 422]);
+    }
+
     $update = [
       'end_ts'     => $effective_stop,
       'state'      => 'closed',
       'updated_at' => $now,
     ];
 
-    if ($overtime_seconds > 0) {
+    if ($overtime_seconds > 0 || $pause_reason !== '') {
       $existing_note = trim((string)($open['note'] ?? ''));
-      $update['note'] = trim($existing_note . ($existing_note ? "\n" : '') . 'Overtime: ' . $overtime_note);
+      $note_lines = [];
+      if ($existing_note !== '') {
+        $note_lines[] = $existing_note;
+      }
+      if ($pause_reason !== '') {
+        $pause_labels = [
+          'end_of_day'           => 'End of day',
+          'waiting_on_parts'     => 'Waiting on parts',
+          'need_help'            => 'Need help',
+          'vehicle_issue'        => 'Vehicle issue',
+          'customer_cs_question' => 'Customer / CS question',
+          'other'                => 'Other',
+        ];
+        $pause_line = 'Paused: ' . ($pause_labels[$pause_reason] ?? $pause_reason);
+        if ($pause_note !== '') {
+          $pause_line .= ' - ' . $pause_note;
+        }
+        $note_lines[] = $pause_line;
+      }
+      if ($overtime_seconds > 0) {
+        $note_lines[] = 'Overtime: ' . $overtime_note;
+      }
+      $update['note'] = trim(implode("\n", $note_lines));
     }
 
     $wpdb->update($segments, $update, ['segment_id' => (int)$open['segment_id']]);
 
-    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer stopped');
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer paused');
+
+    $blocked_by_pause = false;
+    $block_reason = $pause_reason !== '' ? ($pause_map[$pause_reason] ?? null) : null;
+    if ($block_reason) {
+      $jobs = $wpdb->prefix . 'slate_ops_jobs';
+      $job = self::job_by_id((int)$open['job_id']);
+      if ($job && ($job['status'] ?? '') === Slate_Ops_Statuses::IN_PROGRESS) {
+        $block_note = $pause_note !== '' ? $pause_note : 'Paused by technician: ' . str_replace('_', ' ', $pause_reason);
+        $wpdb->update($jobs, [
+          'status'            => Slate_Ops_Statuses::BLOCKED,
+          'block_reason'      => $block_reason,
+          'block_note'        => $block_note,
+          'status_updated_at' => $now,
+          'updated_at'        => $now,
+        ], ['job_id' => (int)$open['job_id']]);
+        $blocked_by_pause = true;
+        self::audit('job', (int)$open['job_id'], 'update', 'status', $job['status'], Slate_Ops_Statuses::BLOCKED,
+          'Paused by technician: [' . $block_reason . '] ' . $block_note);
+        self::maybe_push_dealer_portal_status(self::job_by_id((int)$open['job_id']));
+      }
+    }
+
     if ($overtime_seconds > 0) {
       self::audit(
         'segment',
@@ -2924,6 +2987,8 @@ return self::get_job(['id' => $job_id]);
       'overtime_seconds'       => $overtime_seconds,
       'overtime_minutes'       => $overtime_minutes,
       'total_approved_minutes' => $total_approved_minutes,
+      'pause_reason'           => $pause_reason,
+      'blocked_by_pause'       => $blocked_by_pause,
     ];
   }
 

@@ -2662,7 +2662,7 @@ async function loadTech() {
       </div>
 
       <div class="tech-actions">
-        <button class="btn danger tech-stop" id="stop-active">Stop timer</button>
+        <button class="btn danger tech-stop" id="stop-active">Pause work</button>
         <div class="tech-actions-sub">
           <button class="btn secondary" id="submit-qc-active">Ready for closeout</button>
           <button class="btn secondary" id="note-toggle">+ Note</button>
@@ -2788,8 +2788,33 @@ async function loadTech() {
   const stopBtn = document.getElementById('stop-active');
   if (stopBtn) {
     stopBtn.onclick = async () => {
+      const reasonChoice = window.prompt('Why are you pausing?\n1. End of day\n2. Waiting on parts\n3. Need help\n4. Vehicle issue\n5. Customer / CS question\n6. Other');
+      if (!reasonChoice) return;
+      const pauseReasons = {
+        '1': 'end_of_day',
+        '2': 'waiting_on_parts',
+        '3': 'need_help',
+        '4': 'vehicle_issue',
+        '5': 'customer_cs_question',
+        '6': 'other'
+      };
+      const pauseReason = pauseReasons[String(reasonChoice).trim()];
+      if (!pauseReason) {
+        toast('Choose a valid pause reason', true);
+        return;
+      }
+      let pauseNote = '';
+      if (['need_help', 'vehicle_issue', 'customer_cs_question', 'other'].includes(pauseReason)) {
+        pauseNote = (window.prompt('Add a short note for this pause:') || '').trim();
+        if (!pauseNote) {
+          toast('Pause note required', true);
+          return;
+        }
+      } else if (pauseReason === 'waiting_on_parts') {
+        pauseNote = (window.prompt('Optional note for parts pause:') || '').trim();
+      }
       stopBtn.disabled = true;
-      stopBtn.textContent = 'Stopping…';
+      stopBtn.textContent = 'Pausing…';
       try {
         const overtimeMinutes = active && active.overtime_minutes ? parseInt(active.overtime_minutes, 10) : 0;
         let overtimeNote = '';
@@ -2798,14 +2823,15 @@ async function loadTech() {
           overtimeNote = overtimeNote.trim();
           if (!overtimeNote) {
             stopBtn.disabled = false;
-            stopBtn.textContent = 'Stop timer';
+            stopBtn.textContent = 'Pause work';
             toast('Overtime note required', true);
             return;
           }
         }
+        const stopPayload = { pause_reason: pauseReason, pause_note: pauseNote };
         let result;
         try {
-          result = await api.timeStop(overtimeNote ? { overtime_note: overtimeNote } : {});
+          result = await api.timeStop(overtimeNote ? { ...stopPayload, overtime_note: overtimeNote } : stopPayload);
         } catch (err) {
           if (err && err.data && err.data.code === 'overtime_note_required') {
             const mins = err.data.data && err.data.data.overtime_minutes ? parseInt(err.data.data.overtime_minutes, 10) : 0;
@@ -2813,11 +2839,11 @@ async function loadTech() {
             overtimeNote = overtimeNote.trim();
             if (!overtimeNote) {
               stopBtn.disabled = false;
-              stopBtn.textContent = 'Stop timer';
+              stopBtn.textContent = 'Pause work';
               toast('Overtime note required', true);
               return;
             }
-            result = await api.timeStop({ overtime_note: overtimeNote });
+            result = await api.timeStop({ ...stopPayload, overtime_note: overtimeNote });
           } else {
             throw err;
           }
@@ -2832,7 +2858,7 @@ async function loadTech() {
           toast('Work stopped and logged');
         }
         router();
-      } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop timer'; }
+      } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Pause work'; }
     };
   }
 
