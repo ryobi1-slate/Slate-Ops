@@ -1489,6 +1489,28 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
     display: none !important;
   }
 
+  .ops-page-tech #ops-view div[class~="p-4"][class~="flex"][class~="gap-3"] {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .ops-page-tech #ops-view div[class~="p-4"][class~="flex"][class~="gap-3"] .slate-work-btn {
+    align-items: center !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+  }
+
+  .ops-page-tech #ops-view div[class~="p-4"][class~="flex"][class~="gap-3"] .slate-work-btn[aria-label]::after {
+    content: attr(aria-label);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
   .ops-page-tech #ops-view .ops-tech-help-btn {
     justify-content: center !important;
     min-height: 52px !important;
