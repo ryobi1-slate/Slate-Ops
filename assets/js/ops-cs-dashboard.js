@@ -480,6 +480,8 @@
       queue_order:      e.queue_order   !== undefined ? e.queue_order   : j.queue_order,
       queue_visible:    e.queue_visible !== undefined ? e.queue_visible : j.queue_visible,
       queue_note:       e.queue_note    !== undefined ? e.queue_note    : (j.queue_note || ''),
+      block_reason:     j.block_reason || '',
+      block_note:       j.block_note || '',
       _dirty:           Object.keys(e).length > 0,
       _reassigned:      hasAssignmentEdit && aid !== j.assigned_user_id,
       _orig_assigned_user_id: j.assigned_user_id,
@@ -569,6 +571,37 @@
     var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(s));
     if (!m) return String(s).substr(0, 10);
     return parseInt(m[2], 10) + '-' + parseInt(m[3], 10) + '-' + m[1];
+  }
+
+  function betaBlockReasonLabel(reason) {
+    var v = String(reason || '').toUpperCase();
+    var map = {
+      PARTS: 'Waiting on parts',
+      ENGINEERING: 'Vehicle / engineering issue',
+      CUSTOMER: 'Customer / CS question',
+      LABOR: 'Need help',
+      OTHER: 'Other'
+    };
+    return map[v] || (v ? v.replace(/_/g, ' ') : 'Blocked');
+  }
+
+  function betaDaysUntilDue(due) {
+    if (!due) return null;
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(due));
+    if (!m) return null;
+    var today = new Date();
+    var start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    var target = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)).getTime();
+    return Math.round((target - start) / 86400000);
+  }
+
+  function betaBlockedSeverity(j) {
+    if (betaStatusKey(j.status) !== 'BLOCKED') return '';
+    var days = betaDaysUntilDue(j.due_date);
+    var reason = String(j.block_reason || '').toUpperCase();
+    if (days != null && days <= 1) return 'alert';
+    if (reason === 'CUSTOMER' || reason === 'ENGINEERING' || reason === 'LABOR') return 'alert';
+    return 'warn';
   }
 
   function betaPassesChip(j) {
@@ -688,7 +721,8 @@
         if (!j.queue_visible || j.queue_order !== 1) return;
         var bad = j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status);
         if (bad) {
-          add(k, 'warn', (j.so_number || j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? 'blocked' : 'on parts hold') + '.');
+          var tone = betaBlockedSeverity(j) === 'alert' ? 'alert' : 'warn';
+          add(k, tone, (j.so_number || j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? betaBlockReasonLabel(j.block_reason).toLowerCase() : 'on parts hold') + '.');
         }
       });
     });
@@ -785,6 +819,7 @@
       var rows = g.jobs.map(function (j) {
         var dup        = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
         var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
+        var blockedSeverity = betaBlockedSeverity(j);
         var sel        = (betaState.selected === j.id);
         var qTitle     = (!j.assigned_user_id && j.queue_order == null)
           ? 'Assign a tech before queue order affects the Tech page.'
@@ -796,6 +831,7 @@
         if (!j.queue_visible) rowCls += ' is-hidden';
         if (dup)              rowCls += ' is-dup';
         if (blockedTop)       rowCls += ' is-warn';
+        if (blockedSeverity)  rowCls += ' is-blocked-' + blockedSeverity;
         if (j._reassigned)    rowCls += ' is-reassigned';
         if (j.status === 'SCHEDULED' && !j.assigned_user_id) rowCls += ' is-missing-tech';
 
@@ -817,6 +853,12 @@
           +   '<div class="cs-beta-row__cust">'
           +     '<div class="cs-beta-row__name">' + escapeHtml(j.customer || '—') + '</div>'
           +     '<div class="cs-beta-row__sub">' + escapeHtml(j.dealer || '') + '</div>'
+          +     (blockedSeverity
+                ? '<div class="cs-beta-row__blocker cs-beta-row__blocker--' + escapeHtml(blockedSeverity) + '" title="' + escapeHtml(j.block_note || '') + '">'
+                +   '<span class="material-symbols-outlined" aria-hidden="true">report</span>'
+                +   escapeHtml(betaBlockReasonLabel(j.block_reason))
+                + '</div>'
+                : '')
           +     (j._reassigned
                 ? '<div class="cs-beta-row__staged" title="Reassigned from ' + escapeHtml(j._orig_assigned_tech || 'Unassigned') + '">'
                 +     '<span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>'
@@ -1426,6 +1468,24 @@
     var status = betaStatusKey(j.status);
     var canMarkAwaiting = status === 'QC';
     var canMarkClosed = status === 'AWAITING_PICKUP';
+    var blockedSeverity = betaBlockedSeverity(j);
+    var blockerHtml = status === 'BLOCKED'
+      ? ''
+        + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-blocker cs-beta-blocker--' + escapeHtml(blockedSeverity || 'warn') + '">'
+        +   '<h4 class="cs-beta-detail-section__title">Blocked work</h4>'
+        +   '<div class="cs-beta-blocker__body">'
+        +     '<div class="cs-beta-blocker__reason">'
+        +       '<span class="material-symbols-outlined" aria-hidden="true">report</span>'
+        +       '<strong>' + escapeHtml(betaBlockReasonLabel(j.block_reason)) + '</strong>'
+        +     '</div>'
+        +     '<div class="cs-beta-blocker__note">' + escapeHtml(j.block_note || 'No blocker note provided.') + '</div>'
+        +   '</div>'
+        +   '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-unblock-ready">'
+        +     '<span class="material-symbols-outlined">lock_open</span>'
+        +     'Unblock to Ready to Build'
+        +   '</button>'
+        + '</section>'
+      : '';
     var closeoutHtml = (canMarkAwaiting || canMarkClosed)
       ? ''
         + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-closeout">'
@@ -1445,6 +1505,7 @@
     grid.innerHTML = ''
       + loadingNote
       + loadFailed
+      + blockerHtml
 
       + '<section class="cs-beta-detail-section">'
       +   '<h4 class="cs-beta-detail-section__title">Job Identity</h4>'
@@ -1577,6 +1638,12 @@
           saveBeta();
           return;
         }
+        t = e.target.closest('[data-action="beta-unblock-ready"]');
+        if (t) {
+          e.preventDefault();
+          betaUnblockAction();
+          return;
+        }
       });
     }
   }
@@ -1605,6 +1672,7 @@
       'INTAKE',
       'NEEDS_SO',
       'READY_FOR_BUILD',
+      'BLOCKED',
       'QC',
       'AWAITING_PICKUP'
     ].indexOf(status) >= 0;
@@ -1643,7 +1711,9 @@
 
     if (status === 'INTAKE' || status === 'NEEDS_SO' || status === 'READY_FOR_BUILD') {
       addOption('INTAKE', 'Pending', false);
-      options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
+      if (status === 'NEEDS_SO') {
+        options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
+      }
       addOption(
         'READY_FOR_BUILD',
         'Ready to Build',
@@ -1660,6 +1730,10 @@
       addOption('AWAITING_PICKUP', isRow ? 'Awaiting Pickup' : (label || 'Complete - Awaiting Pickup'), false);
       addOption('COMPLETE', 'Closed', false);
       hint = 'Close only after pickup or delivery handoff is complete.';
+    } else if (status === 'BLOCKED') {
+      addOption('BLOCKED', label || 'Blocked', false);
+      addOption('READY_FOR_BUILD', 'Unblock - Ready to Build', false);
+      hint = 'Only CS or a supervisor should unblock after the issue is resolved.';
     } else {
       addOption(status, label || status, false);
     }
@@ -1976,6 +2050,46 @@
       })
       .catch(function (err) {
         showToast(err && err.message ? err.message : 'Status update failed');
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  function betaUnblockAction() {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+    var btn = grid.querySelector('[data-action="beta-unblock-ready"]');
+    if (btn) btn.disabled = true;
+
+    betaSaveSelectedEdits(id)
+      .then(function () {
+        return fetch(api.root + '/jobs/' + id + '/status', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify({ status: 'READY_FOR_BUILD' })
+        });
+      })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Unblock failed');
+        }
+        showToast('Unblocked to Ready to Build');
+        betaState.loaded = false;
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Unblock failed');
         if (btn) btn.disabled = false;
       });
   }

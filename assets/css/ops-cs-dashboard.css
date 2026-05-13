@@ -975,6 +975,18 @@
   border-color: var(--slate-arches);
 }
 .cs-beta-row.is-warn { box-shadow: inset 3px 0 0 var(--slate-arches); }
+.cs-beta-row.is-blocked-warn {
+  border-left-color: var(--slate-arches);
+  background: rgba(216,107,25,0.06);
+}
+.cs-beta-row.is-blocked-alert {
+  border-left-color: var(--slate-flag);
+  background: rgba(185,28,28,0.06);
+}
+.cs-beta-row.is-blocked-warn.is-selected,
+.cs-beta-row.is-blocked-alert.is-selected {
+  background: var(--slate-sage-wash);
+}
 
 .cs-beta-row__handle {
   color: var(--slate-ink-placeholder);
@@ -1044,6 +1056,31 @@
 .cs-beta-row__staged .material-symbols-outlined {
   font-size: 12px;
   color: var(--slate-sage);
+}
+.cs-beta-row__blocker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  width: fit-content;
+  max-width: 100%;
+}
+.cs-beta-row__blocker .material-symbols-outlined { font-size: 12px; }
+.cs-beta-row__blocker--warn {
+  background: rgba(216,107,25,0.10);
+  border: 1px solid rgba(216,107,25,0.35);
+  color: var(--slate-arches);
+}
+.cs-beta-row__blocker--alert {
+  background: rgba(185,28,28,0.10);
+  border: 1px solid rgba(185,28,28,0.35);
+  color: var(--slate-flag);
 }
 .cs-beta-row.is-reassigned {
   background: var(--slate-sand-wash);
@@ -1312,6 +1349,35 @@ body.cs-beta-detail-modal-open { overflow: hidden; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.cs-beta-blocker {
+  border-left: 3px solid var(--slate-arches);
+}
+.cs-beta-blocker--alert {
+  border-left-color: var(--slate-flag);
+}
+.cs-beta-blocker__body {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.cs-beta-blocker__reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--slate-ink);
+}
+.cs-beta-blocker__reason .material-symbols-outlined {
+  color: var(--slate-arches);
+  font-size: 18px;
+}
+.cs-beta-blocker--alert .cs-beta-blocker__reason .material-symbols-outlined {
+  color: var(--slate-flag);
+}
+.cs-beta-blocker__note {
+  color: var(--slate-ink-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 .cs-beta-detail-section--handoff { grid-column: span 2; }
 .cs-beta-detail-section--wide { grid-column: span 2; }

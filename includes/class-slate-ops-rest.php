@@ -1754,6 +1754,9 @@ foreach ($rows as &$r) {
               'Block reason is required when setting status to Blocked.',
               'Block note is required when setting status to Blocked.', $update);
             if ($err) return $err;
+          } elseif ($cur === Slate_Ops_Statuses::BLOCKED) {
+            $update['block_reason'] = null;
+            $update['block_note']   = null;
           }
           if ($ns === Slate_Ops_Statuses::ON_HOLD) {
             $err = self::validate_reason_fields($body, 'hold_reason', 'hold_note', Slate_Ops_Utils::cs_hold_reasons(),
@@ -2471,6 +2474,9 @@ if ($new_status === Slate_Ops_Statuses::BLOCKED) {
   }
   $update['block_reason'] = $br;
   $update['block_note']   = $bn;
+} elseif ($current_status === Slate_Ops_Statuses::BLOCKED) {
+  $update['block_reason'] = null;
+  $update['block_note']   = null;
 }
 
 // v2: ON_HOLD requires hold_reason + hold_note
@@ -4430,6 +4436,7 @@ self::maybe_push_dealer_portal_status($job);
                    target_ship_date, scheduled_start, assigned_user_id,
                    queue_order, queue_visible, queue_note,
                    queue_updated_at, queue_updated_by, queue_priority,
+                   block_reason, block_note,
                    updated_at
               FROM $t
              WHERE archived_at IS NULL
@@ -4472,6 +4479,8 @@ self::maybe_push_dealer_portal_status($job);
         'queue_order'       => isset($r['queue_order']) && $r['queue_order'] !== null ? (int) $r['queue_order'] : null,
         'queue_visible'     => (int) ($r['queue_visible'] ?? 1) === 1,
         'queue_note'        => (string) ($r['queue_note'] ?? ''),
+        'block_reason'      => (string) ($r['block_reason'] ?? ''),
+        'block_note'        => (string) ($r['block_note'] ?? ''),
         'queue_priority'    => isset($r['queue_priority']) ? (int) $r['queue_priority'] : 3,
         'queue_updated_at'  => $r['queue_updated_at'],
         'queue_updated_by'  => $updated_by_id,
