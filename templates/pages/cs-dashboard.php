@@ -39,6 +39,14 @@ $health        = $payload['health'];
 $parts         = $payload['parts'];
 $qc            = $payload['qc'];
 $pickup        = $payload['pickup'];
+$drawer_seed   = $priorities[0] ?? [
+  'id'     => '',
+  'cust'   => '',
+  'status' => '',
+  'owner'  => '',
+  'action' => 'Open queue',
+  'detail' => 'Open the Job Queue to review live work.',
+];
 
 $pill_class_map = [
   'parts'   => 'pill--danger',
@@ -397,8 +405,8 @@ $health_tone_class_map = [
   <div class="ops-drawer__head">
     <div>
       <div class="ops-drawer__title">Job Detail</div>
-      <h3 class="ops-drawer__job" id="drawer-job"><?php echo esc_html($priorities[0]['id']); ?></h3>
-      <div class="ops-drawer__cust" id="drawer-cust"><?php echo esc_html($priorities[0]['cust']); ?></div>
+      <h3 class="ops-drawer__job" id="drawer-job"><?php echo esc_html($drawer_seed['id']); ?></h3>
+      <div class="ops-drawer__cust" id="drawer-cust"><?php echo esc_html($drawer_seed['cust']); ?></div>
     </div>
     <button class="ops-drawer__close" id="drawer-close" aria-label="Close">
       <span class="material-symbols-outlined">close</span>
@@ -407,39 +415,31 @@ $health_tone_class_map = [
   <div class="ops-drawer__body">
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Status</span>
-      <span class="pill" id="drawer-pill"><?php echo esc_html($priorities[0]['status']); ?></span>
+      <span class="pill" id="drawer-pill"><?php echo esc_html($drawer_seed['status']); ?></span>
     </div>
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Action needed</span>
-      <div class="ops-drawer__text" id="drawer-action"><?php echo esc_html($priorities[0]['detail']); ?></div>
+      <div class="ops-drawer__text" id="drawer-action"><?php echo esc_html($drawer_seed['detail']); ?></div>
     </div>
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Job summary</span>
       <dl class="ops-drawer__kv" id="drawer-kv">
-        <dt>Owner</dt><dd id="drawer-owner"><?php echo esc_html($priorities[0]['owner']); ?></dd>
-        <dt>Opened</dt><dd>Apr 22, 2026</dd>
-        <dt>Promised</dt><dd>May 6, 2026</dd>
-        <dt>Workcenter</dt><dd>Bay 2 · Main floor</dd>
-        <dt>Last update</dt><dd id="drawer-update">2 hours ago — CS</dd>
+        <dt>Owner</dt><dd id="drawer-owner"><?php echo esc_html($drawer_seed['owner']); ?></dd>
+        <dt>Review location</dt><dd>Job Queue</dd>
+        <dt>Source</dt><dd>Live Ops jobs</dd>
       </dl>
     </div>
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Recent activity</span>
       <div class="ops-drawer__text" style="font-size:12px;line-height:1.7;">
-        <div>· Apr 28 — Parts ETA pushed by vendor (electrical kit)</div>
-        <div>· Apr 27 — Intake complete, scope confirmed by dealer</div>
-        <div>· Apr 26 — Job opened from dealer ticket #4421</div>
+        <div>Open the matching Job Queue filter to update status, blocker notes, parts, due date, and assignment.</div>
       </div>
     </div>
   </div>
   <div class="ops-drawer__foot">
     <button class="slate-btn slate-btn--primary" id="drawer-action-btn">
       <span class="material-symbols-outlined">check</span>
-      <span id="drawer-action-btn-label"><?php echo esc_html($priorities[0]['action']); ?></span>
-    </button>
-    <button class="slate-btn slate-btn--secondary">
-      <span class="material-symbols-outlined">edit_note</span>
-      Add note
+      <span id="drawer-action-btn-label"><?php echo esc_html($drawer_seed['action']); ?></span>
     </button>
   </div>
 </aside>

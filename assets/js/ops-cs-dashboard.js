@@ -153,9 +153,11 @@
   // ─── Drawer ───────────────────────────────────────────────────────────
   var drawer   = document.getElementById('job-drawer');
   var backdrop = document.getElementById('drawer-backdrop');
+  var currentDrawerJob = null;
 
   function openDrawer(p) {
     if (!drawer || !p) return;
+    currentDrawerJob = p;
     var el;
     if ((el = document.getElementById('drawer-job')))             el.textContent = p.id || '';
     if ((el = document.getElementById('drawer-cust')))            el.textContent = p.cust || '';
@@ -174,6 +176,7 @@
 
   function closeDrawer() {
     if (!drawer) return;
+    currentDrawerJob = null;
     drawer.classList.remove('open');
     if (backdrop) backdrop.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
@@ -204,7 +207,14 @@
     var actionBtn = document.getElementById('drawer-action-btn');
     if (actionBtn) {
       actionBtn.addEventListener('click', function () {
-        showToast('Action logged · job updated');
+        var filter = currentDrawerJob && currentDrawerJob.pill ? currentDrawerJob.pill : 'all';
+        if (filter === 'parts') filter = 'blocked';
+        if (filter === 'qc') filter = 'closeout';
+        if (filter === 'pickup') filter = 'pickup';
+        var target = document.querySelector('.ops-subtab[data-tab="queue"]');
+        if (target) target.click();
+        var chip = document.querySelector('.cs-beta-chip[data-filter="' + filter + '"]');
+        if (chip) chip.click();
         closeDrawer();
       });
     }
