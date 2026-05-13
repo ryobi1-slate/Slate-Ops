@@ -301,7 +301,7 @@
     loading:   false,
     jobs:      [],
     users:     [],
-    edits:     {},        // { id: { queue_order, queue_visible, queue_note, assigned_user_id, customer_name, dealer_name, sales_person, vin_last8, notes, parts_status, estimated_hours } }
+    edits:     {},        // { id: { queue_order, queue_visible, queue_note, assigned_user_id, customer_name, dealer_name, sales_person, vin_last8, notes, parts_status, estimated_hours, requested_date } }
     filter:    'all',
     query:     '',
     selected:  null,      // currently selected job id
@@ -318,7 +318,7 @@
   // job edits.
   var BETA_JOB_FIELDS = [
     'customer_name', 'dealer_name', 'sales_person',
-    'vin_last8', 'notes',
+    'vin_last8', 'notes', 'requested_date',
     'parts_status', 'estimated_hours', 'status'
   ];
   var BETA_QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
@@ -1469,6 +1469,7 @@
     var canMarkAwaiting = status === 'QC';
     var canMarkClosed = status === 'AWAITING_PICKUP';
     var blockedSeverity = betaBlockedSeverity(j);
+    var unblockDeps = status === 'BLOCKED' ? betaReadyForBuildMissing(id, j) : [];
     var blockerHtml = status === 'BLOCKED'
       ? ''
         + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-blocker cs-beta-blocker--' + escapeHtml(blockedSeverity || 'warn') + '">'
@@ -1480,7 +1481,7 @@
         +     '</div>'
         +     '<div class="cs-beta-blocker__note">' + escapeHtml(j.block_note || 'No blocker note provided.') + '</div>'
         +   '</div>'
-        +   '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-unblock-ready">'
+        +   '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-unblock-ready"' + (unblockDeps.length ? ' disabled title="Ready to Build needs ' + escapeHtml(unblockDeps.join(', ')) + '"' : '') + '>'
         +     '<span class="material-symbols-outlined">lock_open</span>'
         +     'Unblock to Ready to Build'
         +   '</button>'
@@ -1545,13 +1546,18 @@
       +   '<h4 class="cs-beta-detail-section__title">Scheduling</h4>'
       +   '<div class="cs-beta-detail-fields">'
       +     '<label class="cs-beta-field">'
+      +       '<span class="cs-beta-field__label">Due date</span>'
+      +       (det
+                ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
+                : readOnly((det && det.requested_date) || j.requested_date || j.due_date))
+      +     '</label>'
+      +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Estimated Hours</span>'
       +       (det
                 ? '<input type="number" min="0" step="0.25" class="cs-beta-mono cs-beta-field__input' + ec('estimated_hours') + '" data-field="estimated_hours" value="' + fv('estimated_hours') + '" placeholder="—">'
                 : readOnly(j.estimated_minutes ? +(j.estimated_minutes / 60).toFixed(2) : null))
       +     '</label>'
       +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
-      +       '<dt>Requested</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.requested_date) || j.requested_date)) + '</dd>'
       +       '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.promised_date) || j.promised_date)) + '</dd>'
       +       '<dt>Actual completion</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.actual_completed_at) || j.actual_completed_at)) + '</dd>'
       +       '<dt>Queue #</dt><dd class="cs-beta-mono">' + (j.queue_order == null ? '—' : j.queue_order) + '</dd>'
@@ -1654,6 +1660,8 @@
     var customer = betaFieldValue(id, 'customer_name') || j.customer || '';
     var dealer = betaFieldValue(id, 'dealer_name') || j.dealer || '';
     if (!String(customer).trim() && !String(dealer).trim()) missing.push('customer or dealer');
+    var dueDate = betaFieldValue(id, 'requested_date') || j.promised_date || j.target_ship_date || j.requested_date || j.due_date || '';
+    if (!String(dueDate).trim()) missing.push('due date');
     var estRaw = betaFieldValue(id, 'estimated_hours');
     if (estRaw === '' && !betaIsEdited(id, 'estimated_hours') && j.estimated_minutes) {
       estRaw = String(Number(j.estimated_minutes) / 60);
@@ -1732,7 +1740,10 @@
       hint = 'Close only after pickup or delivery handoff is complete.';
     } else if (status === 'BLOCKED') {
       addOption('BLOCKED', label || 'Blocked', false);
-      addOption('READY_FOR_BUILD', 'Unblock - Ready to Build', false);
+      addOption('READY_FOR_BUILD', 'Unblock - Ready to Build', readyDeps.length > 0);
+      if (readyDeps.length) {
+        controlTitle = 'Ready to Build needs ' + readyDeps.join(', ');
+      }
       hint = 'Only CS or a supervisor should unblock after the issue is resolved.';
     } else {
       addOption(status, label || status, false);
@@ -2061,6 +2072,12 @@
     var id = parseInt(grid.getAttribute('data-job-id'), 10);
     if (!id || isNaN(id)) return;
     var btn = grid.querySelector('[data-action="beta-unblock-ready"]');
+    var job = betaEffectiveJob(betaJobById(id));
+    var missing = job ? betaReadyForBuildMissing(id, job) : [];
+    if (missing.length) {
+      showToast('Ready to Build needs ' + missing.join(', '));
+      return;
+    }
     if (btn) btn.disabled = true;
 
     betaSaveSelectedEdits(id)
@@ -2149,6 +2166,7 @@
       'queue_visible',
       'parts_status',
       'estimated_hours',
+      'requested_date',
       'status',
       'customer_name',
       'dealer_name'

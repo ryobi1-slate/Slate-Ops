@@ -1623,6 +1623,19 @@ foreach ($rows as &$r) {
         }
       }
 
+      // Manual due date until scheduler-assigned dates are available.
+      if (array_key_exists('requested_date', $body)) {
+        $val = sanitize_text_field((string)($body['requested_date'] ?? ''));
+        if ($val !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $val)) {
+          return self::validation_error('requested_date', 'invalid_requested_date', 'Due date must be YYYY-MM-DD.');
+        }
+        $store = $val ?: null;
+        if ($store !== ($job['requested_date'] ?? null)) {
+          $audits[] = ['requested_date', $job['requested_date'] ?? null, $store];
+          $update['requested_date'] = $store;
+        }
+      }
+
       // VIN
       if (array_key_exists('vin_last8', $body)) {
         $vin = strtoupper(trim(sanitize_text_field((string)($body['vin_last8'] ?? ''))));
@@ -1970,6 +1983,9 @@ foreach ($rows as &$r) {
       'customer_name',
       'dealer_name',
       'so_number',
+      'requested_date',
+      'promised_date',
+      'target_ship_date',
       'estimated_minutes',
       'parts_status',
     ];
@@ -1992,6 +2008,13 @@ foreach ($rows as &$r) {
     }
     if (empty(trim((string)($data['so_number'] ?? '')))) {
       $missing[] = 'SO#';
+    }
+    if (
+      empty(trim((string)($data['promised_date'] ?? ''))) &&
+      empty(trim((string)($data['target_ship_date'] ?? ''))) &&
+      empty(trim((string)($data['requested_date'] ?? '')))
+    ) {
+      $missing[] = 'due date';
     }
     if (empty((int)($data['estimated_minutes'] ?? 0))) {
       $missing[] = 'estimated hours';
