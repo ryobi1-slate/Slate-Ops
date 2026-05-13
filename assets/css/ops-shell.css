@@ -1375,6 +1375,49 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
   flex-direction: column;
 }
 
+@media (min-width: 901px) {
+  .ops-page-tech .ops-content {
+    background: #e8e5d6;
+  }
+
+  .ops-page-tech .ops-content > #ops-view {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (min-width: 1180px) {
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] {
+    display: grid !important;
+    grid-template-columns: minmax(420px, 0.85fr) minmax(560px, 1.15fr);
+    align-items: start;
+    gap: 20px;
+    width: 100%;
+    max-width: 1680px;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section {
+    min-width: 0;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type {
+    position: sticky;
+    top: 24px;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:not(:first-of-type) {
+    grid-column: 2;
+  }
+
+  .ops-page-tech #ops-view .ops-tech-card {
+    border-radius: 16px !important;
+    padding: 14px 16px !important;
+  }
+}
+
 .ops-page-tech .ops-content > #ops-view,
 .ops-page-tech .ops-content > #ops-view > div,
 .ops-page-tech .ops-content > #ops-view > div > main {
@@ -2205,7 +2248,9 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
   width: min(520px, 100%);
   max-height: min(760px, calc(100dvh - 32px));
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  box-sizing: border-box;
 }
 .ops-pw-open { overflow: hidden; }
 .ops-pw-head {
@@ -2240,14 +2285,17 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
 }
 .ops-pw-choices {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: .65rem;
   margin-bottom: 1rem;
 }
 .ops-pw-choice {
-  min-height: 72px;
-  border: 1px solid #d8d5ca;
-  background: #fff;
+  width: 100%;
+  min-width: 0;
+  min-height: 66px;
+  border: 1px solid #d8d5ca !important;
+  background: #fff !important;
+  color: #15221e !important;
   border-radius: .85rem;
   padding: .75rem;
   text-align: left;
@@ -2260,20 +2308,23 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
 .ops-pw-choice:focus,
 .ops-pw-choice:focus-visible {
   outline: none;
-  border-color: var(--sage);
+  border-color: var(--sage) !important;
   box-shadow: 0 0 0 3px rgba(47,62,57,.15);
 }
 .ops-pw-choice.is-selected {
-  border-color: var(--sage);
-  background: rgba(47,62,57,.08);
+  border-color: var(--sage) !important;
+  background: rgba(47,62,57,.08) !important;
   box-shadow: inset 0 0 0 1px var(--sage);
 }
 .ops-pw-choice__title {
+  display: block;
   color: #15221e;
   font-size: .9rem;
   font-weight: 800;
+  line-height: 1.2;
 }
 .ops-pw-choice__sub {
+  display: block;
   color: #64748b;
   font-size: .76rem;
   line-height: 1.3;
@@ -2342,9 +2393,6 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
     max-height: 92dvh;
     border-radius: 18px 18px 0 0;
     padding: 16px;
-  }
-  .ops-pw-choices {
-    grid-template-columns: 1fr;
   }
   .ops-pw-choice {
     min-height: 64px;
