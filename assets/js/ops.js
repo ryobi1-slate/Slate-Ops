@@ -375,7 +375,7 @@
           ${job.notes ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);"><div class="label" style="margin-bottom:4px;">Notes</div><div style="white-space:pre-wrap;">${escapeHtml(job.notes)}</div></div>` : ''}
           <div class="row" style="margin-top:16px;flex-wrap:wrap;gap:8px;">
             ${isCS ? `<button class="btn secondary" id="so-btn">Set SO#</button>` : ``}
-            ${job.status === 'IN_PROGRESS' ? `<button class="btn" id="submit-qc-btn">Send to QC</button>` : ''}
+            ${job.status === 'IN_PROGRESS' ? `<button class="btn" id="submit-qc-btn">Ready for closeout</button>` : ''}
             ${(job.status === 'QC' || job.status === 'PENDING_QC') && isSupervisor ? `<button class="btn" id="qc-pass-btn">QC Pass</button><button class="btn secondary" id="qc-fail-btn">QC Fail</button>` : ''}
             ${canEdit ? `<button class="btn secondary" id="edit-btn">Edit Job</button>` : ``}
           </div>
@@ -491,8 +491,8 @@
       const notes = prompt('Describe work completed (required):');
       if(!notes || !notes.trim()) return;
       submitQcBtn.disabled = true; submitQcBtn.textContent = 'Submitting…';
-      try{ await api.submitQC(job.job_id, notes.trim()); toast('Sent to QC'); router(); }
-      catch(e){ alert(e.message); submitQcBtn.disabled = false; submitQcBtn.textContent = 'Send to QC'; }
+      try{ await api.submitQC(job.job_id, notes.trim()); toast('Marked ready for closeout'); router(); }
+      catch(e){ alert(e.message); submitQcBtn.disabled = false; submitQcBtn.textContent = 'Ready for closeout'; }
     };
 
     const qcPassBtn = document.getElementById('qc-pass-btn');
@@ -2574,7 +2574,7 @@ async function loadTech() {
     const jst = (job.status||'').toUpperCase();
     const statusLabel = blocked ? 'Blocked'
       : (jst === 'IN_PROGRESS' ? 'In progress'
-      : (jst === 'QC' || jst === 'PENDING_QC' ? 'Sent to QC - Awaiting CS Closeout'
+      : (jst === 'QC' || jst === 'PENDING_QC' ? 'Ready for closeout'
       : (jst === 'SCHEDULED' ? 'Scheduled' : 'Ready')));
     const primary = partsBlocked(job)
       ? `<button class="btn secondary btn-xl tech-card-cta" disabled>${escapeHtml(partsBlockMessage(job))}</button>`
@@ -2658,7 +2658,7 @@ async function loadTech() {
       <div class="tech-actions">
         <button class="btn danger tech-stop" id="stop-active">Stop timer</button>
         <div class="tech-actions-sub">
-          <button class="btn secondary" id="submit-qc-active">Send to QC</button>
+          <button class="btn secondary" id="submit-qc-active">Ready for closeout</button>
           <button class="btn secondary" id="note-toggle">+ Note</button>
         </div>
       </div>
@@ -2666,7 +2666,7 @@ async function loadTech() {
       <div id="qc-submit-panel" class="tech-inline-panel" style="display:none;">
         <textarea class="input" id="qc-submit-notes" rows="3" placeholder="Describe work completed…"></textarea>
         <div class="tech-inline-actions">
-          <button class="btn" id="qc-submit-confirm" style="flex:1;">Send to QC</button>
+          <button class="btn" id="qc-submit-confirm" style="flex:1;">Ready for closeout</button>
           <button class="btn secondary" id="qc-submit-cancel">Cancel</button>
         </div>
       </div>
@@ -2849,9 +2849,9 @@ async function loadTech() {
       try {
         clearInterval(state.timerInterval);
         await api.submitQC(activeJobId, notes);
-        toast('Sent to QC');
+        toast('Marked ready for closeout');
         router();
-      } catch(e) { alert(e.message); qcSubmitConfirm.disabled = false; qcSubmitConfirm.textContent = 'Send to QC'; }
+      } catch(e) { alert(e.message); qcSubmitConfirm.disabled = false; qcSubmitConfirm.textContent = 'Ready for closeout'; }
     };
   }
   const qcSubmitCancel = document.getElementById('qc-submit-cancel');
@@ -2869,9 +2869,9 @@ async function loadTech() {
       btn.textContent = 'Submitting…';
       try {
         await api.submitQC(jobId, notes.trim());
-        toast('Sent to QC');
+        toast('Marked ready for closeout');
         router();
-      } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Send to QC'; }
+      } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Ready for closeout'; }
     };
   });
 
