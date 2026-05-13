@@ -2616,6 +2616,11 @@ async function loadTech() {
   ` : '';
   const notesInline = active ? techNoteBlocks(activeJob || active) : '';
 
+  const activeCrew = active && Array.isArray(active.active_crew) ? active.active_crew : [];
+  const activeCrewText = activeCrew.length > 1
+    ? `<div class="tech-hero-meta">${activeCrew.length} techs active · ${escapeHtml(activeCrew.map(t => t.is_current_user ? 'You' : (t.name || ('User ' + t.user_id))).join(' + '))}</div>`
+    : '';
+
   const afterHoursInline = active && active.after_shift_end ? `
     <div class="tech-hero-section is-blocker">
       <div class="tech-section-label">After hours</div>
@@ -2635,6 +2640,7 @@ async function loadTech() {
 
       <h2 class="tech-hero-title">${escapeHtml(jobLabel(activeJob || active))}</h2>
       <div class="tech-hero-meta">${escapeHtml(jobMeta(activeJob || active) || ('Job #' + active.job_id))}</div>
+      ${activeCrewText}
 
       <div class="tech-strip" role="group" aria-label="Time">
         <div class="tech-strip-cell tech-strip-cell-lead">

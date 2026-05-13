@@ -3018,6 +3018,24 @@ return self::get_job(['id' => $job_id]);
          WHERE job_id = %d AND approval_status != 'voided'",
         (int)$row['job_id']
       ));
+
+      $active_crew = $wpdb->get_results($wpdb->prepare(
+        "SELECT s.user_id, s.start_ts, COALESCE(u.display_name, u.user_login, CONCAT('User ', s.user_id)) AS name
+         FROM $seg s
+         LEFT JOIN {$wpdb->users} u ON u.ID = s.user_id
+         WHERE s.job_id = %d AND s.end_ts IS NULL AND s.state = 'active'
+         ORDER BY s.start_ts ASC",
+        (int)$row['job_id']
+      ), ARRAY_A) ?: [];
+
+      $row['active_crew'] = array_map(static function($crew_row) use ($user_id) {
+        return [
+          'user_id'         => (int)($crew_row['user_id'] ?? 0),
+          'name'            => sanitize_text_field((string)($crew_row['name'] ?? '')),
+          'start_ts'        => (string)($crew_row['start_ts'] ?? ''),
+          'is_current_user' => (int)($crew_row['user_id'] ?? 0) === (int)$user_id,
+        ];
+      }, $active_crew);
     }
 
     return ['active' => $row ?: null];
