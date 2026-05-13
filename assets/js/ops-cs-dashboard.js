@@ -27,6 +27,7 @@
     selectedRow: 0,
     activeTab: 'overview'
   };
+  var CS_TAB_STORAGE_KEY = 'slateOpsCsActiveTab';
 
   var pillLabel = {
     parts:   'Waiting on Parts',
@@ -244,7 +245,17 @@
         try { btn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {}
       }
       var tab = btn.dataset.tab;
+      if (!tab) return;
       state.activeTab = tab;
+      try {
+        window.localStorage.setItem(CS_TAB_STORAGE_KEY, tab);
+      } catch (_) {}
+      if (window.history && window.history.replaceState) {
+        var nextHash = '#' + tab;
+        if (window.location.hash !== nextHash) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search + nextHash);
+        }
+      }
       $$('.ops-tab-content').forEach(function (c) {
         c.hidden = c.dataset.tabContent !== tab;
       });
@@ -2766,6 +2777,10 @@
   };
   function applyHashRoute() {
     var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();
+    if (!raw) {
+      try { raw = (window.localStorage.getItem(CS_TAB_STORAGE_KEY) || '').toLowerCase().trim(); }
+      catch (_) { raw = ''; }
+    }
     if (!raw) return;
     var key = betaHashAliases[raw];
     if (!key) return;
