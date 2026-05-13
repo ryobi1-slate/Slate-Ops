@@ -2287,3 +2287,49 @@ body.slate-ops{ background: var(--p0-canvas); }
   .cs-job-badges { grid-column:2; grid-row:1/3; align-items:flex-start; }
   .cs-job-cols { display:none; }
 }
+
+/* Tech screen detail polish */
+.ops-page-tech .tech-hero-meta,
+.ops-page-tech .tech-next-meta,
+.ops-page-tech .tech-up-meta {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.ops-page-tech .tech-up-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.ops-page-tech .tech-parts-badge {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.ops-page-tech .tech-hero-section--compact {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) 1fr;
+  align-items: center;
+  column-gap: 12px;
+}
+
+@media (max-width:700px){
+  .ops-page-tech .tech-hero-title,
+  .ops-page-tech .tech-next-title,
+  .ops-page-tech .tech-up-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .ops-page-tech .tech-hero-section--compact {
+    display: block;
+  }
+}

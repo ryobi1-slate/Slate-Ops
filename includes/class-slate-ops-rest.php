@@ -1418,6 +1418,7 @@ $status = $req->get_param('status');
 $status_in = $req->get_param('status_in');
 $ready_only = (int)$req->get_param('ready_only');
 $helpable = (int)$req->get_param('helpable');
+$queue_visible = $req->get_param('queue_visible');
 
 $q = $req->get_param('q');
 $so_missing = (int)$req->get_param('so_missing');
@@ -1456,6 +1457,12 @@ if ($so_missing === 1) {
   $where .= " AND (so_number IS NULL OR so_number = '')";
 }
 
+if ($queue_visible !== null && $queue_visible !== '') {
+  $where .= self::truthy($queue_visible)
+    ? " AND queue_visible = 1"
+    : " AND queue_visible = 0";
+}
+
 // Help queue scope:
 // - force in-progress only
 // - require SO#
@@ -1467,6 +1474,12 @@ if ($helpable === 1) {
   $where .= " AND (parts_status IS NULL OR parts_status = '' OR (UPPER(parts_status) <> %s AND UPPER(parts_status) <> %s))";
   $params[] = 'HOLD';
   $params[] = 'NOT_READY';
+  $where .= " AND (status_detail IS NULL OR status_detail = '')";
+  $where .= " AND (block_reason IS NULL OR block_reason = '')";
+  $where .= " AND (block_note IS NULL OR block_note = '')";
+  $where .= " AND (hold_reason IS NULL OR hold_reason = '')";
+  $where .= " AND (hold_note IS NULL OR hold_note = '')";
+  $where .= " AND (delay_reason IS NULL OR delay_reason = '')";
 }
 
 if ((int)$req->get_param('assigned_me') === 1) {
@@ -1503,7 +1516,7 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
                scheduler_locked, hold_reason, hold_note, schedule_notes, scheduling_flag,
                scheduled_start, scheduled_finish, scheduled_week, requested_date, promised_date, target_ship_date,
                block_reason, block_note, cancel_reason, cancel_note,
-               scope_summary, sales_person, notes, queue_order, queue_priority,
+               scope_summary, sales_person, notes, queue_order, queue_visible, queue_priority, queue_note,
                clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
         FROM $t WHERE $where ORDER BY queue_priority ASC, updated_at DESC LIMIT $limit";
 
@@ -2399,6 +2412,17 @@ if (in_array($new_status, [Slate_Ops_Statuses::AWAITING_PICKUP, Slate_Ops_Status
   }
 }
 
+if (in_array($new_status, [Slate_Ops_Statuses::QC, Slate_Ops_Statuses::PENDING_QC], true)) {
+  $user_id = get_current_user_id();
+  $assigned_id = (int)($current_job['assigned_user_id'] ?? 0);
+  $can_submit_for_qc = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+    || current_user_can(Slate_Ops_Utils::CAP_ADMIN)
+    || ($assigned_id > 0 && $assigned_id === $user_id);
+  if (!$can_submit_for_qc) {
+    return new WP_Error('assigned_tech_required', 'Only the assigned tech can finish this job.', ['status' => 403]);
+  }
+}
+
 // Centralized transition guard — blocks all invalid status jumps.
 if (!Slate_Ops_Statuses::is_valid_transition($current_status, $new_status)) {
   return new WP_Error(
@@ -2594,6 +2618,14 @@ return self::get_job(['id' => $job_id]);
     }
 
     $user_id = get_current_user_id();
+    $assigned_id = (int)($job['assigned_user_id'] ?? 0);
+    $can_submit_for_qc = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+      || current_user_can(Slate_Ops_Utils::CAP_ADMIN)
+      || ($assigned_id > 0 && $assigned_id === $user_id);
+    if (!$can_submit_for_qc) {
+      return new WP_Error('assigned_tech_required', 'Only the assigned tech can finish this job.', ['status' => 403]);
+    }
+
     $now     = Slate_Ops_Utils::now_gmt();
     $t       = $wpdb->prefix . 'slate_ops_jobs';
     $qc      = $wpdb->prefix . 'slate_ops_qc_records';
@@ -2728,6 +2760,18 @@ return self::get_job(['id' => $job_id]);
       return new WP_Error('invalid_status', 'Job cannot be started in its current status', ['status' => 422]);
     }
 
+    $parts_status = strtoupper((string)($job['parts_status'] ?? ''));
+    if (in_array($parts_status, ['NOT_READY', 'HOLD'], true)) {
+      $msg = $parts_status === 'HOLD'
+        ? 'Cannot start job while parts are on hold.'
+        : 'Cannot start job while parts are not ready.';
+      return new WP_Error('parts_blocked', $msg, [
+        'status'       => 422,
+        'field'        => 'parts_status',
+        'parts_status' => $parts_status,
+      ]);
+    }
+
     // Duplicate-timer guard.
     $segments = $wpdb->prefix . 'slate_ops_time_segments';
     $open = $wpdb->get_row($wpdb->prepare("SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' ORDER BY start_ts DESC LIMIT 1", $user_id), ARRAY_A);
@@ -2795,6 +2839,8 @@ return self::get_job(['id' => $job_id]);
   public static function time_stop($req) {
     global $wpdb;
     $user_id = get_current_user_id();
+    $body = $req->get_json_params() ?: [];
+    $overtime_note = trim(sanitize_textarea_field((string)($body['overtime_note'] ?? $body['note'] ?? '')));
     $segments = $wpdb->prefix . 'slate_ops_time_segments';
     $open = $wpdb->get_row($wpdb->prepare("SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' ORDER BY start_ts DESC LIMIT 1", $user_id), ARRAY_A);
     if (!$open) {
@@ -2802,16 +2848,57 @@ return self::get_job(['id' => $job_id]);
     }
 
     $now = Slate_Ops_Utils::now_gmt();
-    // Phase 0: shift-end capping disabled. Record the actual stop time so
-    // outside-shift work is visible to supervisors during validation.
     $effective_stop = $now;
-    $wpdb->update($segments, [
+    $shift_breakdown = self::segment_shift_breakdown((string)$open['start_ts'], $effective_stop);
+    $overtime_seconds = (int)($shift_breakdown['overtime_seconds'] ?? 0);
+    $overtime_minutes = (int)ceil($overtime_seconds / 60);
+
+    if ($overtime_seconds > 0 && $overtime_note === '') {
+      return new WP_Error(
+        'overtime_note_required',
+        'Add an overtime note before stopping this timer.',
+        [
+          'status'           => 422,
+          'field'            => 'overtime_note',
+          'overtime_minutes' => $overtime_minutes,
+        ]
+      );
+    }
+
+    $update = [
       'end_ts'     => $effective_stop,
       'state'      => 'closed',
       'updated_at' => $now,
-    ], ['segment_id' => (int)$open['segment_id']]);
+    ];
+
+    if ($overtime_seconds > 0) {
+      $existing_note = trim((string)($open['note'] ?? ''));
+      $update['note'] = trim($existing_note . ($existing_note ? "\n" : '') . 'Overtime: ' . $overtime_note);
+    }
+
+    $wpdb->update($segments, $update, ['segment_id' => (int)$open['segment_id']]);
 
     self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer stopped');
+    if ($overtime_seconds > 0) {
+      self::audit(
+        'segment',
+        (int)$open['segment_id'],
+        'note',
+        null,
+        null,
+        null,
+        sprintf('Overtime logged: %d min. %s', $overtime_minutes, $overtime_note)
+      );
+      self::audit(
+        'job',
+        (int)$open['job_id'],
+        'note',
+        null,
+        null,
+        null,
+        sprintf('Overtime logged by %s: %d min. %s', Slate_Ops_Utils::user_display($user_id), $overtime_minutes, $overtime_note)
+      );
+    }
 
     // Elapsed seconds for the just-closed segment — computed in PHP, no extra query.
     $elapsed_seconds = max(0, strtotime($effective_stop) - strtotime($open['start_ts']));
@@ -2833,6 +2920,9 @@ return self::get_job(['id' => $job_id]);
       'job_id'                 => (int)$open['job_id'],
       'stopped_at'             => $effective_stop,
       'elapsed_seconds'        => $elapsed_seconds,
+      'regular_seconds'        => (int)($shift_breakdown['regular_seconds'] ?? 0),
+      'overtime_seconds'       => $overtime_seconds,
+      'overtime_minutes'       => $overtime_minutes,
       'total_approved_minutes' => $total_approved_minutes,
     ];
   }
@@ -2886,7 +2976,8 @@ return self::get_job(['id' => $job_id]);
     $user_id = get_current_user_id();
     $row = $wpdb->get_row($wpdb->prepare(
       "SELECT s.*, j.so_number, j.customer_name, j.vin, j.status AS job_status,
-              j.estimated_minutes, j.work_center, j.dealer_name
+              j.estimated_minutes, j.work_center, j.dealer_name, j.assigned_user_id, j.parts_status,
+              j.queue_note, j.schedule_notes
        FROM $seg s
        JOIN $jt j ON j.job_id = s.job_id
        WHERE s.user_id = %d AND s.end_ts IS NULL AND s.state = 'active'
@@ -2895,9 +2986,12 @@ return self::get_job(['id' => $job_id]);
     ), ARRAY_A);
 
     if ($row) {
-      // Phase 0: shift-end auto-stop disabled. Active timers remain active
-      // past the configured shift end so techs can finish work during
-      // validation. Outside-shift starts are logged in time_start().
+      $shift_breakdown = self::segment_shift_breakdown((string)$row['start_ts'], Slate_Ops_Utils::now_gmt());
+      $row['regular_seconds']  = (int)($shift_breakdown['regular_seconds'] ?? 0);
+      $row['overtime_seconds'] = (int)($shift_breakdown['overtime_seconds'] ?? 0);
+      $row['overtime_minutes'] = (int)ceil($row['overtime_seconds'] / 60);
+      $row['after_shift_end']  = !empty($shift_breakdown['after_shift_end']);
+      $row['shift_end_ts']     = (string)($shift_breakdown['shift_end_ts'] ?? '');
 
       // Closed approved segments this user has previously logged on this job.
       // Sum seconds first, then convert — avoids per-segment truncation from TIMESTAMPDIFF(MINUTE).
@@ -3232,6 +3326,47 @@ return self::get_job(['id' => $job_id]);
       'after_shift_end' => $now_utc > $shift_end_utc,
       'shift_start_ts'  => $shift_start_utc->format('Y-m-d H:i:s'),
       'shift_end_ts'    => $shift_end_utc->format('Y-m-d H:i:s'),
+    ];
+  }
+
+  private static function segment_shift_breakdown($start_gmt, $end_gmt) {
+    $start_ts = strtotime((string)$start_gmt);
+    $end_ts   = strtotime((string)$end_gmt);
+    if (!$start_ts || !$end_ts || $end_ts <= $start_ts) {
+      return [
+        'regular_seconds'  => 0,
+        'overtime_seconds' => 0,
+        'after_shift_end'  => false,
+        'shift_start_ts'   => '',
+        'shift_end_ts'     => '',
+      ];
+    }
+
+    $shift = self::get_shift_window_state(gmdate('Y-m-d H:i:s', $start_ts));
+    $shift_start_ts = !empty($shift['shift_start_ts']) ? strtotime($shift['shift_start_ts']) : false;
+    $shift_end_ts   = !empty($shift['shift_end_ts']) ? strtotime($shift['shift_end_ts']) : false;
+
+    if (!$shift_start_ts || !$shift_end_ts || $shift_end_ts <= $shift_start_ts) {
+      return [
+        'regular_seconds'  => max(0, $end_ts - $start_ts),
+        'overtime_seconds' => 0,
+        'after_shift_end'  => false,
+        'shift_start_ts'   => '',
+        'shift_end_ts'     => '',
+      ];
+    }
+
+    $regular_start = max($start_ts, $shift_start_ts);
+    $regular_end   = min($end_ts, $shift_end_ts);
+    $regular       = max(0, $regular_end - $regular_start);
+    $total         = max(0, $end_ts - $start_ts);
+
+    return [
+      'regular_seconds'  => $regular,
+      'overtime_seconds' => max(0, $total - $regular),
+      'after_shift_end'  => $end_ts > $shift_end_ts,
+      'shift_start_ts'   => gmdate('Y-m-d H:i:s', $shift_start_ts),
+      'shift_end_ts'     => gmdate('Y-m-d H:i:s', $shift_end_ts),
     ];
   }
 
@@ -4139,6 +4274,11 @@ self::maybe_push_dealer_portal_status($job);
     }
 
     $segments = array_map(function ($r) {
+      $shift_breakdown = self::segment_shift_breakdown(
+        (string)$r['start_ts'],
+        (string)($r['end_ts'] ?: Slate_Ops_Utils::now_gmt())
+      );
+      $overtime_seconds = (int)($shift_breakdown['overtime_seconds'] ?? 0);
       return [
         'segment_id'       => (int) $r['segment_id'],
         'job_id'           => (int) $r['job_id'],
@@ -4150,11 +4290,13 @@ self::maybe_push_dealer_portal_status($job);
         'start_ts'         => $r['start_ts'],
         'end_ts'           => $r['end_ts'],
         'duration_minutes' => $r['duration_minutes'] !== null ? (int) $r['duration_minutes'] : null,
+        'regular_minutes'  => (int)ceil(((int)($shift_breakdown['regular_seconds'] ?? 0)) / 60),
+        'overtime_minutes' => (int)ceil($overtime_seconds / 60),
         'state'            => $r['state'],
         'reason'           => $r['reason'],
         'note_preview'     => $r['note_preview'],
         'approval_status'  => $r['approval_status'],
-        'outside_shift'    => (bool) $r['outside_shift'],
+        'outside_shift'    => (bool) $r['outside_shift'] || $overtime_seconds > 0,
       ];
     }, $rows);
 

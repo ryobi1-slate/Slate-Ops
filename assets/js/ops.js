@@ -50,7 +50,7 @@
     schedule(id, payload){ return this.req('/jobs/' + id + '/schedule', {method:'POST', body: JSON.stringify(payload)}); },
     setStatus(id, status, note=''){ return this.req('/jobs/' + id + '/status', {method:'POST', body: JSON.stringify({status, note})}); },
     timeStart(job_id, reason, note){ return this.req('/time/start', {method:'POST', body: JSON.stringify({job_id, reason, note})}); },
-    timeStop(){ return this.req('/time/stop', {method:'POST'}); },
+    timeStop(payload={}){ return this.req('/time/stop', {method:'POST', body: JSON.stringify(payload)}); },
     timeActive(){ return this.req('/time/active'); },
     correction(payload){ return this.req('/time/correction', {method:'POST', body: JSON.stringify(payload)}); },
     supervisorQueues(){ return this.req('/supervisor/queues'); },
@@ -131,6 +131,17 @@
   function fmtStatus(s){
     if(!s) return '';
     return escapeHtml(STATUS_LABELS[s.toUpperCase()] || s.replaceAll('_',' '));
+  }
+
+  function fmtClock(ts) {
+    if (!ts) return '';
+    try {
+      const d = new Date(String(ts).replace(' ', 'T') + 'Z');
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch(e) {
+      return '';
+    }
   }
 
   function badgeClass(status){
@@ -364,7 +375,7 @@
           ${job.notes ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e0e0e0);"><div class="label" style="margin-bottom:4px;">Notes</div><div style="white-space:pre-wrap;">${escapeHtml(job.notes)}</div></div>` : ''}
           <div class="row" style="margin-top:16px;flex-wrap:wrap;gap:8px;">
             ${isCS ? `<button class="btn secondary" id="so-btn">Set SO#</button>` : ``}
-            ${job.status === 'IN_PROGRESS' ? `<button class="btn" id="submit-qc-btn">Work Complete</button>` : ''}
+            ${job.status === 'IN_PROGRESS' ? `<button class="btn" id="submit-qc-btn">Send to QC</button>` : ''}
             ${(job.status === 'QC' || job.status === 'PENDING_QC') && isSupervisor ? `<button class="btn" id="qc-pass-btn">QC Pass</button><button class="btn secondary" id="qc-fail-btn">QC Fail</button>` : ''}
             ${canEdit ? `<button class="btn secondary" id="edit-btn">Edit Job</button>` : ``}
           </div>
@@ -480,8 +491,8 @@
       const notes = prompt('Describe work completed (required):');
       if(!notes || !notes.trim()) return;
       submitQcBtn.disabled = true; submitQcBtn.textContent = 'Submitting…';
-      try{ await api.submitQC(job.job_id, notes.trim()); toast('Marked Work Complete'); router(); }
-      catch(e){ alert(e.message); submitQcBtn.disabled = false; submitQcBtn.textContent = 'Work Complete'; }
+      try{ await api.submitQC(job.job_id, notes.trim()); toast('Sent to QC'); router(); }
+      catch(e){ alert(e.message); submitQcBtn.disabled = false; submitQcBtn.textContent = 'Send to QC'; }
     };
 
     const qcPassBtn = document.getElementById('qc-pass-btn');
@@ -2438,12 +2449,17 @@ async function loadSchedule(){
 async function loadTech() {
   const [activeResp, myJobsResp] = await Promise.all([
     api.timeActive(),
-    // Phase 0: Tech queue shows SCHEDULED, IN_PROGRESS, BLOCKED, QC. READY_FOR_BUILD stays in CS queue only.
-    api.jobs('?assigned_me=1&limit=100&status_in=SCHEDULED,IN_PROGRESS,BLOCKED,QC'),
+    // Tech queue mirrors CS-visible assigned work. READY_FOR_BUILD remains CS-owned
+    // until CS makes it visible and assigns it to this tech.
+    api.jobs('?assigned_me=1&queue_visible=1&limit=100&status_in=READY_FOR_BUILD,SCHEDULED,IN_PROGRESS,BLOCKED,QC'),
   ]);
   const active  = activeResp.active;
   const allMyJobs = myJobsResp.jobs || [];
-  const myJobs  = allMyJobs.filter(j => ['SCHEDULED','IN_PROGRESS','BLOCKED','QC'].includes((j.status||'').toUpperCase()));
+  const techQueueStatuses = ['READY_FOR_BUILD','SCHEDULED','IN_PROGRESS','BLOCKED','QC'];
+  const myJobs  = allMyJobs.filter(j => (
+    techQueueStatuses.includes((j.status||'').toUpperCase()) &&
+    j.queue_visible !== false
+  ));
 
   const activeJobId = active ? parseInt(active.job_id, 10) : 0;
   // Full job record for the active segment (so we can read blocker/notes fields)
@@ -2455,7 +2471,12 @@ async function loadTech() {
   const queue = myJobs
     .filter(j => j.job_id !== activeJobId)
     .sort((a, b) => {
-      const pri = s => ({ IN_PROGRESS: 0, SCHEDULED: 1, BLOCKED: 2, QC: 3 })[(s||'').toUpperCase()] ?? 9;
+      const ao = parseInt(a.queue_order || 0, 10);
+      const bo = parseInt(b.queue_order || 0, 10);
+      if (ao && bo && ao !== bo) return ao - bo;
+      if (ao && !bo) return -1;
+      if (!ao && bo) return 1;
+      const pri = s => ({ IN_PROGRESS: 0, SCHEDULED: 1, READY_FOR_BUILD: 2, BLOCKED: 3, QC: 4 })[(s||'').toUpperCase()] ?? 9;
       const dp = pri(a.status) - pri(b.status);
       if (dp !== 0) return dp;
       const as = a.scheduled_start || '9999';
@@ -2486,6 +2507,16 @@ async function loadTech() {
     if ((job.status || '') === 'ON_HOLD') return true;
     return !!(job.hold_reason || job.delay_reason || job.status_detail);
   }
+  function partsBlocked(job) {
+    const ps = String((job && job.parts_status) || '').toUpperCase();
+    return ps === 'NOT_READY' || ps === 'HOLD';
+  }
+  function partsBlockMessage(job) {
+    const ps = String((job && job.parts_status) || '').toUpperCase();
+    return ps === 'HOLD'
+      ? 'Parts are on hold'
+      : 'Parts are not ready';
+  }
 
   function jobLabel(job) {
     if (!job) return '';
@@ -2501,6 +2532,33 @@ async function loadTech() {
     if (job.vin)           bits.push('VIN …' + job.vin.slice(-6));
     return bits.join(' · ');
   }
+  function techPartsBadge(job) {
+    if (!job || !job.parts_status) return '';
+    return `<span class="badge-parts tech-parts-badge ${partsBadgeClass(job.parts_status)}">${escapeHtml(partsLabel(job.parts_status))}</span>`;
+  }
+  function techNoteBlocks(job) {
+    if (!job) return '';
+    const blocks = [];
+    const queueNote = (job.queue_note || '').trim();
+    const scheduleNote = (job.schedule_notes || '').trim();
+    if (queueNote) {
+      blocks.push(`
+        <div class="tech-hero-section">
+          <div class="tech-section-label">Tech note</div>
+          <div class="tech-section-body is-prose">${escapeHtml(queueNote)}</div>
+        </div>
+      `);
+    }
+    if (scheduleNote && scheduleNote !== queueNote) {
+      blocks.push(`
+        <div class="tech-hero-section">
+          <div class="tech-section-label">Schedule notes</div>
+          <div class="tech-section-body is-prose">${escapeHtml(scheduleNote)}</div>
+        </div>
+      `);
+    }
+    return blocks.join('');
+  }
   function estHoursStr(job) {
     const m = parseInt(job && job.estimated_minutes || 0, 10);
     if (!m) return '';
@@ -2512,17 +2570,19 @@ async function loadTech() {
   function upNextCard(job) {
     const est = estHoursStr(job);
     const logged = job.actual_minutes > 0 ? fmtMinutes(job.actual_minutes) + ' logged' : '';
-    const blocked = hasBlocker(job);
+    const blocked = hasBlocker(job) || partsBlocked(job);
     const jst = (job.status||'').toUpperCase();
     const statusLabel = blocked ? 'Blocked'
       : (jst === 'IN_PROGRESS' ? 'In progress'
-      : (jst === 'QC' || jst === 'PENDING_QC' ? 'Work Complete - Awaiting CS Closeout'
+      : (jst === 'QC' || jst === 'PENDING_QC' ? 'Sent to QC - Awaiting CS Closeout'
       : (jst === 'SCHEDULED' ? 'Scheduled' : 'Ready')));
-    const primary = jst === 'IN_PROGRESS'
-      ? `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Resume Work</button>`
-      : (jst === 'QC' || jst === 'PENDING_QC'
-          ? `<button class="btn secondary btn-xl tech-card-cta" data-open-job="${job.job_id}">Open</button>`
-          : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start Work</button>`);
+    const primary = partsBlocked(job)
+      ? `<button class="btn secondary btn-xl tech-card-cta" disabled>${escapeHtml(partsBlockMessage(job))}</button>`
+      : (jst === 'IN_PROGRESS'
+          ? `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Resume Work</button>`
+          : (jst === 'QC' || jst === 'PENDING_QC'
+              ? `<button class="btn secondary btn-xl tech-card-cta" data-open-job="${job.job_id}">Open</button>`
+              : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start Work</button>`));
     const subParts = [est ? 'Est ' + est : '', logged, job.so_number ? escapeHtml(job.so_number) : ''].filter(Boolean);
     const subLine = subParts.join(' · ');
     return `
@@ -2533,6 +2593,7 @@ async function loadTech() {
             <span class="tech-up-status${blocked ? ' is-blocked' : ''}">${statusLabel}</span>
           </div>
           <div class="tech-up-meta">${escapeHtml(jobMeta(job) || ('#' + job.job_id))}</div>
+          <div class="tech-up-tags">${techPartsBadge(job)}</div>
           ${subLine ? `<div class="tech-up-sub">${subLine}</div>` : ''}
         </div>
         <div class="tech-up-action">${primary}</div>
@@ -2540,32 +2601,28 @@ async function loadTech() {
     `;
   }
 
-  view(`
-    <div class="tech-page${isPhone ? ' phone-mode' : ''}">
-
-    <div class="card tech-page-header">
-      <div class="tech-page-title-wrap">
-        <div class="dash-page-label">Tech</div>
-        <div class="muted">Track active labor, update job progress, and hand off to QC.</div>
-      </div>
-      <div class="tech-page-kpis">
-        ${kpi('Assigned', allMyJobs.length)}
-        ${kpi('In Queue', myJobs.length)}
-        ${kpi('Active', active ? 1 : 0)}
-      </div>
-    </div>
-
-  const blockerInline = active && hasBlocker(activeJob) ? `
+  const blockerInline = active && (hasBlocker(activeJob) || partsBlocked(activeJob || active)) ? `
     <div class="tech-hero-section is-blocker">
       <div class="tech-section-label">Blocker</div>
-      <div class="tech-section-body">${escapeHtml(blockerText(activeJob) || 'Job is on hold.')}</div>
+      <div class="tech-section-body">${escapeHtml(blockerText(activeJob) || partsBlockMessage(activeJob || active) || 'Job is on hold.')}</div>
     </div>
   ` : '';
 
-  const notesInline = active && activeJob && (activeJob.schedule_notes || '').trim() ? `
-    <div class="tech-hero-section">
-      <div class="tech-section-label">Notes</div>
-      <div class="tech-section-body is-prose">${escapeHtml(activeJob.schedule_notes)}</div>
+  const activePartsInline = active ? `
+    <div class="tech-hero-section tech-hero-section--compact">
+      <div class="tech-section-label">Parts</div>
+      <div class="tech-section-body">${techPartsBadge(activeJob || active) || '—'}</div>
+    </div>
+  ` : '';
+  const notesInline = active ? techNoteBlocks(activeJob || active) : '';
+
+  const afterHoursInline = active && active.after_shift_end ? `
+    <div class="tech-hero-section is-blocker">
+      <div class="tech-section-label">After hours</div>
+      <div class="tech-section-body">
+        This timer has passed the scheduled shift end${fmtClock(active.shift_end_ts) ? ' (' + escapeHtml(fmtClock(active.shift_end_ts)) + ')' : ''}.
+        An overtime note is required when stopping.
+      </div>
     </div>
   ` : '';
 
@@ -2599,9 +2656,9 @@ async function loadTech() {
       </div>
 
       <div class="tech-actions">
-        <button class="btn danger tech-stop" id="stop-active">Stop Work &amp; Log Labor</button>
+        <button class="btn danger tech-stop" id="stop-active">Stop timer</button>
         <div class="tech-actions-sub">
-          <button class="btn secondary" id="submit-qc-active">Work Complete</button>
+          <button class="btn secondary" id="submit-qc-active">Send to QC</button>
           <button class="btn secondary" id="note-toggle">+ Note</button>
         </div>
       </div>
@@ -2609,7 +2666,7 @@ async function loadTech() {
       <div id="qc-submit-panel" class="tech-inline-panel" style="display:none;">
         <textarea class="input" id="qc-submit-notes" rows="3" placeholder="Describe work completed…"></textarea>
         <div class="tech-inline-actions">
-          <button class="btn" id="qc-submit-confirm" style="flex:1;">Confirm Work Complete</button>
+          <button class="btn" id="qc-submit-confirm" style="flex:1;">Send to QC</button>
           <button class="btn secondary" id="qc-submit-cancel">Cancel</button>
         </div>
       </div>
@@ -2622,7 +2679,9 @@ async function loadTech() {
       </div>
 
       ${blockerInline}
+      ${activePartsInline}
       ${notesInline}
+      ${afterHoursInline}
     </section>
   ` : '';
 
@@ -2640,12 +2699,13 @@ async function loadTech() {
           <div class="tech-section-label">Next up</div>
           <div class="tech-next-title">${escapeHtml(jobLabel(nextJob))}</div>
           <div class="tech-next-meta">${escapeHtml(jobMeta(nextJob) || ('Job #' + nextJob.job_id))}</div>
+          <div class="tech-up-tags">${techPartsBadge(nextJob)}</div>
           <div class="tech-next-sub">
             ${nextJob.so_number ? escapeHtml(nextJob.so_number) : ''}
             ${estHoursStr(nextJob) ? `${nextJob.so_number ? ' · ' : ''}Est ${estHoursStr(nextJob)}` : ''}
           </div>
-          <button class="btn tech-next-start" data-start-job="${nextJob.job_id}">
-            <span class="tech-play-tri" aria-hidden="true"></span> Start this job
+          <button class="btn tech-next-start" ${partsBlocked(nextJob) ? 'disabled' : `data-start-job="${nextJob.job_id}"`}>
+            <span class="tech-play-tri" aria-hidden="true"></span> ${partsBlocked(nextJob) ? escapeHtml(partsBlockMessage(nextJob)) : 'Start this job'}
           </button>
         </div>
       </section>
@@ -2725,17 +2785,48 @@ async function loadTech() {
       stopBtn.disabled = true;
       stopBtn.textContent = 'Stopping…';
       try {
-        const result = await api.timeStop();
+        const overtimeMinutes = active && active.overtime_minutes ? parseInt(active.overtime_minutes, 10) : 0;
+        let overtimeNote = '';
+        if (overtimeMinutes > 0) {
+          overtimeNote = window.prompt('Add an overtime note for ' + fmtMinutes(overtimeMinutes) + ' after shift end:') || '';
+          overtimeNote = overtimeNote.trim();
+          if (!overtimeNote) {
+            stopBtn.disabled = false;
+            stopBtn.textContent = 'Stop timer';
+            toast('Overtime note required', true);
+            return;
+          }
+        }
+        let result;
+        try {
+          result = await api.timeStop(overtimeNote ? { overtime_note: overtimeNote } : {});
+        } catch (err) {
+          if (err && err.data && err.data.code === 'overtime_note_required') {
+            const mins = err.data.data && err.data.data.overtime_minutes ? parseInt(err.data.data.overtime_minutes, 10) : 0;
+            overtimeNote = window.prompt('Add an overtime note for ' + (mins ? fmtMinutes(mins) : 'after-hours work') + ':') || '';
+            overtimeNote = overtimeNote.trim();
+            if (!overtimeNote) {
+              stopBtn.disabled = false;
+              stopBtn.textContent = 'Stop timer';
+              toast('Overtime note required', true);
+              return;
+            }
+            result = await api.timeStop({ overtime_note: overtimeNote });
+          } else {
+            throw err;
+          }
+        }
         clearInterval(state.timerInterval);
         if (result && result.elapsed_seconds > 0) {
           const sesStr = fmtMinutes(Math.round(result.elapsed_seconds / 60));
           const totStr = fmtMinutes(result.total_approved_minutes);
-          toast(`${sesStr} saved — ${totStr} total logged on this job`);
+          const otStr = result.overtime_minutes > 0 ? ` · ${fmtMinutes(result.overtime_minutes)} overtime` : '';
+          toast(`${sesStr} saved${otStr} — ${totStr} total logged on this job`);
         } else {
           toast('Work stopped and logged');
         }
         router();
-      } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop Work & Log Labor'; }
+      } catch(e) { alert(e.message); stopBtn.disabled = false; stopBtn.textContent = 'Stop timer'; }
     };
   }
 
@@ -2758,9 +2849,9 @@ async function loadTech() {
       try {
         clearInterval(state.timerInterval);
         await api.submitQC(activeJobId, notes);
-        toast('Marked Work Complete');
+        toast('Sent to QC');
         router();
-      } catch(e) { alert(e.message); qcSubmitConfirm.disabled = false; qcSubmitConfirm.textContent = 'Confirm Work Complete'; }
+      } catch(e) { alert(e.message); qcSubmitConfirm.disabled = false; qcSubmitConfirm.textContent = 'Send to QC'; }
     };
   }
   const qcSubmitCancel = document.getElementById('qc-submit-cancel');
@@ -2778,9 +2869,9 @@ async function loadTech() {
       btn.textContent = 'Submitting…';
       try {
         await api.submitQC(jobId, notes.trim());
-        toast('Marked Work Complete');
+        toast('Sent to QC');
         router();
-      } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Work Complete'; }
+      } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = 'Send to QC'; }
     };
   });
 

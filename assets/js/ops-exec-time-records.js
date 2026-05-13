@@ -41,6 +41,7 @@
     '.sotr-badge--approved{background:var(--slate-redwood-wash,#e4eee9);color:var(--slate-redwood,#0f3a2a)}',
     '.sotr-badge--pending{background:var(--slate-arches-wash,#fdf2df);color:var(--slate-arches-ink,#b07212)}',
     '.sotr-badge--voided{background:var(--slate-flag-wash,#f8e5e5);color:var(--slate-flag,#b22222)}',
+    '.sotr-badge--overtime{background:var(--slate-flag-wash,#f8e5e5);color:var(--slate-flag,#b22222)}',
     '.sotr-loading,.sotr-empty,.sotr-error{padding:2rem;text-align:center;font-size:.85rem;color:var(--slate-ink-muted,#5a5e5c)}',
     '.sotr-error{color:var(--slate-flag,#b22222)}',
     '.sotr-badge--outside{background:var(--slate-arches-wash,#fdf2df);color:var(--slate-arches-ink,#b07212)}',
@@ -78,11 +79,14 @@
   // ── Render ─────────────────────────────────────────────────────────────────
   function renderRows(segments) {
     if (!segments.length) {
-      return '<tr><td colspan="12" class="sotr-empty">No time segments found for these filters.</td></tr>';
+      return '<tr><td colspan="13" class="sotr-empty">No time segments found for these filters.</td></tr>';
     }
     return segments.map(function (s) {
       var shiftCell = s.outside_shift
         ? '<span class="sotr-badge sotr-badge--outside">Outside</span>'
+        : '—';
+      var overtimeCell = s.overtime_minutes > 0
+        ? '<span class="sotr-badge sotr-badge--overtime">' + esc(s.overtime_minutes) + 'm</span>'
         : '—';
       return '<tr>'
         + '<td class="sotr-mono">' + esc(s.segment_id) + '</td>'
@@ -92,6 +96,7 @@
         + '<td class="sotr-ts">' + fmtTs(s.start_ts) + '</td>'
         + '<td class="sotr-ts">' + (s.end_ts ? fmtTs(s.end_ts) : '<span class="sotr-badge sotr-badge--active">open</span>') + '</td>'
         + '<td class="sotr-num">' + (s.duration_minutes != null ? s.duration_minutes : '—') + '</td>'
+        + '<td class="sotr-num">' + overtimeCell + '</td>'
         + '<td><span class="' + badgeState(s.state) + '">' + esc(s.state || '—') + '</span></td>'
         + '<td>' + esc(s.reason || '—') + '</td>'
         + '<td>' + (s.note_preview ? esc(s.note_preview) : '—') + '</td>'
@@ -103,7 +108,7 @@
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   function load(tbody, filters) {
-    tbody.innerHTML = '<tr><td colspan="12" class="sotr-loading">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="sotr-loading">Loading…</td></tr>';
 
     var base   = settings.api.root.replace(/\/$/, '') + '/executive/time-segments';
     var params = [];
@@ -121,11 +126,11 @@
         if (data && Array.isArray(data.segments)) {
           tbody.innerHTML = renderRows(data.segments);
         } else {
-          tbody.innerHTML = '<tr><td colspan="12" class="sotr-error">Unexpected response from server.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="13" class="sotr-error">Unexpected response from server.</td></tr>';
         }
       })
       .catch(function (err) {
-        tbody.innerHTML = '<tr><td colspan="12" class="sotr-error">Error: ' + esc(String(err)) + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="sotr-error">Error: ' + esc(String(err)) + '</td></tr>';
       });
   }
 
@@ -162,7 +167,7 @@
       +   '<table class="sotr-table">'
       +     '<thead><tr>'
       +       '<th>Seg</th><th>Job / SO#</th><th>Customer</th><th>Tech</th>'
-      +       '<th>Start</th><th>End</th><th>Min</th><th>State</th>'
+      +       '<th>Start</th><th>End</th><th>Min</th><th>OT</th><th>State</th>'
       +       '<th>Reason</th><th>Note</th><th>Approval</th><th>Shift</th>'
       +     '</tr></thead>'
       +     '<tbody id="sotr-tbody"></tbody>'
