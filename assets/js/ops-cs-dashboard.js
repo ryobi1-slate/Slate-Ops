@@ -329,7 +329,8 @@
     drag:      null,      // { jobId, groupKey } while a drag is active
     jobDetails:        {},  // id → full /jobs/{id} response (cached)
     jobDetailsLoading: {},  // id → in-flight Promise
-    jobDetailsFailed:  {}   // id → last detail fetch failed
+    jobDetailsFailed:  {},  // id → last detail fetch failed
+    rowValidation:     {}   // id → inline queue validation message
   };
 
   // Fields persisted via PATCH /jobs/{id} (Phase 4). The remaining keys
@@ -842,6 +843,8 @@
         var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
         var blockedSeverity = betaBlockedSeverity(j);
         var sel        = (betaState.selected === j.id);
+        var validation = betaState.rowValidation[j.id] || null;
+        var dueValidation = validation && validation.dueRequired;
         var qTitle     = (!j.assigned_user_id && j.queue_order == null)
           ? 'Assign a tech before queue order affects the Tech page.'
           : 'Queue number';
@@ -854,6 +857,7 @@
         if (blockedTop)       rowCls += ' is-warn';
         if (blockedSeverity)  rowCls += ' is-blocked-' + blockedSeverity;
         if (j._reassigned)    rowCls += ' is-reassigned';
+        if (validation)        rowCls += ' is-ready-validation';
         if (j.status === 'SCHEDULED' && !j.assigned_user_id) rowCls += ' is-missing-tech';
 
         var noteText = betaFmtNote(j.queue_note);
@@ -886,6 +890,12 @@
                 +     'Reassigned to ' + escapeHtml(j.assigned_tech || 'Unassigned')
                 + '</div>'
                 : '')
+          +     (validation
+                ? '<div class="cs-beta-row__validation" role="alert">'
+                +   '<span class="material-symbols-outlined" aria-hidden="true">event_busy</span>'
+                +   escapeHtml(validation.message || 'Add a due date before moving to Ready to Build.')
+                + '</div>'
+                : '')
           +   '</div>'
           +   '<div class="cs-beta-row__status">' + betaRowStatusControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__parts">' + betaRowPartsControlHtml(j) + '</div>'
@@ -894,7 +904,9 @@
           +       betaTechOptions(j.assigned_user_id)
           +     '</select>'
           +   '</div>'
-          +   '<div class="cs-beta-row__due cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</div>'
+          +   '<div class="cs-beta-row__due cs-beta-mono' + (dueValidation ? ' is-required' : '') + '">'
+          +     (dueValidation ? '<span class="cs-beta-row__due-required">Due date required</span>' : escapeHtml(fmtDate(j.due_date)))
+          +   '</div>'
           +   '<div class="cs-beta-row__note">'
           +     (noteIcon ? '<span class="material-symbols-outlined cs-beta-row__noteicon" aria-hidden="true">' + noteIcon + '</span>' : '<span class="cs-beta-row__noteicon-spacer" aria-hidden="true"></span>')
           +     '<span class="cs-beta-row__notetext">' + (noteText ? escapeHtml(noteText) : '<span class="cs-beta-row__notetext--empty">—</span>') + '</span>'
@@ -1476,6 +1488,7 @@
     // Field helpers — value() reads effective value, cls() flags edited.
     function fv(field) { return escapeHtml(betaFieldValue(id, field)); }
     function ec(field) { return betaIsEdited(id, field) ? ' is-edited' : ''; }
+    function vc(field) { return field === 'requested_date' && betaState.rowValidation[id] && betaState.rowValidation[id].dueRequired ? ' is-required' : ''; }
     function readOnly(value) {
       return '<div class="cs-beta-detail-readonly">' + (value == null || value === '' ? '—' : escapeHtml(String(value))) + '</div>';
     }
@@ -1569,8 +1582,9 @@
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Due date</span>'
       +       (det
-                ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
+                ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + vc('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
                 : readOnly((det && det.requested_date) || j.requested_date || j.due_date))
+      +       (betaState.rowValidation[id] && betaState.rowValidation[id].dueRequired ? '<span class="cs-beta-field__error">Add a due date before moving to Ready to Build.</span>' : '')
       +     '</label>'
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Estimated Hours</span>'
@@ -1695,6 +1709,29 @@
     return missing;
   }
 
+  function betaReadyForBuildValidationMessage(missing) {
+    missing = missing || [];
+    if (missing.indexOf('due date') >= 0) {
+      return 'Add a due date before moving to Ready to Build.';
+    }
+    return 'Ready to Build needs ' + missing.join(', ') + '.';
+  }
+
+  function betaWarnReadyForBuildBlocked(id, missing, control) {
+    if (!id) return;
+    betaState.rowValidation[id] = {
+      message: betaReadyForBuildValidationMessage(missing),
+      dueRequired: (missing || []).indexOf('due date') >= 0
+    };
+    if (control) {
+      control.classList.add('is-invalid');
+      control.value = betaStatusKey((betaJobById(id) || {}).status || 'INTAKE');
+    }
+    showToast(betaState.rowValidation[id].message);
+    renderBeta();
+    if (betaState.selected === id) renderBetaDetail();
+  }
+
   function betaRowStatusControlHtml(j) {
     var status = betaStatusKey(j.status);
     var editable = [
@@ -1746,7 +1783,7 @@
       addOption(
         'READY_FOR_BUILD',
         'Ready to Build',
-        status !== 'READY_FOR_BUILD' && readyDeps.length > 0
+        false
       );
       if (readyDeps.length) {
         controlTitle = 'Ready to Build needs ' + readyDeps.join(', ');
@@ -1761,7 +1798,7 @@
       hint = 'Close only after pickup or delivery handoff is complete.';
     } else if (status === 'BLOCKED') {
       addOption('BLOCKED', label || 'Blocked', false);
-      addOption('READY_FOR_BUILD', 'Unblock - Ready to Build', readyDeps.length > 0);
+      addOption('READY_FOR_BUILD', 'Unblock - Ready to Build', false);
       if (readyDeps.length) {
         controlTitle = 'Ready to Build needs ' + readyDeps.join(', ');
       }
@@ -2146,7 +2183,15 @@
       var idForStatus = rowJobId || betaState.selected || 0;
       var currentJob = betaJobById(idForStatus);
       if (!nextStatus || !currentJob || nextStatus === betaStatusKey(currentJob.status || '')) return;
+      if (nextStatus === 'READY_FOR_BUILD') {
+        var missingReady = betaReadyForBuildMissing(idForStatus, betaEffectiveJob(currentJob));
+        if (missingReady.length) {
+          betaWarnReadyForBuildBlocked(idForStatus, missingReady, t);
+          return;
+        }
+      }
       if (rowJobId) {
+        delete betaState.rowValidation[rowJobId];
         recordBetaEdit(rowJobId, 'status', nextStatus);
         renderBeta();
         showToast('Status staged — Save Changes to commit');
@@ -2174,6 +2219,7 @@
     // Normalise empty-string job-text fields to '' for clean comparison
     // against the cached snapshot value.
     if (typeof value === 'string') value = value.trim() === '' ? '' : value;
+    if (field === 'requested_date') delete betaState.rowValidation[id];
     recordBetaEdit(id, field, value);
     if (betaState.edits[id]) t.classList.add('is-edited');
     else t.classList.remove('is-edited');

@@ -987,6 +987,13 @@
 .cs-beta-row.is-blocked-alert.is-selected {
   background: var(--slate-sage-wash);
 }
+.cs-beta-row.is-ready-validation {
+  border-left-color: var(--slate-arches);
+  background: rgba(216,107,25,0.07);
+}
+.cs-beta-row.is-ready-validation.is-selected {
+  background: var(--slate-sand-wash);
+}
 
 .cs-beta-row__handle {
   color: var(--slate-ink-placeholder);
@@ -1081,6 +1088,27 @@
   background: rgba(185,28,28,0.10);
   border: 1px solid rgba(185,28,28,0.35);
   color: var(--slate-flag);
+}
+.cs-beta-row__validation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 7px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(216,107,25,0.35);
+  border-radius: 3px;
+  background: rgba(216,107,25,0.10);
+  color: var(--slate-arches);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+}
+.cs-beta-row__validation .material-symbols-outlined {
+  font-size: 12px;
+  flex: 0 0 auto;
 }
 .cs-beta-row.is-reassigned {
   background: var(--slate-sand-wash);
@@ -1216,6 +1244,23 @@
   color: var(--slate-ink-muted);
   white-space: nowrap;
 }
+.cs-beta-row__due.is-required {
+  color: var(--slate-arches);
+}
+.cs-beta-row__due-required {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid rgba(216,107,25,0.35);
+  border-radius: 999px;
+  background: rgba(216,107,25,0.10);
+  color: var(--slate-arches);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .cs-beta-row__note {
   display: inline-flex;
   align-items: center;
@@ -1263,6 +1308,11 @@
 .cs-beta-row.is-selected .cs-beta-row__iconbtn { color: var(--slate-ink-subtle); }
 .cs-beta-row__iconbtn .material-symbols-outlined { font-size: 16px; }
 .cs-beta-row__iconbtn[aria-pressed="false"] { color: var(--slate-ink-placeholder); }
+.cs-beta-row__statusselect.is-invalid,
+.cs-beta-status-select.is-invalid {
+  border-color: var(--slate-arches) !important;
+  box-shadow: 0 0 0 2px rgba(216,107,25,0.16);
+}
 
 /* Job detail modal — shares the New Job modal shell, with a denser editor
    body and the same explicit Save Changes action. */
@@ -1536,6 +1586,16 @@ body.cs-beta-detail-modal-open { overflow: hidden; }
 .cs-beta-detail-note.is-edited {
   background: var(--slate-sand-wash);
   border-color: var(--slate-sand-deep);
+}
+.cs-beta-field__input.is-required {
+  border-color: var(--slate-arches) !important;
+  box-shadow: 0 0 0 2px rgba(216,107,25,0.16);
+}
+.cs-beta-field__error {
+  color: var(--slate-arches);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 select.cs-beta-field__input {
   appearance: none;
