@@ -15,6 +15,7 @@
 
   window.__slateOpsPauseWork = function (options) {
     options = options || {};
+    var afterHoursRequired = !!(options.afterHoursRequired || options.overtimeRequired);
     return new Promise(function (resolve) {
       var NORMAL_REASONS = [
         ['END_OF_SHIFT', 'End of shift', 'Pause and continue later.', false],
@@ -167,7 +168,7 @@
         if (meta.noteRequired && !noteEl.value.trim()) return false;
         if (meta.blocked && !selectedScope()) return false;
         if (
-          options.afterHoursRequired &&
+          afterHoursRequired &&
           selectedReason !== 'END_OF_SHIFT' &&
           !afterNoteEl.value.trim() &&
           !noteEl.value.trim()
@@ -194,7 +195,7 @@
           meta.noteRequired ||
           meta.blocked ||
           selectedReason === 'SWITCH_JOB' ||
-          (options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT')
+          (afterHoursRequired && selectedReason !== 'END_OF_SHIFT')
         );
         if (!shouldShowDetails) {
           detailFields.hidden = true;
@@ -235,7 +236,7 @@
           noteStateEl.className = meta.noteRequired ? 'ops-pw-required' : 'ops-pw-optional';
           blockScopeEl.hidden = !meta.blocked;
           if (targetFieldEl) targetFieldEl.hidden = selectedReason !== 'SWITCH_JOB';
-          afterFieldEl.hidden = !(options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT');
+          afterFieldEl.hidden = !(afterHoursRequired && selectedReason !== 'END_OF_SHIFT');
           placeDetailsAfter(btn, meta);
           errEl.hidden = true;
           updateSubmit();
@@ -271,10 +272,10 @@
           setError('Choose whether other work can continue.', overlay.querySelector('input[name="ops-pw-scope"]'));
           return;
         }
-        if (options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote && note) {
+        if (afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote && note) {
           afterHoursNote = note;
         }
-        if (options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote) {
+        if (afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote) {
           setError('Add an after-hours note before pausing.', afterNoteEl);
           return;
         }
