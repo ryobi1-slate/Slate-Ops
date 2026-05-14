@@ -724,6 +724,91 @@
   color: #fff !important;
 }
 
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops .ops-supervisor button.ops-supervisor-action,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip,
+.ops-supervisor button.ops-supervisor-btn,
+.ops-supervisor button.ops-supervisor-action,
+.ops-supervisor button.ops-supervisor-tab,
+.ops-supervisor button.ops-supervisor-chip {
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops .ops-supervisor button.ops-supervisor-action,
+.ops-supervisor button.ops-supervisor-btn,
+.ops-supervisor button.ops-supervisor-action {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn:hover,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action:hover,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn:hover,
+body.slate-ops .ops-supervisor button.ops-supervisor-action:hover,
+.ops-supervisor button.ops-supervisor-btn:hover,
+.ops-supervisor button.ops-supervisor-action:hover {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage-wash) !important;
+  color: var(--slate-sage) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn--primary,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action--strong,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn--primary,
+body.slate-ops .ops-supervisor button.ops-supervisor-action--strong,
+.ops-supervisor button.ops-supervisor-btn--primary,
+.ops-supervisor button.ops-supervisor-action--strong {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab,
+.ops-supervisor button.ops-supervisor-tab {
+  border-color: transparent !important;
+  border-width: 0 0 2px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--slate-ink-muted) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab:hover,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab.is-active,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab:hover,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab.is-active,
+.ops-supervisor button.ops-supervisor-tab:hover,
+.ops-supervisor button.ops-supervisor-tab.is-active {
+  border-bottom-color: var(--slate-sage) !important;
+  color: var(--slate-sage) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip,
+.ops-supervisor button.ops-supervisor-chip {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink-muted) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip.is-active,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip.is-active,
+.ops-supervisor button.ops-supervisor-chip.is-active {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
 @media (max-width: 1100px) {
   .ops-supervisor-kpis,
   .ops-supervisor-mini-grid,
