@@ -19,7 +19,7 @@
     return new Promise(function (resolve) {
       var NORMAL_REASONS = [
         ['END_OF_SHIFT', 'End of shift', 'Pause and continue later.', false],
-        ['SWITCH_JOB', 'Switching to another job', 'Priority changed or tech was redirected.', true]
+        ['SWITCH_JOB', 'Switching to another job', 'Priority changed or tech was redirected.', false]
       ];
       var BLOCKED_REASONS = [
         ['WAITING_ON_PARTS', 'Waiting on parts', 'Parts are missing, wrong, damaged, or not staged.'],
@@ -141,6 +141,10 @@
       var submitEl = overlay.querySelector('#ops-pw-submit');
       var selectedReason = '';
 
+      function needsAfterHoursNote() {
+        return afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && selectedReason !== 'SWITCH_JOB';
+      }
+
       var FOCUSABLE = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
       function getFocusable() { return Array.prototype.slice.call(modal.querySelectorAll(FOCUSABLE)); }
 
@@ -168,8 +172,7 @@
         if (meta.noteRequired && !noteEl.value.trim()) return false;
         if (meta.blocked && !selectedScope()) return false;
         if (
-          afterHoursRequired &&
-          selectedReason !== 'END_OF_SHIFT' &&
+          needsAfterHoursNote() &&
           !afterNoteEl.value.trim() &&
           !noteEl.value.trim()
         ) return false;
@@ -195,7 +198,7 @@
           meta.noteRequired ||
           meta.blocked ||
           selectedReason === 'SWITCH_JOB' ||
-          (afterHoursRequired && selectedReason !== 'END_OF_SHIFT')
+          needsAfterHoursNote()
         );
         if (!shouldShowDetails) {
           detailFields.hidden = true;
@@ -236,7 +239,7 @@
           noteStateEl.className = meta.noteRequired ? 'ops-pw-required' : 'ops-pw-optional';
           blockScopeEl.hidden = !meta.blocked;
           if (targetFieldEl) targetFieldEl.hidden = selectedReason !== 'SWITCH_JOB';
-          afterFieldEl.hidden = !(afterHoursRequired && selectedReason !== 'END_OF_SHIFT');
+          afterFieldEl.hidden = !needsAfterHoursNote();
           placeDetailsAfter(btn, meta);
           errEl.hidden = true;
           updateSubmit();
@@ -272,10 +275,10 @@
           setError('Choose whether other work can continue.', overlay.querySelector('input[name="ops-pw-scope"]'));
           return;
         }
-        if (afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote && note) {
+        if (needsAfterHoursNote() && !afterHoursNote && note) {
           afterHoursNote = note;
         }
-        if (afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote) {
+        if (needsAfterHoursNote() && !afterHoursNote) {
           setError('Add an after-hours note before pausing.', afterNoteEl);
           return;
         }

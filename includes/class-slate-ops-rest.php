@@ -3048,7 +3048,7 @@ return self::get_job(['id' => $job_id]);
       ]);
     }
 
-    $needs_after_hours_note = $overtime_seconds > 0 && $pause_reason !== 'END_OF_SHIFT';
+    $needs_after_hours_note = $overtime_seconds > 0 && !in_array($pause_reason, ['END_OF_SHIFT', 'SWITCH_JOB'], true);
     if ($needs_after_hours_note && $after_hours_note === '') {
       return new WP_Error(
         'after_hours_note_required',
@@ -3639,7 +3639,7 @@ return self::get_job(['id' => $job_id]);
         'group' => 'pause',
         'label' => 'Switching to another job',
         'display' => 'Paused - Switched job',
-        'note_required' => true,
+        'note_required' => false,
         'blocked' => false,
         'requires_clearance' => false,
         'owner' => '',
