@@ -3341,11 +3341,26 @@ return self::get_job(['id' => $job_id]);
         (int)$row['job_id'], $user_id
       ));
 
+      // Stable base for live UI rollups. Open timers are added in the browser so helper time ticks live.
+      $row['my_closed_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
+        "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60))
+         FROM $seg
+         WHERE job_id = %d AND user_id = %d AND end_ts IS NOT NULL AND approval_status != 'voided'",
+        (int)$row['job_id'], $user_id
+      ));
+
       // Labor gauge: total minutes all users have logged on this job (all segments, incl. active).
       $row['job_total_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
         "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, COALESCE(end_ts, UTC_TIMESTAMP()))), 0) / 60))
          FROM $seg
          WHERE job_id = %d AND approval_status != 'voided'",
+        (int)$row['job_id']
+      ));
+
+      $row['job_closed_minutes'] = (int)$wpdb->get_var($wpdb->prepare(
+        "SELECT GREATEST(0, ROUND(COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_ts, end_ts)), 0) / 60))
+         FROM $seg
+         WHERE job_id = %d AND end_ts IS NOT NULL AND approval_status != 'voided'",
         (int)$row['job_id']
       ));
 

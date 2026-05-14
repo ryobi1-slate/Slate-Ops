@@ -2662,12 +2662,14 @@ async function loadTech() {
           <div class="tech-strip-label">This session</div>
           <div class="tech-strip-val tech-strip-val-lg" id="live-timer">00:00:00</div>
         </div>
-        ${active.prior_minutes > 0 ? `
-          <div class="tech-strip-cell">
-            <div class="tech-strip-label">Total logged</div>
-            <div class="tech-strip-val">${fmtMinutes(active.prior_minutes)}</div>
-          </div>
-        ` : ''}
+        <div class="tech-strip-cell">
+          <div class="tech-strip-label">My time</div>
+          <div class="tech-strip-val" id="live-my-time">${fmtMinutes(active.my_job_minutes || active.prior_minutes || 0)}</div>
+        </div>
+        <div class="tech-strip-cell">
+          <div class="tech-strip-label">Job total</div>
+          <div class="tech-strip-val" id="live-job-total">${fmtMinutes(active.job_total_minutes || 0)}</div>
+        </div>
         ${estTargetStr ? `
           <div class="tech-strip-cell">
             <div class="tech-strip-label">Target</div>
@@ -2790,11 +2792,32 @@ async function loadTech() {
 
   // Live timer
   if (active && active.start_ts) {
+    const myClosedSeconds = Math.max(0, Number(active.my_closed_minutes ?? active.prior_minutes ?? 0)) * 60;
+    const jobClosedSeconds = Math.max(0, Number(active.job_closed_minutes ?? 0)) * 60;
+    const activeCrewTimers = activeCrew.map((crew) => ({
+      start: parseGMTTimestamp(crew.start_ts),
+      isCurrentUser: !!crew.is_current_user
+    })).filter((crew) => crew.start);
     const tick = () => {
       const el = document.getElementById('live-timer');
       if (!el) { clearInterval(state.timerInterval); return; }
+      const now = Date.now();
       const start = parseGMTTimestamp(active.start_ts);
-      el.textContent = formatElapsed(Math.floor((Date.now() - start.getTime()) / 1000));
+      const sessionSeconds = start ? Math.floor((now - start.getTime()) / 1000) : 0;
+      const activeCrewSeconds = activeCrewTimers.reduce((sum, crew) => {
+        return sum + Math.max(0, Math.floor((now - crew.start.getTime()) / 1000));
+      }, 0);
+      const currentUserCrewSeconds = activeCrewTimers.reduce((sum, crew) => {
+        if (!crew.isCurrentUser) return sum;
+        return sum + Math.max(0, Math.floor((now - crew.start.getTime()) / 1000));
+      }, 0);
+      const mySeconds = myClosedSeconds + (currentUserCrewSeconds || sessionSeconds);
+      const jobSeconds = jobClosedSeconds + activeCrewSeconds;
+      const myEl = document.getElementById('live-my-time');
+      const jobEl = document.getElementById('live-job-total');
+      el.textContent = formatElapsed(sessionSeconds);
+      if (myEl) myEl.textContent = fmtMinutes(Math.round(mySeconds / 60));
+      if (jobEl) jobEl.textContent = fmtMinutes(Math.round(jobSeconds / 60));
     };
     tick();
     state.timerInterval = setInterval(tick, 1000);
