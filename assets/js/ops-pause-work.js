@@ -184,6 +184,21 @@
         submitEl.disabled = !isComplete();
       }
 
+      function placeDetailsAfter(btn, meta) {
+        var shouldShowDetails = !!(
+          meta.noteRequired ||
+          meta.blocked ||
+          selectedReason === 'SWITCH_JOB' ||
+          (options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT')
+        );
+        if (!shouldShowDetails) {
+          detailFields.hidden = true;
+          return;
+        }
+        btn.insertAdjacentElement('afterend', detailFields);
+        detailFields.hidden = false;
+      }
+
       function onKey(e) {
         if (e.key === 'Escape') { done(null); return; }
         if (e.key !== 'Tab') return;
@@ -210,13 +225,13 @@
             b.classList.toggle('is-selected', b === btn);
             b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
           });
-          detailFields.hidden = false;
           noteFieldEl.hidden = !meta.noteRequired;
           noteStateEl.textContent = meta.noteRequired ? '(required)' : '(optional)';
           noteStateEl.className = meta.noteRequired ? 'ops-pw-required' : 'ops-pw-optional';
           blockScopeEl.hidden = !meta.blocked;
           if (targetFieldEl) targetFieldEl.hidden = selectedReason !== 'SWITCH_JOB';
           afterFieldEl.hidden = !(options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT');
+          placeDetailsAfter(btn, meta);
           errEl.hidden = true;
           updateSubmit();
         });

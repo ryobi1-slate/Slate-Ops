@@ -2468,8 +2468,15 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
 }
 .ops-pw-field { margin-bottom: 12px; }
 .ops-pw-detail-fields {
-  border-top: 1px solid rgba(216, 213, 202, .7);
-  padding-top: 12px;
+  margin: -2px 0 8px;
+  padding: 10px;
+  border: 1px solid rgba(216, 213, 202, .9);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: rgba(248, 250, 252, .72);
+}
+.ops-pw-choice.is-selected + .ops-pw-detail-fields {
+  border-color: var(--sage);
 }
 .ops-pw-label {
   display: block;
@@ -2603,6 +2610,10 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
   }
   .ops-pw-field {
     margin-bottom: 9px;
+  }
+  .ops-pw-detail-fields {
+    margin: -1px 0 7px;
+    padding: 9px;
   }
   .ops-pw-label {
     font-size: .72rem;
