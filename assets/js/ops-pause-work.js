@@ -16,10 +16,12 @@
   window.__slateOpsPauseWork = function (options) {
     options = options || {};
     var afterHoursRequired = !!(options.afterHoursRequired || options.overtimeRequired);
+    var rolloutMode = options.rolloutMode || (window.slateOpsSettings && window.slateOpsSettings.tech_rollout_mode) || 'PHASE_1_TIMER_HABIT';
+    var showBlockedReasons = rolloutMode !== 'PHASE_1_TIMER_HABIT';
     return new Promise(function (resolve) {
       var NORMAL_REASONS = [
         ['END_OF_SHIFT', 'End of shift', 'Pause and continue later.', false],
-        ['SWITCH_JOB', 'Switching to another job', 'Priority changed or tech was redirected.', false]
+        ['SWITCH_JOB', 'Switching to another job', 'Priority changed or tech was redirected.', true]
       ];
       var BLOCKED_REASONS = [
         ['WAITING_ON_PARTS', 'Waiting on parts', 'Parts are missing, wrong, damaged, or not staged.'],
@@ -85,10 +87,10 @@
               '<h3 class="ops-pw-section-title">Normal pause</h3>' +
               '<div class="ops-pw-choices" role="listbox" aria-label="Normal pause reason">' + normalButtons + '</div>' +
             '</section>' +
-            '<section class="ops-pw-section">' +
+            (showBlockedReasons ? '<section class="ops-pw-section">' +
               '<h3 class="ops-pw-section-title">Blocked - needs action</h3>' +
               '<div class="ops-pw-choices" role="listbox" aria-label="Blocked reason">' + blockedButtons + '</div>' +
-            '</section>' +
+            '</section>' : '') +
             '<div id="ops-pw-err" class="ops-pw-field-err" hidden>Select a pause reason.</div>' +
             '<div id="ops-pw-detail-fields" class="ops-pw-detail-fields" hidden>' +
               '<div class="ops-pw-field" id="ops-pw-block-scope" hidden>' +
@@ -142,7 +144,7 @@
       var selectedReason = '';
 
       function needsAfterHoursNote() {
-        return afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && selectedReason !== 'SWITCH_JOB';
+        return afterHoursRequired && selectedReason !== 'END_OF_SHIFT';
       }
 
       var FOCUSABLE = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
@@ -285,6 +287,11 @@
         done({
           pause_reason: selectedReason,
           pause_note: note,
+          pause_type: meta.blocked ? 'blocked' : 'paused',
+          source: 'tech_manual',
+          blocked: !!meta.blocked,
+          requires_clearance: !!meta.blocked,
+          after_hours: needsAfterHoursNote(),
           after_hours_note: afterHoursNote,
           overtime_note: afterHoursNote,
           other_work_can_continue: meta.blocked ? scope === 'yes' : null,

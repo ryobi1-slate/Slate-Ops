@@ -33,6 +33,12 @@ class Slate_Ops_REST {
     'slate_ops_viewer'     => 'Viewer',
   ];
 
+  private const TECH_ROLLOUT_MODES = [
+    'PHASE_1_TIMER_HABIT',
+    'PHASE_2_BLOCKERS',
+    'PHASE_3_REPORTING_READY',
+  ];
+
   private static function scheduler_debug_enabled() {
     return defined('SLATE_OPS_DEBUG_SCHEDULER') && SLATE_OPS_DEBUG_SCHEDULER;
   }
@@ -1149,6 +1155,7 @@ return ['ok' => true, 'id' => $id];
     if (!isset($row['shift_end_grace_minutes'])) $row['shift_end_grace_minutes'] = 10;
     $row['auto_stop_job_timers_at_shift_end'] = (bool) $row['auto_stop_job_timers_at_shift_end'];
     $row['shift_end_grace_minutes'] = (int) $row['shift_end_grace_minutes'];
+    $row['tech_rollout_mode'] = self::tech_rollout_mode();
     $row['daily_deduction_minutes'] = (int)($row['lunch_minutes'] ?? 30) + ((int)($row['break_count']) * (int)($row['break_minutes'] ?? 10));
     return $row;
   }
@@ -1201,6 +1208,7 @@ return ['ok' => true, 'id' => $id];
     if (isset($body['company_name']))     update_option('slate_ops_company_name',     sanitize_text_field($body['company_name']));
     if (isset($body['timezone']))         update_option('slate_ops_timezone',         sanitize_text_field($body['timezone']));
     if (isset($body['currency_display'])) update_option('slate_ops_currency_display', sanitize_text_field($body['currency_display']));
+    if (isset($body['tech_rollout_mode'])) update_option('slate_ops_tech_rollout_mode', self::sanitize_tech_rollout_mode($body['tech_rollout_mode']));
     if (isset($body['holiday_sync']))     update_option('slate_ops_holiday_sync',     !empty($body['holiday_sync']) ? 1 : 0);
     if (isset($body['notifications']) && is_array($body['notifications'])) {
       $notif = array_map('rest_sanitize_boolean', $body['notifications']);
@@ -1226,6 +1234,7 @@ return ['ok' => true, 'id' => $id];
       'break_minutes' => $breaks,
       'auto_stop_job_timers_at_shift_end' => $auto_stop,
       'shift_end_grace_minutes' => $grace_minutes,
+      'tech_rollout_mode' => self::tech_rollout_mode(),
       'dealers' => $dealers,
       'sales_people' => $sales_people,
     ]), 'Settings updated');
@@ -2719,6 +2728,9 @@ return self::get_job(['id' => $job_id]);
     if (!$br || empty($reason_config[$br]['blocked'])) {
       return new WP_Error('block_reason_required', 'Block reason is required.', ['status' => 422]);
     }
+    if (!self::tech_rollout_allows_blockers()) {
+      return new WP_Error('blockers_not_enabled', 'Blocked reasons are not enabled for the current Tech screen rollout phase.', ['status' => 403]);
+    }
     if (!$bn) {
       return new WP_Error('block_note_required', 'Block note is required.', ['status' => 422]);
     }
@@ -3011,6 +3023,8 @@ return self::get_job(['id' => $job_id]);
     $pause_note = trim(sanitize_textarea_field((string)($body['pause_note'] ?? '')));
     $after_hours_note = trim(sanitize_textarea_field((string)($body['after_hours_note'] ?? $body['overtime_note'] ?? $body['note'] ?? $pause_note)));
     $target_job_id = isset($body['target_job_id']) ? max(0, intval($body['target_job_id'])) : 0;
+    $source = sanitize_key((string)($body['source'] ?? 'tech_manual'));
+    if ($source === '') $source = 'tech_manual';
     $other_work_can_continue = array_key_exists('other_work_can_continue', $body)
       ? rest_sanitize_boolean($body['other_work_can_continue'])
       : null;
@@ -3041,6 +3055,9 @@ return self::get_job(['id' => $job_id]);
     }
 
     $is_blocked_reason = !empty($config['blocked']);
+    if ($is_blocked_reason && !self::tech_rollout_allows_blockers()) {
+      return new WP_Error('blockers_not_enabled', 'Blocked reasons are not enabled for the current Tech screen rollout phase.', ['status' => 403]);
+    }
     if ($is_blocked_reason && $other_work_can_continue === null) {
       return new WP_Error('block_scope_required', 'Choose whether other work can continue.', [
         'status' => 422,
@@ -3048,7 +3065,7 @@ return self::get_job(['id' => $job_id]);
       ]);
     }
 
-    $needs_after_hours_note = $overtime_seconds > 0 && !in_array($pause_reason, ['END_OF_SHIFT', 'SWITCH_JOB'], true);
+    $needs_after_hours_note = $overtime_seconds > 0 && $pause_reason !== 'END_OF_SHIFT';
     if ($needs_after_hours_note && $after_hours_note === '') {
       return new WP_Error(
         'after_hours_note_required',
@@ -3064,6 +3081,7 @@ return self::get_job(['id' => $job_id]);
 
     $update = [
       'end_ts'     => $effective_stop,
+      'source'     => $source,
       'state'      => 'closed',
       'updated_at' => $now,
     ];
@@ -3089,7 +3107,7 @@ return self::get_job(['id' => $job_id]);
 
     $wpdb->update($segments, $update, ['segment_id' => (int)$open['segment_id']]);
 
-    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, $is_blocked_reason ? 'Timer stopped for blocker' : 'Timer paused');
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, ($is_blocked_reason ? 'Timer stopped for blocker' : 'Timer paused') . ' via ' . $source);
 
     $blocked_by_pause = false;
     $jobs = $wpdb->prefix . 'slate_ops_jobs';
@@ -3276,6 +3294,7 @@ return self::get_job(['id' => $job_id]);
         'end_ts' => $stop_at,
         'reason' => 'END_OF_SHIFT',
         'note' => $note,
+        'source' => 'SYSTEM_AUTO_STOP',
         'state' => 'closed',
         'updated_at' => $now_gmt,
       ], ['segment_id' => (int)$open['segment_id']]);
@@ -3639,7 +3658,7 @@ return self::get_job(['id' => $job_id]);
         'group' => 'pause',
         'label' => 'Switching to another job',
         'display' => 'Paused - Switched job',
-        'note_required' => false,
+        'note_required' => true,
         'blocked' => false,
         'requires_clearance' => false,
         'owner' => '',
@@ -3708,6 +3727,26 @@ return self::get_job(['id' => $job_id]);
         'owner' => 'Ryan',
       ],
     ];
+  }
+
+  private static function sanitize_tech_rollout_mode($mode): string {
+    $mode = strtoupper(sanitize_key((string) $mode));
+    return in_array($mode, self::TECH_ROLLOUT_MODES, true) ? $mode : 'PHASE_1_TIMER_HABIT';
+  }
+
+  private static function tech_rollout_mode(): string {
+    if (defined('SLATE_OPS_TECH_ROLLOUT_MODE')) {
+      return self::sanitize_tech_rollout_mode((string) SLATE_OPS_TECH_ROLLOUT_MODE);
+    }
+    return self::sanitize_tech_rollout_mode(get_option('slate_ops_tech_rollout_mode', 'PHASE_1_TIMER_HABIT'));
+  }
+
+  public static function tech_rollout_mode_for_ui(): string {
+    return self::tech_rollout_mode();
+  }
+
+  private static function tech_rollout_allows_blockers(): bool {
+    return self::tech_rollout_mode() !== 'PHASE_1_TIMER_HABIT';
   }
 
   private static function normalize_pause_reason_key($reason): string {

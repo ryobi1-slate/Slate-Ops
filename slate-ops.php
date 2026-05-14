@@ -290,6 +290,7 @@ add_action('wp_enqueue_scripts', function() {
         'white' => esc_url_raw(SLATE_OPS_URL . 'assets/logos/Slate-Logo-White-CMYK.png'),
       ],
       'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
+      'tech_rollout_mode' => Slate_Ops_REST::tech_rollout_mode_for_ui(),
       'page_access' => [
         'roles' => slate_ops_get_role_page_access(),
         'defaults' => slate_ops_get_default_role_page_access(),
