@@ -389,6 +389,13 @@ class Slate_Ops_PA_Events {
     $tv  = $wpdb->prefix . 'slate_ops_pur_vendors';
     $now = Slate_Ops_Utils::now_gmt();
 
+    if (isset($payload['items']) && is_string($payload['items'])) {
+      $decoded_items = json_decode($payload['items'], true);
+      if (is_array($decoded_items)) {
+        $payload['items'] = $decoded_items;
+      }
+    }
+
     // Support both Slate-native itemNo payloads and BC v2 item payloads that
     // use number/displayName. PA typically sends a batch.
     if (isset($payload['items']) && is_array($payload['items'])) {
