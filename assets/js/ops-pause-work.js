@@ -166,7 +166,12 @@
         var meta = reasonMeta[selectedReason] || {};
         if (meta.noteRequired && !noteEl.value.trim()) return false;
         if (meta.blocked && !selectedScope()) return false;
-        if (options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterNoteEl.value.trim()) return false;
+        if (
+          options.afterHoursRequired &&
+          selectedReason !== 'END_OF_SHIFT' &&
+          !afterNoteEl.value.trim() &&
+          !noteEl.value.trim()
+        ) return false;
         return true;
       }
 
@@ -265,6 +270,9 @@
         if (meta.blocked && !scope) {
           setError('Choose whether other work can continue.', overlay.querySelector('input[name="ops-pw-scope"]'));
           return;
+        }
+        if (options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote && note) {
+          afterHoursNote = note;
         }
         if (options.afterHoursRequired && selectedReason !== 'END_OF_SHIFT' && !afterHoursNote) {
           setError('Add an after-hours note before pausing.', afterNoteEl);

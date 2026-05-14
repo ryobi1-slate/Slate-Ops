@@ -3007,9 +3007,9 @@ return self::get_job(['id' => $job_id]);
     global $wpdb;
     $user_id = get_current_user_id();
     $body = $req->get_json_params() ?: [];
-    $after_hours_note = trim(sanitize_textarea_field((string)($body['after_hours_note'] ?? $body['overtime_note'] ?? $body['note'] ?? '')));
     $pause_reason = self::normalize_pause_reason_key($body['pause_reason'] ?? '');
     $pause_note = trim(sanitize_textarea_field((string)($body['pause_note'] ?? '')));
+    $after_hours_note = trim(sanitize_textarea_field((string)($body['after_hours_note'] ?? $body['overtime_note'] ?? $body['note'] ?? $pause_note)));
     $target_job_id = isset($body['target_job_id']) ? max(0, intval($body['target_job_id'])) : 0;
     $other_work_can_continue = array_key_exists('other_work_can_continue', $body)
       ? rest_sanitize_boolean($body['other_work_can_continue'])
