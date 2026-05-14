@@ -43,6 +43,7 @@ $route_map = [
   'exec'         => 'executive',
   'cs'           => 'cs',
   'cs-dashboard' => 'cs-dashboard',
+  'supervisor-dashboard' => 'supervisor-dashboard',
   'tech'         => 'tech',
   'schedule'     => 'schedule',
   'purchasing'   => 'purchasing',
@@ -70,6 +71,7 @@ $is_embed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 $is_executive_page = ($_ops_route === 'exec');
 $is_resource_hub_page = ($_ops_route === 'resource-hub');
 $is_audit_log_page = ($_ops_path === 'admin/audit');
+$is_supervisor_dashboard_page = ($_ops_route === 'supervisor-dashboard');
 
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
 $shell_part = 'open';
@@ -89,6 +91,9 @@ elseif ($page_slug === 'cs-dashboard') :
   // enqueued for this route in slate-ops.php; the empty #ops-view div above
   // is a harmless sibling.
   include SLATE_OPS_PATH . 'templates/pages/cs-dashboard.php';
+elseif ($is_supervisor_dashboard_page) :
+  // Server-rendered Supervisor Dashboard. React app is not enqueued for this route.
+  include SLATE_OPS_PATH . 'templates/pages/supervisor-dashboard.php';
 elseif ($is_executive_page) :
   // Server-rendered Executive Dashboard V2 (Purchasing pattern).
   // React app is not enqueued for this route in slate-ops.php.

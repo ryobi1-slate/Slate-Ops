@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.58.4
+ * Version: 0.59.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.58.4');
+define('SLATE_OPS_VERSION', '0.59.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -45,6 +45,7 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-resource-hub.php';
 
 // CS / Supervisor Operations Dashboard data layer (Phase 1: stub data)
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-cs.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-supervisor-dashboard.php';
 
 // Executive Dashboard data layer (server-rendered, stub data for now)
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-executive.php';
@@ -96,6 +97,7 @@ add_action('wp_enqueue_scripts', function() {
   $is_home         = ($current_path === '');
   $is_purchasing   = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
   $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
+  $is_supervisor_dashboard = ($current_path === 'supervisor-dashboard' || strncmp($current_path, 'supervisor-dashboard/', 21) === 0);
   $is_executive    = ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
   $is_resource_hub = ($current_path === 'resource-hub' || strncmp($current_path, 'resource-hub/', 13) === 0);
   $is_audit_log    = ($current_path === 'admin/audit');
@@ -142,6 +144,30 @@ add_action('wp_enqueue_scripts', function() {
         'id'   => get_current_user_id(),
         'caps' => Slate_Ops_Utils::current_user_caps_summary(),
       ],
+    ]);
+  } elseif ($is_supervisor_dashboard) {
+    // Supervisor Dashboard — server-rendered template + scoped CSS +
+    // standalone vanilla JS. React app is not loaded here.
+    $route_blocked_supervisor = !slate_ops_current_user_can_access_ops_page('supervisor-dashboard');
+    if ($route_blocked_supervisor) {
+      return;
+    }
+    $payload = Slate_Ops_Supervisor_Dashboard::get_payload();
+    $ver_sup_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops-supervisor-dashboard.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-supervisor-dashboard.css') : SLATE_OPS_VERSION;
+    $ver_sup_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-supervisor-dashboard.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-supervisor-dashboard.js')   : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-supervisor-dashboard', SLATE_OPS_URL . 'assets/css/ops-supervisor-dashboard.css', ['slate-ops-shell'], $ver_sup_css);
+    $enqueue_design_language(['slate-ops-supervisor-dashboard']);
+    wp_enqueue_script('slate-ops-supervisor-dashboard', SLATE_OPS_URL . 'assets/js/ops-supervisor-dashboard.js', [], $ver_sup_js, true);
+    wp_localize_script('slate-ops-supervisor-dashboard', 'slateOpsSupervisorDashboard', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'user' => [
+        'id'   => get_current_user_id(),
+        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+      ],
+      'payload' => $payload,
     ]);
   } elseif ($is_executive) {
     // Executive Dashboard V2 — server-rendered template + standalone
@@ -198,6 +224,7 @@ add_action('wp_enqueue_scripts', function() {
   } else {
     $route_map = [
       '' => 'executive', 'exec' => 'executive', 'cs' => 'cs', 'tech' => 'tech',
+      'cs-dashboard' => 'cs-dashboard', 'supervisor-dashboard' => 'supervisor-dashboard',
       'schedule' => 'schedule', 'purchasing' => 'purchasing', 'resource-hub' => 'resource-hub', 'admin' => 'admin',
       'settings' => 'settings', 'monitor' => 'monitor',
     ];
@@ -310,7 +337,10 @@ add_filter('login_redirect', function($redirect_to, $requested_redirect_to, $use
   $is_viewer     = user_can($user, Slate_Ops_Utils::CAP_VIEWER)
                 || user_can($user, Slate_Ops_Utils::CAP_VIEW_MONITOR);
 
-  if ($is_admin || $is_supervisor || $is_cs) {
+  if ($is_supervisor) {
+    return esc_url_raw(home_url('/ops/supervisor-dashboard'));
+  }
+  if ($is_admin || $is_cs) {
     return esc_url_raw(home_url('/ops/'));
   }
   if ($is_tech) {

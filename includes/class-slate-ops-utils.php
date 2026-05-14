@@ -254,6 +254,7 @@ class Slate_Ops_Utils {
   public static function get_page_labels() {
     return [
       'executive'    => 'Executive',
+      'supervisor-dashboard' => 'Supervisor',
       'cs-dashboard' => 'CS Dashboard',
       'tech'         => 'Tech',
       'schedule'     => 'Schedule',
@@ -268,6 +269,7 @@ class Slate_Ops_Utils {
   public static function get_default_feature_flags() {
     return [
       'executive'    => true,
+      'supervisor-dashboard' => true,
       'cs'           => false,
       'cs-dashboard' => true,
       'tech'         => true,
@@ -319,8 +321,8 @@ class Slate_Ops_Utils {
     // Scheduler is intentionally absent from non-admin defaults for the
     // initial CS/Tech production launch.
     return [
-      'admin'      => ['executive', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'resource-hub', 'admin', 'settings', 'monitor'],
-      'supervisor' => ['executive', 'cs-dashboard', 'tech', 'purchasing', 'resource-hub', 'monitor'],
+      'admin'      => ['executive', 'supervisor-dashboard', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'resource-hub', 'admin', 'settings', 'monitor'],
+      'supervisor' => ['executive', 'supervisor-dashboard', 'tech', 'purchasing', 'resource-hub', 'monitor'],
       'cs'         => ['cs-dashboard', 'resource-hub'],
       'tech'       => ['tech', 'resource-hub', 'monitor'],
       'executive'  => ['executive', 'resource-hub', 'monitor'],
@@ -341,6 +343,9 @@ class Slate_Ops_Utils {
         $saved[$role] = $allowed;
       }
       $saved[$role] = self::sanitize_page_slugs($saved[$role]);
+      if (in_array('supervisor-dashboard', $allowed, true) && !in_array('supervisor-dashboard', $saved[$role], true)) {
+        $saved[$role][] = 'supervisor-dashboard';
+      }
       if ($role === 'admin') {
         $saved[$role] = array_values(array_unique(array_merge($saved[$role], ['admin', 'settings'])));
       }
@@ -349,7 +354,7 @@ class Slate_Ops_Utils {
   }
 
   public static function sanitize_page_slugs($slugs) {
-    $valid = ['executive','cs','cs-dashboard','tech','schedule','purchasing','resource-hub','admin','settings','monitor'];
+    $valid = ['executive','cs','cs-dashboard','supervisor-dashboard','tech','schedule','purchasing','resource-hub','admin','settings','monitor'];
     $in = is_array($slugs) ? $slugs : [];
     $out = [];
     foreach ($in as $slug) {
