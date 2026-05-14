@@ -484,14 +484,48 @@ class Slate_Ops_PA_Events {
   }
 
   public static function process_po_sync($payload) {
+    if (isset($payload['purchaseOrders']) && is_string($payload['purchaseOrders'])) {
+      $decoded_orders = json_decode($payload['purchaseOrders'], true);
+      if (is_array($decoded_orders)) {
+        $payload['purchaseOrders'] = $decoded_orders;
+      }
+    }
+    if (isset($payload['openPos']) && is_string($payload['openPos'])) {
+      $decoded_orders = json_decode($payload['openPos'], true);
+      if (is_array($decoded_orders)) {
+        $payload['openPos'] = $decoded_orders;
+      }
+    }
+
+    if (isset($payload['purchaseOrders']) && is_array($payload['purchaseOrders'])) {
+      $records = $payload['purchaseOrders'];
+    } elseif (isset($payload['openPos']) && is_array($payload['openPos'])) {
+      $records = $payload['openPos'];
+    } elseif (!empty($payload['poNo']) || !empty($payload['number'])) {
+      $records = [$payload];
+    } else {
+      return 0;
+    }
+
+    $count = 0;
+    foreach ($records as $record) {
+      if (self::process_single_po_sync($record)) {
+        $count++;
+      }
+    }
+
+    return $count;
+  }
+
+  private static function process_single_po_sync($payload) {
     global $wpdb;
     $to  = $wpdb->prefix . 'slate_ops_pur_orders';
     $tl  = $wpdb->prefix . 'slate_ops_pur_order_lines';
     $tv  = $wpdb->prefix . 'slate_ops_pur_vendors';
     $now = Slate_Ops_Utils::now_gmt();
 
-    $po_no = sanitize_text_field($payload['poNo'] ?? '');
-    if (!$po_no) return;
+    $po_no = sanitize_text_field($payload['poNo'] ?? $payload['number'] ?? '');
+    if (!$po_no) return false;
 
     $vendor_id = null;
     $vendor_no = sanitize_text_field($payload['vendorNo'] ?? '');
@@ -521,7 +555,7 @@ class Slate_Ops_PA_Events {
 
     $header = [
       'bc_po_id'      => $po_no,
-      'po_number'     => sanitize_text_field($payload['poNo']     ?? $po_no),
+      'po_number'     => sanitize_text_field($payload['poNo']     ?? $payload['number'] ?? $po_no),
       'vendor_id'     => $vendor_id,
       'status'        => sanitize_text_field($payload['status']   ?? 'submitted'),
       'ordered_at'    => $ordered_at,
@@ -539,9 +573,14 @@ class Slate_Ops_PA_Events {
       $po_id = (int) $wpdb->insert_id;
     }
 
-    if (!$po_id) return;
+    if (!$po_id) return false;
 
-    $lines = isset($payload['lines']) && is_array($payload['lines']) ? $payload['lines'] : [];
+    $lines = $payload['lines'] ?? $payload['purchaseOrderLines'] ?? [];
+    if (is_string($lines)) {
+      $decoded_lines = json_decode($lines, true);
+      $lines = is_array($decoded_lines) ? $decoded_lines : [];
+    }
+    $lines = is_array($lines) ? $lines : [];
     $wpdb->query('START TRANSACTION');
     $wpdb->delete($tl, ['po_id' => $po_id]);
     $ok = true;
@@ -562,6 +601,8 @@ class Slate_Ops_PA_Events {
     } else {
       $wpdb->query('ROLLBACK');
     }
+
+    return $ok;
   }
 
   public static function process_po_received($payload) {
