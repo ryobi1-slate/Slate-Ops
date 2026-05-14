@@ -56,6 +56,7 @@ class Slate_Ops_Purchasing {
       "SELECT i.*, v.name AS preferred_vendor_name
        FROM $ti i
        LEFT JOIN $tv v ON i.preferred_vendor_id = v.id
+       WHERE i.part_number NOT LIKE 'BOM%'
        ORDER BY i.part_number ASC",
       ARRAY_A
     ) ?: [];

@@ -411,6 +411,7 @@ class Slate_Ops_PA_Events {
     $item_nos = [];
     foreach ($records as $i) {
       $ino = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
+      if (self::is_ignored_item_no($ino)) continue;
       if ($ino !== '') $item_nos[] = $ino;
     }
     if (empty($item_nos)) return 0;
@@ -447,6 +448,7 @@ class Slate_Ops_PA_Events {
     $count = 0;
     foreach ($records as $i) {
       $item_no = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
+      if (self::is_ignored_item_no($item_no)) continue;
       if ($item_no === '') continue;
 
       $vendor_no           = sanitize_text_field($i['vendorNo'] ?? '');
@@ -599,6 +601,10 @@ class Slate_Ops_PA_Events {
 
   private static function feed_sync_opt($feed, $key) {
     return 'slate_ops_pa_sync_' . $feed . '_' . $key;
+  }
+
+  private static function is_ignored_item_no($item_no) {
+    return stripos((string) $item_no, 'BOM') === 0;
   }
 
   private static function uuid4() {
