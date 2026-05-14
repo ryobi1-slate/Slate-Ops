@@ -1,5 +1,12 @@
 # Slate Ops Changelog
 
+## 0.59.0 — Supervisor Dashboard
+
+- Added server-rendered Supervisor Dashboard at `/ops/supervisor-dashboard` with blocked jobs, schedule readiness, tech status, QC/rework, and ready queue views.
+- Added scoped Supervisor Dashboard CSS, vanilla JS tab/filter/drawer enhancements, supervisor role access, and sidebar navigation.
+- Added `Slate_Ops_Supervisor_Dashboard` stub payload with `slate_ops_supervisor_refresh` for future real-data wiring.
+- Preserved the Claude design reference under `design/` and marked design/prototype assets as export-ignored for production plugin ZIP builds.
+
 ## 0.58.1 — Current CS Dashboard / CS Workspace final state
 
 **No behavior change in this cleanup entry.** Current main now documents the state reached across the 0.55.0 through 0.58.1 CS Dashboard work:
