@@ -1163,6 +1163,10 @@ return ['ok' => true, 'id' => $id];
     // break_count added in 0.13.0 — dbDelta adds it non-destructively
     if (!isset($row['break_count'])) $row['break_count'] = 2;
     $row['break_count'] = (int)$row['break_count'];
+    if (!isset($row['auto_stop_job_timers_at_shift_end'])) $row['auto_stop_job_timers_at_shift_end'] = 1;
+    if (!isset($row['shift_end_grace_minutes'])) $row['shift_end_grace_minutes'] = 10;
+    $row['auto_stop_job_timers_at_shift_end'] = (bool) $row['auto_stop_job_timers_at_shift_end'];
+    $row['shift_end_grace_minutes'] = (int) $row['shift_end_grace_minutes'];
     $row['daily_deduction_minutes'] = (int)($row['lunch_minutes'] ?? 30) + ((int)($row['break_count']) * (int)($row['break_minutes'] ?? 10));
     return $row;
   }
@@ -1177,6 +1181,10 @@ return ['ok' => true, 'id' => $id];
     $lunch        = isset($body['lunch_minutes']) ? max(0, intval($body['lunch_minutes']))     : 30;
     $breaks       = isset($body['break_minutes']) ? max(0, intval($body['break_minutes']))     : 10;
     $break_count  = isset($body['break_count'])   ? max(0, min(4, intval($body['break_count']))) : 2;
+    $auto_stop    = array_key_exists('auto_stop_job_timers_at_shift_end', $body)
+      ? rest_sanitize_boolean($body['auto_stop_job_timers_at_shift_end'])
+      : true;
+    $grace_minutes = isset($body['shift_end_grace_minutes']) ? max(0, min(120, intval($body['shift_end_grace_minutes']))) : 10;
     $dealers_payload = $body['dealers'] ?? [];
     if (is_string($dealers_payload)) {
       $dealers_payload = preg_split('/\r\n|\r|\n/', $dealers_payload);
@@ -1223,11 +1231,22 @@ return ['ok' => true, 'id' => $id];
       'lunch_minutes' => $lunch,
       'break_minutes' => $breaks,
       'break_count'  => $break_count,
+      'auto_stop_job_timers_at_shift_end' => $auto_stop ? 1 : 0,
+      'shift_end_grace_minutes' => $grace_minutes,
       'updated_by'   => get_current_user_id(),
       'updated_at'           => Slate_Ops_Utils::now_gmt(),
     ], ['id' => 1]);
 
-    self::audit('settings', 1, 'update', null, null, wp_json_encode(['shift_start'=>$shift_start,'shift_end'=>$shift_end,'lunch_minutes'=>$lunch,'break_minutes'=>$breaks,'dealers'=>$dealers,'sales_people'=>$sales_people]), 'Settings updated');
+    self::audit('settings', 1, 'update', null, null, wp_json_encode([
+      'shift_start' => $shift_start,
+      'shift_end' => $shift_end,
+      'lunch_minutes' => $lunch,
+      'break_minutes' => $breaks,
+      'auto_stop_job_timers_at_shift_end' => $auto_stop,
+      'shift_end_grace_minutes' => $grace_minutes,
+      'dealers' => $dealers,
+      'sales_people' => $sales_people,
+    ]), 'Settings updated');
     return self::get_settings($req);
   }
 
@@ -1539,7 +1558,8 @@ $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_n
                scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes,
                scheduler_locked, hold_reason, hold_note, schedule_notes, scheduling_flag,
                scheduled_start, scheduled_finish, scheduled_week, requested_date, promised_date, target_ship_date,
-               block_reason, block_note, cancel_reason, cancel_note,
+               block_reason, block_note, block_requires_clearance, partial_blocked, full_blocked, block_owner, block_cleared_by, block_cleared_at,
+               cancel_reason, cancel_note,
                scope_summary, sales_person, notes, queue_order, queue_visible, queue_priority, queue_note,
                clickup_task_id, clickup_estimate_ms, dealer_status, created_at, updated_at
         FROM $t WHERE $where ORDER BY queue_priority ASC, updated_at DESC LIMIT $limit";
@@ -2238,8 +2258,15 @@ foreach ($rows as &$r) {
     $result = $wpdb->update($table, [
       'status' => $new_status,
       'status_updated_at' => $now,
+      'status_detail' => null,
       'block_reason' => null,
       'block_note' => null,
+      'block_requires_clearance' => 0,
+      'partial_blocked' => 0,
+      'full_blocked' => 0,
+      'block_owner' => null,
+      'block_cleared_by' => get_current_user_id(),
+      'block_cleared_at' => $now,
       'hold_reason' => null,
       'hold_note' => null,
       'delay_reason' => null,
@@ -2809,7 +2836,7 @@ return self::get_job(['id' => $job_id]);
       $user_id, $job_id
     ), ARRAY_A);
     if ($open) {
-      $wpdb->update($segments, ['end_ts' => $now, 'updated_at' => $now], ['segment_id' => (int)$open['segment_id']]);
+      $wpdb->update($segments, ['end_ts' => $now, 'state' => 'closed', 'updated_at' => $now], ['segment_id' => (int)$open['segment_id']]);
       self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $now, 'Auto-stopped by QC submit');
     }
     return $open;
@@ -2830,10 +2857,14 @@ return self::get_job(['id' => $job_id]);
 
     if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
 
-    $br = strtoupper(sanitize_key($body['block_reason'] ?? ''));
+    $br = self::normalize_pause_reason_key($body['block_reason'] ?? '');
     $bn = trim(sanitize_textarea_field($body['block_note'] ?? ''));
+    $other_work_can_continue = array_key_exists('other_work_can_continue', $body)
+      ? rest_sanitize_boolean($body['other_work_can_continue'])
+      : false;
+    $reason_config = self::pause_reason_config();
 
-    if (!$br || !in_array($br, Slate_Ops_Utils::cs_block_reasons(), true)) {
+    if (!$br || empty($reason_config[$br]['blocked'])) {
       return new WP_Error('block_reason_required', 'Block reason is required.', ['status' => 422]);
     }
     if (!$bn) {
@@ -2852,8 +2883,15 @@ return self::get_job(['id' => $job_id]);
 
     $wpdb->update($t, [
       'status'            => Slate_Ops_Statuses::BLOCKED,
+      'status_detail'     => self::pause_status_detail($br),
       'block_reason'      => $br,
       'block_note'        => $bn,
+      'block_requires_clearance' => 1,
+      'partial_blocked'  => $other_work_can_continue ? 1 : 0,
+      'full_blocked'     => $other_work_can_continue ? 0 : 1,
+      'block_owner'       => sanitize_text_field((string)($reason_config[$br]['owner'] ?? 'Ryan')),
+      'block_cleared_by'  => null,
+      'block_cleared_at'  => null,
       'status_updated_at' => $now,
       'updated_at'        => $now,
     ], ['job_id' => $job_id]);
@@ -3021,7 +3059,7 @@ return self::get_job(['id' => $job_id]);
     // Job-status guard: only schedulable/active-state jobs can be started.
     $startable = [
       Slate_Ops_Statuses::READY_FOR_BUILD, Slate_Ops_Statuses::SCHEDULED,
-      Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::BLOCKED,
+      Slate_Ops_Statuses::IN_PROGRESS,
       Slate_Ops_Statuses::QUEUED, // legacy alias
     ];
     $job_status = Slate_Ops_Statuses::normalize((string)($job['status'] ?? ''));
@@ -3096,6 +3134,14 @@ return self::get_job(['id' => $job_id]);
         'updated_at'        => $now2,
       ], ['job_id' => $job_id]);
       self::audit('job', $job_id, 'update', 'status', $job['status'], 'IN_PROGRESS', 'Auto set by timer start');
+    } elseif (strpos((string)($job['status_detail'] ?? ''), 'Paused - ') === 0) {
+      $t    = $wpdb->prefix . 'slate_ops_jobs';
+      $now2 = Slate_Ops_Utils::now_gmt();
+      $wpdb->update($t, [
+        'status_detail' => null,
+        'updated_at'    => $now2,
+      ], ['job_id' => $job_id]);
+      self::audit('job', $job_id, 'resume_work', 'status_detail', $job['status_detail'], null, 'Work resumed');
     }
 
     return [
@@ -3109,9 +3155,13 @@ return self::get_job(['id' => $job_id]);
     global $wpdb;
     $user_id = get_current_user_id();
     $body = $req->get_json_params() ?: [];
-    $overtime_note = trim(sanitize_textarea_field((string)($body['overtime_note'] ?? $body['note'] ?? '')));
-    $pause_reason = sanitize_key((string)($body['pause_reason'] ?? ''));
+    $after_hours_note = trim(sanitize_textarea_field((string)($body['after_hours_note'] ?? $body['overtime_note'] ?? $body['note'] ?? '')));
+    $pause_reason = self::normalize_pause_reason_key($body['pause_reason'] ?? '');
     $pause_note = trim(sanitize_textarea_field((string)($body['pause_note'] ?? '')));
+    $target_job_id = isset($body['target_job_id']) ? max(0, intval($body['target_job_id'])) : 0;
+    $other_work_can_continue = array_key_exists('other_work_can_continue', $body)
+      ? rest_sanitize_boolean($body['other_work_can_continue'])
+      : null;
     $segments = $wpdb->prefix . 'slate_ops_time_segments';
     $open = $wpdb->get_row($wpdb->prepare("SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' ORDER BY start_ts DESC LIMIT 1", $user_id), ARRAY_A);
     if (!$open) {
@@ -3124,33 +3174,40 @@ return self::get_job(['id' => $job_id]);
     $overtime_seconds = (int)($shift_breakdown['overtime_seconds'] ?? 0);
     $overtime_minutes = (int)ceil($overtime_seconds / 60);
 
-    if ($overtime_seconds > 0 && $overtime_note === '') {
-      return new WP_Error(
-        'overtime_note_required',
-        'Add an overtime note before stopping this timer.',
-        [
-          'status'           => 422,
-          'field'            => 'overtime_note',
-          'overtime_minutes' => $overtime_minutes,
-        ]
-      );
-    }
-
-    $pause_map = [
-      'end_of_day'           => null,
-      'waiting_on_parts'     => 'PARTS',
-      'need_help'            => 'LABOR',
-      'vehicle_issue'        => 'ENGINEERING',
-      'customer_cs_question' => 'CUSTOMER',
-      'other'                => 'OTHER',
-    ];
-    if ($pause_reason !== '' && !array_key_exists($pause_reason, $pause_map)) {
+    $reason_config = self::pause_reason_config();
+    if ($pause_reason !== '' && !isset($reason_config[$pause_reason])) {
       return new WP_Error('invalid_pause_reason', 'Choose a valid pause reason.', ['status' => 422]);
     }
 
-    $note_required = in_array($pause_reason, ['need_help', 'vehicle_issue', 'customer_cs_question', 'other'], true);
-    if ($note_required && $pause_note === '') {
+    if ($pause_reason === '') {
+      $pause_reason = 'END_OF_SHIFT';
+    }
+    $config = $reason_config[$pause_reason];
+
+    if (!empty($config['note_required']) && $pause_note === '') {
       return new WP_Error('pause_note_required', 'Add a note for this pause reason.', ['status' => 422]);
+    }
+
+    $is_blocked_reason = !empty($config['blocked']);
+    if ($is_blocked_reason && $other_work_can_continue === null) {
+      return new WP_Error('block_scope_required', 'Choose whether other work can continue.', [
+        'status' => 422,
+        'field' => 'other_work_can_continue',
+      ]);
+    }
+
+    $needs_after_hours_note = $overtime_seconds > 0 && $pause_reason !== 'END_OF_SHIFT';
+    if ($needs_after_hours_note && $after_hours_note === '') {
+      return new WP_Error(
+        'after_hours_note_required',
+        'Add an after-hours note before pausing this timer.',
+        [
+          'status'              => 422,
+          'field'               => 'after_hours_note',
+          'after_hours_minutes' => $overtime_minutes,
+          'overtime_minutes'    => $overtime_minutes,
+        ]
+      );
     }
 
     $update = [
@@ -3159,59 +3216,68 @@ return self::get_job(['id' => $job_id]);
       'updated_at' => $now,
     ];
 
-    if ($overtime_seconds > 0 || $pause_reason !== '') {
-      $existing_note = trim((string)($open['note'] ?? ''));
-      $note_lines = [];
-      if ($existing_note !== '') {
-        $note_lines[] = $existing_note;
-      }
-      if ($pause_reason !== '') {
-        $pause_labels = [
-          'end_of_day'           => 'End of day',
-          'waiting_on_parts'     => 'Waiting on parts',
-          'need_help'            => 'Need help',
-          'vehicle_issue'        => 'Vehicle issue',
-          'customer_cs_question' => 'Customer / CS question',
-          'other'                => 'Other',
-        ];
-        $pause_line = 'Paused: ' . ($pause_labels[$pause_reason] ?? $pause_reason);
-        if ($pause_note !== '') {
-          $pause_line .= ' - ' . $pause_note;
-        }
-        $note_lines[] = $pause_line;
-      }
-      if ($overtime_seconds > 0) {
-        $note_lines[] = 'Overtime: ' . $overtime_note;
-      }
-      $update['note'] = trim(implode("\n", $note_lines));
+    $existing_note = trim((string)($open['note'] ?? ''));
+    $note_lines = [];
+    if ($existing_note !== '') {
+      $note_lines[] = $existing_note;
     }
+    $pause_line = (!empty($config['blocked']) ? 'Blocked: ' : 'Paused: ') . (string)($config['label'] ?? $pause_reason);
+    if ($pause_note !== '') {
+      $pause_line .= ' - ' . $pause_note;
+    }
+    if ($target_job_id > 0 && $pause_reason === 'SWITCH_JOB') {
+      $pause_line .= ' (target job #' . $target_job_id . ')';
+    }
+    $note_lines[] = $pause_line;
+    if ($needs_after_hours_note) {
+      $note_lines[] = 'After-hours: ' . $after_hours_note;
+    }
+    $update['reason'] = $pause_reason;
+    $update['note'] = trim(implode("\n", $note_lines));
 
     $wpdb->update($segments, $update, ['segment_id' => (int)$open['segment_id']]);
 
-    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, 'Timer paused');
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, $is_blocked_reason ? 'Timer stopped for blocker' : 'Timer paused');
 
     $blocked_by_pause = false;
-    $block_reason = $pause_reason !== '' ? ($pause_map[$pause_reason] ?? null) : null;
-    if ($block_reason) {
-      $jobs = $wpdb->prefix . 'slate_ops_jobs';
-      $job = self::job_by_id((int)$open['job_id']);
-      if ($job && ($job['status'] ?? '') === Slate_Ops_Statuses::IN_PROGRESS) {
-        $block_note = $pause_note !== '' ? $pause_note : 'Paused by technician: ' . str_replace('_', ' ', $pause_reason);
+    $jobs = $wpdb->prefix . 'slate_ops_jobs';
+    $job = self::job_by_id((int)$open['job_id']);
+    if ($job) {
+      if ($is_blocked_reason) {
+        $full_blocked = $other_work_can_continue ? 0 : 1;
         $wpdb->update($jobs, [
-          'status'            => Slate_Ops_Statuses::BLOCKED,
-          'block_reason'      => $block_reason,
-          'block_note'        => $block_note,
-          'status_updated_at' => $now,
-          'updated_at'        => $now,
+          'status'                   => Slate_Ops_Statuses::BLOCKED,
+          'status_detail'            => self::pause_status_detail($pause_reason),
+          'block_reason'             => $pause_reason,
+          'block_note'               => $pause_note,
+          'block_requires_clearance' => 1,
+          'partial_blocked'          => $other_work_can_continue ? 1 : 0,
+          'full_blocked'             => $full_blocked,
+          'block_owner'              => sanitize_text_field((string)($config['owner'] ?? 'Ryan')),
+          'block_cleared_by'         => null,
+          'block_cleared_at'         => null,
+          'status_updated_at'        => $now,
+          'updated_at'               => $now,
         ], ['job_id' => (int)$open['job_id']]);
         $blocked_by_pause = true;
-        self::audit('job', (int)$open['job_id'], 'update', 'status', $job['status'], Slate_Ops_Statuses::BLOCKED,
-          'Paused by technician: [' . $block_reason . '] ' . $block_note);
+        self::audit('job', (int)$open['job_id'], 'block_job', 'status', $job['status'], Slate_Ops_Statuses::BLOCKED,
+          'Blocked by technician: [' . $pause_reason . '] ' . $pause_note . ($other_work_can_continue ? ' Other work can continue.' : ' Job fully stopped.'));
         self::maybe_push_dealer_portal_status(self::job_by_id((int)$open['job_id']));
+      } elseif (($job['status'] ?? '') === Slate_Ops_Statuses::IN_PROGRESS || strpos((string)($job['status_detail'] ?? ''), 'Paused - ') === 0) {
+        $detail = self::pause_status_detail($pause_reason);
+        $wpdb->update($jobs, [
+          'status_detail'            => $detail,
+          'block_requires_clearance' => 0,
+          'partial_blocked'          => 0,
+          'full_blocked'             => 0,
+          'updated_at'               => $now,
+        ], ['job_id' => (int)$open['job_id']]);
+        self::audit('job', (int)$open['job_id'], 'pause_job', 'status_detail', (string)($job['status_detail'] ?? ''), $detail,
+          $pause_line);
       }
     }
 
-    if ($overtime_seconds > 0) {
+    if ($needs_after_hours_note) {
       self::audit(
         'segment',
         (int)$open['segment_id'],
@@ -3219,7 +3285,7 @@ return self::get_job(['id' => $job_id]);
         null,
         null,
         null,
-        sprintf('Overtime logged: %d min. %s', $overtime_minutes, $overtime_note)
+        sprintf('AFTER_HOURS_REVIEW: %d min. %s', $overtime_minutes, $after_hours_note)
       );
       self::audit(
         'job',
@@ -3228,7 +3294,7 @@ return self::get_job(['id' => $job_id]);
         null,
         null,
         null,
-        sprintf('Overtime logged by %s: %d min. %s', Slate_Ops_Utils::user_display($user_id), $overtime_minutes, $overtime_note)
+        sprintf('AFTER_HOURS_REVIEW logged by %s: %d min. %s', Slate_Ops_Utils::user_display($user_id), $overtime_minutes, $after_hours_note)
       );
     }
 
@@ -3303,7 +3369,80 @@ return self::get_job(['id' => $job_id]);
     return ['segment_id' => $segment_id, 'approval_status' => 'pending'];
   }
 
+  public static function auto_stop_shift_end_timers() {
+    global $wpdb;
+
+    $settings_t = $wpdb->prefix . 'slate_ops_settings';
+    $segments_t = $wpdb->prefix . 'slate_ops_time_segments';
+    $jobs_t = $wpdb->prefix . 'slate_ops_jobs';
+
+    $setting_cols = self::settings_table_columns();
+    $auto_col = in_array('auto_stop_job_timers_at_shift_end', $setting_cols, true)
+      ? 'auto_stop_job_timers_at_shift_end'
+      : null;
+    $grace_col = in_array('shift_end_grace_minutes', $setting_cols, true)
+      ? 'shift_end_grace_minutes'
+      : null;
+
+    $cfg = $wpdb->get_row("SELECT * FROM $settings_t WHERE id=1", ARRAY_A) ?: [];
+    if ($auto_col && empty($cfg[$auto_col])) return;
+
+    $grace_minutes = $grace_col ? max(0, (int)($cfg[$grace_col] ?? 10)) : 10;
+    $now_gmt = Slate_Ops_Utils::now_gmt();
+    $now_ts = strtotime($now_gmt);
+    if (!$now_ts) return;
+
+    $open_segments = $wpdb->get_results(
+      "SELECT s.*, j.status AS job_status, j.status_detail
+         FROM $segments_t s
+         LEFT JOIN $jobs_t j ON j.job_id = s.job_id
+        WHERE s.end_ts IS NULL
+          AND s.state = 'active'
+        ORDER BY s.start_ts ASC
+        LIMIT 200",
+      ARRAY_A
+    ) ?: [];
+
+    foreach ($open_segments as $open) {
+      $shift_breakdown = self::segment_shift_breakdown((string)$open['start_ts'], $now_gmt);
+      $shift_end_ts = !empty($shift_breakdown['shift_end_ts']) ? strtotime((string)$shift_breakdown['shift_end_ts']) : false;
+      if (!$shift_end_ts) continue;
+
+      $cutoff_ts = $shift_end_ts + ($grace_minutes * MINUTE_IN_SECONDS);
+      if ($now_ts < $cutoff_ts) continue;
+
+      $stop_at = gmdate('Y-m-d H:i:s', $cutoff_ts);
+      $existing_note = trim((string)($open['note'] ?? ''));
+      $note = trim($existing_note . ($existing_note !== '' ? "\n" : '') . 'Paused automatically at shift end.');
+
+      $wpdb->update($segments_t, [
+        'end_ts' => $stop_at,
+        'reason' => 'END_OF_SHIFT',
+        'note' => $note,
+        'state' => 'closed',
+        'updated_at' => $now_gmt,
+      ], ['segment_id' => (int)$open['segment_id']]);
+
+      $current_detail = (string)($open['status_detail'] ?? '');
+      if ((string)($open['job_status'] ?? '') === Slate_Ops_Statuses::IN_PROGRESS || strpos($current_detail, 'Paused - ') === 0) {
+        $wpdb->update($jobs_t, [
+          'status_detail' => self::pause_status_detail('END_OF_SHIFT'),
+          'block_requires_clearance' => 0,
+          'partial_blocked' => 0,
+          'full_blocked' => 0,
+          'updated_at' => $now_gmt,
+        ], ['job_id' => (int)$open['job_id']]);
+      }
+
+      self::audit('segment', (int)$open['segment_id'], 'system_auto_stop', 'end_ts', null, $stop_at, 'SYSTEM_AUTO_STOP: Paused automatically at shift end.');
+      self::audit('job', (int)$open['job_id'], 'system_auto_stop', 'status_detail', $current_detail, self::pause_status_detail('END_OF_SHIFT'), 'Paused automatically at shift end.');
+      Slate_Ops_Jobs::recompute_actuals((int)$open['job_id']);
+    }
+  }
+
   public static function time_active($req) {
+    self::auto_stop_shift_end_timers();
+
     global $wpdb;
     $seg     = $wpdb->prefix . 'slate_ops_time_segments';
     $jt      = $wpdb->prefix . 'slate_ops_jobs';
@@ -3611,6 +3750,119 @@ return self::get_job(['id' => $job_id]);
     $update[$reason_key] = $r;
     $update[$note_key]   = $n;
     return null;
+  }
+
+  private static function pause_reason_config(): array {
+    return [
+      'END_OF_SHIFT' => [
+        'group' => 'pause',
+        'label' => 'End of shift',
+        'display' => 'Paused - End of shift',
+        'note_required' => false,
+        'blocked' => false,
+        'requires_clearance' => false,
+        'owner' => '',
+      ],
+      'SWITCH_JOB' => [
+        'group' => 'pause',
+        'label' => 'Switching to another job',
+        'display' => 'Paused - Switched job',
+        'note_required' => true,
+        'blocked' => false,
+        'requires_clearance' => false,
+        'owner' => '',
+      ],
+      'WAITING_ON_PARTS' => [
+        'group' => 'blocked',
+        'label' => 'Waiting on parts',
+        'display' => 'Blocked - Waiting on parts',
+        'note_required' => true,
+        'blocked' => true,
+        'requires_clearance' => true,
+        'owner' => 'CS / Purchasing',
+      ],
+      'TECH_SUPPORT_NEEDED' => [
+        'group' => 'blocked',
+        'label' => 'Tech support needed',
+        'display' => 'Blocked - Tech support needed',
+        'note_required' => true,
+        'blocked' => true,
+        'requires_clearance' => true,
+        'owner' => 'Shop / Lead Tech / Ryan',
+      ],
+      'VEHICLE_ISSUE' => [
+        'group' => 'blocked',
+        'label' => 'Vehicle issue',
+        'display' => 'Blocked - Vehicle issue',
+        'note_required' => true,
+        'blocked' => true,
+        'requires_clearance' => true,
+        'owner' => 'CS / Ryan',
+      ],
+      'CUSTOMER_DEALER_QUESTION' => [
+        'group' => 'blocked',
+        'label' => 'Customer / dealer question',
+        'display' => 'Blocked - Customer / dealer question',
+        'note_required' => true,
+        'blocked' => true,
+        'requires_clearance' => true,
+        'owner' => 'CS',
+      ],
+      'SCOPE_OR_JOB_ISSUE' => [
+        'group' => 'blocked',
+        'label' => 'Scope or job issue',
+        'display' => 'Blocked - Scope or job issue',
+        'note_required' => true,
+        'blocked' => true,
+        'requires_clearance' => true,
+        'owner' => 'CS / Ryan',
+      ],
+      'QUALITY_REWORK_ISSUE' => [
+        'group' => 'blocked',
+        'label' => 'Quality / rework issue',
+        'display' => 'Blocked - Quality / rework issue',
+        'note_required' => true,
+        'blocked' => true,
+        'requires_clearance' => true,
+        'owner' => 'Ryan / QC',
+      ],
+      'OTHER_ISSUE' => [
+        'group' => 'blocked',
+        'label' => 'Other issue',
+        'display' => 'Blocked - Other issue',
+        'note_required' => true,
+        'blocked' => true,
+        'requires_clearance' => true,
+        'owner' => 'Ryan',
+      ],
+    ];
+  }
+
+  private static function normalize_pause_reason_key($reason): string {
+    $key = strtoupper(sanitize_key((string) $reason));
+    $legacy = [
+      'END_OF_DAY' => 'END_OF_SHIFT',
+      'WAITING_ON_PARTS' => 'WAITING_ON_PARTS',
+      'NEED_HELP' => 'TECH_SUPPORT_NEEDED',
+      'VEHICLE_ISSUE' => 'VEHICLE_ISSUE',
+      'CUSTOMER_CS_QUESTION' => 'CUSTOMER_DEALER_QUESTION',
+      'OTHER' => 'OTHER_ISSUE',
+    ];
+    return $legacy[$key] ?? $key;
+  }
+
+  private static function pause_status_detail(string $reason): string {
+    $config = self::pause_reason_config();
+    return (string) ($config[$reason]['display'] ?? 'Paused');
+  }
+
+  private static function settings_table_columns(): array {
+    global $wpdb;
+    static $cols = null;
+    if ($cols !== null) return $cols;
+    $settings = $wpdb->prefix . 'slate_ops_settings';
+    $cols = $wpdb->get_col("SHOW COLUMNS FROM `{$settings}`", 0) ?: [];
+    return $cols;
   }
 
   /**

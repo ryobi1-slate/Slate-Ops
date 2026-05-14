@@ -1008,6 +1008,8 @@
             <label><div class="label" style="margin-bottom:6px;">Shift End</div><input class="input" id="shift_end" value="${escapeHtml(s.shift_end || '15:30:00')}" /></label>
             <label><div class="label" style="margin-bottom:6px;">Lunch (min)</div><input class="input" id="lunch_minutes" type="number" min="0" value="${parseInt(s.lunch_minutes)||30}" /></label>
             <label><div class="label" style="margin-bottom:6px;">Break (min)</div><input class="input" id="break_minutes" type="number" min="0" value="${parseInt(s.break_minutes)||20}" /></label>
+            <label><div class="label" style="margin-bottom:6px;">Shift-end grace (min)</div><input class="input" id="shift_end_grace_minutes" type="number" min="0" max="120" value="${parseInt(s.shift_end_grace_minutes)||10}" /></label>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:22px;"><input type="checkbox" id="auto_stop_job_timers_at_shift_end" ${s.auto_stop_job_timers_at_shift_end !== false ? 'checked' : ''} /> Auto-stop job timers at shift end</label>
           </div>
           <div style="padding:12px 20px;background:rgba(0,0,0,0.025);border-top:1px solid rgba(0,0,0,0.08);display:flex;justify-content:flex-end;">
             <button class="btn" id="save_shift">Save Shift</button>
@@ -1089,6 +1091,8 @@
         shift_end: $('#shift_end').value.trim(),
         lunch_minutes: parseInt($('#lunch_minutes').value, 10) || 0,
         break_minutes: parseInt($('#break_minutes').value, 10) || 0,
+        shift_end_grace_minutes: parseInt($('#shift_end_grace_minutes').value, 10) || 0,
+        auto_stop_job_timers_at_shift_end: $('#auto_stop_job_timers_at_shift_end').checked,
         dealers,
         sales_people: salesPeople,
       };
@@ -2504,8 +2508,11 @@ async function loadTech() {
   }
   function hasBlocker(job) {
     if (!job) return false;
-    if ((job.status || '') === 'ON_HOLD') return true;
-    return !!(job.hold_reason || job.delay_reason || job.status_detail);
+    if ((job.status || '') === 'BLOCKED' || (job.status || '') === 'ON_HOLD') return true;
+    return !!(job.hold_reason || job.delay_reason);
+  }
+  function isPaused(job) {
+    return !!(job && String(job.status_detail || '').indexOf('Paused - ') === 0);
   }
   function partsBlocked(job) {
     const ps = String((job && job.parts_status) || '').toUpperCase();
@@ -2571,20 +2578,27 @@ async function loadTech() {
     const est = estHoursStr(job);
     const logged = job.actual_minutes > 0 ? fmtMinutes(job.actual_minutes) + ' logged' : '';
     const blocked = hasBlocker(job) || partsBlocked(job);
+    const paused = isPaused(job);
     const jst = (job.status||'').toUpperCase();
     const statusLabel = blocked ? 'Blocked'
+      : (paused ? escapeHtml(job.status_detail)
       : (jst === 'IN_PROGRESS' ? 'In progress'
       : (jst === 'QC' || jst === 'PENDING_QC' ? 'Ready for closeout'
-      : (jst === 'SCHEDULED' ? 'Scheduled' : 'Ready')));
+      : (jst === 'SCHEDULED' ? 'Scheduled' : 'Ready'))));
     const primary = partsBlocked(job)
       ? `<button class="btn secondary btn-xl tech-card-cta" disabled>${escapeHtml(partsBlockMessage(job))}</button>`
+      : (blocked
+          ? `<button class="btn secondary btn-xl tech-card-cta" disabled>Waiting for clearance</button>`
       : (jst === 'IN_PROGRESS'
           ? `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Resume Work</button>`
           : (jst === 'QC' || jst === 'PENDING_QC'
               ? `<button class="btn secondary btn-xl tech-card-cta" data-open-job="${job.job_id}">Open</button>`
-              : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start Work</button>`));
+              : `<button class="btn btn-xl tech-card-cta" data-start-job="${job.job_id}">Start Work</button>`)));
     const subParts = [est ? 'Est ' + est : '', logged, job.so_number ? escapeHtml(job.so_number) : ''].filter(Boolean);
     const subLine = subParts.join(' · ');
+    const pausedMessage = paused && String(job.status_detail || '').indexOf('End of shift') !== -1
+      ? '<div class="tech-up-sub">Paused automatically at shift end.</div>'
+      : '';
     return `
       <div class="tech-up-card${blocked ? ' is-blocked' : ''}" data-open-job="${job.job_id}" role="button" tabindex="0">
         <div class="tech-up-body">
@@ -2595,6 +2609,7 @@ async function loadTech() {
           <div class="tech-up-meta">${escapeHtml(jobMeta(job) || ('#' + job.job_id))}</div>
           <div class="tech-up-tags">${techPartsBadge(job)}</div>
           ${subLine ? `<div class="tech-up-sub">${subLine}</div>` : ''}
+          ${pausedMessage}
         </div>
         <div class="tech-up-action">${primary}</div>
       </div>
@@ -2626,7 +2641,7 @@ async function loadTech() {
       <div class="tech-section-label">After hours</div>
       <div class="tech-section-body">
         This timer has passed the scheduled shift end${fmtClock(active.shift_end_ts) ? ' (' + escapeHtml(fmtClock(active.shift_end_ts)) + ')' : ''}.
-        An overtime note is required when stopping.
+        An after-hours note is required unless this is an end-of-shift pause.
       </div>
     </div>
   ` : '';
@@ -2710,8 +2725,8 @@ async function loadTech() {
             ${nextJob.so_number ? escapeHtml(nextJob.so_number) : ''}
             ${estHoursStr(nextJob) ? `${nextJob.so_number ? ' · ' : ''}Est ${estHoursStr(nextJob)}` : ''}
           </div>
-          <button class="btn tech-next-start" ${partsBlocked(nextJob) ? 'disabled' : `data-start-job="${nextJob.job_id}"`}>
-            <span class="tech-play-tri" aria-hidden="true"></span> ${partsBlocked(nextJob) ? escapeHtml(partsBlockMessage(nextJob)) : 'Start this job'}
+          <button class="btn tech-next-start" ${partsBlocked(nextJob) || hasBlocker(nextJob) ? 'disabled' : `data-start-job="${nextJob.job_id}"`}>
+            <span class="tech-play-tri" aria-hidden="true"></span> ${hasBlocker(nextJob) ? 'Waiting for clearance' : (partsBlocked(nextJob) ? escapeHtml(partsBlockMessage(nextJob)) : 'Start this job')}
           </button>
         </div>
       </section>
@@ -2788,71 +2803,34 @@ async function loadTech() {
   const stopBtn = document.getElementById('stop-active');
   if (stopBtn) {
     stopBtn.onclick = async () => {
-      const reasonChoice = window.prompt('Why are you pausing?\n1. End of day\n2. Waiting on parts\n3. Need help\n4. Vehicle issue\n5. Customer / CS question\n6. Other');
-      if (!reasonChoice) return;
-      const pauseReasons = {
-        '1': 'end_of_day',
-        '2': 'waiting_on_parts',
-        '3': 'need_help',
-        '4': 'vehicle_issue',
-        '5': 'customer_cs_question',
-        '6': 'other'
-      };
-      const pauseReason = pauseReasons[String(reasonChoice).trim()];
-      if (!pauseReason) {
-        toast('Choose a valid pause reason', true);
-        return;
-      }
-      let pauseNote = '';
-      if (['need_help', 'vehicle_issue', 'customer_cs_question', 'other'].includes(pauseReason)) {
-        pauseNote = (window.prompt('Add a short note for this pause:') || '').trim();
-        if (!pauseNote) {
-          toast('Pause note required', true);
-          return;
-        }
-      } else if (pauseReason === 'waiting_on_parts') {
-        pauseNote = (window.prompt('Optional note for parts pause:') || '').trim();
-      }
+      const shiftEnd = active && active.shift_end_ts ? parseGMTTimestamp(active.shift_end_ts) : null;
+      const afterHoursRequired = !!(active && active.after_shift_end)
+        || !!(shiftEnd && Date.now() > shiftEnd.getTime());
+      const pausePayload = window.__slateOpsPauseWork
+        ? await window.__slateOpsPauseWork({
+            afterHoursRequired: afterHoursRequired,
+            switchTargets: queue.map(j => ({
+              job_id: j.job_id,
+              so_number: j.so_number,
+              customer_name: j.customer_name
+            }))
+          })
+        : null;
+      if (!pausePayload) return;
       stopBtn.disabled = true;
       stopBtn.textContent = 'Pausing…';
       try {
-        const overtimeMinutes = active && active.overtime_minutes ? parseInt(active.overtime_minutes, 10) : 0;
-        let overtimeNote = '';
-        if (overtimeMinutes > 0) {
-          overtimeNote = window.prompt('Add an overtime note for ' + fmtMinutes(overtimeMinutes) + ' after shift end:') || '';
-          overtimeNote = overtimeNote.trim();
-          if (!overtimeNote) {
-            stopBtn.disabled = false;
-            stopBtn.textContent = 'Pause work';
-            toast('Overtime note required', true);
-            return;
-          }
-        }
-        const stopPayload = { pause_reason: pauseReason, pause_note: pauseNote };
         let result;
         try {
-          result = await api.timeStop(overtimeNote ? { ...stopPayload, overtime_note: overtimeNote } : stopPayload);
+          result = await api.timeStop(pausePayload);
         } catch (err) {
-          if (err && err.data && err.data.code === 'overtime_note_required') {
-            const mins = err.data.data && err.data.data.overtime_minutes ? parseInt(err.data.data.overtime_minutes, 10) : 0;
-            overtimeNote = window.prompt('Add an overtime note for ' + (mins ? fmtMinutes(mins) : 'after-hours work') + ':') || '';
-            overtimeNote = overtimeNote.trim();
-            if (!overtimeNote) {
-              stopBtn.disabled = false;
-              stopBtn.textContent = 'Pause work';
-              toast('Overtime note required', true);
-              return;
-            }
-            result = await api.timeStop({ ...stopPayload, overtime_note: overtimeNote });
-          } else {
-            throw err;
-          }
+          throw err;
         }
         clearInterval(state.timerInterval);
         if (result && result.elapsed_seconds > 0) {
           const sesStr = fmtMinutes(Math.round(result.elapsed_seconds / 60));
           const totStr = fmtMinutes(result.total_approved_minutes);
-          const otStr = result.overtime_minutes > 0 ? ` · ${fmtMinutes(result.overtime_minutes)} overtime` : '';
+          const otStr = result.overtime_minutes > 0 ? ` · ${fmtMinutes(result.overtime_minutes)} after hours` : '';
           toast(`${sesStr} saved${otStr} — ${totStr} total logged on this job`);
         } else {
           toast('Work stopped and logged');
@@ -3462,7 +3440,15 @@ async function loadAdmin() {
           <div class="label" style="margin-bottom:6px;">Break Minutes</div>
           <input class="input" id="break_minutes" value="${settingsResp.break_minutes || 20}" />
         </div>
+        <div style="flex:1 1 160px;">
+          <div class="label" style="margin-bottom:6px;">Shift-end Grace</div>
+          <input class="input" id="shift_end_grace_minutes" value="${settingsResp.shift_end_grace_minutes || 10}" />
+        </div>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;margin:0 0 14px;">
+        <input type="checkbox" id="auto_stop_job_timers_at_shift_end" ${settingsResp.auto_stop_job_timers_at_shift_end !== false ? 'checked' : ''} />
+        Auto-stop job timers at shift end
+      </label>
       <div style="margin-bottom:14px;">
         <div class="label" style="margin-bottom:6px;">Dealers</div>
         ${tagListHtml('dealers', dealers, 'Dealer name…')}
@@ -3632,6 +3618,8 @@ async function loadAdmin() {
         shift_end:      $('#shift_end').value.trim(),
         lunch_minutes:  parseInt($('#lunch_minutes').value, 10),
         break_minutes:  parseInt($('#break_minutes').value, 10),
+        shift_end_grace_minutes: parseInt($('#shift_end_grace_minutes').value, 10) || 0,
+        auto_stop_job_timers_at_shift_end: $('#auto_stop_job_timers_at_shift_end').checked,
         dealers,
         sales_people: salesPeople,
         bays,

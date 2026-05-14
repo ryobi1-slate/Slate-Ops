@@ -332,6 +332,17 @@ class Slate_Ops_Supervisor_Dashboard {
 
     if (self::is_rework($row) || $status === Slate_Ops_Statuses::QC && strpos($reason, 'fail') !== false) return 'QC Issue';
     if ($status === Slate_Ops_Statuses::BLOCKED || $status === Slate_Ops_Statuses::ON_HOLD) {
+      $block_reason = strtoupper((string) ($row['block_reason'] ?? ''));
+      $mapped = [
+        'WAITING_ON_PARTS' => 'Parts',
+        'TECH_SUPPORT_NEEDED' => 'Tech Needs Help',
+        'VEHICLE_ISSUE' => 'Customer / Dealer',
+        'CUSTOMER_DEALER_QUESTION' => 'Customer / Dealer',
+        'SCOPE_OR_JOB_ISSUE' => 'Scope / Engineering',
+        'QUALITY_REWORK_ISSUE' => 'QC Issue',
+        'OTHER_ISSUE' => 'Admin / Paperwork',
+      ];
+      if (isset($mapped[$block_reason])) return $mapped[$block_reason];
       if ($parts === 'HOLD' || $parts === 'NOT_READY' || str_contains($reason, 'part') || str_contains($reason, 'vendor')) return 'Parts';
       if (str_contains($reason, 'scope') || str_contains($reason, 'engineering') || str_contains($reason, 'build sheet')) return 'Scope / Engineering';
       if (str_contains($reason, 'customer') || str_contains($reason, 'dealer') || str_contains($reason, 'sign-off')) return 'Customer / Dealer';
