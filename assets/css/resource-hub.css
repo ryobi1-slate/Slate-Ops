@@ -255,9 +255,9 @@ body.slate-ops.ops-page-resource-hub .rh-app .rh-chip {
 }
 
 body.slate-ops.ops-page-resource-hub .rh-app .rh-chip[aria-pressed="true"] {
-  background: var(--rh-ink) !important;
-  border-color: var(--rh-ink) !important;
-  color: #f1ede3 !important;
+  background: var(--slate-sage-wash) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
 }
 
 .rh-list {
@@ -418,9 +418,9 @@ body.slate-ops.ops-page-resource-hub .rh-app .rh-btn {
 }
 
 body.slate-ops.ops-page-resource-hub .rh-app .rh-btn--primary {
-  background: var(--rh-ink) !important;
-  border-color: var(--rh-ink) !important;
-  color: #f1ede3 !important;
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: #fff !important;
 }
 
 .rh-btn--ghost {

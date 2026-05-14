@@ -1,5 +1,29 @@
 # Slate Ops Changelog
 
+## 0.61.2 — Supervisor unblock schedule review
+
+- Clear Blocker now flags manual schedule review when a blocker was open 4+ hours or the job is due today/past due.
+- Jobs flagged for manual schedule review remain visible in Supervisor Schedule Risk after the blocker is cleared.
+- Rescheduling remains manual for now; no automatic schedule writes were added.
+
+## 0.61.1 — Supervisor clear blocker only
+
+- Simplified Supervisor Dashboard actions so only Clear Blocker is active.
+- Clear Blocker requires a resolution note and uses the Supervisor-scoped clear-blocker REST endpoint with audit logging.
+- Removed the not-yet-needed helper, hold, note, escalation, and QC action controls from the Supervisor Dashboard UI.
+
+## 0.61.0 — Supervisor actions
+
+- Added safe Supervisor Dashboard action modals for notes, helper assignment, blocker clearing, hold moves, and QC review.
+- Added Supervisor-scoped REST endpoints with nonce-protected requests, permission checks, required notes for state changes, and audit logging.
+- Kept schedule handoff as navigation only; no drag/drop or schedule writes were added in this phase.
+
+## 0.60.0 — Live Supervisor data
+
+- Replaced the Supervisor Dashboard prototype stub payload with live read-only Ops job data from `slate_ops_jobs`.
+- Added live Supervisor rollups for blockers, parts risk, schedule readiness, tech status, QC/rework, ready queue, and attention items.
+- Kept Supervisor Dashboard actions read-only while preserving the `slate_ops_supervisor_refresh` filter for future real-data overrides.
+
 ## 0.59.0 — Supervisor Dashboard
 
 - Added server-rendered Supervisor Dashboard at `/ops/supervisor-dashboard` with blocked jobs, schedule readiness, tech status, QC/rework, and ready queue views.

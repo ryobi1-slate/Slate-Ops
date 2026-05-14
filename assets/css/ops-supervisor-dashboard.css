@@ -58,6 +58,8 @@
   font: 600 12px/1 var(--font-sans);
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: none;
+  text-decoration: none;
 }
 
 .ops-supervisor-btn:hover,
@@ -195,8 +197,10 @@
   margin-bottom: var(--slate-space-md);
   padding: 16px 18px;
   border-radius: var(--slate-radius-md);
-  background: var(--slate-sage);
-  color: #fff;
+  border: 1px solid rgba(64, 79, 75, 0.24);
+  border-left: 4px solid var(--slate-sage);
+  background: var(--slate-sage-wash);
+  color: var(--slate-ink);
 }
 
 .ops-supervisor-focus strong {
@@ -207,7 +211,7 @@
 }
 
 .ops-supervisor-focus span {
-  color: rgba(255, 255, 255, 0.74);
+  color: var(--slate-ink-muted);
 }
 
 .ops-supervisor-grid {
@@ -218,7 +222,7 @@
 }
 
 .ops-supervisor-grid--wide {
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.8fr);
+  grid-template-columns: 1fr;
 }
 
 .ops-supervisor-card {
@@ -254,7 +258,7 @@
 
 .ops-supervisor-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1180px;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -297,6 +301,8 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .ops-supervisor-sub {
@@ -349,7 +355,7 @@
 }
 
 .ops-supervisor-actions-cell {
-  min-width: 220px;
+  min-width: 260px;
 }
 
 .ops-supervisor-actions-cell .ops-supervisor-action,
@@ -657,6 +663,252 @@
   transform: translateY(0);
 }
 
+.ops-supervisor-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  background: rgba(15, 52, 42, 0.28);
+}
+
+.ops-supervisor-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 10002;
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  transform: translate(-50%, -50%);
+  border: var(--slate-border);
+  border-radius: var(--slate-radius-md);
+  background: var(--slate-surface);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.ops-supervisor-modal__head,
+.ops-supervisor-modal__foot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+
+.ops-supervisor-modal__head h2 {
+  margin: 3px 0;
+  color: var(--slate-ink);
+  font-size: 20px;
+}
+
+.ops-supervisor-modal__head p,
+.ops-supervisor-modal__hint {
+  margin: 0;
+  color: var(--slate-ink-muted);
+  font-size: 13px;
+}
+
+.ops-supervisor-modal__body {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.ops-supervisor-modal__foot {
+  justify-content: flex-end;
+  border-top: 1px solid var(--slate-divider-soft);
+  border-bottom: 0;
+}
+
+.ops-supervisor-field {
+  display: grid;
+  gap: 7px;
+}
+
+.ops-supervisor-field span {
+  color: var(--slate-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: var(--slate-tracking-wide);
+  text-transform: uppercase;
+}
+
+.ops-supervisor-field textarea,
+.ops-supervisor-field select {
+  width: 100%;
+  border: 1px solid var(--slate-divider);
+  border-radius: 6px;
+  background: var(--slate-surface);
+  color: var(--slate-ink);
+  font: 500 13px/1.4 var(--font-sans);
+}
+
+.ops-supervisor-field textarea {
+  min-height: 112px;
+  resize: vertical;
+  padding: 10px;
+}
+
+.ops-supervisor-field select {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.ops-supervisor-field textarea:focus,
+.ops-supervisor-field select:focus {
+  border-color: var(--slate-sage);
+  outline: 2px solid var(--slate-sage-wash);
+}
+
+/* Shared design-language button rules load after this page bundle. These
+   scoped selectors keep Supervisor controls in the Slate industrial palette. */
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-action,
+.ops-page-supervisor-dashboard .ops-supervisor-drawer button.ops-supervisor-action,
+.ops-page-supervisor-dashboard .ops-supervisor-modal button.ops-supervisor-action {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+  box-shadow: none !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn:hover,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-action:hover,
+.ops-page-supervisor-dashboard .ops-supervisor-drawer button.ops-supervisor-action:hover,
+.ops-page-supervisor-dashboard .ops-supervisor-modal button.ops-supervisor-action:hover {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage-wash) !important;
+  color: var(--slate-sage) !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn--primary,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-action--strong,
+.ops-page-supervisor-dashboard .ops-supervisor-drawer button.ops-supervisor-action--strong,
+.ops-page-supervisor-dashboard .ops-supervisor-modal button.ops-supervisor-action--strong {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn--light {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-sage) !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-tab {
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--slate-ink-muted) !important;
+  box-shadow: none !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-tab:hover,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-tab.is-active {
+  color: var(--slate-sage) !important;
+  border-bottom-color: var(--slate-sage) !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-chip {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink-muted) !important;
+  box-shadow: none !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-chip.is-active {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops .ops-supervisor button.ops-supervisor-action,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip,
+.ops-supervisor button.ops-supervisor-btn,
+.ops-supervisor button.ops-supervisor-action,
+.ops-supervisor button.ops-supervisor-tab,
+.ops-supervisor button.ops-supervisor-chip {
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn,
+body.slate-ops .ops-supervisor button.ops-supervisor-action,
+.ops-supervisor button.ops-supervisor-btn,
+.ops-supervisor button.ops-supervisor-action {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn:hover,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action:hover,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn:hover,
+body.slate-ops .ops-supervisor button.ops-supervisor-action:hover,
+.ops-supervisor button.ops-supervisor-btn:hover,
+.ops-supervisor button.ops-supervisor-action:hover {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage-wash) !important;
+  color: var(--slate-sage) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-btn--primary,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-action--strong,
+body.slate-ops .ops-supervisor button.ops-supervisor-btn--primary,
+body.slate-ops .ops-supervisor button.ops-supervisor-action--strong,
+.ops-supervisor button.ops-supervisor-btn--primary,
+.ops-supervisor button.ops-supervisor-action--strong {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab,
+.ops-supervisor button.ops-supervisor-tab {
+  border-color: transparent !important;
+  border-width: 0 0 2px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--slate-ink-muted) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab:hover,
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-tab.is-active,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab:hover,
+body.slate-ops .ops-supervisor button.ops-supervisor-tab.is-active,
+.ops-supervisor button.ops-supervisor-tab:hover,
+.ops-supervisor button.ops-supervisor-tab.is-active {
+  border-bottom-color: var(--slate-sage) !important;
+  color: var(--slate-sage) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip,
+.ops-supervisor button.ops-supervisor-chip {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink-muted) !important;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip.is-active,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip.is-active,
+.ops-supervisor button.ops-supervisor-chip.is-active {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
 @media (max-width: 1100px) {
   .ops-supervisor-kpis,
   .ops-supervisor-mini-grid,
@@ -701,4 +953,95 @@
   .ops-supervisor-toast {
     transition: none;
   }
+}
+
+/* Consistency pass: CS and Purchasing are the reference. Keep Supervisor's
+   workflow intact, but remove the older soft/accent-card treatment. */
+.ops-page-supervisor-dashboard .ops-supervisor-header {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--slate-divider);
+  margin-bottom: 0;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-title {
+  font-size: var(--slate-text-xl);
+  font-weight: var(--slate-weight-medium);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-tabs {
+  margin-bottom: var(--slate-space-xl);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpis {
+  gap: var(--slate-space-lg);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi,
+.ops-page-supervisor-dashboard .ops-supervisor-card,
+.ops-page-supervisor-dashboard .ops-supervisor-mini,
+.ops-page-supervisor-dashboard .ops-supervisor-future,
+.ops-page-supervisor-dashboard .ops-supervisor-tech-card {
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+  box-shadow: none;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi,
+.ops-page-supervisor-dashboard .ops-supervisor-card {
+  border-top: 1px solid var(--slate-divider);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi--arches {
+  border-left: 3px solid var(--slate-arches);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi--blocked {
+  border-left: 3px solid var(--slate-flag);
+  background: var(--slate-surface);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi__value,
+.ops-page-supervisor-dashboard .ops-supervisor-mini strong,
+.ops-page-supervisor-dashboard .ops-supervisor-future strong {
+  font-family: var(--font-sans);
+  font-weight: var(--slate-weight-medium);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-card__head h2 {
+  font-size: var(--slate-text-base);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-table th {
+  background: var(--slate-sage-wash);
+  border-bottom-color: var(--slate-divider);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-job-row:hover,
+.ops-page-supervisor-dashboard .ops-supervisor-job-row:focus,
+.ops-page-supervisor-dashboard .ops-supervisor-list-row:hover {
+  background: var(--slate-surface-tint);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-focus {
+  border: 1px solid var(--slate-divider);
+  border-left: 3px solid var(--slate-sage);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-chip {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip.is-active,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip.is-active,
+.ops-supervisor button.ops-supervisor-chip.is-active {
+  background: var(--slate-sage-wash) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
 }

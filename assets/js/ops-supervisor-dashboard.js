@@ -93,10 +93,22 @@
   var closeButton = $('#ops-supervisor-drawer-close');
   var toast = $('#ops-supervisor-toast');
   var toastTimer;
+  var currentJob = null;
+  var modal = $('#ops-supervisor-action-modal');
+  var modalBackdrop = $('#ops-supervisor-modal-backdrop');
+  var modalForm = $('#ops-supervisor-action-form');
+  var modalFields = $('#ops-supervisor-modal-fields');
+  var modalTitle = $('#ops-supervisor-modal-title');
+  var modalJob = $('#ops-supervisor-modal-job');
+  var modalSubmit = $('#ops-supervisor-modal-submit');
+  var modalClose = $('#ops-supervisor-modal-close');
+  var modalCancel = $('#ops-supervisor-modal-cancel');
+  var activeAction = null;
+  var activeJob = null;
 
   function showToast(message) {
     if (!toast) return;
-    toast.textContent = message || 'Read-only first pass. No job change was written.';
+    toast.textContent = message || 'No change was written.';
     toast.classList.add('is-open');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () {
@@ -106,6 +118,7 @@
 
   function openDrawer(job) {
     if (!drawer || !job) return;
+    currentJob = job;
     var tech = job.tech && job.tech.name ? job.tech.name : 'Unassigned';
     var customer = (job.dealer || '—') + ' / ' + (job.customer || '—');
     $('#ops-supervisor-drawer-job').textContent = job.id || '—';
@@ -142,7 +155,7 @@
     var notes = $('#ops-supervisor-drawer-notes');
     var rows = Array.isArray(job.notes) ? job.notes : [];
     if (!rows.length) {
-      notes.innerHTML = '<p>No recent activity in the stub payload.</p>';
+      notes.innerHTML = '<p>No recent activity recorded.</p>';
     } else {
       notes.innerHTML = rows.map(function (note) {
         return '<div class="ops-supervisor-note"><strong>' + escapeHtml(note.who) + '</strong> <span>' + escapeHtml(note.role) + ' · ' + escapeHtml(note.when) + '</span><br>' + escapeHtml(note.text) + '</div>';
@@ -167,9 +180,109 @@
     catch (e) { return null; }
   }
 
+  function jobId(job) {
+    return job && job._raw && job._raw.job_id ? parseInt(job._raw.job_id, 10) : 0;
+  }
+
+  function apiUrl(path) {
+    var rootUrl = localized.api && localized.api.root ? localized.api.root : '';
+    return rootUrl.replace(/\/$/, '') + '/' + path.replace(/^\//, '');
+  }
+
+  function apiRequest(path, body) {
+    return fetch(apiUrl(path), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': localized.api && localized.api.nonce ? localized.api.nonce : ''
+      },
+      body: JSON.stringify(body || {})
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        if (!response.ok) {
+          throw new Error(data.message || data.error || 'Action failed');
+        }
+        return data;
+      });
+    });
+  }
+
+  function actionTitle(action) {
+    return {
+      'clear-blocker': 'Clear blocker'
+    }[action] || 'Supervisor action';
+  }
+
+  function textareaField(name, label, placeholder, required) {
+    return '<label class="ops-supervisor-field"><span>' + escapeHtml(label) + '</span><textarea name="' + escapeHtml(name) + '"' + (required ? ' required' : '') + ' placeholder="' + escapeHtml(placeholder || '') + '"></textarea></label>';
+  }
+
+  function renderModalFields(action, job) {
+    if (!modalFields) return Promise.resolve();
+    if (action === 'clear-blocker') {
+      modalFields.innerHTML = textareaField('resolution_note', 'Resolution note', 'What changed, and why is the blocker safe to clear?', true);
+      return Promise.resolve();
+    }
+    modalFields.innerHTML = '<p class="ops-supervisor-modal__hint">Only clear-blocker actions are active right now.</p>';
+    return Promise.resolve();
+  }
+
+  function openActionModal(action, job) {
+    if (action !== 'clear-blocker') {
+      showToast('Only Clear Blocker is active right now.');
+      return;
+    }
+    if (!modal || !modalFields || !jobId(job)) {
+      showToast('Open a job first.');
+      return;
+    }
+    activeAction = action;
+    activeJob = job;
+    modalTitle.textContent = actionTitle(action);
+    modalJob.textContent = (job.id || 'Job') + ' · ' + (job.customer || 'Unknown customer');
+    modalSubmit.textContent = 'Clear blocker';
+    renderModalFields(action, job).then(function () {
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      if (modalBackdrop) modalBackdrop.hidden = false;
+      var first = modal.querySelector('textarea, select, input');
+      if (first) first.focus();
+    });
+  }
+
+  function closeActionModal() {
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    if (modalBackdrop) modalBackdrop.hidden = true;
+    activeAction = null;
+    activeJob = null;
+  }
+
+  function formPayload(form) {
+    var data = new FormData(form);
+    var out = {};
+    data.forEach(function (value, key) {
+      out[key] = value;
+    });
+    return out;
+  }
+
+  function submitAction(action, job, body) {
+    var id = jobId(job);
+    if (action === 'clear-blocker') return apiRequest('/supervisor/jobs/' + id + '/clear-blocker', body);
+    return Promise.reject(new Error('Only Clear Blocker is active right now.'));
+  }
+
   $$('.ops-supervisor-job-row').forEach(function (row) {
     row.addEventListener('click', function (event) {
-      if (event.target.closest('[data-readonly-action]')) return;
+      var actionButton = event.target.closest('[data-supervisor-action]');
+      if (actionButton) {
+        event.stopPropagation();
+        openActionModal(actionButton.getAttribute('data-supervisor-action'), jobFromRow(row));
+        return;
+      }
       openDrawer(jobFromRow(row));
     });
     row.addEventListener('keydown', function (event) {
@@ -183,15 +296,43 @@
   if (closeButton) closeButton.addEventListener('click', closeDrawer);
   if (backdrop) backdrop.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') closeDrawer();
+    if (event.key === 'Escape') {
+      if (modal && !modal.hidden) closeActionModal();
+      else closeDrawer();
+    }
   });
 
-  $$('[data-readonly-action]').forEach(function (button) {
+  $$('[data-supervisor-action]').forEach(function (button) {
     button.addEventListener('click', function (event) {
       event.stopPropagation();
-      showToast('Read-only first pass. No job change was written.');
+      var row = button.closest('.ops-supervisor-job-row');
+      var job = row ? jobFromRow(row) : currentJob;
+      openActionModal(button.getAttribute('data-supervisor-action'), job);
     });
   });
+
+  if (modalForm) {
+    modalForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (!activeAction || !activeJob) return;
+      modalSubmit.disabled = true;
+      modalSubmit.textContent = 'Saving...';
+      submitAction(activeAction, activeJob, formPayload(modalForm)).then(function (data) {
+        closeActionModal();
+        showToast(data.message || 'Supervisor action saved.');
+        setTimeout(function () { window.location.reload(); }, 700);
+      }).catch(function (error) {
+        showToast(error.message || 'Action failed.');
+      }).finally(function () {
+        modalSubmit.disabled = false;
+        modalSubmit.textContent = 'Clear blocker';
+      });
+    });
+  }
+
+  if (modalClose) modalClose.addEventListener('click', closeActionModal);
+  if (modalCancel) modalCancel.addEventListener('click', closeActionModal);
+  if (modalBackdrop) modalBackdrop.addEventListener('click', closeActionModal);
 
   if (payload && payload.tabs && window.location.hash) {
     var hashTab = window.location.hash.replace(/^#/, '');

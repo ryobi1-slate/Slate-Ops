@@ -398,3 +398,160 @@
     flex-direction: column;
   }
 }
+
+/* Consistency pass: Audit Log was still using raw utility colors. Keep the
+   table/drawer behavior, but align it to the CS/Purchasing Slate language. */
+.ops-page-admin .ops-audit-log {
+  color: var(--slate-ink);
+  padding: var(--slate-space-2xl) var(--slate-space-2xl) 56px;
+}
+
+.ops-page-admin .ops-audit-log__header {
+  align-items: flex-start;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.ops-page-admin .ops-audit-log__header h1 {
+  font-size: var(--slate-text-xl);
+  font-weight: var(--slate-weight-medium);
+}
+
+.ops-page-admin .ops-audit-log__header p {
+  color: var(--slate-ink-muted);
+  font-size: var(--slate-text-sm);
+  margin-top: 4px;
+}
+
+.ops-page-admin .ops-audit-summary__tile,
+.ops-page-admin .ops-audit-panel,
+.ops-page-admin .ops-audit-detail-group {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  box-shadow: none;
+}
+
+.ops-page-admin .ops-audit-summary__tile span,
+.ops-page-admin .ops-audit-filters label span,
+.ops-page-admin .ops-audit-detail-group h3,
+.ops-page-admin .ops-audit-detail-list dt,
+.ops-page-admin .ops-audit-muted,
+.ops-page-admin .ops-audit-empty,
+.ops-page-admin .ops-audit-pagination span {
+  color: var(--slate-ink-subtle);
+}
+
+.ops-page-admin .ops-audit-summary__tile strong,
+.ops-page-admin .ops-audit-change,
+.ops-page-admin .ops-audit-detail-list dd {
+  color: var(--slate-ink);
+}
+
+.ops-page-admin .ops-audit-filters input,
+.ops-page-admin .ops-audit-filters select {
+  background: var(--slate-surface);
+  border-color: var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  color: var(--slate-ink);
+}
+
+.ops-page-admin .ops-audit-button,
+.ops-page-admin .ops-audit-icon-button {
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-divider-strong) !important;
+  border-radius: 8px;
+  color: var(--slate-ink) !important;
+}
+
+.ops-page-admin .ops-audit-button:hover,
+.ops-page-admin .ops-audit-button:focus-visible,
+.ops-page-admin .ops-audit-icon-button:hover,
+.ops-page-admin .ops-audit-icon-button:focus-visible {
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-ink) !important;
+}
+
+.ops-page-admin .ops-audit-button--primary {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+.ops-page-admin .ops-audit-button--primary:hover,
+.ops-page-admin .ops-audit-button--primary:focus-visible {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: #fff !important;
+}
+
+.ops-page-admin .ops-audit-table th {
+  background: var(--slate-sage-wash);
+  border-bottom-color: var(--slate-divider);
+  color: var(--slate-ink-muted);
+}
+
+.ops-page-admin .ops-audit-table td {
+  border-bottom-color: var(--slate-divider-soft);
+  color: var(--slate-ink);
+}
+
+.ops-page-admin .ops-audit-row:hover td {
+  background: var(--slate-surface-tint);
+}
+
+.ops-page-admin .ops-audit-pill {
+  background: var(--slate-pill-neutral-bg);
+  border: 1px solid var(--slate-pill-neutral-br);
+  color: var(--slate-pill-neutral-fg);
+}
+
+.ops-page-admin .ops-audit-pill--job {
+  background: var(--slate-pill-info-bg);
+  border-color: var(--slate-pill-info-br);
+  color: var(--slate-pill-info-fg);
+}
+
+.ops-page-admin .ops-audit-pill--user {
+  background: var(--slate-pill-ok-bg);
+  border-color: var(--slate-pill-ok-br);
+  color: var(--slate-pill-ok-fg);
+}
+
+.ops-page-admin .ops-audit-pill--settings,
+.ops-page-admin .ops-audit-pill--scheduler,
+.ops-page-admin .ops-audit-pill--work-center {
+  background: var(--slate-pill-warn-bg);
+  border-color: var(--slate-pill-warn-br);
+  color: var(--slate-pill-warn-fg);
+}
+
+.ops-page-admin .ops-audit-drawer__scrim {
+  background: rgba(15, 52, 42, .28);
+}
+
+.ops-page-admin .ops-audit-drawer__panel {
+  background: var(--slate-surface);
+  border-left-color: var(--slate-divider);
+  box-shadow: -18px 0 42px rgba(15, 52, 42, .14);
+}
+
+.ops-page-admin .ops-audit-drawer__panel header {
+  border-bottom-color: var(--slate-divider-soft);
+}
+
+.ops-page-admin .ops-audit-drawer__panel header span {
+  color: var(--slate-arches);
+}
+
+.ops-page-admin .ops-audit-code {
+  background: var(--slate-sage-wash);
+  border-radius: var(--slate-radius-md);
+}
+
+@media (max-width: 640px) {
+  .ops-page-admin .ops-audit-log {
+    padding: var(--slate-space-lg) var(--slate-space-lg) 40px;
+  }
+}

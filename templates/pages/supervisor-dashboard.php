@@ -40,8 +40,18 @@ function slate_ops_supervisor_job_json($job) {
   return esc_attr(wp_json_encode($job));
 }
 
+function slate_ops_supervisor_action_slug($label) {
+  $map = [
+    'Clear Blocker' => 'clear-blocker',
+    'Review blocker' => 'clear-blocker',
+  ];
+  return $map[$label] ?? '';
+}
+
 function slate_ops_supervisor_button($label, $extra_class = '') {
-  echo '<button type="button" class="ops-supervisor-action ' . esc_attr($extra_class) . '" data-readonly-action="1">' . esc_html($label) . '</button>';
+  $action = slate_ops_supervisor_action_slug($label);
+  if ($action === '') return;
+  echo '<button type="button" class="ops-supervisor-action ' . esc_attr($extra_class) . '" data-supervisor-action="' . esc_attr($action) . '">' . esc_html($label) . '</button>';
 }
 
 function slate_ops_supervisor_job_table($jobs, $columns = 'control') {
@@ -71,11 +81,7 @@ function slate_ops_supervisor_job_table($jobs, $columns = 'control') {
               <td><span class="ops-supervisor-mono"><?php echo esc_html((string) $job['time_blocked']); ?></span></td>
               <td><?php echo esc_html($job['last_note']); ?></td>
               <td class="ops-supervisor-actions-cell">
-                <?php slate_ops_supervisor_button('Clear Blocker'); ?>
-                <?php slate_ops_supervisor_button('Assign Helper'); ?>
-                <?php slate_ops_supervisor_button('Move to Hold'); ?>
-                <?php slate_ops_supervisor_button('Add Note'); ?>
-                <?php slate_ops_supervisor_button('Escalate', 'ops-supervisor-action--strong'); ?>
+                <?php slate_ops_supervisor_button('Clear Blocker', 'ops-supervisor-action--strong'); ?>
               </td>
             <?php else : ?>
               <td><span class="ops-supervisor-mono"><?php echo esc_html($job['id']); ?></span><span class="ops-supervisor-sub"><?php echo esc_html($job['so']); ?></span></td>
@@ -85,7 +91,13 @@ function slate_ops_supervisor_job_table($jobs, $columns = 'control') {
               <td><?php echo esc_html($job['step']); ?></td>
               <td><span class="ops-supervisor-mono"><?php echo esc_html($job['due']); ?></span></td>
               <td><?php echo esc_html($job['issue']); ?></td>
-              <td><?php slate_ops_supervisor_button($job['action'], 'ops-supervisor-action--strong'); ?></td>
+              <td>
+                <?php if (!empty($job['blocked_category'])) : ?>
+                  <?php slate_ops_supervisor_button('Clear Blocker', 'ops-supervisor-action--strong'); ?>
+                <?php else : ?>
+                  <span class="ops-supervisor-sub">Open row for details</span>
+                <?php endif; ?>
+              </td>
             <?php endif; ?>
           </tr>
         <?php endforeach; ?>
@@ -266,12 +278,6 @@ function slate_ops_supervisor_job_list_card($title, $jobs, $empty = 'No jobs in 
       <?php slate_ops_supervisor_job_list_card('Rework Required', $payload['qc']['rework']); ?>
       <?php slate_ops_supervisor_job_list_card('Ready for Sign-off', $payload['qc']['signoff']); ?>
     </div>
-    <div class="ops-supervisor-action-row">
-      <?php slate_ops_supervisor_button('Review QC'); ?>
-      <?php slate_ops_supervisor_button('Approve Closeout'); ?>
-      <?php slate_ops_supervisor_button('Send Back to Tech'); ?>
-      <?php slate_ops_supervisor_button('Add Rework Note'); ?>
-    </div>
   </section>
 
   <section class="ops-supervisor-tab-panel" data-tab-panel="ready" hidden>
@@ -309,11 +315,26 @@ function slate_ops_supervisor_job_list_card($title, $jobs, $empty = 'No jobs in 
   </div>
   <footer class="ops-supervisor-drawer__foot">
     <?php slate_ops_supervisor_button('Clear Blocker'); ?>
-    <?php slate_ops_supervisor_button('Assign Helper'); ?>
-    <?php slate_ops_supervisor_button('Add Note'); ?>
-    <?php slate_ops_supervisor_button('Escalate', 'ops-supervisor-action--strong'); ?>
   </footer>
 </aside>
 
-<div class="ops-supervisor-toast" id="ops-supervisor-toast">Read-only first pass. No job change was written.</div>
+<div class="ops-supervisor-toast" id="ops-supervisor-toast">No change was written.</div>
+<div class="ops-supervisor-modal-backdrop" id="ops-supervisor-modal-backdrop" hidden></div>
+<section class="ops-supervisor-modal" id="ops-supervisor-action-modal" hidden aria-hidden="true" aria-labelledby="ops-supervisor-modal-title" role="dialog">
+  <form id="ops-supervisor-action-form">
+    <header class="ops-supervisor-modal__head">
+      <div>
+        <span class="ops-supervisor-drawer__eyebrow">Supervisor action</span>
+        <h2 id="ops-supervisor-modal-title">Clear blocker</h2>
+        <p id="ops-supervisor-modal-job">Select a job</p>
+      </div>
+      <button type="button" class="ops-supervisor-drawer__close" id="ops-supervisor-modal-close" aria-label="Close action modal"><span class="material-symbols-outlined">close</span></button>
+    </header>
+    <div class="ops-supervisor-modal__body" id="ops-supervisor-modal-fields"></div>
+    <footer class="ops-supervisor-modal__foot">
+      <button type="button" class="ops-supervisor-action" id="ops-supervisor-modal-cancel">Cancel</button>
+      <button type="submit" class="ops-supervisor-action ops-supervisor-action--strong" id="ops-supervisor-modal-submit">Save</button>
+    </footer>
+  </form>
+</section>
 <script type="application/json" id="supervisor-dashboard-data"><?php echo wp_json_encode($payload); ?></script>

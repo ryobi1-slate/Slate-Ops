@@ -24,6 +24,7 @@ class Slate_Ops_Install {
   private static function add_missing_columns() {
     global $wpdb;
     $jobs = $wpdb->prefix . 'slate_ops_jobs';
+    $settings = $wpdb->prefix . 'slate_ops_settings';
 
     $cols = $wpdb->get_col("SHOW COLUMNS FROM `{$jobs}`", 0);
 
@@ -46,6 +47,33 @@ class Slate_Ops_Install {
     }
     if (!in_array('actual_completed_at', $cols, true)) {
       $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `actual_completed_at` DATETIME NULL AFTER `promised_date`");
+    }
+
+    if (!in_array('block_requires_clearance', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `block_requires_clearance` TINYINT(1) NOT NULL DEFAULT 0 AFTER `block_note`");
+    }
+    if (!in_array('partial_blocked', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `partial_blocked` TINYINT(1) NOT NULL DEFAULT 0 AFTER `block_requires_clearance`");
+    }
+    if (!in_array('full_blocked', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `full_blocked` TINYINT(1) NOT NULL DEFAULT 0 AFTER `partial_blocked`");
+    }
+    if (!in_array('block_owner', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `block_owner` VARCHAR(80) NULL AFTER `full_blocked`");
+    }
+    if (!in_array('block_cleared_by', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `block_cleared_by` BIGINT UNSIGNED NULL AFTER `block_owner`");
+    }
+    if (!in_array('block_cleared_at', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `block_cleared_at` DATETIME NULL AFTER `block_cleared_by`");
+    }
+
+    $setting_cols = $wpdb->get_col("SHOW COLUMNS FROM `{$settings}`", 0);
+    if (!in_array('auto_stop_job_timers_at_shift_end', $setting_cols, true)) {
+      $wpdb->query("ALTER TABLE `{$settings}` ADD COLUMN `auto_stop_job_timers_at_shift_end` TINYINT(1) NOT NULL DEFAULT 1 AFTER `ot_threshold_minutes`");
+    }
+    if (!in_array('shift_end_grace_minutes', $setting_cols, true)) {
+      $wpdb->query("ALTER TABLE `{$settings}` ADD COLUMN `shift_end_grace_minutes` SMALLINT UNSIGNED NOT NULL DEFAULT 10 AFTER `auto_stop_job_timers_at_shift_end`");
     }
   }
 
@@ -149,6 +177,12 @@ target_ship_date DATE NULL,
 -- v2 status reason fields
 block_reason VARCHAR(30) NULL,
 block_note TEXT NULL,
+block_requires_clearance TINYINT(1) NOT NULL DEFAULT 0,
+partial_blocked TINYINT(1) NOT NULL DEFAULT 0,
+full_blocked TINYINT(1) NOT NULL DEFAULT 0,
+block_owner VARCHAR(80) NULL,
+block_cleared_by BIGINT UNSIGNED NULL,
+block_cleared_at DATETIME NULL,
 hold_note TEXT NULL,
 cancel_reason VARCHAR(30) NULL,
 cancel_note TEXT NULL,
@@ -277,6 +311,8 @@ KEY awaiting_idx (awaiting_direction)
       break_count TINYINT UNSIGNED NOT NULL DEFAULT 2,
       capacity_threshold_pct TINYINT UNSIGNED NOT NULL DEFAULT 70,
       ot_threshold_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 480,
+      auto_stop_job_timers_at_shift_end TINYINT(1) NOT NULL DEFAULT 1,
+      shift_end_grace_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 10,
       timezone VARCHAR(64) NOT NULL DEFAULT 'America/Los_Angeles',
       updated_by BIGINT UNSIGNED NULL,
       updated_at DATETIME NOT NULL,

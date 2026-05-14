@@ -926,7 +926,7 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 68px 100px minmax(170px, 1.1fr) 152px 106px minmax(190px, 0.9fr) 88px minmax(180px, 1fr) 42px;
+  grid-template-columns: 24px 68px 100px minmax(170px, 1.1fr) 152px 106px minmax(190px, 0.9fr) 88px minmax(160px, 1fr) 58px;
   align-items: center;
   gap: 10px;
   padding: 6px 14px;
@@ -1266,16 +1266,23 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 .cs-beta-row__noteicon { font-size: 16px; color: var(--slate-ink-subtle); flex: 0 0 auto; }
 .cs-beta-row__noteicon-spacer { width: 16px; flex: 0 0 auto; }
 .cs-beta-row__notetext {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  min-width: 0;
   font-size: 12px;
   color: var(--slate-ink-muted);
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  line-height: 1.25;
 }
 .cs-beta-row__notetext--empty { color: var(--slate-ink-placeholder); }
 
@@ -1284,6 +1291,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 2px;
+  min-width: 58px;
 }
 .cs-beta-row__iconbtn {
   /* Same WP-theme override pattern as the chips. */
