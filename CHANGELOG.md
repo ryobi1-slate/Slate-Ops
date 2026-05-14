@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.61.3 — Item sync batch parity
+
+- `process_item_sync` now accepts batch `{items: [...]}` payloads from Power Automate in addition to single-item payloads, matching the vendor sync contract.
+- Item / demand callbacks now return the processed record count and surface it in the Sync Status row ("Synced N item(s)"), matching the vendor sync message format.
+- Replaced per-record vendor + item lookups with two `IN` queries to remove the N+1 SELECT pattern.
+
 ## 0.61.2 — Supervisor unblock schedule review
 
 - Clear Blocker now flags manual schedule review when a blocker was open 4+ hours or the job is due today/past due.
