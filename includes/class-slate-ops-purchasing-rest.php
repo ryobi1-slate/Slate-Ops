@@ -229,6 +229,7 @@ class Slate_Ops_Purchasing_REST {
     $timestamp  = $req->get_header('x-slate-timestamp') ?? '';
     $event_type = $req->get_header('x-slate-event-type') ?? '';
     $flow_id    = $req->get_header('x-slate-flow-id') ?? '';
+    $callback_secret = $req->get_header('x-slate-callback-secret') ?? '';
 
     $hmac_configured   = !empty(get_option(Slate_Ops_PA_Events::OPT_SECRET, ''));
     $unsigned_eligible = in_array($event_type, self::READONLY_SYNC_EVENTS, true) ||
@@ -240,7 +241,7 @@ class Slate_Ops_Purchasing_REST {
     // HMAC is always enforced once a secret is set, and purchase writeback
     // events are never eligible for this bypass.
     if ($hmac_configured || !$unsigned_eligible) {
-      if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp)) {
+      if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp, $callback_secret)) {
         return new WP_Error('invalid_signature', 'Signature invalid or expired.', ['status' => 401]);
       }
     }

@@ -35,13 +35,30 @@ class Slate_Ops_PA_Events {
   }
 
   /**
-   * Verify an inbound signature. Rejects replays older than 300 s.
+   * Sign a request body using base64 output for tools that cannot easily emit
+   * a lowercase hex HMAC. Uses the same signed_string as sign().
    */
-  public static function verify_inbound($body, $signature, $timestamp) {
+  public static function sign_base64($body, $timestamp, $secret) {
+    return 'sha256-base64=' . base64_encode(hash_hmac('sha256', $timestamp . '.' . $body, $secret, true));
+  }
+
+  /**
+   * Verify an inbound callback. Rejects replays older than 300 s.
+   */
+  public static function verify_inbound($body, $signature, $timestamp, $callback_secret = '') {
     $secret = get_option(self::OPT_SECRET, '');
-    if (!$secret || !$signature || !$timestamp) return false;
+    if (!$secret || !$timestamp) return false;
     if (abs(time() - (int) $timestamp) > 300)    return false;
-    return hash_equals(self::sign($body, (string) $timestamp, $secret), $signature);
+
+    $signature = trim((string) $signature);
+    if ($signature &&
+        (hash_equals(self::sign($body, (string) $timestamp, $secret), $signature) ||
+         hash_equals(self::sign_base64($body, (string) $timestamp, $secret), $signature))) {
+      return true;
+    }
+
+    $callback_secret = trim((string) $callback_secret);
+    return $callback_secret !== '' && hash_equals($secret, $callback_secret);
   }
 
   // ── Status (safe for UI — no secret values) ────────────────────────────────
@@ -372,11 +389,11 @@ class Slate_Ops_PA_Events {
     $tv  = $wpdb->prefix . 'slate_ops_pur_vendors';
     $now = Slate_Ops_Utils::now_gmt();
 
-    // Support both a single-item payload {itemNo, name, ...} and a batch
-    // payload {items: [{itemNo, ...}, ...]} — PA typically sends a batch.
+    // Support both Slate-native itemNo payloads and BC v2 item payloads that
+    // use number/displayName. PA typically sends a batch.
     if (isset($payload['items']) && is_array($payload['items'])) {
       $records = $payload['items'];
-    } elseif (!empty($payload['itemNo'])) {
+    } elseif (!empty($payload['itemNo']) || !empty($payload['number'])) {
       $records = [$payload];
     } else {
       return 0;
@@ -386,7 +403,7 @@ class Slate_Ops_PA_Events {
     // rows in a single IN query instead of one SELECT per record (N+1).
     $item_nos = [];
     foreach ($records as $i) {
-      $ino = sanitize_text_field($i['itemNo'] ?? '');
+      $ino = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
       if ($ino !== '') $item_nos[] = $ino;
     }
     if (empty($item_nos)) return 0;
@@ -422,7 +439,7 @@ class Slate_Ops_PA_Events {
 
     $count = 0;
     foreach ($records as $i) {
-      $item_no = sanitize_text_field($i['itemNo'] ?? '');
+      $item_no = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
       if ($item_no === '') continue;
 
       $vendor_no           = sanitize_text_field($i['vendorNo'] ?? '');
@@ -430,8 +447,8 @@ class Slate_Ops_PA_Events {
 
       $data = [
         'bc_item_id'          => $item_no,
-        'part_number'         => sanitize_text_field($i['itemNo']          ?? $item_no),
-        'description'         => sanitize_text_field($i['description']     ?? ''),
+        'part_number'         => sanitize_text_field($i['itemNo']          ?? $i['number'] ?? $item_no),
+        'description'         => sanitize_text_field($i['description']     ?? $i['displayName'] ?? ''),
         'preferred_vendor_id' => $preferred_vendor_id,
         'on_hand'             => (int) ($i['onHand']                       ?? 0),
         'reorder_point'       => max(0, (int) ($i['reorderPoint']          ?? 0)),
