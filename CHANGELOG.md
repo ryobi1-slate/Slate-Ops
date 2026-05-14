@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.61.1 — Supervisor clear blocker only
+
+- Simplified Supervisor Dashboard actions so only Clear Blocker is active.
+- Clear Blocker requires a resolution note and uses the Supervisor-scoped clear-blocker REST endpoint with audit logging.
+- Removed the not-yet-needed helper, hold, note, escalation, and QC action controls from the Supervisor Dashboard UI.
+
 ## 0.61.0 — Supervisor actions
 
 - Added safe Supervisor Dashboard action modals for notes, helper assignment, blocker clearing, hold moves, and QC review.

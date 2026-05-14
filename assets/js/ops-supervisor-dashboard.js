@@ -105,7 +105,6 @@
   var modalCancel = $('#ops-supervisor-modal-cancel');
   var activeAction = null;
   var activeJob = null;
-  var techOptions = null;
 
   function showToast(message) {
     if (!toast) return;
@@ -209,32 +208,9 @@
     });
   }
 
-  function loadTechOptions() {
-    if (techOptions) return Promise.resolve(techOptions);
-    return fetch(apiUrl('/techs'), {
-      credentials: 'same-origin',
-      headers: { 'X-WP-Nonce': localized.api && localized.api.nonce ? localized.api.nonce : '' }
-    }).then(function (response) {
-      return response.json();
-    }).then(function (data) {
-      techOptions = Array.isArray(data.users) ? data.users : [];
-      return techOptions;
-    }).catch(function () {
-      techOptions = [];
-      return techOptions;
-    });
-  }
-
   function actionTitle(action) {
     return {
-      'add-note': 'Add note',
-      'escalate': 'Escalate job',
-      'assign-helper': 'Assign helper',
-      'clear-blocker': 'Clear blocker',
-      'move-hold': 'Move to hold',
-      'review-qc': 'Review QC',
-      'approve-qc': 'Approve closeout',
-      'send-back': 'Send back to tech'
+      'clear-blocker': 'Clear blocker'
     }[action] || 'Supervisor action';
   }
 
@@ -242,57 +218,19 @@
     return '<label class="ops-supervisor-field"><span>' + escapeHtml(label) + '</span><textarea name="' + escapeHtml(name) + '"' + (required ? ' required' : '') + ' placeholder="' + escapeHtml(placeholder || '') + '"></textarea></label>';
   }
 
-  function selectField(name, label, options) {
-    return '<label class="ops-supervisor-field"><span>' + escapeHtml(label) + '</span><select name="' + escapeHtml(name) + '" required>' + options.map(function (option) {
-      return '<option value="' + escapeHtml(option.value) + '">' + escapeHtml(option.label) + '</option>';
-    }).join('') + '</select></label>';
-  }
-
   function renderModalFields(action, job) {
     if (!modalFields) return Promise.resolve();
-    if (action === 'assign-helper') {
-      modalFields.innerHTML = '<p class="ops-supervisor-modal__hint">Loading techs...</p>';
-      return loadTechOptions().then(function (users) {
-        var options = [{ value: '', label: 'Select helper' }].concat(users.map(function (user) {
-          return { value: user.id, label: user.name || user.display_name || ('User ' + user.id) };
-        }));
-        modalFields.innerHTML = selectField('helper_user_id', 'Helper', options)
-          + textareaField('note', 'Helper note', 'What should the helper handle?', false);
-      });
-    }
     if (action === 'clear-blocker') {
       modalFields.innerHTML = textareaField('resolution_note', 'Resolution note', 'What changed, and why is the blocker safe to clear?', true);
       return Promise.resolve();
     }
-    if (action === 'move-hold') {
-      modalFields.innerHTML = selectField('hold_reason', 'Hold reason', [
-        { value: 'SUPERVISOR_HOLD', label: 'Supervisor hold' },
-        { value: 'CUSTOMER', label: 'Customer / dealer' },
-        { value: 'PARTS', label: 'Parts' },
-        { value: 'SCOPE', label: 'Scope / engineering' },
-        { value: 'ADMIN', label: 'Admin / paperwork' }
-      ]) + textareaField('note', 'Hold note', 'Why is this job moving to hold?', true);
-      return Promise.resolve();
-    }
-    if (action === 'review-qc' || action === 'approve-qc') {
-      modalFields.innerHTML = '<input type="hidden" name="decision" value="PASS">' + textareaField('notes', 'QC note', 'Optional closeout note.', false);
-      return Promise.resolve();
-    }
-    if (action === 'send-back') {
-      modalFields.innerHTML = '<input type="hidden" name="decision" value="FAIL">' + textareaField('notes', 'Rework note', 'Describe what failed QC and what the tech needs to correct.', true);
-      return Promise.resolve();
-    }
-    var prompt = action === 'escalate' ? 'What needs attention, and who should own the next step?' : 'Add a supervisor note.';
-    modalFields.innerHTML = textareaField('note', action === 'escalate' ? 'Escalation note' : 'Note', prompt, true);
+    modalFields.innerHTML = '<p class="ops-supervisor-modal__hint">Only clear-blocker actions are active right now.</p>';
     return Promise.resolve();
   }
 
   function openActionModal(action, job) {
-    if (action === 'schedule-handoff') {
-      setActiveTab('schedule');
-      showToast('Schedule handoff opened. No schedule change was written.');
-      closeDrawer();
-      root.scrollIntoView({ block: 'start' });
+    if (action !== 'clear-blocker') {
+      showToast('Only Clear Blocker is active right now.');
       return;
     }
     if (!modal || !modalFields || !jobId(job)) {
@@ -303,7 +241,7 @@
     activeJob = job;
     modalTitle.textContent = actionTitle(action);
     modalJob.textContent = (job.id || 'Job') + ' · ' + (job.customer || 'Unknown customer');
-    modalSubmit.textContent = action === 'send-back' ? 'Send back' : (action === 'approve-qc' || action === 'review-qc' ? 'Approve' : 'Save');
+    modalSubmit.textContent = 'Clear blocker';
     renderModalFields(action, job).then(function () {
       modal.hidden = false;
       modal.setAttribute('aria-hidden', 'false');
@@ -334,11 +272,7 @@
   function submitAction(action, job, body) {
     var id = jobId(job);
     if (action === 'clear-blocker') return apiRequest('/supervisor/jobs/' + id + '/clear-blocker', body);
-    if (action === 'assign-helper') return apiRequest('/supervisor/jobs/' + id + '/helper', body);
-    if (action === 'move-hold') return apiRequest('/supervisor/jobs/' + id + '/hold', body);
-    if (action === 'review-qc' || action === 'approve-qc' || action === 'send-back') return apiRequest('/jobs/' + id + '/qc/review', body);
-    if (action === 'escalate') body.note = 'Escalation: ' + (body.note || '');
-    return apiRequest('/supervisor/jobs/' + id + '/note', body);
+    return Promise.reject(new Error('Only Clear Blocker is active right now.'));
   }
 
   $$('.ops-supervisor-job-row').forEach(function (row) {
@@ -391,7 +325,7 @@
         showToast(error.message || 'Action failed.');
       }).finally(function () {
         modalSubmit.disabled = false;
-        modalSubmit.textContent = activeAction === 'send-back' ? 'Send back' : (activeAction === 'approve-qc' || activeAction === 'review-qc' ? 'Approve' : 'Save');
+        modalSubmit.textContent = 'Clear blocker';
       });
     });
   }

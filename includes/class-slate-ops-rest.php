@@ -279,28 +279,10 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'supervisor_queues'],
       ]);
 
-      register_rest_route($ns, '/supervisor/jobs/(?P<id>\d+)/note', [
-        'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-        'callback'            => [__CLASS__, 'supervisor_add_note'],
-      ]);
-
-      register_rest_route($ns, '/supervisor/jobs/(?P<id>\d+)/helper', [
-        'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_assign_jobs'],
-        'callback'            => [__CLASS__, 'supervisor_assign_helper'],
-      ]);
-
       register_rest_route($ns, '/supervisor/jobs/(?P<id>\d+)/clear-blocker', [
         'methods'             => 'POST',
         'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
         'callback'            => [__CLASS__, 'supervisor_clear_blocker'],
-      ]);
-
-      register_rest_route($ns, '/supervisor/jobs/(?P<id>\d+)/hold', [
-        'methods'             => 'POST',
-        'permission_callback' => [__CLASS__, 'perm_supervisor_or_admin'],
-        'callback'            => [__CLASS__, 'supervisor_move_to_hold'],
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/activity', [
@@ -2124,110 +2106,6 @@ foreach ($rows as &$r) {
     return self::get_job(['id' => $job_id]);
   }
 
-  public static function supervisor_add_note($req) {
-    $job_id = (int) $req['id'];
-    $body = $req->get_json_params() ?: [];
-    $note = trim(sanitize_textarea_field((string) ($body['note'] ?? '')));
-
-    if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
-    if ($note === '') return new WP_Error('note_required', 'Note text is required.', ['status' => 400]);
-
-    $job = self::job_by_id($job_id);
-    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
-
-    self::audit('job', $job_id, 'note', null, null, null, 'Supervisor note: ' . $note);
-
-    return rest_ensure_response([
-      'ok' => true,
-      'job_id' => $job_id,
-      'message' => 'Note added.',
-    ]);
-  }
-
-  public static function supervisor_assign_helper($req) {
-    global $wpdb;
-
-    $job_id = (int) $req['id'];
-    $body = $req->get_json_params() ?: [];
-    $helper_user_id = (int) ($body['helper_user_id'] ?? 0);
-    $note = trim(sanitize_textarea_field((string) ($body['note'] ?? '')));
-
-    if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
-    if ($helper_user_id <= 0) return new WP_Error('helper_required', 'Select a helper.', ['status' => 400]);
-
-    $job = self::job_by_id($job_id);
-    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
-
-    $helper = get_user_by('id', $helper_user_id);
-    if (!$helper) return new WP_Error('helper_not_found', 'Helper not found.', ['status' => 404]);
-
-    $assignments = $wpdb->prefix . 'slate_ops_job_assignments';
-    if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $assignments)) !== $assignments) {
-      return new WP_Error('table_missing', 'Job assignments table is not available.', ['status' => 500]);
-    }
-
-    $now = Slate_Ops_Utils::now_gmt();
-    $existing_id = (int) $wpdb->get_var($wpdb->prepare(
-      "SELECT assignment_id
-         FROM $assignments
-        WHERE job_id = %d
-          AND user_id = %d
-          AND role = 'HELPER'
-          AND status = 'ACTIVE'
-        LIMIT 1",
-      $job_id,
-      $helper_user_id
-    ));
-
-    $payload = [
-      'assigned_by' => get_current_user_id(),
-      'assigned_task' => $note !== '' ? $note : null,
-    ];
-
-    if ($existing_id > 0) {
-      $result = $wpdb->update($assignments, $payload, ['assignment_id' => $existing_id]);
-      $assignment_id = $existing_id;
-    } else {
-      $result = $wpdb->insert($assignments, [
-        'job_id' => $job_id,
-        'user_id' => $helper_user_id,
-        'role' => 'HELPER',
-        'assigned_by' => get_current_user_id(),
-        'assigned_task' => $note !== '' ? $note : null,
-        'planned_start_point' => null,
-        'planned_stop_point' => null,
-        'effective_date' => current_time('Y-m-d'),
-        'status' => 'ACTIVE',
-        'location_id' => (int) ($job['location_id'] ?? 1),
-        'created_at' => $now,
-        'ended_at' => null,
-      ]);
-      $assignment_id = (int) $wpdb->insert_id;
-    }
-
-    if ($result === false) {
-      return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
-    }
-
-    self::audit(
-      'job',
-      $job_id,
-      'assign_helper',
-      'helper_user_id',
-      null,
-      (string) $helper_user_id,
-      'Helper assigned: ' . $helper->display_name . ($note !== '' ? ' - ' . $note : '')
-    );
-
-    return rest_ensure_response([
-      'ok' => true,
-      'job_id' => $job_id,
-      'assignment_id' => $assignment_id,
-      'helper_user_id' => $helper_user_id,
-      'message' => 'Helper assigned.',
-    ]);
-  }
-
   public static function supervisor_clear_blocker($req) {
     global $wpdb;
 
@@ -2292,58 +2170,6 @@ foreach ($rows as &$r) {
       'job_id' => $job_id,
       'status' => $new_status,
       'message' => 'Blocker cleared.',
-    ]);
-  }
-
-  public static function supervisor_move_to_hold($req) {
-    global $wpdb;
-
-    $job_id = (int) $req['id'];
-    $body = $req->get_json_params() ?: [];
-    $reason = strtoupper(sanitize_key((string) ($body['hold_reason'] ?? 'SUPERVISOR_HOLD')));
-    $note = trim(sanitize_textarea_field((string) ($body['note'] ?? '')));
-
-    if (!$job_id) return new WP_Error('bad_request', 'Missing job_id', ['status' => 400]);
-    if ($note === '') return new WP_Error('hold_note_required', 'Hold note is required.', ['status' => 400]);
-
-    $job = self::job_by_id($job_id);
-    if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
-
-    $current_status = Slate_Ops_Statuses::normalize((string) ($job['status'] ?? ''));
-    if (in_array($current_status, [Slate_Ops_Statuses::COMPLETE, Slate_Ops_Statuses::CANCELLED], true)) {
-      return new WP_Error('invalid_state', 'Closed or cancelled jobs cannot be moved to hold.', ['status' => 409]);
-    }
-
-    $now = Slate_Ops_Utils::now_gmt();
-    $table = $wpdb->prefix . 'slate_ops_jobs';
-    $result = $wpdb->update($table, [
-      'status' => Slate_Ops_Statuses::ON_HOLD,
-      'status_updated_at' => $now,
-      'hold_reason' => $reason,
-      'hold_note' => $note,
-      'delay_reason' => strtolower($reason),
-      'schedule_notes' => $note,
-      'updated_at' => $now,
-    ], ['job_id' => $job_id]);
-
-    if ($result === false) {
-      return new WP_Error('db_error', $wpdb->last_error ?: 'DB update failed.', ['status' => 500]);
-    }
-
-    self::audit('job', $job_id, 'move_to_hold', 'status', $current_status, Slate_Ops_Statuses::ON_HOLD, 'Moved to hold: ' . $note);
-
-    if (class_exists('Slate_Priority_Service')) {
-      Slate_Priority_Service::refresh_scores();
-    }
-
-    $updated = self::job_by_id($job_id);
-    self::maybe_push_dealer_portal_status($updated);
-
-    return rest_ensure_response([
-      'ok' => true,
-      'job_id' => $job_id,
-      'status' => Slate_Ops_Statuses::ON_HOLD,
-      'message' => 'Job moved to hold.',
     ]);
   }
 
