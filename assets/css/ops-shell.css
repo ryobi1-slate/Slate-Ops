@@ -2521,26 +2521,62 @@ body.slate-ops :where(.slate-btn[disabled], .slate-btn[aria-disabled="true"]) {
 @media (max-width: 560px) {
   .ops-pw-overlay {
     align-items: flex-end;
-    padding: 0;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
   }
   .ops-pw-modal {
     width: 100%;
-    max-height: 90dvh;
-    border-radius: 18px 18px 0 0;
+    max-height: 82dvh;
+    border-radius: 14px;
   }
   .ops-pw-head {
-    padding: 16px 16px 10px;
+    padding: 12px 14px 9px;
+  }
+  .ops-pw-title {
+    font-size: .98rem;
+  }
+  .ops-pw-body {
+    font-size: .76rem;
+  }
+  .ops-pw-x {
+    width: 32px;
+    height: 32px;
   }
   .ops-pw-content {
-    padding: 12px 16px 0;
+    padding: 10px 14px 0;
+  }
+  .ops-pw-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .ops-pw-choice {
+    min-height: 54px;
+    padding: 8px 7px;
+  }
+  .ops-pw-choice__title {
+    font-size: .76rem;
+  }
+  .ops-pw-choice__sub {
+    font-size: .64rem;
+    line-height: 1.2;
+  }
+  .ops-pw-field {
+    margin-bottom: 9px;
+  }
+  .ops-pw-label {
+    font-size: .72rem;
+  }
+  .ops-pw-textarea {
+    min-height: 50px;
+    font-size: .78rem;
   }
   .ops-pw-actions {
-    padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+    padding: 10px 14px 12px;
     background: #fff;
   }
   .ops-pw-btn {
     flex: 1;
-    min-height: 48px;
+    min-height: 42px;
+    padding: .45rem .75rem;
   }
 }
 
