@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.60.0 — Live Supervisor data
+
+- Replaced the Supervisor Dashboard prototype stub payload with live read-only Ops job data from `slate_ops_jobs`.
+- Added live Supervisor rollups for blockers, parts risk, schedule readiness, tech status, QC/rework, ready queue, and attention items.
+- Kept Supervisor Dashboard actions read-only while preserving the `slate_ops_supervisor_refresh` filter for future real-data overrides.
+
 ## 0.59.0 — Supervisor Dashboard
 
 - Added server-rendered Supervisor Dashboard at `/ops/supervisor-dashboard` with blocked jobs, schedule readiness, tech status, QC/rework, and ready queue views.
