@@ -142,7 +142,7 @@
     var notes = $('#ops-supervisor-drawer-notes');
     var rows = Array.isArray(job.notes) ? job.notes : [];
     if (!rows.length) {
-      notes.innerHTML = '<p>No recent activity in the stub payload.</p>';
+      notes.innerHTML = '<p>No recent activity recorded.</p>';
     } else {
       notes.innerHTML = rows.map(function (note) {
         return '<div class="ops-supervisor-note"><strong>' + escapeHtml(note.who) + '</strong> <span>' + escapeHtml(note.role) + ' · ' + escapeHtml(note.when) + '</span><br>' + escapeHtml(note.text) + '</div>';
