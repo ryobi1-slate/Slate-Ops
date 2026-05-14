@@ -475,3 +475,100 @@
 	.so-exec .trust       { grid-template-columns: 1fr; }
 	.so-exec .trust .score { border-right: 0; border-bottom: 1px solid var(--rule); }
 }
+
+/* Consistency pass: keep Executive's dense readouts, but align the visual
+   language with CS/Purchasing instead of the older bespoke dashboard skin. */
+.ops-page-exec .so-exec .page-wrap {
+  max-width: var(--slate-shell-maxwidth);
+  padding: var(--slate-space-2xl);
+}
+
+.ops-page-exec .so-exec .page-head {
+  align-items: flex-start;
+  padding-bottom: 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.ops-page-exec .so-exec .eyebrow {
+  color: var(--slate-arches);
+  letter-spacing: 0.12em;
+}
+
+.ops-page-exec .so-exec .page-title {
+  font-size: var(--slate-text-xl);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: 0;
+}
+
+.ops-page-exec .so-exec .tabs {
+  margin-bottom: var(--slate-space-xl);
+}
+
+.ops-page-exec .so-exec .kpi-grid {
+  gap: var(--slate-space-lg);
+  border: 0;
+  background: transparent;
+}
+
+.ops-page-exec .so-exec .kpi,
+.ops-page-exec .so-exec .readout,
+.ops-page-exec .so-exec .card {
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.ops-page-exec .so-exec .kpi {
+  min-height: 112px;
+  padding: 20px;
+}
+
+.ops-page-exec .so-exec .kpi-grid > .kpi:nth-child(4n),
+.ops-page-exec .so-exec .kpi-grid > .kpi:nth-last-child(-n+4) {
+  border-right: 1px solid var(--slate-divider);
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.ops-page-exec .so-exec .kpi .k-value,
+.ops-page-exec .so-exec .trust .score .val,
+.ops-page-exec .so-exec .reason .val {
+  font-family: var(--font-sans);
+  font-weight: var(--slate-weight-medium);
+  letter-spacing: 0;
+}
+
+.ops-page-exec .so-exec .readout,
+.ops-page-exec .so-exec .card,
+.ops-page-exec .so-exec .split {
+  margin-top: var(--slate-space-lg);
+}
+
+.ops-page-exec .so-exec .card-head h3 {
+  font-size: var(--slate-text-base);
+  font-weight: 600;
+}
+
+.ops-page-exec .so-exec .btn,
+.ops-page-exec .so-exec .chip,
+.ops-page-exec .so-exec .search {
+  border-radius: 8px;
+}
+
+.ops-page-exec .so-exec .chip.toggle.on {
+  background: var(--slate-sage-wash) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
+}
+
+.ops-page-exec .so-exec .t thead tr {
+  background: var(--slate-sage-wash);
+}
+
+@media (max-width: 640px) {
+  .ops-page-exec .so-exec .page-wrap {
+    padding: var(--slate-space-lg);
+  }
+}

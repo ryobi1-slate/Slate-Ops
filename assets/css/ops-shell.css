@@ -675,6 +675,70 @@ body.slate-ops {
   color: #6e5d2f;
 }
 
+/* Ops Home consistency pass: keep it as the front door, but flatten the
+   softer launch-card treatment so it matches CS/Purchasing density. */
+.ops-page-home .ops-home {
+  padding: var(--slate-space-2xl);
+}
+
+.ops-page-home .ops-home__wrap {
+  max-width: var(--slate-shell-maxwidth);
+}
+
+.ops-page-home .ops-home__header {
+  align-items: flex-start;
+  padding-bottom: 20px;
+  margin-bottom: var(--slate-space-xl);
+  border-bottom: 1px solid var(--slate-divider);
+}
+
+.ops-page-home .ops-home__header h1 {
+  font-weight: var(--slate-weight-medium);
+}
+
+.ops-page-home .ops-home-link,
+.ops-page-home .ops-home-card,
+.ops-page-home .ops-home-notes {
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  box-shadow: none;
+}
+
+.ops-page-home .ops-home-link:hover {
+  border-color: var(--slate-divider-strong);
+  box-shadow: none;
+}
+
+.ops-page-home .ops-home-link.is-primary {
+  background: var(--slate-surface);
+}
+
+.ops-page-home .ops-home-link.is-primary .ops-home-link__icon {
+  background: var(--slate-sage);
+  border-color: var(--slate-sage);
+  color: #fff;
+}
+
+.ops-page-home .ops-home-card__head,
+.ops-page-home .ops-home-notes__head {
+  background: var(--slate-sage-wash);
+  border-bottom-color: var(--slate-divider);
+}
+
+.ops-page-home .ops-home-notes {
+  background: var(--slate-surface);
+  border-color: var(--slate-divider);
+}
+
+.ops-page-home .ops-home-notes__head h2,
+.ops-page-home .ops-home-notes__head .material-symbols-outlined,
+.ops-page-home .ops-home-notes__head > span,
+.ops-page-home .ops-home-notes__grid .material-symbols-outlined,
+.ops-page-home .ops-home-notes h3,
+.ops-page-home .ops-home-notes p {
+  color: var(--slate-ink);
+}
+
 @media (max-width: 1180px) {
   .ops-home__quick-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

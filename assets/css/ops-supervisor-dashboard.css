@@ -954,3 +954,94 @@ body.slate-ops .ops-supervisor button.ops-supervisor-chip.is-active,
     transition: none;
   }
 }
+
+/* Consistency pass: CS and Purchasing are the reference. Keep Supervisor's
+   workflow intact, but remove the older soft/accent-card treatment. */
+.ops-page-supervisor-dashboard .ops-supervisor-header {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--slate-divider);
+  margin-bottom: 0;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-title {
+  font-size: var(--slate-text-xl);
+  font-weight: var(--slate-weight-medium);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-tabs {
+  margin-bottom: var(--slate-space-xl);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpis {
+  gap: var(--slate-space-lg);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi,
+.ops-page-supervisor-dashboard .ops-supervisor-card,
+.ops-page-supervisor-dashboard .ops-supervisor-mini,
+.ops-page-supervisor-dashboard .ops-supervisor-future,
+.ops-page-supervisor-dashboard .ops-supervisor-tech-card {
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+  box-shadow: none;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi,
+.ops-page-supervisor-dashboard .ops-supervisor-card {
+  border-top: 1px solid var(--slate-divider);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi--arches {
+  border-left: 3px solid var(--slate-arches);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi--blocked {
+  border-left: 3px solid var(--slate-flag);
+  background: var(--slate-surface);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-kpi__value,
+.ops-page-supervisor-dashboard .ops-supervisor-mini strong,
+.ops-page-supervisor-dashboard .ops-supervisor-future strong {
+  font-family: var(--font-sans);
+  font-weight: var(--slate-weight-medium);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-card__head h2 {
+  font-size: var(--slate-text-base);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-table th {
+  background: var(--slate-sage-wash);
+  border-bottom-color: var(--slate-divider);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-job-row:hover,
+.ops-page-supervisor-dashboard .ops-supervisor-job-row:focus,
+.ops-page-supervisor-dashboard .ops-supervisor-list-row:hover {
+  background: var(--slate-surface-tint);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-focus {
+  border: 1px solid var(--slate-divider);
+  border-left: 3px solid var(--slate-sage);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor-chip {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+body.slate-ops #ops-view .ops-supervisor button.ops-supervisor-chip.is-active,
+body.slate-ops .ops-supervisor button.ops-supervisor-chip.is-active,
+.ops-supervisor button.ops-supervisor-chip.is-active {
+  background: var(--slate-sage-wash) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
+}

@@ -51,13 +51,13 @@ if (!function_exists('ops_nav_link')) {
         ops_nav_link('/ops/', '/', 'home', 'OPS Home');
       endif;
       if (in_array('cs-dashboard', $allowed, true)) :
-        ops_nav_link('/ops/cs-dashboard', '/cs-dashboard', 'support_agent', 'CS Workspace');
+        ops_nav_link('/ops/cs-dashboard', '/cs-dashboard', 'support_agent', 'Customer Service');
       endif;
       if (in_array('supervisor-dashboard', $allowed, true)) :
         ops_nav_link('/ops/supervisor-dashboard', '/supervisor-dashboard', 'supervisor_account', 'Supervisor');
       endif;
       if (in_array('tech', $allowed, true)) :
-        ops_nav_link('/ops/tech', '/tech', 'build', 'Tech Screen');
+        ops_nav_link('/ops/tech', '/tech', 'build', 'Technician');
       endif;
       if (in_array('executive', $allowed, true)) :
         ops_nav_link('/ops/exec', '/exec', 'monitoring', 'Executive');
