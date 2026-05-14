@@ -287,9 +287,11 @@ class Slate_Ops_Purchasing_REST {
         break;
 
       case 'bc.item.synced':
-        Slate_Ops_PA_Events::process_item_sync($payload);
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
-        Slate_Ops_PA_Events::record_feed_sync('item', $now, 'success', 'Synced');
+        $item_count = Slate_Ops_PA_Events::process_item_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success',
+          'Processed ' . $item_count . ' item(s)', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('item', $now, 'success',
+          'Synced ' . $item_count . ' item(s)');
         break;
 
       case 'bc.openPo.synced':
@@ -299,9 +301,11 @@ class Slate_Ops_Purchasing_REST {
         break;
 
       case 'bc.demand.synced':
-        Slate_Ops_PA_Events::process_item_sync($payload);
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
-        Slate_Ops_PA_Events::record_feed_sync('demand', $now, 'success', 'Synced');
+        $demand_count = Slate_Ops_PA_Events::process_item_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success',
+          'Processed ' . $demand_count . ' item(s)', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('demand', $now, 'success',
+          'Synced ' . $demand_count . ' item(s)');
         break;
 
       case 'bc.sync.failed':
