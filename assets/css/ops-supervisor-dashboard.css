@@ -58,6 +58,8 @@
   font: 600 12px/1 var(--font-sans);
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: none;
+  text-decoration: none;
 }
 
 .ops-supervisor-btn:hover,
@@ -195,8 +197,10 @@
   margin-bottom: var(--slate-space-md);
   padding: 16px 18px;
   border-radius: var(--slate-radius-md);
-  background: var(--slate-sage);
-  color: #fff;
+  border: 1px solid rgba(64, 79, 75, 0.24);
+  border-left: 4px solid var(--slate-sage);
+  background: var(--slate-sage-wash);
+  color: var(--slate-ink);
 }
 
 .ops-supervisor-focus strong {
@@ -207,7 +211,7 @@
 }
 
 .ops-supervisor-focus span {
-  color: rgba(255, 255, 255, 0.74);
+  color: var(--slate-ink-muted);
 }
 
 .ops-supervisor-grid {
@@ -218,7 +222,7 @@
 }
 
 .ops-supervisor-grid--wide {
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.8fr);
+  grid-template-columns: 1fr;
 }
 
 .ops-supervisor-card {
@@ -254,7 +258,7 @@
 
 .ops-supervisor-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1180px;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -297,6 +301,8 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .ops-supervisor-sub {
@@ -349,7 +355,7 @@
 }
 
 .ops-supervisor-actions-cell {
-  min-width: 220px;
+  min-width: 260px;
 }
 
 .ops-supervisor-actions-cell .ops-supervisor-action,
@@ -655,6 +661,67 @@
 .ops-supervisor-toast.is-open {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Shared design-language button rules load after this page bundle. These
+   scoped selectors keep Supervisor controls in the Slate industrial palette. */
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-action,
+.ops-page-supervisor-dashboard .ops-supervisor-drawer button.ops-supervisor-action {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+  box-shadow: none !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn:hover,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-action:hover,
+.ops-page-supervisor-dashboard .ops-supervisor-drawer button.ops-supervisor-action:hover {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage-wash) !important;
+  color: var(--slate-sage) !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn--primary,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-action--strong,
+.ops-page-supervisor-dashboard .ops-supervisor-drawer button.ops-supervisor-action--strong {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-btn--light {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-sage) !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-tab {
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--slate-ink-muted) !important;
+  box-shadow: none !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-tab:hover,
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-tab.is-active {
+  color: var(--slate-sage) !important;
+  border-bottom-color: var(--slate-sage) !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-chip {
+  border-color: var(--slate-divider) !important;
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink-muted) !important;
+  box-shadow: none !important;
+}
+
+.ops-page-supervisor-dashboard .ops-supervisor button.ops-supervisor-chip.is-active {
+  border-color: var(--slate-sage) !important;
+  background: var(--slate-sage) !important;
+  color: #fff !important;
 }
 
 @media (max-width: 1100px) {
