@@ -411,7 +411,7 @@ class Slate_Ops_PA_Events {
     $item_nos = [];
     foreach ($records as $i) {
       $ino = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
-      if (self::is_ignored_item_no($ino)) continue;
+      if (self::is_ignored_item($i)) continue;
       if ($ino !== '') $item_nos[] = $ino;
     }
     if (empty($item_nos)) return 0;
@@ -448,8 +448,11 @@ class Slate_Ops_PA_Events {
     $count = 0;
     foreach ($records as $i) {
       $item_no = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
-      if (self::is_ignored_item_no($item_no)) continue;
       if ($item_no === '') continue;
+      if (self::is_ignored_item($i)) {
+        $wpdb->delete($ti, ['bc_item_id' => $item_no]);
+        continue;
+      }
 
       $vendor_no           = sanitize_text_field($i['vendorNo'] ?? '');
       $preferred_vendor_id = ($vendor_no !== '' && isset($vendor_map[$vendor_no])) ? $vendor_map[$vendor_no] : null;
@@ -603,8 +606,16 @@ class Slate_Ops_PA_Events {
     return 'slate_ops_pa_sync_' . $feed . '_' . $key;
   }
 
-  private static function is_ignored_item_no($item_no) {
-    return stripos((string) $item_no, 'BOM') === 0;
+  private static function is_ignored_item($item) {
+    $item_no = sanitize_text_field($item['itemNo'] ?? $item['number'] ?? '');
+    if (stripos($item_no, 'BOM') === 0) {
+      return true;
+    }
+
+    $type = strtolower(sanitize_text_field($item['type'] ?? ''));
+    $type = str_replace('_x002d_', '-', $type);
+    $type = preg_replace('/[^a-z0-9]/', '', $type);
+    return $type === 'noninventory';
   }
 
   private static function uuid4() {
