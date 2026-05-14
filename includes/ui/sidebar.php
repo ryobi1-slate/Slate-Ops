@@ -53,26 +53,26 @@ if (!function_exists('ops_nav_link')) {
       if (in_array('cs-dashboard', $allowed, true)) :
         ops_nav_link('/ops/cs-dashboard', '/cs-dashboard', 'support_agent', 'Customer Service');
       endif;
+      if (in_array('schedule', $allowed, true)) :
+        ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule');
+      endif;
       if (in_array('supervisor-dashboard', $allowed, true)) :
         ops_nav_link('/ops/supervisor-dashboard', '/supervisor-dashboard', 'supervisor_account', 'Supervisor');
       endif;
       if (in_array('tech', $allowed, true)) :
         ops_nav_link('/ops/tech', '/tech', 'build', 'Technician');
       endif;
-      if (in_array('executive', $allowed, true)) :
-        ops_nav_link('/ops/exec', '/exec', 'monitoring', 'Executive');
-      endif;
-      if (in_array('schedule', $allowed, true)) :
-        ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule');
-      endif;
       if (in_array('purchasing', $allowed, true)) :
         ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
       endif;
-      if (in_array('monitor', $allowed, true)) :
-        ops_nav_link(home_url('/slate-ops-monitor/'), '/monitor', 'desktop_windows', 'Monitor');
-      endif;
       if (in_array('resource-hub', $allowed, true)) :
         ops_nav_link('/ops/resource-hub', '/resource-hub', 'menu_book', 'Resource Hub');
+      endif;
+      if (in_array('executive', $allowed, true)) :
+        ops_nav_link('/ops/exec', '/exec', 'monitoring', 'Executive');
+      endif;
+      if (in_array('monitor', $allowed, true)) :
+        ops_nav_link(home_url('/slate-ops-monitor/'), '/monitor', 'desktop_windows', 'Monitor');
       endif;
       ?>
     </div>
