@@ -76,7 +76,12 @@ add_action('init',       ['Slate_Ops_Roles', 'maybe_install']);
 // Self-healing: always runs on admin_init so manual role edits are corrected.
 add_action('admin_init', ['Slate_Ops_Roles', 'install']);
 add_action('init', ['Slate_Ops_Install', 'maybe_upgrade']);
-add_action('init', ['Slate_Ops_REST', 'auto_stop_shift_end_timers'], 20);
+add_action('init', function() {
+  if (defined('REST_REQUEST') && REST_REQUEST) {
+    return;
+  }
+  Slate_Ops_REST::auto_stop_shift_end_timers();
+}, 20);
 add_action('init', ['Slate_Ops_Routes', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_Purchasing_REST', 'register_routes']);
