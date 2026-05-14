@@ -536,6 +536,8 @@
 
     var related = (resource.related || []).map(byId).filter(Boolean);
     var links = Array.isArray(resource.links) ? resource.links : [];
+    var slatePart = resourceLinkValue(resource, 'slate_part') || resource.sku || 'Not set';
+    var vendorPart = resourceLinkValue(resource, 'vendor_part') || 'Not set';
     var linksHtml = links.length
       ? links.map(function (link) {
           return '<span class="rh-link-chip"><span>' + esc(link.link_type.replace(/_/g, ' ')) + '</span>' + esc(link.link_label || link.link_key) + '</span>';
@@ -569,6 +571,8 @@
       '<div class="rh-detail-grid">',
       '<aside class="rh-meta" aria-label="Document metadata">',
       metaRow('Vendor', resource.vendor),
+      metaRow('Slate PN', slatePart, true),
+      metaRow('Vendor PN', vendorPart, true),
       metaRow('Vendor revision', resource.vendor_revision, true),
       metaRow('Last Slate review', resource.last_review, true),
       metaRow('Chassis', resource.chassis),
