@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.61.2 — Supervisor unblock schedule review
+
+- Clear Blocker now flags manual schedule review when a blocker was open 4+ hours or the job is due today/past due.
+- Jobs flagged for manual schedule review remain visible in Supervisor Schedule Risk after the blocker is cleared.
+- Rescheduling remains manual for now; no automatic schedule writes were added.
+
 ## 0.61.1 — Supervisor clear blocker only
 
 - Simplified Supervisor Dashboard actions so only Clear Blocker is active.

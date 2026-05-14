@@ -420,6 +420,8 @@ class Slate_Ops_Supervisor_Dashboard {
     $status_slug = self::status_slug($status, $row);
     $due_delta = self::due_delta($row);
     $priority = (int) ($row['priority'] ?? 3);
+    $schedule_notes = trim((string) ($row['schedule_notes'] ?? ''));
+    $schedule_review = stripos($schedule_notes, 'manual schedule review needed') !== false;
 
     return [
       'id' => self::job_id_label($row),
@@ -442,6 +444,7 @@ class Slate_Ops_Supervisor_Dashboard {
       'parts' => self::parts_label((string) ($row['parts_status'] ?? '')),
       'parts_risk' => self::parts_risk((string) ($row['parts_status'] ?? '')),
       'qc' => self::qc_state($row),
+      'schedule_review' => $schedule_review,
       'bay' => trim((string) ($row['work_center'] ?? '')) !== '' ? self::humanize((string) $row['work_center']) : '—',
       'work_center' => trim((string) ($row['work_center'] ?? '')) !== '' ? self::humanize((string) $row['work_center']) : '—',
       'priority' => $category || $due_delta <= 0 || $priority <= 1 ? 'high' : ($priority <= 2 || $due_delta <= 3 ? 'med' : 'low'),
@@ -599,7 +602,7 @@ class Slate_Ops_Supervisor_Dashboard {
     $failed_qc = self::filter_jobs($jobs, function($job) { return $job['qc'] === 'Failed QC'; });
     $unassigned = self::filter_jobs($jobs, function($job) { return empty($job['tech']); });
     $at_risk = self::filter_jobs($jobs, function($job) {
-      return (int) $job['due_delta'] <= 1 || $job['parts_risk'] === 'high' || !empty($job['blocked_category']);
+      return (int) $job['due_delta'] <= 1 || $job['parts_risk'] === 'high' || !empty($job['blocked_category']) || !empty($job['schedule_review']);
     });
     $ready = self::filter_jobs($jobs, function($job) { return $job['status'] === 'ready'; });
     $today = self::filter_jobs($jobs, function($job) {

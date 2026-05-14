@@ -2130,8 +2130,33 @@ foreach ($rows as &$r) {
       return new WP_Error('no_blocker', 'This job does not have an active blocker to clear.', ['status' => 409]);
     }
 
-    $new_status = !empty($job['scheduled_start']) ? Slate_Ops_Statuses::SCHEDULED : Slate_Ops_Statuses::READY_FOR_BUILD;
     $now = Slate_Ops_Utils::now_gmt();
+    $new_status = !empty($job['scheduled_start']) ? Slate_Ops_Statuses::SCHEDULED : Slate_Ops_Statuses::READY_FOR_BUILD;
+    $blocked_at = trim((string) (($job['status_updated_at'] ?? '') ?: ($job['updated_at'] ?? '')));
+    $now_ts = strtotime($now);
+    $blocked_ts = $blocked_at !== '' ? strtotime($blocked_at) : false;
+    $blocked_seconds = ($now_ts && $blocked_ts) ? max(0, $now_ts - $blocked_ts) : 0;
+    $blocked_too_long = $blocked_seconds >= (4 * HOUR_IN_SECONDS);
+    $due_date = '';
+    foreach (['promised_date', 'target_ship_date', 'scheduled_finish', 'scheduled_start', 'requested_date'] as $date_key) {
+      $value = trim((string) ($job[$date_key] ?? ''));
+      if ($value !== '') {
+        $due_date = substr($value, 0, 10);
+        break;
+      }
+    }
+    $due_ts = $due_date !== '' ? strtotime($due_date) : false;
+    $today_ts = strtotime(current_time('Y-m-d'));
+    $due_needs_review = ($due_ts && $today_ts) ? $due_ts <= $today_ts : false;
+    $review_reasons = [];
+    if ($blocked_too_long) $review_reasons[] = 'blocked 4+ hours';
+    if ($due_needs_review) $review_reasons[] = 'due today or past due';
+    $needs_schedule_review = !empty($review_reasons);
+    $schedule_note = $note;
+    if ($needs_schedule_review) {
+      $schedule_note .= "\nManual schedule review needed after blocker cleared (" . implode(', ', $review_reasons) . ').';
+    }
+
     $table = $wpdb->prefix . 'slate_ops_jobs';
     $result = $wpdb->update($table, [
       'status' => $new_status,
@@ -2148,7 +2173,7 @@ foreach ($rows as &$r) {
       'hold_reason' => null,
       'hold_note' => null,
       'delay_reason' => null,
-      'schedule_notes' => $note,
+      'schedule_notes' => $schedule_note,
       'updated_at' => $now,
     ], ['job_id' => $job_id]);
 
@@ -2156,7 +2181,7 @@ foreach ($rows as &$r) {
       return new WP_Error('db_error', $wpdb->last_error ?: 'DB update failed.', ['status' => 500]);
     }
 
-    self::audit('job', $job_id, 'clear_blocker', 'status', $current_status, $new_status, 'Blocker cleared: ' . $note);
+    self::audit('job', $job_id, 'clear_blocker', 'status', $current_status, $new_status, 'Blocker cleared: ' . $schedule_note);
 
     if (class_exists('Slate_Priority_Service')) {
       Slate_Priority_Service::refresh_scores();
@@ -2169,7 +2194,8 @@ foreach ($rows as &$r) {
       'ok' => true,
       'job_id' => $job_id,
       'status' => $new_status,
-      'message' => 'Blocker cleared.',
+      'needs_schedule_review' => $needs_schedule_review,
+      'message' => $needs_schedule_review ? 'Blocker cleared. Manual schedule review needed.' : 'Blocker cleared.',
     ]);
   }
 
