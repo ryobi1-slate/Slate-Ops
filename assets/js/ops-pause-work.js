@@ -49,23 +49,25 @@
             '</div>' +
             '<button id="ops-pw-x" type="button" class="ops-pw-x" aria-label="Cancel">&times;</button>' +
           '</div>' +
-          '<div class="ops-pw-choices" role="listbox" aria-label="Pause reason">' + reasonButtons + '</div>' +
-          '<div id="ops-pw-err" class="ops-pw-field-err" hidden>Select a pause reason.</div>' +
-          '<div class="ops-pw-field">' +
-            '<label class="ops-pw-label" for="ops-pw-note">' +
-              'Note <span id="ops-pw-note-state" class="ops-pw-optional">(optional)</span>' +
-            '</label>' +
-            '<textarea id="ops-pw-note" class="ops-pw-textarea" placeholder="Add details…" rows="3"></textarea>' +
+          '<div class="ops-pw-content">' +
+            '<div class="ops-pw-choices" role="listbox" aria-label="Pause reason">' + reasonButtons + '</div>' +
+            '<div id="ops-pw-err" class="ops-pw-field-err" hidden>Select a pause reason.</div>' +
+            '<div class="ops-pw-field">' +
+              '<label class="ops-pw-label" for="ops-pw-note">' +
+                'Note <span id="ops-pw-note-state" class="ops-pw-optional">(optional)</span>' +
+              '</label>' +
+              '<textarea id="ops-pw-note" class="ops-pw-textarea" placeholder="Add details…" rows="3"></textarea>' +
+            '</div>' +
+            (options.overtimeRequired
+              ? '<div class="ops-pw-field">' +
+                  '<label class="ops-pw-label" for="ops-pw-ot-note">Overtime note <span class="ops-pw-required">(required)</span></label>' +
+                  '<textarea id="ops-pw-ot-note" class="ops-pw-textarea" placeholder="Why was work needed after shift?" rows="2"></textarea>' +
+                '</div>'
+              : '') +
           '</div>' +
-          (options.overtimeRequired
-            ? '<div class="ops-pw-field">' +
-                '<label class="ops-pw-label" for="ops-pw-ot-note">Overtime note <span class="ops-pw-required">(required)</span></label>' +
-                '<textarea id="ops-pw-ot-note" class="ops-pw-textarea" placeholder="Why was work needed after shift?" rows="2"></textarea>' +
-              '</div>'
-            : '') +
           '<div class="ops-pw-actions">' +
             '<button id="ops-pw-cancel" type="button" class="ops-pw-btn ops-pw-btn--cancel">Cancel</button>' +
-            '<button id="ops-pw-submit" type="button" class="ops-pw-btn ops-pw-btn--primary">Pause work</button>' +
+            '<button id="ops-pw-submit" type="button" class="ops-pw-btn ops-pw-btn--primary" disabled>Pause work</button>' +
           '</div>' +
         '</div>';
 
@@ -125,6 +127,7 @@
           });
           noteStateEl.textContent = NOTE_REQUIRED[selectedReason] ? '(required)' : '(optional)';
           noteStateEl.className = NOTE_REQUIRED[selectedReason] ? 'ops-pw-required' : 'ops-pw-optional';
+          submitEl.disabled = false;
           errEl.hidden = true;
         });
       });
