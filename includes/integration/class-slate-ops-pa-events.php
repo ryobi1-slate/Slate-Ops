@@ -372,43 +372,86 @@ class Slate_Ops_PA_Events {
     $tv  = $wpdb->prefix . 'slate_ops_pur_vendors';
     $now = Slate_Ops_Utils::now_gmt();
 
-    $item_no = sanitize_text_field($payload['itemNo'] ?? '');
-    if (!$item_no) return;
-
-    $preferred_vendor_id = null;
-    $vendor_no = sanitize_text_field($payload['vendorNo'] ?? '');
-    if ($vendor_no) {
-      $vid = $wpdb->get_var($wpdb->prepare(
-        "SELECT id FROM $tv WHERE bc_vendor_id = %s LIMIT 1",
-        $vendor_no
-      ));
-      if ($vid) $preferred_vendor_id = (int) $vid;
+    // Support both a single-item payload {itemNo, name, ...} and a batch
+    // payload {items: [{itemNo, ...}, ...]} — PA typically sends a batch.
+    if (isset($payload['items']) && is_array($payload['items'])) {
+      $records = $payload['items'];
+    } elseif (!empty($payload['itemNo'])) {
+      $records = [$payload];
+    } else {
+      return 0;
     }
 
-    $existing = $wpdb->get_row(
-      $wpdb->prepare("SELECT id FROM $ti WHERE bc_item_id = %s LIMIT 1", $item_no),
+    // Collect all valid item numbers up front so we can pre-fetch existing
+    // rows in a single IN query instead of one SELECT per record (N+1).
+    $item_nos = [];
+    foreach ($records as $i) {
+      $ino = sanitize_text_field($i['itemNo'] ?? '');
+      if ($ino !== '') $item_nos[] = $ino;
+    }
+    if (empty($item_nos)) return 0;
+
+    $placeholders = implode(',', array_fill(0, count($item_nos), '%s'));
+    $existing_rows = $wpdb->get_results(
+      $wpdb->prepare("SELECT id, bc_item_id FROM $ti WHERE bc_item_id IN ($placeholders)", $item_nos),
       ARRAY_A
     );
-
-    $data = [
-      'bc_item_id'          => $item_no,
-      'part_number'         => sanitize_text_field($payload['itemNo']          ?? $item_no),
-      'description'         => sanitize_text_field($payload['description']     ?? ''),
-      'preferred_vendor_id' => $preferred_vendor_id,
-      'on_hand'             => (int) ($payload['onHand']                       ?? 0),
-      'reorder_point'       => max(0, (int) ($payload['reorderPoint']          ?? 0)),
-      'unit_cost'           => max(0.0, (float) ($payload['unitCost']          ?? 0)),
-      'demand_level'        => sanitize_text_field($payload['demandLevel']     ?? 'low'),
-      'forecasted_need'     => max(0, (int) ($payload['forecastedNeed']        ?? 0)),
-      'suggested_order'     => max(0, (int) ($payload['suggestedOrder']        ?? 0)),
-      'updated_at'          => $now,
-    ];
-
-    if ($existing) {
-      $wpdb->update($ti, $data, ['id' => (int) $existing['id']]);
-    } else {
-      $wpdb->insert($ti, array_merge($data, ['created_at' => $now]));
+    $existing_map = [];
+    foreach ($existing_rows as $row) {
+      $existing_map[$row['bc_item_id']] = (int) $row['id'];
     }
+
+    // Pre-fetch vendor id mappings in a single IN query.
+    $vendor_nos = [];
+    foreach ($records as $i) {
+      $vno = sanitize_text_field($i['vendorNo'] ?? '');
+      if ($vno !== '') $vendor_nos[] = $vno;
+    }
+    $vendor_map = [];
+    if (!empty($vendor_nos)) {
+      $vendor_nos = array_values(array_unique($vendor_nos));
+      $v_placeholders = implode(',', array_fill(0, count($vendor_nos), '%s'));
+      $vendor_rows = $wpdb->get_results(
+        $wpdb->prepare("SELECT id, bc_vendor_id FROM $tv WHERE bc_vendor_id IN ($v_placeholders)", $vendor_nos),
+        ARRAY_A
+      );
+      foreach ($vendor_rows as $row) {
+        $vendor_map[$row['bc_vendor_id']] = (int) $row['id'];
+      }
+    }
+
+    $count = 0;
+    foreach ($records as $i) {
+      $item_no = sanitize_text_field($i['itemNo'] ?? '');
+      if ($item_no === '') continue;
+
+      $vendor_no           = sanitize_text_field($i['vendorNo'] ?? '');
+      $preferred_vendor_id = ($vendor_no !== '' && isset($vendor_map[$vendor_no])) ? $vendor_map[$vendor_no] : null;
+
+      $data = [
+        'bc_item_id'          => $item_no,
+        'part_number'         => sanitize_text_field($i['itemNo']          ?? $item_no),
+        'description'         => sanitize_text_field($i['description']     ?? ''),
+        'preferred_vendor_id' => $preferred_vendor_id,
+        'on_hand'             => (int) ($i['onHand']                       ?? 0),
+        'reorder_point'       => max(0, (int) ($i['reorderPoint']          ?? 0)),
+        'unit_cost'           => max(0.0, (float) ($i['unitCost']          ?? 0)),
+        'demand_level'        => sanitize_text_field($i['demandLevel']     ?? 'low'),
+        'forecasted_need'     => max(0, (int) ($i['forecastedNeed']        ?? 0)),
+        'suggested_order'     => max(0, (int) ($i['suggestedOrder']        ?? 0)),
+        'updated_at'          => $now,
+      ];
+
+      if (isset($existing_map[$item_no])) {
+        $result = $wpdb->update($ti, $data, ['id' => $existing_map[$item_no]]);
+      } else {
+        $result = $wpdb->insert($ti, array_merge($data, ['created_at' => $now]));
+      }
+
+      if ($result !== false) $count++;
+    }
+
+    return $count;
   }
 
   public static function process_po_sync($payload) {
