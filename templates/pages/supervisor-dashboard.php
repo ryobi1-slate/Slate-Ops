@@ -40,8 +40,29 @@ function slate_ops_supervisor_job_json($job) {
   return esc_attr(wp_json_encode($job));
 }
 
+function slate_ops_supervisor_action_slug($label) {
+  $map = [
+    'Clear Blocker' => 'clear-blocker',
+    'Assign Helper' => 'assign-helper',
+    'Move to Hold' => 'move-hold',
+    'Add Note' => 'add-note',
+    'Escalate' => 'escalate',
+    'Review QC' => 'review-qc',
+    'Approve Closeout' => 'approve-qc',
+    'Send Back to Tech' => 'send-back',
+    'Add Rework Note' => 'add-note',
+    'Review parts ETA' => 'add-note',
+    'Review blocker' => 'clear-blocker',
+    'Review schedule' => 'schedule-handoff',
+    'Assign tech' => 'schedule-handoff',
+    'Schedule' => 'schedule-handoff',
+    'Approve closeout' => 'approve-qc',
+  ];
+  return $map[$label] ?? 'add-note';
+}
+
 function slate_ops_supervisor_button($label, $extra_class = '') {
-  echo '<button type="button" class="ops-supervisor-action ' . esc_attr($extra_class) . '" data-readonly-action="1">' . esc_html($label) . '</button>';
+  echo '<button type="button" class="ops-supervisor-action ' . esc_attr($extra_class) . '" data-supervisor-action="' . esc_attr(slate_ops_supervisor_action_slug($label)) . '">' . esc_html($label) . '</button>';
 }
 
 function slate_ops_supervisor_job_table($jobs, $columns = 'control') {
@@ -315,5 +336,23 @@ function slate_ops_supervisor_job_list_card($title, $jobs, $empty = 'No jobs in 
   </footer>
 </aside>
 
-<div class="ops-supervisor-toast" id="ops-supervisor-toast">Read-only first pass. No job change was written.</div>
+<div class="ops-supervisor-toast" id="ops-supervisor-toast">No change was written.</div>
+<div class="ops-supervisor-modal-backdrop" id="ops-supervisor-modal-backdrop" hidden></div>
+<section class="ops-supervisor-modal" id="ops-supervisor-action-modal" hidden aria-hidden="true" aria-labelledby="ops-supervisor-modal-title" role="dialog">
+  <form id="ops-supervisor-action-form">
+    <header class="ops-supervisor-modal__head">
+      <div>
+        <span class="ops-supervisor-drawer__eyebrow">Supervisor action</span>
+        <h2 id="ops-supervisor-modal-title">Action</h2>
+        <p id="ops-supervisor-modal-job">Select a job</p>
+      </div>
+      <button type="button" class="ops-supervisor-drawer__close" id="ops-supervisor-modal-close" aria-label="Close action modal"><span class="material-symbols-outlined">close</span></button>
+    </header>
+    <div class="ops-supervisor-modal__body" id="ops-supervisor-modal-fields"></div>
+    <footer class="ops-supervisor-modal__foot">
+      <button type="button" class="ops-supervisor-action" id="ops-supervisor-modal-cancel">Cancel</button>
+      <button type="submit" class="ops-supervisor-action ops-supervisor-action--strong" id="ops-supervisor-modal-submit">Save</button>
+    </footer>
+  </form>
+</section>
 <script type="application/json" id="supervisor-dashboard-data"><?php echo wp_json_encode($payload); ?></script>

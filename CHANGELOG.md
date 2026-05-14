@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.61.0 — Supervisor actions
+
+- Added safe Supervisor Dashboard action modals for notes, helper assignment, blocker clearing, hold moves, and QC review.
+- Added Supervisor-scoped REST endpoints with nonce-protected requests, permission checks, required notes for state changes, and audit logging.
+- Kept schedule handoff as navigation only; no drag/drop or schedule writes were added in this phase.
+
 ## 0.60.0 — Live Supervisor data
 
 - Replaced the Supervisor Dashboard prototype stub payload with live read-only Ops job data from `slate_ops_jobs`.

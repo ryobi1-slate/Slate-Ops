@@ -93,10 +93,23 @@
   var closeButton = $('#ops-supervisor-drawer-close');
   var toast = $('#ops-supervisor-toast');
   var toastTimer;
+  var currentJob = null;
+  var modal = $('#ops-supervisor-action-modal');
+  var modalBackdrop = $('#ops-supervisor-modal-backdrop');
+  var modalForm = $('#ops-supervisor-action-form');
+  var modalFields = $('#ops-supervisor-modal-fields');
+  var modalTitle = $('#ops-supervisor-modal-title');
+  var modalJob = $('#ops-supervisor-modal-job');
+  var modalSubmit = $('#ops-supervisor-modal-submit');
+  var modalClose = $('#ops-supervisor-modal-close');
+  var modalCancel = $('#ops-supervisor-modal-cancel');
+  var activeAction = null;
+  var activeJob = null;
+  var techOptions = null;
 
   function showToast(message) {
     if (!toast) return;
-    toast.textContent = message || 'Read-only first pass. No job change was written.';
+    toast.textContent = message || 'No change was written.';
     toast.classList.add('is-open');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () {
@@ -106,6 +119,7 @@
 
   function openDrawer(job) {
     if (!drawer || !job) return;
+    currentJob = job;
     var tech = job.tech && job.tech.name ? job.tech.name : 'Unassigned';
     var customer = (job.dealer || '—') + ' / ' + (job.customer || '—');
     $('#ops-supervisor-drawer-job').textContent = job.id || '—';
@@ -167,9 +181,174 @@
     catch (e) { return null; }
   }
 
+  function jobId(job) {
+    return job && job._raw && job._raw.job_id ? parseInt(job._raw.job_id, 10) : 0;
+  }
+
+  function apiUrl(path) {
+    var rootUrl = localized.api && localized.api.root ? localized.api.root : '';
+    return rootUrl.replace(/\/$/, '') + '/' + path.replace(/^\//, '');
+  }
+
+  function apiRequest(path, body) {
+    return fetch(apiUrl(path), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': localized.api && localized.api.nonce ? localized.api.nonce : ''
+      },
+      body: JSON.stringify(body || {})
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        if (!response.ok) {
+          throw new Error(data.message || data.error || 'Action failed');
+        }
+        return data;
+      });
+    });
+  }
+
+  function loadTechOptions() {
+    if (techOptions) return Promise.resolve(techOptions);
+    return fetch(apiUrl('/techs'), {
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': localized.api && localized.api.nonce ? localized.api.nonce : '' }
+    }).then(function (response) {
+      return response.json();
+    }).then(function (data) {
+      techOptions = Array.isArray(data.users) ? data.users : [];
+      return techOptions;
+    }).catch(function () {
+      techOptions = [];
+      return techOptions;
+    });
+  }
+
+  function actionTitle(action) {
+    return {
+      'add-note': 'Add note',
+      'escalate': 'Escalate job',
+      'assign-helper': 'Assign helper',
+      'clear-blocker': 'Clear blocker',
+      'move-hold': 'Move to hold',
+      'review-qc': 'Review QC',
+      'approve-qc': 'Approve closeout',
+      'send-back': 'Send back to tech'
+    }[action] || 'Supervisor action';
+  }
+
+  function textareaField(name, label, placeholder, required) {
+    return '<label class="ops-supervisor-field"><span>' + escapeHtml(label) + '</span><textarea name="' + escapeHtml(name) + '"' + (required ? ' required' : '') + ' placeholder="' + escapeHtml(placeholder || '') + '"></textarea></label>';
+  }
+
+  function selectField(name, label, options) {
+    return '<label class="ops-supervisor-field"><span>' + escapeHtml(label) + '</span><select name="' + escapeHtml(name) + '" required>' + options.map(function (option) {
+      return '<option value="' + escapeHtml(option.value) + '">' + escapeHtml(option.label) + '</option>';
+    }).join('') + '</select></label>';
+  }
+
+  function renderModalFields(action, job) {
+    if (!modalFields) return Promise.resolve();
+    if (action === 'assign-helper') {
+      modalFields.innerHTML = '<p class="ops-supervisor-modal__hint">Loading techs...</p>';
+      return loadTechOptions().then(function (users) {
+        var options = [{ value: '', label: 'Select helper' }].concat(users.map(function (user) {
+          return { value: user.id, label: user.name || user.display_name || ('User ' + user.id) };
+        }));
+        modalFields.innerHTML = selectField('helper_user_id', 'Helper', options)
+          + textareaField('note', 'Helper note', 'What should the helper handle?', false);
+      });
+    }
+    if (action === 'clear-blocker') {
+      modalFields.innerHTML = textareaField('resolution_note', 'Resolution note', 'What changed, and why is the blocker safe to clear?', true);
+      return Promise.resolve();
+    }
+    if (action === 'move-hold') {
+      modalFields.innerHTML = selectField('hold_reason', 'Hold reason', [
+        { value: 'SUPERVISOR_HOLD', label: 'Supervisor hold' },
+        { value: 'CUSTOMER', label: 'Customer / dealer' },
+        { value: 'PARTS', label: 'Parts' },
+        { value: 'SCOPE', label: 'Scope / engineering' },
+        { value: 'ADMIN', label: 'Admin / paperwork' }
+      ]) + textareaField('note', 'Hold note', 'Why is this job moving to hold?', true);
+      return Promise.resolve();
+    }
+    if (action === 'review-qc' || action === 'approve-qc') {
+      modalFields.innerHTML = '<input type="hidden" name="decision" value="PASS">' + textareaField('notes', 'QC note', 'Optional closeout note.', false);
+      return Promise.resolve();
+    }
+    if (action === 'send-back') {
+      modalFields.innerHTML = '<input type="hidden" name="decision" value="FAIL">' + textareaField('notes', 'Rework note', 'Describe what failed QC and what the tech needs to correct.', true);
+      return Promise.resolve();
+    }
+    var prompt = action === 'escalate' ? 'What needs attention, and who should own the next step?' : 'Add a supervisor note.';
+    modalFields.innerHTML = textareaField('note', action === 'escalate' ? 'Escalation note' : 'Note', prompt, true);
+    return Promise.resolve();
+  }
+
+  function openActionModal(action, job) {
+    if (action === 'schedule-handoff') {
+      setActiveTab('schedule');
+      showToast('Schedule handoff opened. No schedule change was written.');
+      closeDrawer();
+      root.scrollIntoView({ block: 'start' });
+      return;
+    }
+    if (!modal || !modalFields || !jobId(job)) {
+      showToast('Open a job first.');
+      return;
+    }
+    activeAction = action;
+    activeJob = job;
+    modalTitle.textContent = actionTitle(action);
+    modalJob.textContent = (job.id || 'Job') + ' · ' + (job.customer || 'Unknown customer');
+    modalSubmit.textContent = action === 'send-back' ? 'Send back' : (action === 'approve-qc' || action === 'review-qc' ? 'Approve' : 'Save');
+    renderModalFields(action, job).then(function () {
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      if (modalBackdrop) modalBackdrop.hidden = false;
+      var first = modal.querySelector('textarea, select, input');
+      if (first) first.focus();
+    });
+  }
+
+  function closeActionModal() {
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    if (modalBackdrop) modalBackdrop.hidden = true;
+    activeAction = null;
+    activeJob = null;
+  }
+
+  function formPayload(form) {
+    var data = new FormData(form);
+    var out = {};
+    data.forEach(function (value, key) {
+      out[key] = value;
+    });
+    return out;
+  }
+
+  function submitAction(action, job, body) {
+    var id = jobId(job);
+    if (action === 'clear-blocker') return apiRequest('/supervisor/jobs/' + id + '/clear-blocker', body);
+    if (action === 'assign-helper') return apiRequest('/supervisor/jobs/' + id + '/helper', body);
+    if (action === 'move-hold') return apiRequest('/supervisor/jobs/' + id + '/hold', body);
+    if (action === 'review-qc' || action === 'approve-qc' || action === 'send-back') return apiRequest('/jobs/' + id + '/qc/review', body);
+    if (action === 'escalate') body.note = 'Escalation: ' + (body.note || '');
+    return apiRequest('/supervisor/jobs/' + id + '/note', body);
+  }
+
   $$('.ops-supervisor-job-row').forEach(function (row) {
     row.addEventListener('click', function (event) {
-      if (event.target.closest('[data-readonly-action]')) return;
+      var actionButton = event.target.closest('[data-supervisor-action]');
+      if (actionButton) {
+        event.stopPropagation();
+        openActionModal(actionButton.getAttribute('data-supervisor-action'), jobFromRow(row));
+        return;
+      }
       openDrawer(jobFromRow(row));
     });
     row.addEventListener('keydown', function (event) {
@@ -183,15 +362,43 @@
   if (closeButton) closeButton.addEventListener('click', closeDrawer);
   if (backdrop) backdrop.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') closeDrawer();
+    if (event.key === 'Escape') {
+      if (modal && !modal.hidden) closeActionModal();
+      else closeDrawer();
+    }
   });
 
-  $$('[data-readonly-action]').forEach(function (button) {
+  $$('[data-supervisor-action]').forEach(function (button) {
     button.addEventListener('click', function (event) {
       event.stopPropagation();
-      showToast('Read-only first pass. No job change was written.');
+      var row = button.closest('.ops-supervisor-job-row');
+      var job = row ? jobFromRow(row) : currentJob;
+      openActionModal(button.getAttribute('data-supervisor-action'), job);
     });
   });
+
+  if (modalForm) {
+    modalForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (!activeAction || !activeJob) return;
+      modalSubmit.disabled = true;
+      modalSubmit.textContent = 'Saving...';
+      submitAction(activeAction, activeJob, formPayload(modalForm)).then(function (data) {
+        closeActionModal();
+        showToast(data.message || 'Supervisor action saved.');
+        setTimeout(function () { window.location.reload(); }, 700);
+      }).catch(function (error) {
+        showToast(error.message || 'Action failed.');
+      }).finally(function () {
+        modalSubmit.disabled = false;
+        modalSubmit.textContent = activeAction === 'send-back' ? 'Send back' : (activeAction === 'approve-qc' || activeAction === 'review-qc' ? 'Approve' : 'Save');
+      });
+    });
+  }
+
+  if (modalClose) modalClose.addEventListener('click', closeActionModal);
+  if (modalCancel) modalCancel.addEventListener('click', closeActionModal);
+  if (modalBackdrop) modalBackdrop.addEventListener('click', closeActionModal);
 
   if (payload && payload.tabs && window.location.hash) {
     var hashTab = window.location.hash.replace(/^#/, '');
