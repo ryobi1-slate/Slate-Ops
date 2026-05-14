@@ -10,7 +10,7 @@
   var dataEl = document.getElementById('slate-resource-hub-data');
   var config = window.slateOpsResourceHub || {};
   var api = config.api || {};
-  var payload = { resources: [], canReview: false };
+  var payload = { resources: [], canReview: false, canAddResource: false };
   try {
     payload = JSON.parse(dataEl ? dataEl.textContent : '{}') || payload;
   } catch (err) {}
@@ -23,9 +23,13 @@
     reviewId: null,
     source: 'vendor',
     addFile: null,
+    noteFile: null,
     sort: { key: 'vendor', dir: 'ascending' },
     resources: Array.isArray(payload.resources) ? payload.resources.slice() : [],
-    canReview: !!payload.canReview
+    fieldNotes: Array.isArray(payload.fieldNotes) ? payload.fieldNotes.slice() : [],
+    canReview: !!payload.canReview,
+    canAddResource: !!payload.canAddResource,
+    canSubmitFieldNote: !!payload.canSubmitFieldNote
   };
 
   function apiFetch(path, options) {
@@ -36,7 +40,7 @@
     var headers = options.headers || {};
     headers['X-WP-Nonce'] = api.nonce;
     headers.Accept = 'application/json';
-    if (options.body && !headers['Content-Type']) {
+    if (options.body && !(options.body instanceof window.FormData) && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
     return window.fetch(api.root.replace(/\/$/, '') + path, Object.assign({}, options, {
@@ -59,6 +63,7 @@
     library: root.querySelector('[data-rh-screen="library"]'),
     detail: root.querySelector('[data-rh-screen="detail"]'),
     queue: root.querySelector('[data-rh-screen="queue"]'),
+    fieldNotes: root.querySelector('[data-rh-screen="field-notes"]'),
     list: root.querySelector('[data-rh-list]'),
     search: root.querySelector('[data-rh-search]'),
     empty: root.querySelector('[data-rh-empty]'),
@@ -74,7 +79,12 @@
     reviewSku: root.querySelector('[data-rh-review-sku]'),
     reviewTitle: root.querySelector('[data-rh-review-title]'),
     reviewPills: root.querySelector('[data-rh-review-pills]'),
-    reviewBody: root.querySelector('[data-rh-review-body]')
+    reviewBody: root.querySelector('[data-rh-review-body]'),
+    noteModal: root.querySelector('[data-rh-note-modal]'),
+    noteForm: root.querySelector('[data-rh-note-form]'),
+    noteFileInput: root.querySelector('[data-rh-note-file]'),
+    noteFileTitle: root.querySelector('[data-rh-note-file-title]'),
+    noteFileSub: root.querySelector('[data-rh-note-file-sub]')
   };
 
   function esc(value) {
@@ -141,6 +151,28 @@
     return '<span class="rh-pill pill--info">' + esc(resource.doc_type) + '</span>';
   }
 
+  function filePreview(resource, compact) {
+    var url = resource.file_url || '';
+    var name = resource.file_name || resource.file || 'Resource file';
+    var meta = String(resource.file_meta || resource.file || '').toLowerCase();
+    var lowerName = String(name).toLowerCase();
+    var body;
+    if (url && (/\.(jpg|jpeg|png|gif|webp)(\?|$)/.test(url.toLowerCase()) || meta.indexOf('image/') === 0)) {
+      body = '<img class="rh-file-preview__media" src="' + esc(url) + '" alt="' + esc(name) + '">';
+    } else if (url && (/\.(mp4|mov|webm)(\?|$)/.test(url.toLowerCase()) || meta.indexOf('video/') === 0)) {
+      body = '<video class="rh-file-preview__media" src="' + esc(url) + '" controls></video>';
+    } else if (url && (lowerName.indexOf('.pdf') !== -1 || meta.indexOf('pdf') !== -1)) {
+      body = '<iframe class="rh-file-preview__frame" src="' + esc(url) + '" title="' + esc(name) + '"></iframe>';
+    } else {
+      body = [
+        '<div class="rh-pdf__icon" aria-hidden="true">FILE</div>',
+        '<div class="rh-pdf__filename">' + esc(name) + '</div>',
+        '<div class="rh-mute" style="font-size:12px">' + (url ? 'Preview is not available for this file type.' : 'Upload a file to preview it here.') + '</div>'
+      ].join('');
+    }
+    return '<div class="rh-file-preview' + (compact ? ' rh-file-preview--compact' : '') + '">' + body + '</div>';
+  }
+
   function matchesTab(resource) {
     if (state.tab === 'slate') return resource.source_type === 'slate';
     if (state.tab === 'recent') return resource.updated_date >= '2026-04-01';
@@ -180,6 +212,7 @@
       library: state.resources.length,
       slate: state.resources.filter(function (resource) { return resource.source_type === 'slate'; }).length,
       queue: queueItems().length,
+      'field-notes': state.fieldNotes.filter(function (note) { return note.status_key === 'submitted' || note.status_key === 'in_review'; }).length,
       recent: state.resources.filter(function (resource) { return resource.updated_date >= '2026-04-01'; }).length
     };
 
@@ -196,9 +229,25 @@
     if (els.library) els.library.hidden = screen !== 'library';
     if (els.detail) els.detail.hidden = screen !== 'detail';
     if (els.queue) els.queue.hidden = screen !== 'queue';
+    if (els.fieldNotes) els.fieldNotes.hidden = screen !== 'field-notes';
+  }
+
+  function uploadMedia(file) {
+    if (!file) return Promise.resolve(null);
+    var data = new window.FormData();
+    data.append('file', file, file.name);
+    return apiFetch('/resource-hub/media', {
+      method: 'POST',
+      body: data
+    }).then(function (json) {
+      return json.media || null;
+    });
   }
 
   function setTab(tab) {
+    if ((tab === 'queue' || tab === 'field-notes') && !state.canReview) {
+      tab = 'library';
+    }
     state.tab = tab;
     state.selectedId = null;
     els.tabs.forEach(function (button) {
@@ -208,6 +257,13 @@
     if (tab === 'queue') {
       setScreen('queue');
       renderQueue();
+      updateTabCounts();
+      return;
+    }
+
+    if (tab === 'field-notes') {
+      setScreen('field-notes');
+      renderFieldNotes();
       updateTabCounts();
       return;
     }
@@ -225,10 +281,12 @@
     if (els.sourceHint) {
       els.sourceHint.innerHTML = state.source === 'vendor'
         ? 'Vendor doc lands in the review queue with status <em>Needs Slate review</em>.'
-        : 'Slate-authored docs publish straight to the library, marked <em>Reviewed by Slate</em>.';
+        : 'Slate-authored docs can be published after CS, Supervisor, or Admin signoff.';
     }
     if (els.addSubmit) {
-      els.addSubmit.textContent = state.source === 'vendor' ? 'Add to queue' : 'Publish to library';
+      els.addSubmit.textContent = state.canReview
+        ? (state.source === 'vendor' ? 'Add to queue' : 'Publish to library')
+        : 'Submit for signoff';
     }
     var vendor = root.querySelector('#rh-add-vendor');
     if (vendor && state.source === 'slate') vendor.value = 'Slate-authored';
@@ -238,6 +296,12 @@
     state.addFile = file || null;
     if (els.fileTitle) els.fileTitle.textContent = file ? file.name : 'Drop a PDF, image, or video here';
     if (els.fileSub) els.fileSub.textContent = file ? fileLabel(file) : 'Up to 25 MB - pdf, jpg, png, mp4';
+  }
+
+  function setNoteFile(file) {
+    state.noteFile = file || null;
+    if (els.noteFileTitle) els.noteFileTitle.textContent = file ? file.name : 'Snap a photo or choose media';
+    if (els.noteFileSub) els.noteFileSub.textContent = file ? fileLabel(file) : 'Photo, PDF, or short video metadata is saved in this MVP';
   }
 
   function selectedChassis() {
@@ -270,7 +334,7 @@
   }
 
   function openAddModal() {
-    if (!els.addModal || !state.canReview) return;
+    if (!els.addModal || !state.canAddResource) return;
     resetAddForm();
     els.addModal.hidden = false;
   }
@@ -278,6 +342,7 @@
   function closeOverlays() {
     if (els.addModal) els.addModal.hidden = true;
     if (els.reviewDrawer) els.reviewDrawer.hidden = true;
+    if (els.noteModal) els.noteModal.hidden = true;
     state.reviewId = null;
   }
 
@@ -287,8 +352,28 @@
     return field ? field.value.trim() : '';
   }
 
+  function fieldValue(form, name) {
+    if (!form) return '';
+    var field = form.querySelector('[name="' + name + '"]');
+    return field ? field.value.trim() : '';
+  }
+
+  function linksFromForm() {
+    var specs = [
+      ['bom_no', 'bom', 'bc'],
+      ['bom_revision', 'bom_revision', 'bc'],
+      ['slate_part_no', 'slate_part', 'manual'],
+      ['vendor_part_no', 'vendor_part', 'vendor']
+    ];
+    return specs.map(function (spec) {
+      var value = formValue(spec[0]);
+      if (!value) return null;
+      return { link_type: spec[1], link_key: value, link_label: value, source_system: spec[2] };
+    }).filter(Boolean);
+  }
+
   function addResource(draftOnly) {
-    if (!state.canReview || !els.addForm) return;
+    if (!state.canAddResource || !els.addForm) return;
     if (!els.addForm.reportValidity()) return;
     if (!draftOnly && !state.addFile) {
       showNotice('Choose a file before adding the resource.');
@@ -301,7 +386,8 @@
     var notesValue = formValue('notes');
     var fileName = state.addFile ? state.addFile.name : sku + '_resource.pdf';
     var id = sku.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
-    var statusKey = draftOnly ? 'draft' : (sourceType === 'vendor' ? 'needs_review' : 'reviewed');
+    var statusKey = state.canReview && draftOnly ? 'draft' : (sourceType === 'vendor' ? 'needs_review' : 'reviewed');
+    if (!state.canReview) statusKey = 'needs_review';
     var resource = {
       resource_key: id,
       sku: sku,
@@ -316,25 +402,90 @@
       source: sourceType === 'slate' ? 'Slate-authored upload' : 'Admin upload',
       file_name: fileName + ' - ' + (state.addFile ? fileLabel(state.addFile) : 'file pending'),
       file_meta: state.addFile ? fileLabel(state.addFile) : 'file pending',
+      file_url: '',
       notes: notesValue ? notesValue.split(/\n+/).filter(Boolean) : [],
       attachments: [],
       related: [],
-      audience: selectedAudience()
+      audience: selectedAudience(),
+      links: linksFromForm()
     };
 
-    apiFetch('/resource-hub', {
-      method: 'POST',
-      body: JSON.stringify(resource)
+    uploadMedia(state.addFile).then(function (media) {
+      if (media) {
+        resource.file_name = media.name + ' - ' + media.meta;
+        resource.file_meta = media.meta;
+        resource.file_url = media.url;
+      }
+      return apiFetch('/resource-hub', {
+        method: 'POST',
+        body: JSON.stringify(resource)
+      });
     }).then(function (json) {
       state.resources.unshift(json.resource);
       closeOverlays();
       renderList();
       renderQueue();
       updateTabCounts();
-      showNotice(draftOnly ? 'Draft added to the library.' : (sourceType === 'vendor' ? 'Resource added to the review queue.' : 'Resource published to the library.'));
-      if (sourceType === 'vendor' && !draftOnly) setTab('queue');
+      showNotice(state.canReview && draftOnly ? 'Draft added to the library.' : (state.canReview && sourceType === 'slate' ? 'Resource published to the library.' : 'Resource submitted for signoff.'));
+      if (state.canReview && sourceType === 'vendor' && !draftOnly) setTab('queue');
     }).catch(function (err) {
       showNotice(err.message || 'Could not save resource.');
+    });
+  }
+
+  function resetNoteForm() {
+    setNoteFile(null);
+    if (els.noteFileInput) els.noteFileInput.value = '';
+    if (els.noteForm) els.noteForm.reset();
+  }
+
+  function openNoteModal() {
+    if (!els.noteModal || !state.canSubmitFieldNote) return;
+    resetNoteForm();
+    els.noteModal.hidden = false;
+  }
+
+  function submitFieldNote() {
+    if (!state.canSubmitFieldNote || !els.noteForm) return;
+    if (!els.noteForm.reportValidity()) return;
+    var file = state.noteFile;
+    var note = {
+      note_type: fieldValue(els.noteForm, 'note_type'),
+      title: fieldValue(els.noteForm, 'title'),
+      note_body: fieldValue(els.noteForm, 'note_body'),
+      so_number: fieldValue(els.noteForm, 'so_number'),
+      rvia_no: fieldValue(els.noteForm, 'rvia_no'),
+      build_type: fieldValue(els.noteForm, 'build_type'),
+      bom_no: fieldValue(els.noteForm, 'bom_no'),
+      bom_revision: fieldValue(els.noteForm, 'bom_revision'),
+      slate_part_no: fieldValue(els.noteForm, 'slate_part_no'),
+      vendor_part_no: fieldValue(els.noteForm, 'vendor_part_no'),
+      vendor: fieldValue(els.noteForm, 'vendor'),
+      chassis: fieldValue(els.noteForm, 'chassis'),
+      media_name: file ? file.name : '',
+      media_url: '',
+      media_meta: file ? fileLabel(file) : ''
+    };
+    uploadMedia(file).then(function (media) {
+      if (media) {
+        note.media_name = media.name;
+        note.media_url = media.url;
+        note.media_meta = media.meta;
+      }
+      return apiFetch('/resource-hub/field-notes', {
+        method: 'POST',
+        body: JSON.stringify(note)
+      });
+    }).then(function (json) {
+      closeOverlays();
+      if (json.fieldNote && state.canReview) {
+        state.fieldNotes.unshift(json.fieldNote);
+        renderFieldNotes();
+        updateTabCounts();
+      }
+      showNotice('Install note submitted for review.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not submit install note.');
     });
   }
 
@@ -367,7 +518,7 @@
 
     var notes = resource.notes && resource.notes.length
       ? resource.notes.map(function (note) { return '<li>' + esc(note) + '</li>'; }).join('')
-      : '<li>No Slate notes have been attached yet.</li>';
+      : '<li>No review notes have been attached yet.</li>';
 
     var attachments = resource.attachments && resource.attachments.length
       ? resource.attachments.map(function (attachment) {
@@ -381,9 +532,15 @@
             '</div>'
           ].join('');
         }).join('')
-      : '<div class="rh-empty"><h2 class="rh-empty__title">No Slate attachments yet</h2><p class="rh-empty__sub">Attachments can be added when the document storage workflow is connected.</p></div>';
+      : '<div class="rh-empty"><h2 class="rh-empty__title">No attachments yet</h2><p class="rh-empty__sub">Photos, diagrams, and support files can be added during review.</p></div>';
 
     var related = (resource.related || []).map(byId).filter(Boolean);
+    var links = Array.isArray(resource.links) ? resource.links : [];
+    var linksHtml = links.length
+      ? links.map(function (link) {
+          return '<span class="rh-link-chip"><span>' + esc(link.link_type.replace(/_/g, ' ')) + '</span>' + esc(link.link_label || link.link_key) + '</span>';
+        }).join('')
+      : '<span class="rh-mute">No BOM or part links yet.</span>';
     var relatedHtml = related.length
       ? related.map(function (item) {
           return [
@@ -419,28 +576,116 @@
       metaRow('Source', resource.source, true),
       '</aside>',
       '<section class="rh-pdf" aria-label="Document preview">',
-      '<div class="rh-pdf__placeholder">',
-      '<div class="rh-pdf__icon">PDF</div>',
-      '<div class="rh-pdf__filename">' + esc(resource.file) + '</div>',
-      '<div class="rh-mute" style="font-size:12px">Preview is ready for the document storage workflow.</div>',
-      '</div>',
+      filePreview(resource, false),
       '<div class="rh-pdf__footer">',
       '<span class="rh-mute" style="font-size:12px">Last updated ' + esc(resource.updated_date) + '</span>',
-      '<button class="rh-btn rh-btn--primary" type="button" disabled>Open PDF</button>',
+      resource.file_url ? '<a class="rh-btn rh-btn--primary" href="' + esc(resource.file_url) + '" target="_blank" rel="noopener">Open file</a>' : '<button class="rh-btn rh-btn--primary" type="button" disabled>Open file</button>',
       '</div>',
       '</section>',
       '</div>',
       '<section class="rh-slate-notes" aria-labelledby="slate-notes-title">',
-      '<div class="rh-slate-notes__eyebrow" id="slate-notes-title"><span class="material-symbols-outlined" style="font-size:14px">verified</span>Slate-authored notes for techs</div>',
+      '<div class="rh-slate-notes__eyebrow" id="slate-notes-title"><span class="material-symbols-outlined" style="font-size:14px">verified</span>Notes for techs</div>',
       '<div class="rh-slate-notes__body"><ul>' + notes + '</ul></div>',
       '</section>',
-      '<div class="rh-section-head"><h2 class="rh-section-head__title">Slate attachments</h2><span class="rh-section-head__count">' + esc(String((resource.attachments || []).length)) + ' files</span></div>',
+      '<div class="rh-section-head"><h2 class="rh-section-head__title">BOM and part links</h2><span class="rh-section-head__count">' + esc(String(links.length)) + ' links</span></div>',
+      '<div class="rh-link-list">' + linksHtml + '</div>',
+      '<div class="rh-section-head"><h2 class="rh-section-head__title">Attachments</h2><span class="rh-section-head__count">' + esc(String((resource.attachments || []).length)) + ' files</span></div>',
       '<div class="rh-attach">' + attachments + '</div>',
       '<div class="rh-section-head"><h2 class="rh-section-head__title">Related resources</h2><span class="rh-section-head__count">' + esc(String(related.length)) + ' items</span></div>',
       '<div class="rh-related">' + relatedHtml + '</div>'
     ].join('');
 
     setScreen('detail');
+  }
+
+  function renderFieldNotes() {
+    if (!els.fieldNotes) return;
+    var rows = state.fieldNotes.filter(function (note) {
+      return note.status_key === 'submitted' || note.status_key === 'in_review';
+    });
+    if (!rows.length) {
+      els.fieldNotes.innerHTML = '<section class="rh-empty" role="status"><div class="rh-empty__icon"><span class="material-symbols-outlined">task_alt</span></div><h2 class="rh-empty__title">No field notes awaiting review</h2><p class="rh-empty__sub">Install notes submitted from the floor will appear here.</p></section>';
+      return;
+    }
+
+    els.fieldNotes.innerHTML = [
+      '<div class="rh-page__head">',
+      '<div><div class="rh-eyebrow">Tech capture / supervisor review</div><h2 class="rh-page__title">Field notes</h2><p class="rh-page__sub">Review install photos, tips, corrections, and part-specific notes before publishing them.</p></div>',
+      '</div>',
+      '<div class="rh-note-review-list">',
+      rows.map(fieldNoteCard).join(''),
+      '</div>'
+    ].join('');
+  }
+
+  function fieldNoteCard(note) {
+    var context = [
+      note.so_number ? 'SO ' + note.so_number : '',
+      note.rvia_no ? 'RVIA ' + note.rvia_no : '',
+      note.bom_no ? 'BOM ' + note.bom_no : '',
+      note.slate_part_no ? 'Slate ' + note.slate_part_no : '',
+      note.vendor_part_no ? 'Vendor ' + note.vendor_part_no : ''
+    ].filter(Boolean).join(' - ');
+    return [
+      '<article class="rh-field-note-card" data-rh-field-note="' + esc(note.id) + '">',
+      '<div>',
+      '<div class="rh-field-note-card__meta">' + esc(note.note_type_label || 'Tip') + (note.submitted_by ? ' - ' + esc(note.submitted_by) : '') + '</div>',
+      '<h3 class="rh-field-note-card__title">' + esc(note.title) + '</h3>',
+      '<p class="rh-field-note-card__body">' + esc(note.note_body) + '</p>',
+      '<div class="rh-field-note-card__context">' + esc(context || 'No BOM or part context yet') + '</div>',
+      note.media_name ? '<div class="rh-field-note-card__media"><span class="material-symbols-outlined" aria-hidden="true">attach_file</span>' + esc(note.media_name + (note.media_meta ? ' - ' + note.media_meta : '')) + '</div>' : '',
+      '</div>',
+      '<div class="rh-field-note-card__actions">',
+      '<button class="rh-btn rh-btn--sm" type="button" data-rh-field-archive="' + esc(note.id) + '">Archive</button>',
+      '<button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-rh-field-promote="' + esc(note.id) + '">Promote</button>',
+      '</div>',
+      '</article>'
+    ].join('');
+  }
+
+  function replaceFieldNote(note) {
+    if (!note || !note.id) return;
+    var replaced = false;
+    state.fieldNotes = state.fieldNotes.map(function (item) {
+      if (item.id === note.id) {
+        replaced = true;
+        return note;
+      }
+      return item;
+    });
+    if (!replaced) state.fieldNotes.unshift(note);
+  }
+
+  function promoteFieldNote(id) {
+    var note = state.fieldNotes.find(function (item) { return item.id === id; });
+    if (!note) return;
+    apiFetch('/resource-hub/field-notes/' + encodeURIComponent(id) + '/promote', {
+      method: 'POST',
+      body: JSON.stringify({})
+    }).then(function (json) {
+      replaceFieldNote(json.fieldNote);
+      if (json.resource) replaceResource(json.resource);
+      renderFieldNotes();
+      renderList();
+      updateTabCounts();
+      showNotice('Field note promoted to Resource Hub.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not promote field note.');
+    });
+  }
+
+  function archiveFieldNote(id) {
+    apiFetch('/resource-hub/field-notes/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      body: JSON.stringify({ status_key: 'archived' })
+    }).then(function (json) {
+      replaceFieldNote(json.fieldNote);
+      renderFieldNotes();
+      updateTabCounts();
+      showNotice('Field note archived.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not archive field note.');
+    });
   }
 
   function metaRow(label, value, mono) {
@@ -452,13 +697,27 @@
     ].join('');
   }
 
+  function resourceLinkValue(resource, type) {
+    var links = Array.isArray(resource.links) ? resource.links : [];
+    var match = links.find(function (link) {
+      return link.link_type === type && (link.link_key || link.link_label);
+    });
+    return match ? (match.link_label || match.link_key) : '';
+  }
+
+  function queueSortValue(resource, key) {
+    if (key === 'slate_part') return resourceLinkValue(resource, 'slate_part') || resource.sku || '';
+    if (key === 'vendor_part') return resourceLinkValue(resource, 'vendor_part') || '';
+    return resource[key] || '';
+  }
+
   function queueItems() {
     return state.resources.filter(function (resource) {
       return resource.status_key === 'needs_review';
     }).sort(function (a, b) {
       var key = state.sort.key;
-      var aVal = String(a[key] || '').toLowerCase();
-      var bVal = String(b[key] || '').toLowerCase();
+      var aVal = String(queueSortValue(a, key)).toLowerCase();
+      var bVal = String(queueSortValue(b, key)).toLowerCase();
       if (aVal < bVal) return state.sort.dir === 'ascending' ? -1 : 1;
       if (aVal > bVal) return state.sort.dir === 'ascending' ? 1 : -1;
       return 0;
@@ -475,12 +734,14 @@
     }
 
     var cards = rows.map(function (resource) {
+      var slatePart = resourceLinkValue(resource, 'slate_part') || resource.sku || 'Not set';
+      var vendorPart = resourceLinkValue(resource, 'vendor_part') || 'Not set';
       return [
         '<article class="rh-queue-card">',
         '<div class="rh-queue-card__head">',
         '<div><div class="rh-queue-card__vendor">' + esc(resource.vendor) + '</div>',
         '<h3 class="rh-queue-card__title">' + esc(resource.title) + '</h3>',
-        '<div class="rh-queue-card__sku">' + esc(resource.sku) + '</div></div>',
+        '<div class="rh-queue-card__sku">Slate PN ' + esc(slatePart) + ' / Vendor PN ' + esc(vendorPart) + '</div></div>',
         statusPill(resource),
         '</div>',
         '<div class="rh-queue-card__rev">' + esc(resource.vendor_revision) + '</div>',
@@ -490,10 +751,13 @@
     }).join('');
 
     var tableRows = rows.map(function (resource) {
+      var slatePart = resourceLinkValue(resource, 'slate_part') || resource.sku || '';
+      var vendorPart = resourceLinkValue(resource, 'vendor_part') || '';
       return [
         '<tr>',
         '<td class="rh-cell--vendor">' + esc(resource.vendor) + '</td>',
-        '<td class="rh-cell--mono">' + esc(resource.sku) + '</td>',
+        '<td class="rh-cell--mono">' + esc(slatePart || 'Not set') + '</td>',
+        '<td class="rh-cell--mono">' + esc(vendorPart || 'Not set') + '</td>',
         '<td class="rh-cell--title">' + esc(resource.title) + '</td>',
         '<td class="rh-cell--mono">' + esc(resource.vendor_revision) + '</td>',
         '<td>' + statusPill(resource) + '</td>',
@@ -505,14 +769,14 @@
     els.queue.innerHTML = [
       '<div class="rh-page__head">',
       '<div><div class="rh-eyebrow">Engineering / admin</div><h2 class="rh-page__title">Admin queue</h2><p class="rh-page__sub">Vendor docs awaiting Slate review. Add notes, attach floor references, then publish.</p></div>',
-      '<div class="rh-page__actions"><button class="slate-btn slate-btn--accent slate-btn--sm" type="button" data-rh-add-open><span class="material-symbols-outlined" aria-hidden="true">add</span>Add resource</button></div>',
       '</div>',
       '<div class="rh-queue__cards">' + cards + '</div>',
       '<div class="rh-queue__table">',
       '<table class="rh-table">',
       '<thead><tr>',
       queueHead('vendor', 'Vendor'),
-      queueHead('sku', 'SKU'),
+      queueHead('slate_part', 'Slate PN'),
+      queueHead('vendor_part', 'Vendor PN'),
       queueHead('title', 'Title'),
       queueHead('vendor_revision', 'Vendor revision'),
       '<th>Status</th><th class="rh-cell--action">&nbsp;</th>',
@@ -542,20 +806,14 @@
     if (!replaced) state.resources.unshift(resource);
   }
 
-  function checklistItem(label, checked) {
-    return [
-      '<button class="rh-checklist__item" type="button" aria-checked="' + (checked ? 'true' : 'false') + '" role="checkbox" data-rh-check>',
-      '<span class="rh-checklist__box">' + (checked ? '<span class="material-symbols-outlined" style="font-size:13px">check</span>' : '') + '</span>',
-      '<span class="rh-checklist__label">' + esc(label) + '</span>',
-      '</button>'
-    ].join('');
-  }
-
-  function attachmentTile(attachment) {
+  function attachmentTile(attachment, index) {
     return [
       '<div class="rh-attach-tile rh-attach-tile--filled">',
       '<div class="rh-attach-tile__img">' + esc(attachment.label || 'Attachment') + '</div>',
-      '<div class="rh-attach-tile__cap">' + esc(attachment.name || 'Attachment') + '</div>',
+      '<div class="rh-attach-tile__cap">',
+      '<span>' + esc(attachment.name || 'Attachment') + '</span>',
+      '<button class="rh-file-remove" type="button" data-rh-remove-attachment="' + esc(String(index)) + '" aria-label="Remove attachment">Remove</button>',
+      '</div>',
       '</div>'
     ].join('');
   }
@@ -570,33 +828,27 @@
     }
 
     var notesText = (resource.notes || []).join('\n\n');
-    var attachments = (resource.attachments || []).map(attachmentTile).join('');
+    var attachments = (resource.attachments || []).map(function (attachment, index) {
+      return attachmentTile(attachment, index);
+    }).join('');
     els.reviewBody.innerHTML = [
       '<div class="rh-drawer__pdf">',
       '<div class="rh-drawer__pdf-thumb">',
-      '<div class="rh-pdf__icon" aria-hidden="true">PDF</div>',
+      filePreview(resource, true),
       '<div class="rh-drawer__pdf-name">' + esc(resource.file || 'Resource file') + '</div>',
       '<div class="rh-mute" style="font-size:11px">' + esc(resource.source || 'Admin upload') + '</div>',
-      '<button class="rh-btn rh-btn--sm" type="button" disabled>Open file</button>',
+      resource.file_url || resource.file ? '<button class="rh-file-remove" type="button" data-rh-remove-file>Remove file</button>' : '',
+      resource.file_url ? '<a class="rh-btn rh-btn--sm" href="' + esc(resource.file_url) + '" target="_blank" rel="noopener">Open file</a>' : '<button class="rh-btn rh-btn--sm" type="button" disabled>Open file</button>',
       '</div>',
       '<div class="rh-mute" style="font-size:11px">Uploaded ' + esc(resource.updated_date || todayIso()) + '</div>',
       '</div>',
       '<div class="rh-drawer__notes">',
       '<div class="rh-field">',
-      '<label class="rh-field__label" for="rh-review-notes">Slate notes for techs</label>',
-      '<textarea class="rh-textarea" id="rh-review-notes" data-rh-review-notes rows="7" placeholder="Hardware variants, sealant call-outs, vendor errata, references to attached photos...">' + esc(notesText) + '</textarea>',
+      '<label class="rh-field__label" for="rh-review-notes">Notes for techs</label>',
+      '<textarea class="rh-textarea" id="rh-review-notes" data-rh-review-notes rows="7" placeholder="Add the install guidance, correction, or reviewer note that should be visible to techs.">' + esc(notesText) + '</textarea>',
       '</div>',
       '<div class="rh-field">',
-      '<span class="rh-field__label">QC checks</span>',
-      '<div class="rh-checklist">',
-      checklistItem('Torque values verified against current production hardware', true),
-      checklistItem('Hardware variants noted', notesText.length > 0),
-      checklistItem('Sealant / adhesive specified', false),
-      checklistItem('Photos / diagrams attached for tricky steps', (resource.attachments || []).length > 0),
-      '</div>',
-      '</div>',
-      '<div class="rh-field">',
-      '<span class="rh-field__label">Slate attachments</span>',
+      '<span class="rh-field__label">Attachments</span>',
       '<div class="rh-attach-grid" data-rh-review-attachments>',
       attachments,
       '<label class="rh-attach-tile" data-rh-attach-drop>',
@@ -663,17 +915,20 @@
   function addReviewAttachment(file) {
     var resource = byId(state.reviewId);
     if (!resource || !file) return;
-    resource.attachments = resource.attachments || [];
-    resource.attachments.push({
-      name: file.name,
-      meta: fileLabel(file),
-      label: file.type && file.type.indexOf('image/') === 0 ? 'Image' : file.type && file.type.indexOf('video/') === 0 ? 'Video' : 'File'
-    });
-    apiFetch('/resource-hub/' + encodeURIComponent(resource.id), {
-      method: 'PATCH',
-      body: JSON.stringify({
-        attachments: resource.attachments
-      })
+    uploadMedia(file).then(function (media) {
+      resource.attachments = resource.attachments || [];
+      resource.attachments.push({
+        name: media ? media.name : file.name,
+        meta: media ? media.meta : fileLabel(file),
+        label: file.type && file.type.indexOf('image/') === 0 ? 'Image' : file.type && file.type.indexOf('video/') === 0 ? 'Video' : 'File',
+        url: media ? media.url : ''
+      });
+      return apiFetch('/resource-hub/' + encodeURIComponent(resource.id), {
+        method: 'PATCH',
+        body: JSON.stringify({
+          attachments: resource.attachments
+        })
+      });
     }).then(function (json) {
       replaceResource(json.resource);
       renderReviewDrawer(json.resource);
@@ -707,6 +962,12 @@
     var addOpen = event.target.closest('[data-rh-add-open]');
     if (addOpen) {
       openAddModal();
+      return;
+    }
+
+    var noteOpen = event.target.closest('[data-rh-note-open]');
+    if (noteOpen) {
+      openNoteModal();
       return;
     }
 
@@ -755,6 +1016,12 @@
       return;
     }
 
+    var noteSubmit = event.target.closest('[data-rh-note-submit]');
+    if (noteSubmit) {
+      submitFieldNote();
+      return;
+    }
+
     var review = event.target.closest('[data-rh-review]');
     if (review) {
       openReview(review.getAttribute('data-rh-review'));
@@ -774,18 +1041,33 @@
       return;
     }
 
-    var approve = event.target.closest('[data-rh-review-approve]');
-    if (approve) {
-      approveReview();
+    var fieldPromote = event.target.closest('[data-rh-field-promote]');
+    if (fieldPromote) {
+      promoteFieldNote(fieldPromote.getAttribute('data-rh-field-promote'));
       return;
     }
 
-    var check = event.target.closest('[data-rh-check]');
-    if (check) {
-      var checked = check.getAttribute('aria-checked') === 'true';
-      check.setAttribute('aria-checked', checked ? 'false' : 'true');
-      var box = check.querySelector('.rh-checklist__box');
-      if (box) box.innerHTML = checked ? '' : '<span class="material-symbols-outlined" style="font-size:13px">check</span>';
+    var fieldArchive = event.target.closest('[data-rh-field-archive]');
+    if (fieldArchive) {
+      archiveFieldNote(fieldArchive.getAttribute('data-rh-field-archive'));
+      return;
+    }
+
+    var removeFile = event.target.closest('[data-rh-remove-file]');
+    if (removeFile) {
+      removeResourceFile();
+      return;
+    }
+
+    var removeAttachment = event.target.closest('[data-rh-remove-attachment]');
+    if (removeAttachment) {
+      removeReviewAttachment(parseInt(removeAttachment.getAttribute('data-rh-remove-attachment'), 10));
+      return;
+    }
+
+    var approve = event.target.closest('[data-rh-review-approve]');
+    if (approve) {
+      approveReview();
       return;
     }
 
@@ -886,6 +1168,52 @@
     });
   }
 
+  if (els.noteFileInput) {
+    els.noteFileInput.addEventListener('change', function () {
+      setNoteFile(els.noteFileInput.files && els.noteFileInput.files[0] ? els.noteFileInput.files[0] : null);
+    });
+  }
+
+  function removeResourceFile() {
+    var resource = byId(state.reviewId);
+    if (!resource) return;
+    apiFetch('/resource-hub/' + encodeURIComponent(resource.id), {
+      method: 'PATCH',
+      body: JSON.stringify({
+        file_name: '',
+        file_url: '',
+        file_meta: ''
+      })
+    }).then(function (json) {
+      replaceResource(json.resource);
+      renderReviewDrawer(json.resource);
+      showNotice('File removed from resource.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not remove file.');
+    });
+  }
+
+  function removeReviewAttachment(index) {
+    var resource = byId(state.reviewId);
+    if (!Number.isFinite(index)) return;
+    if (!resource || !Array.isArray(resource.attachments)) return;
+    resource.attachments = resource.attachments.filter(function (_, itemIndex) {
+      return itemIndex !== index;
+    });
+    apiFetch('/resource-hub/' + encodeURIComponent(resource.id), {
+      method: 'PATCH',
+      body: JSON.stringify({
+        attachments: resource.attachments
+      })
+    }).then(function (json) {
+      replaceResource(json.resource);
+      renderReviewDrawer(json.resource);
+      showNotice('Attachment removed from resource.');
+    }).catch(function (err) {
+      showNotice(err.message || 'Could not remove attachment.');
+    });
+  }
+
   var drop = root.querySelector('[data-rh-drop]');
   if (drop) {
     ['dragenter', 'dragover'].forEach(function (name) {
@@ -903,6 +1231,26 @@
     drop.addEventListener('drop', function (event) {
       var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
       if (file) setAddFile(file);
+    });
+  }
+
+  var noteDrop = root.querySelector('[data-rh-note-drop]');
+  if (noteDrop) {
+    ['dragenter', 'dragover'].forEach(function (name) {
+      noteDrop.addEventListener(name, function (event) {
+        event.preventDefault();
+        noteDrop.classList.add('is-dragging');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (name) {
+      noteDrop.addEventListener(name, function (event) {
+        event.preventDefault();
+        noteDrop.classList.remove('is-dragging');
+      });
+    });
+    noteDrop.addEventListener('drop', function (event) {
+      var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+      if (file) setNoteFile(file);
     });
   }
 
