@@ -3260,6 +3260,11 @@ return self::get_job(['id' => $job_id]);
       $shift_end_ts = !empty($shift_breakdown['shift_end_ts']) ? strtotime((string)$shift_breakdown['shift_end_ts']) : false;
       if (!$shift_end_ts) continue;
 
+      $start_ts = strtotime((string)$open['start_ts']);
+      if (!$start_ts || $start_ts >= $shift_end_ts) {
+        continue;
+      }
+
       $cutoff_ts = $shift_end_ts + ($grace_minutes * MINUTE_IN_SECONDS);
       if ($now_ts < $cutoff_ts) continue;
 
