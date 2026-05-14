@@ -1110,7 +1110,7 @@
         : (fs && fs.requested_at ? 'Requested ' + fmtDate(fs.requested_at) : '—');
 
       var syncBtn = IS_ADMIN
-        ? '<button class="pur-btn pur-btn--outline pur-sync-btn"' +
+        ? '<button class="slate-btn slate-btn--secondary slate-btn--sm pur-sync-btn"' +
             ' data-action="sync-request" data-feed="' + esc(feed) + '"' +
             (feedDisabled || !!state.integrationSyncing ? ' disabled' : '') + '>' +
             (isSyncing

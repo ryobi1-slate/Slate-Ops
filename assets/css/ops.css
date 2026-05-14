@@ -1978,6 +1978,7 @@ body.slate-ops{ background: var(--p0-canvas); }
 .badge.scheduled     { background:rgba(15,23,42,0.05); border-color:var(--ui-border); color:var(--ui-muted); }
 .badge.progress      { background:rgba(214,139,25,0.10); border-color:rgba(214,139,25,0.22); color:#8b4a10; }
 .badge.qc            { background:rgba(99,60,166,0.10); border-color:rgba(99,60,166,0.20); color:#5b3a9e; }
+.badge.pickup        { background:rgba(64,79,75,0.10); border-color:rgba(64,79,75,0.18); color:var(--sage); }
 .badge.blocked       { background:rgba(220,38,38,0.10); border-color:rgba(220,38,38,0.20); color:#b91c1c; }
 .badge.hold          { background:rgba(220,38,38,0.07); border-color:rgba(220,38,38,0.14); color:#9e2020; }
 .badge.complete      { background:rgba(64,79,75,0.10); border-color:rgba(64,79,75,0.18); color:var(--sage); }
@@ -2285,4 +2286,50 @@ body.slate-ops{ background: var(--p0-canvas); }
   }
   .cs-job-badges { grid-column:2; grid-row:1/3; align-items:flex-start; }
   .cs-job-cols { display:none; }
+}
+
+/* Tech screen detail polish */
+.ops-page-tech .tech-hero-meta,
+.ops-page-tech .tech-next-meta,
+.ops-page-tech .tech-up-meta {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.ops-page-tech .tech-up-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.ops-page-tech .tech-parts-badge {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.ops-page-tech .tech-hero-section--compact {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) 1fr;
+  align-items: center;
+  column-gap: 12px;
+}
+
+@media (max-width:700px){
+  .ops-page-tech .tech-hero-title,
+  .ops-page-tech .tech-next-title,
+  .ops-page-tech .tech-up-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .ops-page-tech .tech-hero-section--compact {
+    display: block;
+  }
 }

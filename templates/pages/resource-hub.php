@@ -19,7 +19,9 @@ if (!slate_ops_current_user_can_access_ops_page('resource-hub')) {
   return;
 }
 
-$can_review = Slate_Ops_Utils::can_supervisor_or_admin();
+$can_review = Slate_Ops_Utils::can_cs_or_above();
+$can_add_resource = slate_ops_current_user_can_access_ops_page('resource-hub');
+$can_submit_field_note = Slate_Ops_Utils::is_tech() || $can_review;
 
 $resources = [
   [
@@ -233,13 +235,25 @@ $resources = [
   ],
 ];
 
+if (class_exists('Slate_Ops_Resource_Hub')) {
+  Slate_Ops_Resource_Hub::maybe_seed($resources);
+  $stored_resources = Slate_Ops_Resource_Hub::list_for_current_user();
+  if (!empty($stored_resources)) {
+    $resources = $stored_resources;
+  }
+}
+
 $review_queue = array_values(array_filter($resources, function ($resource) {
   return isset($resource['status_key']) && $resource['status_key'] === 'needs_review';
 }));
+$field_notes = ($can_review && class_exists('Slate_Ops_Resource_Hub')) ? Slate_Ops_Resource_Hub::list_field_notes('submitted') : [];
 
 $payload = [
   'resources' => $resources,
   'canReview' => $can_review,
+  'canAddResource' => $can_add_resource,
+  'canSubmitFieldNote' => $can_submit_field_note,
+  'fieldNotes' => $field_notes,
 ];
 
 $slate_authored_count = count(array_filter($resources, function ($resource) {
@@ -263,9 +277,17 @@ $recent_count = count(array_filter($resources, function ($resource) {
         <span class="rh-meta-pill"><?php echo esc_html((string) count($resources)); ?> resources</span>
         <?php if ($can_review) : ?>
           <span class="rh-meta-pill rh-meta-pill--warn"><?php echo esc_html((string) count($review_queue)); ?> need review</span>
-          <button class="rh-btn rh-btn--primary rh-btn--sm" type="button" data-rh-add-open>
+        <?php endif; ?>
+        <?php if ($can_add_resource) : ?>
+          <button class="slate-btn slate-btn--accent slate-btn--sm" type="button" data-rh-add-open>
             <span class="material-symbols-outlined" aria-hidden="true">add</span>
             Add resource
+          </button>
+        <?php endif; ?>
+        <?php if ($can_submit_field_note) : ?>
+          <button class="slate-btn slate-btn--secondary slate-btn--sm" type="button" data-rh-note-open>
+            <span class="material-symbols-outlined" aria-hidden="true">add_a_photo</span>
+            Capture install note
           </button>
         <?php endif; ?>
       </div>
@@ -276,6 +298,7 @@ $recent_count = count(array_filter($resources, function ($resource) {
       <button class="rh-tab" type="button" data-rh-tab="slate">Slate-authored <span class="rh-tab__count"><?php echo esc_html((string) $slate_authored_count); ?></span></button>
       <?php if ($can_review) : ?>
         <button class="rh-tab" type="button" data-rh-tab="queue">Admin queue <span class="rh-tab__count"><?php echo esc_html((string) count($review_queue)); ?></span></button>
+        <button class="rh-tab" type="button" data-rh-tab="field-notes">Field notes <span class="rh-tab__count"><?php echo esc_html((string) count($field_notes)); ?></span></button>
       <?php endif; ?>
       <button class="rh-tab" type="button" data-rh-tab="recent">Recently updated <span class="rh-tab__count"><?php echo esc_html((string) $recent_count); ?></span></button>
     </nav>
@@ -306,7 +329,7 @@ $recent_count = count(array_filter($resources, function ($resource) {
 
       <ul class="rh-list" data-rh-list>
         <?php foreach ($resources as $resource) :
-          $status_class = $resource['status_key'] === 'needs_review' ? 'rh-pill--parts' : ($resource['status_key'] === 'reviewed' ? 'rh-pill--ready' : 'rh-pill--neutral');
+          $status_class = $resource['status_key'] === 'needs_review' ? 'pill--warn' : ($resource['status_key'] === 'reviewed' ? 'pill--info' : 'pill--neutral');
           ?>
           <li class="rh-card" data-rh-resource="<?php echo esc_attr($resource['id']); ?>">
             <div class="rh-card__sku"><?php echo esc_html($resource['sku']); ?></div>
@@ -314,7 +337,7 @@ $recent_count = count(array_filter($resources, function ($resource) {
               <h3 class="rh-card__title"><?php echo esc_html($resource['title']); ?></h3>
               <div class="rh-card__vendor"><?php echo esc_html($resource['vendor']); ?></div>
             </div>
-            <div class="rh-card__pillrow"><span class="rh-pill rh-pill--qc"><?php echo esc_html($resource['doc_type']); ?></span></div>
+            <div class="rh-card__pillrow"><span class="rh-pill pill--info"><?php echo esc_html($resource['doc_type']); ?></span></div>
             <div class="rh-card__chassis"><?php echo esc_html($resource['chassis']); ?></div>
             <div class="rh-card__updated"><?php echo esc_html($resource['updated_label']); ?></div>
             <div class="rh-card__review"><span class="rh-pill <?php echo esc_attr($status_class); ?>"><?php if ($resource['status_key'] !== 'current') : ?><span class="rh-pill__dot"></span><?php endif; ?><?php echo esc_html($resource['status']); ?></span></div>
@@ -335,15 +358,16 @@ $recent_count = count(array_filter($resources, function ($resource) {
 
     <section class="rh-detail" data-rh-screen="detail" hidden></section>
     <section class="rh-queue" data-rh-screen="queue" hidden></section>
+    <section class="rh-field-notes" data-rh-screen="field-notes" hidden></section>
   </main>
 
-  <?php if ($can_review) : ?>
+  <?php if ($can_add_resource) : ?>
     <div class="rh-overlay" data-rh-add-modal hidden role="dialog" aria-labelledby="rh-add-title" aria-modal="true">
       <div class="rh-modal">
         <div class="rh-modal__head">
           <div>
             <h2 class="rh-modal__title" id="rh-add-title">Add resource</h2>
-            <p class="rh-modal__sub">Vendor docs land in the review queue. Slate-authored docs publish straight to the library.</p>
+            <p class="rh-modal__sub"><?php echo $can_review ? esc_html('Vendor docs land in the review queue. Slate-authored docs can be published after signoff.') : esc_html('Submitted resources go to CS, Supervisor, or Admin for signoff before publishing.'); ?></p>
           </div>
           <button class="rh-modal__close" type="button" data-rh-dismiss aria-label="Close">
             <span class="material-symbols-outlined" aria-hidden="true">close</span>
@@ -355,9 +379,11 @@ $recent_count = count(array_filter($resources, function ($resource) {
             <span class="rh-field__label">Source</span>
             <div class="rh-segment" role="group" aria-label="Source">
               <button class="rh-segment__btn" type="button" data-rh-source="vendor" aria-pressed="true">Vendor doc</button>
-              <button class="rh-segment__btn" type="button" data-rh-source="slate" aria-pressed="false">Slate-authored</button>
+              <?php if ($can_review) : ?>
+                <button class="rh-segment__btn" type="button" data-rh-source="slate" aria-pressed="false">Slate-authored</button>
+              <?php endif; ?>
             </div>
-            <span class="rh-field__hint" data-rh-source-hint>Vendor doc lands in the review queue with status <em>Needs Slate review</em>.</span>
+            <span class="rh-field__hint" data-rh-source-hint><?php echo $can_review ? wp_kses('Vendor doc lands in the review queue with status <em>Needs Slate review</em>.', ['em' => []]) : esc_html('Resource submissions are held for signoff before they appear as published knowledge.'); ?></span>
           </div>
 
           <div class="rh-field">
@@ -390,6 +416,28 @@ $recent_count = count(array_filter($resources, function ($resource) {
 
           <div class="rh-field-grid">
             <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-bom">BC BOM number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-add-bom" name="bom_no" placeholder="e.g. BOM-144-RACK">
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-bom-rev">BOM revision</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-add-bom-rev" name="bom_revision" placeholder="e.g. Rev. 4">
+            </div>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-slate-part">Slate part number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-add-slate-part" name="slate_part_no" placeholder="e.g. SL-RACK-144-HR">
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-add-vendor-part">Vendor part number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-add-vendor-part" name="vendor_part_no" placeholder="e.g. SP0114B">
+            </div>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
               <label class="rh-field__label" for="rh-add-doctype">Doc type</label>
               <select class="rh-select" id="rh-add-doctype" name="doc_type">
                 <option>Install guide</option>
@@ -417,12 +465,22 @@ $recent_count = count(array_filter($resources, function ($resource) {
           </div>
 
           <div class="rh-field">
+            <span class="rh-field__label">Audience visibility</span>
+            <div class="rh-multi" role="group" aria-label="Audience visibility">
+              <button class="rh-multi__chip" type="button" data-rh-audience="tech" aria-pressed="true">Tech <span class="rh-multi__chip__x">x</span></button>
+              <button class="rh-multi__chip" type="button" data-rh-audience="cs" aria-pressed="true">CS <span class="rh-multi__chip__x">x</span></button>
+              <button class="rh-multi__chip" type="button" data-rh-audience="slate_sales" aria-pressed="false">Slate sales</button>
+              <button class="rh-multi__chip" type="button" data-rh-audience="dealer_sales" aria-pressed="false">Dealer sales</button>
+            </div>
+          </div>
+
+          <div class="rh-field">
             <label class="rh-field__label" for="rh-add-title-input">Title</label>
             <input class="rh-input" type="text" id="rh-add-title-input" name="title" placeholder="e.g. Sprinter standard roof rack - 144 HR" required>
           </div>
 
           <div class="rh-field">
-            <label class="rh-field__label" for="rh-add-notes">Initial Slate notes <span class="rh-mute" style="font-weight:500;letter-spacing:0;text-transform:none">(optional)</span></label>
+            <label class="rh-field__label" for="rh-add-notes">Initial notes <span class="rh-mute" style="font-weight:500;letter-spacing:0;text-transform:none">(optional)</span></label>
             <textarea class="rh-textarea" id="rh-add-notes" name="notes" placeholder="What should techs watch for? Hardware quirks, vendor errata, sealant call-outs..."></textarea>
           </div>
         </form>
@@ -430,13 +488,18 @@ $recent_count = count(array_filter($resources, function ($resource) {
         <div class="rh-modal__foot">
           <button class="rh-btn rh-btn--ghost" type="button" data-rh-dismiss>Cancel</button>
           <div class="rh-row">
-            <button class="rh-btn" type="button" data-rh-save-draft>Save draft</button>
-            <button class="rh-btn rh-btn--primary" type="button" data-rh-add-submit>Add to queue</button>
+            <?php if ($can_review) : ?>
+              <button class="rh-btn" type="button" data-rh-save-draft>Save draft</button>
+            <?php endif; ?>
+            <button class="rh-btn rh-btn--primary" type="button" data-rh-add-submit><?php echo $can_review ? esc_html('Add to queue') : esc_html('Submit for signoff'); ?></button>
           </div>
         </div>
       </div>
     </div>
 
+  <?php endif; ?>
+
+  <?php if ($can_review) : ?>
     <div class="rh-drawer-overlay" data-rh-review-drawer hidden role="dialog" aria-labelledby="rh-review-title" aria-modal="true">
       <aside class="rh-drawer">
         <div class="rh-drawer__head">
@@ -459,6 +522,112 @@ $recent_count = count(array_filter($resources, function ($resource) {
           </div>
         </div>
       </aside>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($can_submit_field_note) : ?>
+    <div class="rh-overlay" data-rh-note-modal hidden role="dialog" aria-labelledby="rh-note-title" aria-modal="true">
+      <div class="rh-modal">
+        <div class="rh-modal__head">
+          <div>
+            <h2 class="rh-modal__title" id="rh-note-title">Capture install note</h2>
+            <p class="rh-modal__sub">Photos and notes go to supervisor review before they become published instructions.</p>
+          </div>
+          <button class="rh-modal__close" type="button" data-rh-dismiss aria-label="Close">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </div>
+
+        <form class="rh-modal__body" data-rh-note-form>
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-type">Note type</label>
+              <select class="rh-select" id="rh-note-type" name="note_type">
+                <option value="tip">Tip</option>
+                <option value="issue">Issue</option>
+                <option value="correction">Correction</option>
+                <option value="missing_instruction">Missing instruction</option>
+                <option value="better_photo">Better photo</option>
+                <option value="qc_callout">QC callout</option>
+              </select>
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-so">Sales order number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-note-so" name="so_number" placeholder="S-ORD123456">
+            </div>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-rvia">RVIA number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-note-rvia" name="rvia_no" placeholder="e.g. A095549">
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-build-type">Build type</label>
+              <input class="rh-input" type="text" id="rh-note-build-type" name="build_type" placeholder="e.g. RVIA build">
+            </div>
+          </div>
+
+          <div class="rh-field">
+            <span class="rh-field__label">Photo or video</span>
+            <label class="rh-drop" data-rh-note-drop>
+              <input class="rh-file-input" type="file" data-rh-note-file accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,image/*,application/pdf,video/*" capture="environment">
+              <span class="material-symbols-outlined rh-drop__icon" aria-hidden="true">add_a_photo</span>
+              <span class="rh-drop__title" data-rh-note-file-title>Snap a photo or choose media</span>
+              <span class="rh-drop__sub" data-rh-note-file-sub>Photo, PDF, or short video metadata is saved in this MVP</span>
+              <span class="rh-drop__pick">Choose file</span>
+            </label>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-bom">BC BOM number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-note-bom" name="bom_no" placeholder="BOM number">
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-bom-rev">BOM revision</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-note-bom-rev" name="bom_revision" placeholder="Revision">
+            </div>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-slate-part">Slate part number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-note-slate-part" name="slate_part_no" placeholder="Slate part">
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-vendor-part">Vendor part number</label>
+              <input class="rh-input rh-input--mono" type="text" id="rh-note-vendor-part" name="vendor_part_no" placeholder="Vendor part">
+            </div>
+          </div>
+
+          <div class="rh-field-grid">
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-vendor">Vendor</label>
+              <input class="rh-input" type="text" id="rh-note-vendor" name="vendor" placeholder="Vendor">
+            </div>
+            <div class="rh-field">
+              <label class="rh-field__label" for="rh-note-chassis">Chassis</label>
+              <input class="rh-input" type="text" id="rh-note-chassis" name="chassis" placeholder="Sprinter 144 HR">
+            </div>
+          </div>
+
+          <div class="rh-field">
+            <label class="rh-field__label" for="rh-note-title-input">Title</label>
+            <input class="rh-input" type="text" id="rh-note-title-input" name="title" placeholder="What should this be called?" required>
+          </div>
+
+          <div class="rh-field">
+            <label class="rh-field__label" for="rh-note-body">Note or instruction</label>
+            <textarea class="rh-textarea" id="rh-note-body" name="note_body" placeholder="What did you learn during the install?" required></textarea>
+          </div>
+        </form>
+
+        <div class="rh-modal__foot">
+          <button class="rh-btn rh-btn--ghost" type="button" data-rh-dismiss>Cancel</button>
+          <button class="rh-btn rh-btn--primary" type="button" data-rh-note-submit>Submit for review</button>
+        </div>
+      </div>
     </div>
   <?php endif; ?>
 </div>

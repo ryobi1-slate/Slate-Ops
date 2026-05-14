@@ -44,6 +44,9 @@ class Slate_Ops_Install {
     if (!in_array('queue_updated_by', $cols, true)) {
       $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `queue_updated_by` BIGINT UNSIGNED NULL AFTER `queue_updated_at`");
     }
+    if (!in_array('actual_completed_at', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `actual_completed_at` DATETIME NULL AFTER `promised_date`");
+    }
   }
 
   private static function run_install($flush_rewrites = false) {
@@ -81,6 +84,9 @@ class Slate_Ops_Install {
     $pur_orders      = $wpdb->prefix . 'slate_ops_pur_orders';
     $pur_order_lines = $wpdb->prefix . 'slate_ops_pur_order_lines';
     $pur_sync_log    = $wpdb->prefix . 'slate_ops_pur_sync_log';
+    $resources       = $wpdb->prefix . 'slate_ops_resources';
+    $resource_links  = $wpdb->prefix . 'slate_ops_resource_links';
+    $field_notes     = $wpdb->prefix . 'slate_ops_resource_field_notes';
 
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -137,6 +143,7 @@ scheduled_finish DATETIME NULL,
 scheduled_week VARCHAR(20) NULL,
 requested_date DATE NULL,
 promised_date DATE NULL,
+actual_completed_at DATETIME NULL,
 target_ship_date DATE NULL,
 
 -- v2 status reason fields
@@ -658,6 +665,95 @@ KEY awaiting_idx (awaiting_direction)
       KEY status_idx (status)
     ) $charset_collate;";
 
+    // ── Resource Hub knowledge base ───────────────────
+
+    $sql_resources = "CREATE TABLE $resources (
+      resource_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      resource_key VARCHAR(80) NOT NULL,
+      sku VARCHAR(64) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      vendor VARCHAR(255) NULL,
+      doc_type VARCHAR(60) NOT NULL DEFAULT 'Reference',
+      chassis VARCHAR(255) NULL,
+      audience LONGTEXT NULL,
+      status_key VARCHAR(30) NOT NULL DEFAULT 'draft',
+      source_type VARCHAR(20) NOT NULL DEFAULT 'vendor',
+      vendor_revision VARCHAR(120) NULL,
+      last_review VARCHAR(120) NULL,
+      source VARCHAR(255) NULL,
+      file_name VARCHAR(255) NULL,
+      file_url TEXT NULL,
+      file_meta VARCHAR(120) NULL,
+      notes LONGTEXT NULL,
+      attachments LONGTEXT NULL,
+      related LONGTEXT NULL,
+      created_by BIGINT UNSIGNED NULL,
+      updated_by BIGINT UNSIGNED NULL,
+      reviewed_by BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      reviewed_at DATETIME NULL,
+      PRIMARY KEY (resource_id),
+      UNIQUE KEY resource_key_idx (resource_key),
+      KEY sku_idx (sku),
+      KEY status_idx (status_key),
+      KEY source_type_idx (source_type),
+      KEY doc_type_idx (doc_type),
+      KEY updated_idx (updated_at)
+    ) $charset_collate;";
+
+    $sql_resource_links = "CREATE TABLE $resource_links (
+      link_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      resource_id BIGINT UNSIGNED NOT NULL,
+      link_type VARCHAR(30) NOT NULL,
+      link_key VARCHAR(120) NOT NULL,
+      link_label VARCHAR(255) NULL,
+      source_system VARCHAR(30) NOT NULL DEFAULT 'manual',
+      created_by BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      PRIMARY KEY (link_id),
+      KEY resource_idx (resource_id),
+      KEY link_lookup_idx (link_type, link_key),
+      KEY source_system_idx (source_system)
+    ) $charset_collate;";
+
+    $sql_field_notes = "CREATE TABLE $field_notes (
+      note_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      note_type VARCHAR(40) NOT NULL DEFAULT 'tip',
+      status_key VARCHAR(30) NOT NULL DEFAULT 'submitted',
+      title VARCHAR(255) NOT NULL,
+      note_body LONGTEXT NULL,
+      job_id BIGINT UNSIGNED NULL,
+      so_number VARCHAR(32) NULL,
+      rvia_no VARCHAR(120) NULL,
+      build_type VARCHAR(120) NULL,
+      bom_no VARCHAR(120) NULL,
+      bom_revision VARCHAR(120) NULL,
+      slate_part_no VARCHAR(120) NULL,
+      vendor_part_no VARCHAR(120) NULL,
+      vendor VARCHAR(255) NULL,
+      chassis VARCHAR(255) NULL,
+      media_name VARCHAR(255) NULL,
+      media_url TEXT NULL,
+      media_meta VARCHAR(120) NULL,
+      submitted_by BIGINT UNSIGNED NULL,
+      reviewed_by BIGINT UNSIGNED NULL,
+      promoted_resource_id BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      reviewed_at DATETIME NULL,
+      PRIMARY KEY (note_id),
+      KEY status_idx (status_key),
+      KEY job_idx (job_id),
+      KEY so_idx (so_number),
+      KEY rvia_idx (rvia_no),
+      KEY bom_idx (bom_no),
+      KEY slate_part_idx (slate_part_no),
+      KEY vendor_part_idx (vendor_part_no),
+      KEY submitted_idx (submitted_by),
+      KEY promoted_resource_idx (promoted_resource_id)
+    ) $charset_collate;";
+
     // ── Run all dbDelta ─────────────────────────────────
 
     dbDelta($sql_jobs);
@@ -688,6 +784,9 @@ KEY awaiting_idx (awaiting_direction)
     dbDelta($sql_pur_orders);
     dbDelta($sql_pur_order_lines);
     dbDelta($sql_pur_sync_log);
+    dbDelta($sql_resources);
+    dbDelta($sql_resource_links);
+    dbDelta($sql_field_notes);
 
     // ── Data migrations ─────────────────────────────────
 
@@ -702,7 +801,9 @@ KEY awaiting_idx (awaiting_direction)
     $wpdb->query("UPDATE $jobs SET status = 'SCHEDULED'        WHERE status IN ('QUEUED','SCHEDULED')");
     $wpdb->query("UPDATE $jobs SET status = 'BLOCKED'          WHERE status = 'DELAYED'");
     $wpdb->query("UPDATE $jobs SET status = 'QC'               WHERE status = 'PENDING_QC'");
-    $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status IN ('COMPLETE','COMPLETED','READY_FOR_PICKUP','COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
+    $wpdb->query("UPDATE $jobs SET status = 'AWAITING_PICKUP'  WHERE status IN ('READY_FOR_PICKUP','COMPLETE_AWAITING_PICKUP','COMPLETED_AWAITING_PICKUP')");
+    $wpdb->query("UPDATE $jobs SET status = 'COMPLETE'         WHERE status IN ('COMPLETE','COMPLETED')");
+    $wpdb->query("UPDATE $jobs SET actual_completed_at = COALESCE(status_updated_at, updated_at) WHERE status = 'COMPLETE' AND actual_completed_at IS NULL");
     // Migrate scheduling_status column to match canonical job status values.
     $wpdb->query("UPDATE $jobs SET scheduling_status = 'READY_FOR_BUILD' WHERE scheduling_status = 'APPROVED_FOR_SCHEDULING'");
 

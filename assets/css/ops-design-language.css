@@ -279,6 +279,158 @@ body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :whe
   background-color: var(--slate-surface-page) !important;
 }
 
+/* Legacy button bridge: keep older page-local button systems inside the five
+   Slate variants while templates migrate toward .slate-btn markup. */
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn,
+  a.btn,
+  .rh-btn,
+  .rh-back,
+  .rh-mini,
+  .ops-link,
+  .sotr-refresh
+) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-height: 32px !important;
+  padding: 7px 14px !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  font: 500 13px/1.2 var(--font-sans) !important;
+  letter-spacing: 0 !important;
+  text-decoration: none !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn:not(.secondary):not(.danger):not(.ghost):not(.btn-destructive),
+  a.btn:not(.secondary):not(.danger):not(.ghost):not(.btn-destructive),
+  .rh-btn--primary
+) {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn:not(.secondary):not(.danger):not(.ghost):not(.btn-destructive),
+  a.btn:not(.secondary):not(.danger):not(.ghost):not(.btn-destructive),
+  .rh-btn--primary
+):hover:not(:disabled) {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: #fff !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn.secondary,
+  a.btn.secondary,
+  .rh-btn:not(.rh-btn--primary):not(.rh-btn--ghost),
+  .rh-back,
+  .rh-mini,
+  .ops-link,
+  .sotr-refresh
+) {
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-divider-strong) !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn.secondary,
+  a.btn.secondary,
+  .rh-btn:not(.rh-btn--primary):not(.rh-btn--ghost),
+  .rh-back,
+  .rh-mini,
+  .ops-link,
+  .sotr-refresh
+):hover:not(:disabled) {
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn.ghost,
+  a.btn.ghost,
+  .rh-btn--ghost,
+  .rh-chip,
+  .range-chip,
+  .so-exec .chip
+) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--slate-ink-muted) !important;
+  box-shadow: none !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn.ghost,
+  a.btn.ghost,
+  .rh-btn--ghost,
+  .rh-chip,
+  .range-chip,
+  .so-exec .chip
+):hover:not(:disabled) {
+  background: var(--slate-sage-wash) !important;
+  border-color: transparent !important;
+  color: var(--slate-ink) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  .range-chip.active,
+  .so-exec .chip.toggle.on,
+  .rh-chip[aria-pressed="true"],
+  .rh-multi__chip[aria-pressed="true"],
+  .rh-segment__btn[aria-pressed="true"]
+) {
+  background: var(--slate-sage-wash) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage-ink) !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn.danger,
+  button.btn-destructive,
+  a.btn.danger,
+  a.btn-destructive
+) {
+  background: var(--slate-flag) !important;
+  border-color: var(--slate-flag) !important;
+  color: #fff !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn.danger,
+  button.btn-destructive,
+  a.btn.danger,
+  a.btn-destructive
+):hover:not(:disabled) {
+  background: var(--slate-flag-ink) !important;
+  border-color: var(--slate-flag-ink) !important;
+  color: #fff !important;
+}
+
+body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) #slate-ops-app :where(
+  button.btn:disabled,
+  a.btn[aria-disabled="true"],
+  .rh-btn:disabled,
+  .rh-back:disabled,
+  .rh-mini:disabled,
+  .ops-link:disabled,
+  .sotr-refresh:disabled
+) {
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: .45 !important;
+  pointer-events: none !important;
+}
+
 body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-xl,
 body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-2xl,
 body.slate-ops:not(.ops-page-tech):not(.ops-page-purchasing) .rounded-3xl {

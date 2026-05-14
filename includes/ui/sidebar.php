@@ -14,7 +14,12 @@ if (!defined('ABSPATH')) exit;
 
 if (!function_exists('ops_nav_link')) {
   function ops_nav_link($href, $route, $icon, $label) {
-    echo '<a href="' . esc_url($href) . '" data-route="' . esc_attr($route) . '" class="ops-nav-link">'
+    $current_path = class_exists('Slate_Ops_Routes') ? Slate_Ops_Routes::current_path() : '';
+    $current_route = $current_path === '' ? '/' : '/' . strtok($current_path, '/');
+    $current_full_route = $current_path === '' ? '/' : '/' . trim($current_path, '/');
+    $is_active = ($current_route === $route || $current_full_route === $route);
+    $classes = 'ops-nav-link' . ($is_active ? ' active' : '');
+    echo '<a href="' . esc_url($href) . '" data-route="' . esc_attr($route) . '" class="' . esc_attr($classes) . '">'
       . '<span class="material-symbols-outlined ops-nav-icon">' . esc_html($icon) . '</span>'
       . '<span class="ops-nav-label">' . esc_html($label) . '</span>'
       . '</a>';
@@ -29,55 +34,65 @@ if (!function_exists('ops_nav_link')) {
         <span class="material-symbols-outlined">chevron_left</span>
       </button>
     </div>
-    <div class="ops-sidebar-nav-section">
-      <span class="ops-sidebar-nav-label">Navigate</span>
-    </div>
   </div>
 
-  <nav class="ops-nav">
+  <nav class="ops-nav" aria-label="Slate OPS navigation">
     <?php
     $allowed = Slate_Ops_Utils::user_allowed_pages();
-
-    if (in_array('executive', $allowed, true)) :
-      ops_nav_link('/ops/exec',         '/exec',          'dashboard',      'Executive');
-    endif;
-    if (in_array('cs-dashboard', $allowed, true)) :
-      ops_nav_link('/ops/cs-dashboard', '/cs-dashboard',  'person',         'CS');
-    endif;
-    if (in_array('tech', $allowed, true)) :
-      ops_nav_link('/ops/tech',     '/tech',     'build',          'Tech');
-    endif;
-    if (in_array('schedule', $allowed, true)) :
-      ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule');
-    endif;
-    if (in_array('purchasing', $allowed, true)) :
-      ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
-    endif;
-    if (in_array('resource-hub', $allowed, true)) :
-      ops_nav_link('/ops/resource-hub', '/resource-hub', 'folder_open', 'Resource hub');
-    endif;
-    if (in_array('admin', $allowed, true)) :
-      ops_nav_link('/ops/admin',    '/admin',    'shield',         'Admin');
-    endif;
-    if (in_array('settings', $allowed, true)) :
-      ops_nav_link('/ops/settings', '/settings', 'settings',       'Settings');
-    endif;
-    if (in_array('monitor', $allowed, true)) :
-      ops_nav_link(home_url('/slate-ops-monitor/'), '/monitor', 'monitor', 'Monitor');
-    endif;
+    $show_ops_home = !($caps['tech'] && !$caps['admin'] && !$caps['supervisor'] && !$caps['cs']);
+    $has_admin_nav = in_array('admin', $allowed, true) || in_array('settings', $allowed, true);
     ?>
+
+    <div class="ops-nav-section">
+      <div class="ops-nav-section-label">Workspaces</div>
+      <?php
+
+      if ($show_ops_home) :
+        ops_nav_link('/ops/', '/', 'home', 'OPS Home');
+      endif;
+      if (in_array('cs-dashboard', $allowed, true)) :
+        ops_nav_link('/ops/cs-dashboard', '/cs-dashboard', 'support_agent', 'CS Workspace');
+      endif;
+      if (in_array('tech', $allowed, true)) :
+        ops_nav_link('/ops/tech', '/tech', 'build', 'Tech Screen');
+      endif;
+      if (in_array('executive', $allowed, true)) :
+        ops_nav_link('/ops/exec', '/exec', 'monitoring', 'Executive');
+      endif;
+      if (in_array('schedule', $allowed, true)) :
+        ops_nav_link('/ops/schedule', '/schedule', 'calendar_month', 'Schedule');
+      endif;
+      if (in_array('purchasing', $allowed, true)) :
+        ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
+      endif;
+      if (in_array('monitor', $allowed, true)) :
+        ops_nav_link(home_url('/slate-ops-monitor/'), '/monitor', 'desktop_windows', 'Monitor');
+      endif;
+      if (in_array('resource-hub', $allowed, true)) :
+        ops_nav_link('/ops/resource-hub', '/resource-hub', 'menu_book', 'Resource Hub');
+      endif;
+      ?>
+    </div>
+
+    <?php if ($has_admin_nav) : ?>
+      <div class="ops-nav-divider" aria-hidden="true"></div>
+      <div class="ops-nav-section">
+        <div class="ops-nav-section-label">Administration</div>
+        <?php
+        if (in_array('settings', $allowed, true)) :
+          ops_nav_link('/ops/settings', '/settings', 'tune', 'Settings / Admin');
+        endif;
+        if (in_array('admin', $allowed, true)) :
+          ops_nav_link('/ops/admin/users', '/admin/users', 'manage_accounts', 'Users & Roles');
+          ops_nav_link('/ops/admin/audit', '/admin/audit', 'history', 'Audit Log');
+        endif;
+        ?>
+      </div>
+    <?php endif; ?>
   </nav>
 
   <div class="ops-sidebar-footer">
-    <div class="ops-sidebar-user">
-      <div class="ops-sidebar-user-name"><?php echo esc_html($user->display_name); ?></div>
-      <?php if ($role_label) : ?>
-        <div class="ops-sidebar-user-role"><?php echo esc_html($role_label); ?></div>
-      <?php endif; ?>
-    </div>
-    <a class="ops-sidebar-logout" href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>" title="Log out">
-      <span class="material-symbols-outlined">logout</span>
-    </a>
+    <?php include __DIR__ . '/version-badge.php'; ?>
   </div>
 
 </aside>

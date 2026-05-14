@@ -226,25 +226,6 @@
   transform: translateX(2px);
 }
 
-/* Status pill */
-.pill {
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-.pill--parts    { background: var(--slate-arches-wash);  color: var(--slate-arches-ink); }
-.pill--qc       { background: var(--slate-sage-wash);    color: var(--slate-sage-ink); }
-.pill--pickup   { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
-.pill--blocked  { background: var(--slate-flag-wash);    color: var(--slate-flag); }
-.pill--ready    { background: var(--slate-redwood-wash); color: var(--slate-redwood); }
-.pill--neutral  { background: var(--slate-surface-page); color: var(--slate-ink-muted); border: 1px solid var(--slate-divider); }
-
 /* Operational Health rows */
 .ops-health { padding: 6px 0; }
 .ops-health__row {
@@ -565,7 +546,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--slate-space-md);
-  padding-bottom: 240px; /* leave room for sticky bottom detail panel */
   min-width: 0;
 }
 
@@ -583,6 +563,52 @@
   flex-wrap: wrap;
   flex-shrink: 0;
   align-items: center;
+}
+
+.cs-beta .slate-btn,
+.cs-beta__filterbar .slate-btn {
+  min-height: 30px;
+  padding: 6px 11px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.cs-beta .slate-btn .material-symbols-outlined,
+.cs-beta__filterbar .slate-btn .material-symbols-outlined {
+  font-size: 15px;
+}
+
+.cs-beta .slate-btn--accent {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-surface) !important;
+}
+
+.cs-beta .slate-btn--accent:hover:not(:disabled) {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: var(--slate-surface) !important;
+}
+
+.cs-beta .slate-btn--secondary {
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-divider) !important;
+  color: var(--slate-ink) !important;
+}
+
+.cs-beta .slate-btn--secondary:hover:not(:disabled) {
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-divider-strong) !important;
+  color: var(--slate-ink) !important;
+}
+
+.cs-beta .slate-btn--primary {
+  background: var(--slate-ink-muted) !important;
+  border-color: var(--slate-ink-muted) !important;
+  color: var(--slate-surface) !important;
 }
 
 /* Scoped button polish — keep .btn--primary as Sage save action; replace
@@ -675,42 +701,28 @@
   gap: 4px;
 }
 .cs-beta-chip {
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  text-transform: none;
-  /* !important on border + background + color so the WP theme's
-     default <button> styling can't bleed through (the same pattern
-     ops-shell.css uses for .pur-tab and .ops-btn-* — without it the
-     chips render with the theme's default button outline). */
-  border: 1px solid var(--slate-divider-strong) !important;
-  background: var(--slate-surface) !important;
-  color: var(--slate-ink) !important;
-  border-radius: 2px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  -webkit-appearance: none;
-  appearance: none;
-  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
-}
-.cs-beta-chip:hover {
-  border-color: var(--slate-sage) !important;
-  color: var(--slate-ink) !important;
+  justify-content: center;
+  min-height: 30px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 5px;
+  color: var(--slate-ink-muted) !important;
 }
 .cs-beta-chip.is-active {
-  background: var(--slate-sage) !important;
-  border-color: var(--slate-sage) !important;
+  background: var(--slate-ink) !important;
+  border-color: var(--slate-ink) !important;
   color: var(--slate-surface) !important;
-  font-weight: 500;
+}
+.cs-beta-chip.is-active:hover {
+  background: var(--slate-ink) !important;
+  border-color: var(--slate-ink) !important;
+  color: var(--slate-surface) !important;
 }
 .cs-beta-chip__count {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  color: var(--slate-ink-subtle);
+  color: inherit;
   font-variant-numeric: tabular-nums;
   margin-left: 2px;
 }
@@ -914,9 +926,9 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 68px 100px minmax(180px, 1.35fr) 120px 100px minmax(220px, 0.95fr) 96px minmax(120px, 1fr) 64px;
+  grid-template-columns: 24px 68px 100px minmax(170px, 1.1fr) 152px 106px minmax(190px, 0.9fr) 88px minmax(180px, 1fr) 42px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 6px 14px;
 }
 .cs-beta-list__head {
@@ -963,6 +975,25 @@
   border-color: var(--slate-arches);
 }
 .cs-beta-row.is-warn { box-shadow: inset 3px 0 0 var(--slate-arches); }
+.cs-beta-row.is-blocked-warn {
+  border-left-color: var(--slate-arches);
+  background: rgba(216,107,25,0.06);
+}
+.cs-beta-row.is-blocked-alert {
+  border-left-color: var(--slate-flag);
+  background: rgba(185,28,28,0.06);
+}
+.cs-beta-row.is-blocked-warn.is-selected,
+.cs-beta-row.is-blocked-alert.is-selected {
+  background: var(--slate-sage-wash);
+}
+.cs-beta-row.is-ready-validation {
+  border-left-color: var(--slate-arches);
+  background: rgba(216,107,25,0.07);
+}
+.cs-beta-row.is-ready-validation.is-selected {
+  background: var(--slate-sand-wash);
+}
 
 .cs-beta-row__handle {
   color: var(--slate-ink-placeholder);
@@ -1032,6 +1063,52 @@
 .cs-beta-row__staged .material-symbols-outlined {
   font-size: 12px;
   color: var(--slate-sage);
+}
+.cs-beta-row__blocker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  width: fit-content;
+  max-width: 100%;
+}
+.cs-beta-row__blocker .material-symbols-outlined { font-size: 12px; }
+.cs-beta-row__blocker--warn {
+  background: rgba(216,107,25,0.10);
+  border: 1px solid rgba(216,107,25,0.35);
+  color: var(--slate-arches);
+}
+.cs-beta-row__blocker--alert {
+  background: rgba(185,28,28,0.10);
+  border: 1px solid rgba(185,28,28,0.35);
+  color: var(--slate-flag);
+}
+.cs-beta-row__validation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 7px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(216,107,25,0.35);
+  border-radius: 3px;
+  background: rgba(216,107,25,0.10);
+  color: var(--slate-arches);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+}
+.cs-beta-row__validation .material-symbols-outlined {
+  font-size: 12px;
+  flex: 0 0 auto;
 }
 .cs-beta-row.is-reassigned {
   background: var(--slate-sand-wash);
@@ -1131,7 +1208,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 220px;
+  min-width: 0;
 }
 .cs-beta-row__techname {
   font-size: 12px;
@@ -1167,6 +1244,23 @@
   color: var(--slate-ink-muted);
   white-space: nowrap;
 }
+.cs-beta-row__due.is-required {
+  color: var(--slate-arches);
+}
+.cs-beta-row__due-required {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid rgba(216,107,25,0.35);
+  border-radius: 999px;
+  background: rgba(216,107,25,0.10);
+  color: var(--slate-arches);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .cs-beta-row__note {
   display: inline-flex;
   align-items: center;
@@ -1181,6 +1275,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 .cs-beta-row__notetext--empty { color: var(--slate-ink-placeholder); }
 
@@ -1214,28 +1309,34 @@
 .cs-beta-row.is-selected .cs-beta-row__iconbtn { color: var(--slate-ink-subtle); }
 .cs-beta-row__iconbtn .material-symbols-outlined { font-size: 16px; }
 .cs-beta-row__iconbtn[aria-pressed="false"] { color: var(--slate-ink-placeholder); }
+.cs-beta-row__statusselect.is-invalid,
+.cs-beta-status-select.is-invalid {
+  border-color: var(--slate-arches) !important;
+  box-shadow: 0 0 0 2px rgba(216,107,25,0.16);
+}
 
-/* Bottom detail panel — sticky inside the page scroll. Flat redwood
-   header bar, soft divider above, no oversize shadow. */
+/* Job detail modal — shares the New Job modal shell, with a denser editor
+   body and the same explicit Save Changes action. */
+body.cs-beta-detail-modal-open { overflow: hidden; }
+
 .cs-beta__detail {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-  background: var(--slate-surface);
-  border: 1px solid var(--slate-divider);
-  border-radius: 2px;
-  box-shadow: 0 -8px 20px -16px rgba(15, 52, 42, 0.18);
-  margin-top: var(--slate-space-md);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.cs-beta-job-modal .cs-beta-job-modal__panel {
+  width: min(960px, 100%);
+  max-height: calc(100vh - 48px);
 }
 .cs-beta__detail-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 14px;
-  background: var(--slate-redwood);
-  color: var(--slate-sand-wash);
-  border-radius: 2px 2px 0 0;
+  padding: 16px 20px 12px;
+  background: var(--slate-surface-tint);
+  color: var(--slate-ink);
+  border-bottom: 1px solid var(--slate-divider);
 }
 .cs-beta__detail-id {
   display: inline-flex;
@@ -1247,43 +1348,47 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--slate-sand);
-  opacity: 0.8;
+  color: var(--slate-arches);
 }
 .cs-beta__detail-job {
   font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 600;
-  color: var(--slate-sand-wash);
+  color: var(--slate-ink);
 }
 .cs-beta__detail-cust {
   font-size: 13px;
-  color: var(--slate-sand);
+  color: var(--slate-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .cs-beta__detail-close {
   background: transparent !important;
-  border: 1px solid rgba(225, 223, 200, 0.25) !important;
-  color: var(--slate-sand-wash) !important;
-  padding: 4px 6px;
+  border: 1px solid var(--slate-divider) !important;
+  color: var(--slate-ink-muted) !important;
+  width: 30px; height: 30px;
   cursor: pointer;
-  border-radius: var(--slate-radius-sm);
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.cs-beta__detail-close:hover { background: rgba(255, 255, 255, 0.08) !important; }
+.cs-beta__detail-close:hover {
+  background: var(--slate-surface) !important;
+  color: var(--slate-ink) !important;
+  border-color: var(--slate-sage) !important;
+}
 .cs-beta__detail-close .material-symbols-outlined { font-size: 16px; }
 
 .cs-beta__detail-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  padding: 14px 18px 16px;
-  max-height: 320px;
+  padding: 16px 20px;
   overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
 @media (max-width: 1100px) {
   .cs-beta__detail-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1296,13 +1401,45 @@
   flex-direction: column;
   gap: 8px;
 }
+.cs-beta-blocker {
+  border-left: 3px solid var(--slate-arches);
+}
+.cs-beta-blocker--alert {
+  border-left-color: var(--slate-flag);
+}
+.cs-beta-blocker__body {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.cs-beta-blocker__reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--slate-ink);
+}
+.cs-beta-blocker__reason .material-symbols-outlined {
+  color: var(--slate-arches);
+  font-size: 18px;
+}
+.cs-beta-blocker--alert .cs-beta-blocker__reason .material-symbols-outlined {
+  color: var(--slate-flag);
+}
+.cs-beta-blocker__note {
+  color: var(--slate-ink-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.cs-beta-detail-section--handoff { grid-column: span 2; }
 .cs-beta-detail-section--wide { grid-column: span 2; }
 .cs-beta-detail-section--actions { grid-column: span 2; }
 @media (max-width: 1100px) {
+  .cs-beta-detail-section--handoff,
   .cs-beta-detail-section--wide,
   .cs-beta-detail-section--actions { grid-column: span 2; }
 }
 @media (max-width: 700px) {
+  .cs-beta-detail-section--handoff,
   .cs-beta-detail-section--wide,
   .cs-beta-detail-section--actions { grid-column: span 1; }
 }
@@ -1366,6 +1503,20 @@
   gap: 8px;
 }
 .cs-beta-detail-actions .btn { text-decoration: none; }
+.cs-beta-closeout__checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.cs-beta-closeout__hint {
+  margin: 0;
+}
+.cs-beta-closeout__note {
+  min-height: 54px;
+}
+@media (max-width: 700px) {
+  .cs-beta-closeout__checks { grid-template-columns: 1fr; }
+}
 
 /* Editable form fields (Phase 4). The per-row dirty marker lives on the
    row in the list; on individual inputs we use a subtle Sand-wash tint
@@ -1437,6 +1588,16 @@
   background: var(--slate-sand-wash);
   border-color: var(--slate-sand-deep);
 }
+.cs-beta-field__input.is-required {
+  border-color: var(--slate-arches) !important;
+  box-shadow: 0 0 0 2px rgba(216,107,25,0.16);
+}
+.cs-beta-field__error {
+  color: var(--slate-arches);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
 select.cs-beta-field__input {
   appearance: none;
   -webkit-appearance: none;
@@ -1489,28 +1650,6 @@ select.cs-beta-field__input {
 }
 .cs-beta-detail-loading .material-symbols-outlined { font-size: 16px; }
 
-/* Scoped pill overrides — matches the rounded Purchasing badge treatment.
-   The global `.pill` (used on the Overview tab) is left untouched. */
-.cs-beta .pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  border: 1px solid transparent;
-  line-height: 1;
-  white-space: nowrap;
-}
-.cs-beta .pill--ready    { background: var(--slate-sage-wash);    color: var(--slate-sage-ink);     border-color: #cdd5d0; }
-.cs-beta .pill--qc       { background: var(--slate-redwood-wash); color: var(--slate-redwood);      border-color: #b9cdc3; }
-.cs-beta .pill--parts    { background: var(--slate-arches-wash);  color: var(--slate-arches-ink);   border-color: #e9c79b; }
-.cs-beta .pill--blocked  { background: #f0d9d5;                   color: #651510;                   border-color: #dcb1ac; }
-.cs-beta .pill--pickup   { background: var(--slate-redwood-wash); color: var(--slate-redwood);      border-color: #b9cdc3; }
-.cs-beta .pill--neutral  { background: var(--slate-surface-tint); color: var(--slate-ink-muted);    border-color: var(--slate-divider-strong); }
-
 /* Legacy CS queue density pass.
    Keep the new queue interactions, but tune the list back toward the original
    compact CS table: smaller controls, clearer grid lines, and flatter rows. */
@@ -1549,7 +1688,7 @@ select.cs-beta-field__input {
 .cs-beta-chip {
   min-height: 30px;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 12px;
 }
 
@@ -1628,7 +1767,8 @@ select.cs-beta-field__input {
 
 .cs-beta-row__so,
 .cs-beta-row__name,
-.cs-beta-row__techselect {
+.cs-beta-row__techselect,
+.cs-beta-row__select {
   font-size: 12.5px;
 }
 
@@ -1643,10 +1783,11 @@ select.cs-beta-field__input {
   gap: 6px;
 }
 
-.cs-beta-row__techselect {
+.cs-beta-row__techselect,
+.cs-beta-row__select {
   height: 26px;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  padding-top: 1px;
+  padding-bottom: 1px;
   border-radius: 4px;
 }
 
@@ -1654,11 +1795,6 @@ select.cs-beta-field__input {
   width: 24px;
   height: 24px;
   border-radius: 4px;
-}
-
-.cs-beta .pill {
-  padding: 3px 9px;
-  font-size: 10px;
 }
 
 /* Queue typography alignment.
@@ -1707,16 +1843,43 @@ select.cs-beta-field__input {
   color: var(--slate-ink-muted);
 }
 
-.cs-beta-row__techselect {
+.cs-beta-row__techselect,
+.cs-beta-row__select {
   font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 400;
+  line-height: 1.15;
+  box-sizing: border-box;
 }
+
+.cs-beta-row__techselect {
+  padding-left: 8px;
+  padding-right: 22px;
+}
+
+.cs-beta-row__select {
+  width: 100%;
+  min-width: 0;
+  padding-left: 7px;
+  padding-right: 20px;
+  border: 1px solid var(--slate-divider-strong);
+  background: var(--slate-surface);
+  color: var(--slate-ink);
+  text-overflow: ellipsis;
+}
+
+.cs-beta-row__statusselect { min-width: 136px; }
+.cs-beta-row__partsselect { min-width: 92px; }
 
 @media (min-width: 1101px) {
   .cs-beta-list__head,
   .cs-beta-row {
-    grid-template-columns: 22px 62px 96px minmax(170px, 1.35fr) 112px 92px minmax(200px, 0.95fr) 88px minmax(120px, 1fr) 58px;
+    grid-template-columns: 22px 62px 96px minmax(160px, 1.2fr) 152px 106px minmax(180px, 0.85fr) 76px minmax(92px, 0.6fr) 54px;
+  }
+
+  .cs-beta-row__status,
+  .cs-beta-row__parts {
+    min-width: 0;
   }
 }
 

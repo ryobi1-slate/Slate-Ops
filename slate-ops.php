@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.58.1
+ * Version: 0.58.4
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.58.1');
+define('SLATE_OPS_VERSION', '0.58.4');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -41,6 +41,7 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-timelogs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-jobs.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-schedule.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-work-centers.php';
+require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-resource-hub.php';
 
 // CS / Supervisor Operations Dashboard data layer (Phase 1: stub data)
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-cs.php';
@@ -58,6 +59,7 @@ require_once SLATE_OPS_PATH . 'includes/class-slate-ops-clickup.php';
 require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-purchasing.php';
 require_once SLATE_OPS_PATH . 'includes/integration/class-slate-ops-pa-events.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-purchasing-rest.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-resource-hub-rest.php';
 
 if ( is_admin() ) {
     require_once SLATE_OPS_PATH . 'includes/admin/class-clickup-import-admin.php';
@@ -76,6 +78,7 @@ add_action('init', ['Slate_Ops_Install', 'maybe_upgrade']);
 add_action('init', ['Slate_Ops_Routes', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_Purchasing_REST', 'register_routes']);
+add_action('rest_api_init', ['Slate_Ops_Resource_Hub_REST', 'register_routes']);
 
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
@@ -90,10 +93,12 @@ add_action('wp_enqueue_scripts', function() {
   // Narrow check: only the purchasing sub-tree gets the purchasing bundle.
   // Exact match 'purchasing' or sub-paths 'purchasing/…' — nothing else.
   $current_path = Slate_Ops_Routes::current_path();
+  $is_home         = ($current_path === '');
   $is_purchasing   = ($current_path === 'purchasing' || strncmp($current_path, 'purchasing/', 11) === 0);
   $is_cs_dashboard = ($current_path === 'cs-dashboard' || strncmp($current_path, 'cs-dashboard/', 13) === 0);
-  $is_executive    = ($current_path === '' || $current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
+  $is_executive    = ($current_path === 'exec' || strncmp($current_path, 'exec/', 5) === 0);
   $is_resource_hub = ($current_path === 'resource-hub' || strncmp($current_path, 'resource-hub/', 13) === 0);
+  $is_audit_log    = ($current_path === 'admin/audit');
   $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
 
   $enqueue_design_language = function($deps = ['slate-ops-shell']) {
@@ -102,7 +107,10 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('slate-ops-design-language', SLATE_OPS_URL . 'assets/css/ops-design-language.css', $deps, $ver);
   };
 
-  if ($is_purchasing) {
+  if ($is_home) {
+    // Ops Home uses shared shell styles only.
+    return;
+  } elseif ($is_purchasing) {
     // Purchasing workspace — standalone vanilla JS; React app is not loaded here.
     $ver_pur_css = file_exists(SLATE_OPS_PATH . 'assets/css/purchasing.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/purchasing.css') : SLATE_OPS_VERSION;
     $ver_pur_js  = file_exists(SLATE_OPS_PATH . 'assets/js/purchasing.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/purchasing.js')   : SLATE_OPS_VERSION;
@@ -158,6 +166,35 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('slate-ops-resource-hub',  SLATE_OPS_URL . 'assets/css/resource-hub.css', ['slate-ops-shell'], $ver_rh_css);
     $enqueue_design_language(['slate-ops-resource-hub']);
     wp_enqueue_script('slate-ops-resource-hub', SLATE_OPS_URL . 'assets/js/resource-hub.js',   [],                  $ver_rh_js,  true);
+    wp_localize_script('slate-ops-resource-hub', 'slateOpsResourceHub', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'user' => [
+        'id' => get_current_user_id(),
+        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+      ],
+    ]);
+  } elseif ($is_audit_log) {
+    $route_blocked_audit_log = !slate_ops_current_user_can_access_ops_page('admin');
+    if ($route_blocked_audit_log) {
+      return;
+    }
+    $ver_audit_css = file_exists(SLATE_OPS_PATH . 'assets/css/audit-log.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/audit-log.css') : SLATE_OPS_VERSION;
+    $ver_audit_js  = file_exists(SLATE_OPS_PATH . 'assets/js/audit-log.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/audit-log.js')   : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-audit-log', SLATE_OPS_URL . 'assets/css/audit-log.css', ['slate-ops-shell'], $ver_audit_css);
+    $enqueue_design_language(['slate-ops-audit-log']);
+    wp_enqueue_script('slate-ops-audit-log', SLATE_OPS_URL . 'assets/js/audit-log.js', [], $ver_audit_js, true);
+    wp_localize_script('slate-ops-audit-log', 'slateOpsAudit', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'urls' => [
+        'ops' => esc_url_raw(home_url('/ops')),
+      ],
+    ]);
   } else {
     $route_map = [
       '' => 'executive', 'exec' => 'executive', 'cs' => 'cs', 'tech' => 'tech',
@@ -274,7 +311,7 @@ add_filter('login_redirect', function($redirect_to, $requested_redirect_to, $use
                 || user_can($user, Slate_Ops_Utils::CAP_VIEW_MONITOR);
 
   if ($is_admin || $is_supervisor || $is_cs) {
-    return esc_url_raw(home_url('/ops/cs-dashboard'));
+    return esc_url_raw(home_url('/ops/'));
   }
   if ($is_tech) {
     return esc_url_raw(home_url('/ops/tech'));

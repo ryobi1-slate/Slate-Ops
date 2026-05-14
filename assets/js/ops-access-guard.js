@@ -25,6 +25,7 @@
 
   // Segment → allowed_pages key mapping.
   var PAGE_SEGMENTS = {
+    ops:       'home',
     exec:      'executive',
     executive: 'executive',
     cs:        'cs',
@@ -32,6 +33,8 @@
     schedule:  'schedule',
     'resource-hub': 'resource-hub',
     admin:     'admin',
+    'admin/users': 'admin',
+    'admin/audit': 'admin',
     settings:  'settings',
     monitor:   'monitor',
   };
@@ -87,6 +90,8 @@
       var link  = links[i];
       var route = link.getAttribute('data-route').replace(/^\//, '');
       var page  = PAGE_SEGMENTS[route] || route;
+      if (route === '') continue;
+      if (page === 'home') continue;
       if (allowedPages.indexOf(page) === -1) {
         link.parentNode.removeChild(link);
       }
@@ -105,6 +110,7 @@
   var sessionError  = (!settings || !settings.user);
   var routeBlocked  = !sessionError
                       && segment !== ''
+                      && pageName !== 'home'
                       && PAGE_SEGMENTS.hasOwnProperty(segment)
                       && allowedPages.indexOf(pageName) === -1;
 

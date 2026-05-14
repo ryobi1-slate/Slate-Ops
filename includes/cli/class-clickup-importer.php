@@ -32,7 +32,7 @@ class Slate_Ops_ClickUp_Importer {
 		'Delayed'                    => 'DELAYED',
 		'Scheduled'                  => 'QUEUED',
 		'In Progress'                => 'IN_PROGRESS',
-		'Complete - Awaiting Pickup' => 'READY_FOR_PICKUP',
+		'Complete - Awaiting Pickup' => 'AWAITING_PICKUP',
 		'Complete'                   => 'COMPLETE',
 		'On Hold'                    => 'ON_HOLD',
 	];

@@ -22,6 +22,7 @@ class Slate_Ops_Statuses {
     const IN_PROGRESS      = 'IN_PROGRESS';
     const BLOCKED          = 'BLOCKED';
     const QC               = 'QC';
+    const AWAITING_PICKUP  = 'AWAITING_PICKUP';
     const COMPLETE         = 'COMPLETE';
     const ON_HOLD          = 'ON_HOLD';
     const CANCELLED        = 'CANCELLED';
@@ -30,7 +31,7 @@ class Slate_Ops_Statuses {
 
     const QUEUED           = 'QUEUED';           // → SCHEDULED
     const PENDING_QC       = 'PENDING_QC';       // → QC
-    const READY_FOR_PICKUP = 'READY_FOR_PICKUP'; // → COMPLETE
+    const READY_FOR_PICKUP = 'READY_FOR_PICKUP'; // → AWAITING_PICKUP
     const DELAYED          = 'DELAYED';           // → BLOCKED
 
     // ── Non-canonical transitional constants ──────────────────────────
@@ -51,6 +52,7 @@ class Slate_Ops_Statuses {
                 self::IN_PROGRESS,
                 self::BLOCKED,
                 self::QC,
+                self::AWAITING_PICKUP,
                 self::COMPLETE,
                 self::ON_HOLD,
                 self::CANCELLED,
@@ -66,15 +68,17 @@ class Slate_Ops_Statuses {
 
     /**
      * Statuses CS users are permitted to set manually (Phase 0 CS workflow).
-     * IN_PROGRESS and QC (Ready for Closeout) come from Tech/QC workflow.
-     * COMPLETE (Closed) is set by CS/Supervisor after paper sign-off.
+     * IN_PROGRESS and QC (Ready to Close) come from Tech/QC workflow.
+     * AWAITING_PICKUP and COMPLETE are CS closeout workflow states.
      */
     public static function cs_settable(): array {
         return [
             self::INTAKE,
+            self::NEEDS_SO,
             self::READY_FOR_BUILD,
             self::SCHEDULED,
             self::BLOCKED,
+            self::AWAITING_PICKUP,
             self::ON_HOLD,
             self::COMPLETE,
             self::CANCELLED,
@@ -93,10 +97,12 @@ class Slate_Ops_Statuses {
             self::IN_PROGRESS,
             self::BLOCKED,
             self::QC,
+            self::AWAITING_PICKUP,
             self::ON_HOLD,
             // Legacy equivalents included so they surface under "All Active"
             self::QUEUED,
             self::PENDING_QC,
+            self::READY_FOR_PICKUP,
             self::DELAYED,
         ];
     }
@@ -117,20 +123,21 @@ class Slate_Ops_Statuses {
 
     private static function label_map(): array {
         return [
-            self::INTAKE           => 'Intake',
+            self::INTAKE           => 'Pending',
             self::NEEDS_SO         => 'Needs SO',
-            self::READY_FOR_BUILD  => 'Ready for Build',
+            self::READY_FOR_BUILD  => 'Ready to Build',
             self::SCHEDULED        => 'Scheduled',
             self::IN_PROGRESS      => 'In Progress',
             self::BLOCKED          => 'Blocked',
-            self::QC               => 'Ready for Closeout',
+            self::QC               => 'Ready to Close',
+            self::AWAITING_PICKUP  => 'Complete - Awaiting Pickup',
             self::COMPLETE         => 'Closed',
             self::ON_HOLD          => 'On Hold',
             self::CANCELLED        => 'Cancelled',
             // Legacy display labels
             self::QUEUED           => 'Scheduled',
-            self::PENDING_QC       => 'Ready for Closeout',
-            self::READY_FOR_PICKUP => 'Closed',
+            self::PENDING_QC       => 'Ready to Close',
+            self::READY_FOR_PICKUP => 'Complete - Awaiting Pickup',
             self::DELAYED          => 'Blocked',
         ];
     }
@@ -145,7 +152,7 @@ class Slate_Ops_Statuses {
                 'QUEUED'                      => self::SCHEDULED,
                 'SCHEDULED'                   => self::SCHEDULED,
                 'PENDING_QC'                  => self::QC,
-                'READY_FOR_PICKUP'            => self::COMPLETE,
+                'READY_FOR_PICKUP'            => self::AWAITING_PICKUP,
                 'DELAYED'                     => self::BLOCKED,
                 // Older legacy values
                 'PENDING_INTAKE'              => self::INTAKE,
@@ -155,7 +162,8 @@ class Slate_Ops_Statuses {
                 'READY_FOR_SCHEDULING'        => self::READY_FOR_BUILD,
                 'APPROVED_FOR_SCHEDULING'     => self::READY_FOR_BUILD,
                 'READY_FOR_SUPERVISOR_REVIEW' => self::READY_FOR_BUILD,
-                'COMPLETE_AWAITING_PICKUP'    => self::COMPLETE,
+                'COMPLETE_AWAITING_PICKUP'    => self::AWAITING_PICKUP,
+                'COMPLETED_AWAITING_PICKUP'   => self::AWAITING_PICKUP,
                 'COMPLETED'                   => self::COMPLETE,
             ];
         }
@@ -173,13 +181,14 @@ class Slate_Ops_Statuses {
             self::IN_PROGRESS      => 'ops-badge-status-inprogress',
             self::BLOCKED          => 'ops-badge-status-blocked',
             self::QC               => 'ops-badge-status-qc',
+            self::AWAITING_PICKUP  => 'ops-badge-status-awaiting-pickup',
             self::COMPLETE         => 'ops-badge-status-complete',
             self::ON_HOLD          => 'ops-badge-status-hold',
             self::CANCELLED        => 'ops-badge-status-cancelled',
             // Legacy → same class as v2 equivalent
             self::QUEUED           => 'ops-badge-status-scheduled',
             self::PENDING_QC       => 'ops-badge-status-qc',
-            self::READY_FOR_PICKUP => 'ops-badge-status-complete',
+            self::READY_FOR_PICKUP => 'ops-badge-status-awaiting-pickup',
             self::DELAYED          => 'ops-badge-status-blocked',
         ];
     }
@@ -223,7 +232,7 @@ class Slate_Ops_Statuses {
      * Return true if the value is a recognized status (canonical or legacy).
      */
     public static function is_canonical(string $status): bool {
-        return in_array(strtoupper(trim($status)), self::all(), true);
+        return in_array(self::normalize($status), self::all(), true);
     }
 
     // ── Transition enforcement ────────────────────────────────────────
@@ -238,17 +247,18 @@ class Slate_Ops_Statuses {
         return [
             self::INTAKE           => [self::NEEDS_SO, self::READY_FOR_BUILD, self::ON_HOLD, self::CANCELLED],
             self::NEEDS_SO         => [self::INTAKE, self::READY_FOR_BUILD, self::ON_HOLD, self::CANCELLED],
-            self::READY_FOR_BUILD  => [self::SCHEDULED, self::IN_PROGRESS, self::ON_HOLD, self::CANCELLED, self::BLOCKED],
+            self::READY_FOR_BUILD  => [self::INTAKE, self::NEEDS_SO, self::SCHEDULED, self::IN_PROGRESS, self::ON_HOLD, self::CANCELLED, self::BLOCKED],
             self::SCHEDULED        => [self::IN_PROGRESS, self::READY_FOR_BUILD, self::ON_HOLD, self::CANCELLED, self::BLOCKED],
             self::IN_PROGRESS      => [self::QC, self::BLOCKED, self::ON_HOLD, self::SCHEDULED],
             self::BLOCKED          => $any,
-            self::QC               => [self::IN_PROGRESS, self::COMPLETE],
+            self::QC               => [self::IN_PROGRESS, self::AWAITING_PICKUP],
+            self::AWAITING_PICKUP  => [self::COMPLETE],
             self::COMPLETE         => [],
             self::ON_HOLD          => $any,
             self::CANCELLED        => [],
             // Legacy aliases map to same rules as their v2 equivalents
             self::QUEUED           => [self::IN_PROGRESS, self::READY_FOR_BUILD, self::SCHEDULED, self::ON_HOLD, self::CANCELLED, self::BLOCKED],
-            self::PENDING_QC       => [self::IN_PROGRESS, self::COMPLETE],
+            self::PENDING_QC       => [self::IN_PROGRESS, self::AWAITING_PICKUP],
             self::READY_FOR_PICKUP => [self::COMPLETE],
             self::DELAYED          => $any,
         ];
@@ -260,7 +270,10 @@ class Slate_Ops_Statuses {
      * Any active status may enter ON_HOLD, BLOCKED, or CANCELLED.
      */
     public static function is_valid_transition(string $from, string $to): bool {
+        $from = self::normalize($from);
+        $to = self::normalize($to);
         if ($from === $to) return true;
+        if (in_array($from, [self::COMPLETE, self::CANCELLED], true)) return false;
         // Pause/terminal overrides: any status may enter these
         if (in_array($to, [self::ON_HOLD, self::BLOCKED, self::CANCELLED], true)) return true;
         $map = self::allowed_transitions();

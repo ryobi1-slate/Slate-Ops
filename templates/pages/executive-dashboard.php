@@ -93,7 +93,7 @@ $blocks = $exec->get_blockers();
 				<div class="kpi"><div class="k-label">Active Jobs</div><div class="k-value"><?php echo (int) $ov['active_jobs']; ?></div><div class="k-help"><?php echo esc_html( $ov['active_breakdown'] ); ?></div></div>
 				<div class="kpi"><div class="k-label">In Progress</div><div class="k-value"><?php echo (int) $ov['in_progress']; ?></div></div>
 				<div class="kpi"><div class="k-label">Pending QC</div><div class="k-value"><?php echo (int) $ov['pending_qc']; ?></div></div>
-				<div class="kpi"><div class="k-label">Ready For Pickup</div><div class="k-value"><?php echo (int) $ov['ready_for_pickup']; ?></div></div>
+				<div class="kpi"><div class="k-label">Awaiting Pickup</div><div class="k-value"><?php echo (int) $ov['ready_for_pickup']; ?></div></div>
 
 				<div class="kpi flag-crit">
 					<div class="k-label">Labor Capture <span class="k-status crit">Low</span></div>
@@ -449,7 +449,7 @@ $blocks = $exec->get_blockers();
 		<!-- ===== BLOCKS ===== -->
 		<section class="tab-pane" id="pane-blocks" data-screen-label="05 Bottlenecks">
 			<div class="kpi-grid">
-				<div class="kpi"><div class="k-label">Ready For Build</div><div class="k-value"><?php echo (int) $bk['ready_for_build']; ?></div></div>
+				<div class="kpi"><div class="k-label">Ready to Build</div><div class="k-value"><?php echo (int) $bk['ready_for_build']; ?></div></div>
 				<div class="kpi"><div class="k-label">Scheduled</div><div class="k-value"><?php echo (int) $bk['scheduled']; ?></div></div>
 				<div class="kpi"><div class="k-label">In Progress</div><div class="k-value"><?php echo (int) $bk['in_progress']; ?></div></div>
 				<div class="kpi"><div class="k-label">QC</div><div class="k-value"><?php echo (int) $bk['qc']; ?></div></div>

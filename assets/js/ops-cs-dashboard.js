@@ -27,11 +27,12 @@
     selectedRow: 0,
     activeTab: 'overview'
   };
+  var CS_TAB_STORAGE_KEY = 'slateOpsCsActiveTab';
 
   var pillLabel = {
     parts:   'Waiting on Parts',
     qc:      'Pending QC',
-    pickup:  'Ready for Pickup',
+    pickup:  'Complete - Awaiting Pickup',
     blocked: 'Blocked',
     ready:   'Ready'
   };
@@ -152,9 +153,11 @@
   // ─── Drawer ───────────────────────────────────────────────────────────
   var drawer   = document.getElementById('job-drawer');
   var backdrop = document.getElementById('drawer-backdrop');
+  var currentDrawerJob = null;
 
   function openDrawer(p) {
     if (!drawer || !p) return;
+    currentDrawerJob = p;
     var el;
     if ((el = document.getElementById('drawer-job')))             el.textContent = p.id || '';
     if ((el = document.getElementById('drawer-cust')))            el.textContent = p.cust || '';
@@ -173,6 +176,7 @@
 
   function closeDrawer() {
     if (!drawer) return;
+    currentDrawerJob = null;
     drawer.classList.remove('open');
     if (backdrop) backdrop.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
@@ -203,7 +207,14 @@
     var actionBtn = document.getElementById('drawer-action-btn');
     if (actionBtn) {
       actionBtn.addEventListener('click', function () {
-        showToast('Action logged · job updated');
+        var filter = currentDrawerJob && currentDrawerJob.pill ? currentDrawerJob.pill : 'all';
+        if (filter === 'parts') filter = 'blocked';
+        if (filter === 'qc') filter = 'closeout';
+        if (filter === 'pickup') filter = 'pickup';
+        var target = document.querySelector('.ops-subtab[data-tab="queue"]');
+        if (target) target.click();
+        var chip = document.querySelector('.cs-beta-chip[data-filter="' + filter + '"]');
+        if (chip) chip.click();
         closeDrawer();
       });
     }
@@ -244,7 +255,17 @@
         try { btn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {}
       }
       var tab = btn.dataset.tab;
+      if (!tab) return;
       state.activeTab = tab;
+      try {
+        window.localStorage.setItem(CS_TAB_STORAGE_KEY, tab);
+      } catch (_) {}
+      if (window.history && window.history.replaceState) {
+        var nextHash = '#' + tab;
+        if (window.location.hash !== nextHash) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search + nextHash);
+        }
+      }
       $$('.ops-tab-content').forEach(function (c) {
         c.hidden = c.dataset.tabContent !== tab;
       });
@@ -307,7 +328,9 @@
     selected:  null,      // currently selected job id
     drag:      null,      // { jobId, groupKey } while a drag is active
     jobDetails:        {},  // id → full /jobs/{id} response (cached)
-    jobDetailsLoading: {}   // id → in-flight Promise
+    jobDetailsLoading: {},  // id → in-flight Promise
+    jobDetailsFailed:  {},  // id → last detail fetch failed
+    rowValidation:     {}   // id → inline queue validation message
   };
 
   // Fields persisted via PATCH /jobs/{id} (Phase 4). The remaining keys
@@ -317,9 +340,10 @@
   // job edits.
   var BETA_JOB_FIELDS = [
     'customer_name', 'dealer_name', 'sales_person',
-    'vin_last8', 'notes',
-    'parts_status', 'estimated_hours', 'requested_date'
+    'vin_last8', 'notes', 'requested_date',
+    'parts_status', 'estimated_hours', 'status'
   ];
+  var BETA_QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
   function betaIsJobField(name) { return BETA_JOB_FIELDS.indexOf(name) >= 0; }
 
   function betaApi() {
@@ -375,7 +399,11 @@
         betaState.users  = (usersRes && usersRes.ok && usersRes.body && usersRes.body.users) ? usersRes.body.users : [];
         betaState.edits  = {};
         betaState.loaded = true;
+        var autoNumbered = betaAutoNumberMissingQueues();
         renderBeta();
+        if (autoNumbered > 0) {
+          showBetaNotice('Missing queue numbers were filled locally. Review, then Save Changes to commit.', 'info');
+        }
       })
       .catch(function () {
         betaState.loading = false;
@@ -459,11 +487,14 @@
       so_number:        j.so_number,
       customer:         e.customer_name !== undefined ? e.customer_name : j.customer,
       dealer:           e.dealer_name   !== undefined ? e.dealer_name   : j.dealer,
-      status:           j.status,
-      status_label:     j.status_label,
+      status:           e.status !== undefined ? betaStatusKey(e.status) : j.status,
+      status_label:     e.status !== undefined ? betaStatusLabel(e.status) : j.status_label,
       parts_status:     e.parts_status  !== undefined ? e.parts_status  : j.parts_status,
+      estimated_minutes: j.estimated_minutes,
+      requested_date:   j.requested_date,
       due_date:         j.due_date,
       promised_date:    j.promised_date,
+      actual_completed_at: j.actual_completed_at,
       scheduled_start:  j.scheduled_start,
       assigned_user_id: aid,
       assigned_tech:    atech,
@@ -471,6 +502,8 @@
       queue_order:      e.queue_order   !== undefined ? e.queue_order   : j.queue_order,
       queue_visible:    e.queue_visible !== undefined ? e.queue_visible : j.queue_visible,
       queue_note:       e.queue_note    !== undefined ? e.queue_note    : (j.queue_note || ''),
+      block_reason:     j.block_reason || '',
+      block_note:       j.block_note || '',
       _dirty:           Object.keys(e).length > 0,
       _reassigned:      hasAssignmentEdit && aid !== j.assigned_user_id,
       _orig_assigned_user_id: j.assigned_user_id,
@@ -492,25 +525,41 @@
     return ps === 'HOLD' || ps === 'NOT_READY';
   }
 
+  function betaStatusKey(status) {
+    var st = String(status || '').toUpperCase().trim().replace(/\s+/g, '_').replace(/-/g, '_');
+    switch (st) {
+      case 'PENDING_QC':
+      case 'READY_FOR_CLOSEOUT':
+      case 'READY_CLOSEOUT':
+        return 'QC';
+      case 'READY_FOR_PICKUP':
+      case 'COMPLETE_AWAITING_PICKUP':
+      case 'COMPLETED_AWAITING_PICKUP':
+        return 'AWAITING_PICKUP';
+      default:
+        return st;
+    }
+  }
+
   // Shared display helpers used by the row, the detail panel, and the
   // overview's existing pills.
   function statusPillClass(status) {
-    switch (status) {
-      case 'BLOCKED':         return 'pill--blocked';
-      case 'SCHEDULED':       return 'pill--ready';
-      case 'IN_PROGRESS':     return 'pill--qc';
-      case 'QC':
-      case 'PENDING_QC':      return 'pill--qc';
-      case 'READY_FOR_BUILD': return 'pill--ready';
+    switch (betaStatusKey(status)) {
+      case 'BLOCKED':         return 'pill--danger';
+      case 'SCHEDULED':       return 'pill--info';
+      case 'IN_PROGRESS':     return 'pill--info';
+      case 'QC':              return 'pill--warn';
+      case 'AWAITING_PICKUP': return 'pill--pickup';
+      case 'READY_FOR_BUILD': return 'pill--info';
       default:                return 'pill--neutral';
     }
   }
 
   function partsPillClass(ps) {
-    if (betaIsPartsHold(ps))                              return 'pill--blocked';
+    if (betaIsPartsHold(ps))                              return 'pill--danger';
     var v = String(ps || '').toUpperCase();
-    if (v === 'PARTIAL')                                  return 'pill--parts';
-    if (v === 'READY')                                    return 'pill--ready';
+    if (v === 'PARTIAL')                                  return 'pill--warn';
+    if (v === 'READY')                                    return 'pill--success';
     return 'pill--neutral';
   }
 
@@ -521,6 +570,24 @@
     return map[v] || v;
   }
 
+  function betaStatusLabel(status) {
+    var v = betaStatusKey(status);
+    var map = {
+      INTAKE: 'Pending',
+      NEEDS_SO: 'Needs SO',
+      READY_FOR_BUILD: 'Ready to Build',
+      SCHEDULED: 'Scheduled',
+      IN_PROGRESS: 'In Progress',
+      BLOCKED: 'Blocked',
+      QC: 'Ready to Close',
+      AWAITING_PICKUP: 'Complete - Awaiting Pickup',
+      COMPLETE: 'Closed',
+      ON_HOLD: 'On Hold',
+      CANCELLED: 'Cancelled'
+    };
+    return map[v] || v;
+  }
+
   function fmtDate(s) {
     if (!s) return '—';
     var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(s));
@@ -528,14 +595,47 @@
     return parseInt(m[2], 10) + '-' + parseInt(m[3], 10) + '-' + m[1];
   }
 
+  function betaBlockReasonLabel(reason) {
+    var v = String(reason || '').toUpperCase();
+    var map = {
+      PARTS: 'Waiting on parts',
+      ENGINEERING: 'Vehicle / engineering issue',
+      CUSTOMER: 'Customer / CS question',
+      LABOR: 'Need help',
+      OTHER: 'Other'
+    };
+    return map[v] || (v ? v.replace(/_/g, ' ') : 'Blocked');
+  }
+
+  function betaDaysUntilDue(due) {
+    if (!due) return null;
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(due));
+    if (!m) return null;
+    var today = new Date();
+    var start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    var target = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)).getTime();
+    return Math.round((target - start) / 86400000);
+  }
+
+  function betaBlockedSeverity(j) {
+    if (betaStatusKey(j.status) !== 'BLOCKED') return '';
+    var days = betaDaysUntilDue(j.due_date);
+    var reason = String(j.block_reason || '').toUpperCase();
+    if (days != null && days <= 1) return 'alert';
+    if (reason === 'CUSTOMER' || reason === 'ENGINEERING' || reason === 'LABOR') return 'alert';
+    return 'warn';
+  }
+
   function betaPassesChip(j) {
+    var status = betaStatusKey(j.status);
     switch (betaState.filter) {
       case 'all':        return true;
-      case 'ready':      return j.status === 'READY_FOR_BUILD';
-      case 'scheduled':  return j.status === 'SCHEDULED';
-      case 'inprog':     return j.status === 'IN_PROGRESS';
-      case 'blocked':    return j.status === 'BLOCKED';
-      case 'closeout':   return j.status === 'QC' || j.status === 'PENDING_QC';
+      case 'ready':      return status === 'READY_FOR_BUILD';
+      case 'scheduled':  return status === 'SCHEDULED';
+      case 'inprog':     return status === 'IN_PROGRESS';
+      case 'blocked':    return status === 'BLOCKED';
+      case 'closeout':   return status === 'QC';
+      case 'pickup':     return status === 'AWAITING_PICKUP';
       case 'unassigned': return !j.assigned_user_id;
       case 'parts':      return betaIsPartsHold(j.parts_status);
       default:           return true;
@@ -553,14 +653,16 @@
   }
 
   function betaCounts(jobs) {
-    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, unassigned: 0, parts: 0 };
+    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, pickup: 0, unassigned: 0, parts: 0 };
     jobs.forEach(function (j) {
+      var status = betaStatusKey(j.status);
       c.all++;
-      if (j.status === 'READY_FOR_BUILD')                  c.ready++;
-      if (j.status === 'SCHEDULED')                        c.scheduled++;
-      if (j.status === 'IN_PROGRESS')                      c.inprog++;
-      if (j.status === 'BLOCKED')                          c.blocked++;
-      if (j.status === 'QC' || j.status === 'PENDING_QC')  c.closeout++;
+      if (status === 'READY_FOR_BUILD')                    c.ready++;
+      if (status === 'SCHEDULED')                          c.scheduled++;
+      if (status === 'IN_PROGRESS')                        c.inprog++;
+      if (status === 'BLOCKED')                            c.blocked++;
+      if (status === 'QC')                                 c.closeout++;
+      if (status === 'AWAITING_PICKUP')                    c.pickup++;
       if (!j.assigned_user_id)                             c.unassigned++;
       if (betaIsPartsHold(j.parts_status))                 c.parts++;
     });
@@ -641,7 +743,8 @@
         if (!j.queue_visible || j.queue_order !== 1) return;
         var bad = j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status);
         if (bad) {
-          add(k, 'warn', (j.so_number || j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? 'blocked' : 'on parts hold') + '.');
+          var tone = betaBlockedSeverity(j) === 'alert' ? 'alert' : 'warn';
+          add(k, tone, (j.so_number || j.job_number || ('Job ' + j.id)) + ' is queue #1 in ' + g.label + ' but is ' + (j.status === 'BLOCKED' ? betaBlockReasonLabel(j.block_reason).toLowerCase() : 'on parts hold') + '.');
         }
       });
     });
@@ -738,7 +841,10 @@
       var rows = g.jobs.map(function (j) {
         var dup        = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
         var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
+        var blockedSeverity = betaBlockedSeverity(j);
         var sel        = (betaState.selected === j.id);
+        var validation = betaState.rowValidation[j.id] || null;
+        var dueValidation = validation && validation.dueRequired;
         var qTitle     = (!j.assigned_user_id && j.queue_order == null)
           ? 'Assign a tech before queue order affects the Tech page.'
           : 'Queue number';
@@ -749,7 +855,9 @@
         if (!j.queue_visible) rowCls += ' is-hidden';
         if (dup)              rowCls += ' is-dup';
         if (blockedTop)       rowCls += ' is-warn';
+        if (blockedSeverity)  rowCls += ' is-blocked-' + blockedSeverity;
         if (j._reassigned)    rowCls += ' is-reassigned';
+        if (validation)        rowCls += ' is-ready-validation';
         if (j.status === 'SCHEDULED' && !j.assigned_user_id) rowCls += ' is-missing-tech';
 
         var noteText = betaFmtNote(j.queue_note);
@@ -770,21 +878,35 @@
           +   '<div class="cs-beta-row__cust">'
           +     '<div class="cs-beta-row__name">' + escapeHtml(j.customer || '—') + '</div>'
           +     '<div class="cs-beta-row__sub">' + escapeHtml(j.dealer || '') + '</div>'
+          +     (blockedSeverity
+                ? '<div class="cs-beta-row__blocker cs-beta-row__blocker--' + escapeHtml(blockedSeverity) + '" title="' + escapeHtml(j.block_note || '') + '">'
+                +   '<span class="material-symbols-outlined" aria-hidden="true">report</span>'
+                +   escapeHtml(betaBlockReasonLabel(j.block_reason))
+                + '</div>'
+                : '')
           +     (j._reassigned
                 ? '<div class="cs-beta-row__staged" title="Reassigned from ' + escapeHtml(j._orig_assigned_tech || 'Unassigned') + '">'
                 +     '<span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>'
                 +     'Reassigned to ' + escapeHtml(j.assigned_tech || 'Unassigned')
                 + '</div>'
                 : '')
+          +     (validation
+                ? '<div class="cs-beta-row__validation" role="alert">'
+                +   '<span class="material-symbols-outlined" aria-hidden="true">event_busy</span>'
+                +   escapeHtml(validation.message || 'Add a due date before moving to Ready to Build.')
+                + '</div>'
+                : '')
           +   '</div>'
-          +   '<div class="cs-beta-row__status"><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></div>'
-          +   '<div class="cs-beta-row__parts"><span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span></div>'
+          +   '<div class="cs-beta-row__status">' + betaRowStatusControlHtml(j) + '</div>'
+          +   '<div class="cs-beta-row__parts">' + betaRowPartsControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__tech">'
           +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech">'
           +       betaTechOptions(j.assigned_user_id)
           +     '</select>'
           +   '</div>'
-          +   '<div class="cs-beta-row__due cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</div>'
+          +   '<div class="cs-beta-row__due cs-beta-mono' + (dueValidation ? ' is-required' : '') + '">'
+          +     (dueValidation ? '<span class="cs-beta-row__due-required">Due date required</span>' : escapeHtml(fmtDate(j.due_date)))
+          +   '</div>'
           +   '<div class="cs-beta-row__note">'
           +     (noteIcon ? '<span class="material-symbols-outlined cs-beta-row__noteicon" aria-hidden="true">' + noteIcon + '</span>' : '<span class="cs-beta-row__noteicon-spacer" aria-hidden="true"></span>')
           +     '<span class="cs-beta-row__notetext">' + (noteText ? escapeHtml(noteText) : '<span class="cs-beta-row__notetext--empty">—</span>') + '</span>'
@@ -870,8 +992,26 @@
         var v   = select.value.trim();
         var parsed = v === '' ? null : parseInt(v, 10);
         if (parsed != null && (!isFinite(parsed) || parsed <= 0)) parsed = null;
-        recordBetaEdit(id, 'assigned_user_id', parsed);
-        renderBeta();
+        betaAutosaveRowDropdown(id, 'assigned_user_id', parsed, select);
+      });
+    });
+
+    $$('.cs-beta-row__select', body).forEach(function (select) {
+      select.addEventListener('click', function (e) { e.stopPropagation(); });
+      select.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+      select.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      select.addEventListener('change', function (e) {
+        e.stopPropagation();
+        var row = select.closest('.cs-beta-row'); if (!row) return;
+        var id = parseInt(row.dataset.job, 10);
+        if (!id || isNaN(id)) return;
+        if (select.dataset.action === 'beta-status-select') {
+          betaAutosaveRowDropdown(id, 'status', String(select.value || '').trim(), select);
+          return;
+        }
+        if (select.dataset.field === 'parts_status') {
+          betaAutosaveRowDropdown(id, 'parts_status', String(select.value || '').trim(), select);
+        }
       });
     });
 
@@ -897,7 +1037,8 @@
     });
 
     $$('.cs-beta-row', body).forEach(function (row) {
-      row.addEventListener('click', function () {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('input, select, textarea, button, [data-action]')) return;
         var id = parseInt(row.dataset.job, 10);
         selectBetaJob(id);
       });
@@ -1188,11 +1329,14 @@
   function betaOrigFieldValue(id, field) {
     if (betaIsJobField(field)) {
       var det = betaState.jobDetails[id];
-      if (!det) return undefined;
+      var snap = betaJobById(id);
       if (field === 'estimated_hours') {
-        var m = det.estimated_minutes != null ? Number(det.estimated_minutes) : 0;
+        var m = det && det.estimated_minutes != null
+          ? Number(det.estimated_minutes)
+          : (snap && snap.estimated_minutes != null ? Number(snap.estimated_minutes) : 0);
         return m > 0 ? String(+(m / 60).toFixed(2)) : '';
       }
+      if (!det) return undefined;
       if (field === 'vin_last8') {
         return String(det.vin_last8 || det.vin || '');
       }
@@ -1248,6 +1392,7 @@
     if (betaState.jobDetailsLoading[id]) return betaState.jobDetailsLoading[id];
     var api = betaApi();
     if (!api) return Promise.reject(new Error('no_api'));
+    delete betaState.jobDetailsFailed[id];
     var p = fetch(api.root + '/jobs/' + id, {
       method: 'GET',
       credentials: 'same-origin',
@@ -1260,10 +1405,12 @@
       .then(function (job) {
         betaState.jobDetails[id] = job || {};
         delete betaState.jobDetailsLoading[id];
+        delete betaState.jobDetailsFailed[id];
         return betaState.jobDetails[id];
       })
       .catch(function (err) {
         delete betaState.jobDetailsLoading[id];
+        betaState.jobDetailsFailed[id] = true;
         throw err;
       });
     betaState.jobDetailsLoading[id] = p;
@@ -1289,6 +1436,7 @@
     $$('.cs-beta-row.is-selected').forEach(function (el) { el.classList.remove('is-selected'); });
     var panel = document.getElementById('cs-beta-detail');
     if (panel) panel.hidden = true;
+    document.body.classList.remove('cs-beta-detail-modal-open');
   }
 
   /**
@@ -1312,9 +1460,17 @@
     var panel = document.getElementById('cs-beta-detail');
     var grid  = document.getElementById('cs-beta-detail-grid');
     if (!panel || !grid) return;
-    if (betaState.selected == null) { panel.hidden = true; return; }
+    if (betaState.selected == null) {
+      panel.hidden = true;
+      document.body.classList.remove('cs-beta-detail-modal-open');
+      return;
+    }
     var snap = betaJobById(betaState.selected);
-    if (!snap) { panel.hidden = true; return; }
+    if (!snap) {
+      panel.hidden = true;
+      document.body.classList.remove('cs-beta-detail-modal-open');
+      return;
+    }
     var j = betaEffectiveJob(snap);
     var id = j.id;
     var det = betaState.jobDetails[id];      // may be undefined while loading
@@ -1326,31 +1482,65 @@
     if (custEl) custEl.textContent = j.customer || '';
 
     panel.hidden = false;
+    document.body.classList.add('cs-beta-detail-modal-open');
     grid.setAttribute('data-job-id', String(id));
 
     // Field helpers — value() reads effective value, cls() flags edited.
     function fv(field) { return escapeHtml(betaFieldValue(id, field)); }
     function ec(field) { return betaIsEdited(id, field) ? ' is-edited' : ''; }
+    function vc(field) { return field === 'requested_date' && betaState.rowValidation[id] && betaState.rowValidation[id].dueRequired ? ' is-required' : ''; }
     function readOnly(value) {
       return '<div class="cs-beta-detail-readonly">' + (value == null || value === '' ? '—' : escapeHtml(String(value))) + '</div>';
     }
 
-    var partsOptions = ['', 'NOT_READY', 'PARTIAL', 'READY', 'HOLD'].map(function (v) {
-      var label = v === '' ? '—' : (partsLabel(v) || v);
-      var sel = (betaFieldValue(id, 'parts_status') === v) ? ' selected' : '';
-      return '<option value="' + escapeHtml(v) + '"' + sel + '>' + escapeHtml(label) + '</option>';
-    }).join('');
-
     var loadingNote = detailLoading
       ? '<div class="cs-beta-detail-loading"><span class="material-symbols-outlined cs-beta__spinner" aria-hidden="true">progress_activity</span><span>Loading job…</span></div>'
       : '';
-    var loadFailed = !det && !detailLoading
+    var loadFailed = !det && !detailLoading && betaState.jobDetailsFailed[id]
       ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
+      : '';
+    var status = betaStatusKey(j.status);
+    var canMarkAwaiting = status === 'QC';
+    var canMarkClosed = status === 'AWAITING_PICKUP';
+    var blockedSeverity = betaBlockedSeverity(j);
+    var unblockDeps = status === 'BLOCKED' ? betaReadyForBuildMissing(id, j) : [];
+    var blockerHtml = status === 'BLOCKED'
+      ? ''
+        + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-blocker cs-beta-blocker--' + escapeHtml(blockedSeverity || 'warn') + '">'
+        +   '<h4 class="cs-beta-detail-section__title">Blocked work</h4>'
+        +   '<div class="cs-beta-blocker__body">'
+        +     '<div class="cs-beta-blocker__reason">'
+        +       '<span class="material-symbols-outlined" aria-hidden="true">report</span>'
+        +       '<strong>' + escapeHtml(betaBlockReasonLabel(j.block_reason)) + '</strong>'
+        +     '</div>'
+        +     '<div class="cs-beta-blocker__note">' + escapeHtml(j.block_note || 'No blocker note provided.') + '</div>'
+        +   '</div>'
+        +   '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-unblock-ready"' + (unblockDeps.length ? ' disabled title="Ready to Build needs ' + escapeHtml(unblockDeps.join(', ')) + '"' : '') + '>'
+        +     '<span class="material-symbols-outlined">lock_open</span>'
+        +     'Unblock to Ready to Build'
+        +   '</button>'
+        + '</section>'
+      : '';
+    var closeoutHtml = (canMarkAwaiting || canMarkClosed)
+      ? ''
+        + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-closeout">'
+        +   '<h4 class="cs-beta-detail-section__title">Closeout</h4>'
+        +   (canMarkAwaiting
+              ? '<div class="cs-beta-closeout__checks">'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="jacket_received"><span>Jacket received</span></label>'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="invoice_completed"><span>Invoice completed</span></label>'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="notified"><span>Customer/dealer notified</span></label>'
+              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="pickup_arranged"><span>Pickup or delivery arranged</span></label>'
+              + '</div>'
+              : '<div class="cs-beta-detail-section__hint cs-beta-closeout__hint">Confirm pickup or delivery handoff is complete before closing.</div>')
+        +   '<textarea class="cs-beta-detail-note cs-beta-closeout__note" data-closeout-note maxlength="1000" placeholder="Closeout note…"></textarea>'
+        + '</section>'
       : '';
 
     grid.innerHTML = ''
       + loadingNote
       + loadFailed
+      + blockerHtml
 
       + '<section class="cs-beta-detail-section">'
       +   '<h4 class="cs-beta-detail-section__title">Job Identity</h4>'
@@ -1390,27 +1580,27 @@
       +   '<h4 class="cs-beta-detail-section__title">Scheduling</h4>'
       +   '<div class="cs-beta-detail-fields">'
       +     '<label class="cs-beta-field">'
-      +       '<span class="cs-beta-field__label">Requested Date</span>'
+      +       '<span class="cs-beta-field__label">Due date</span>'
       +       (det
-                ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
-                : readOnly(det && det.requested_date))
+                ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + vc('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
+                : readOnly((det && det.requested_date) || j.requested_date || j.due_date))
+      +       (betaState.rowValidation[id] && betaState.rowValidation[id].dueRequired ? '<span class="cs-beta-field__error">Add a due date before moving to Ready to Build.</span>' : '')
       +     '</label>'
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Estimated Hours</span>'
       +       (det
                 ? '<input type="number" min="0" step="0.25" class="cs-beta-mono cs-beta-field__input' + ec('estimated_hours') + '" data-field="estimated_hours" value="' + fv('estimated_hours') + '" placeholder="—">'
-                : readOnly(det && det.estimated_minutes ? +(det.estimated_minutes / 60).toFixed(2) : null))
+                : readOnly(j.estimated_minutes ? +(j.estimated_minutes / 60).toFixed(2) : null))
       +     '</label>'
       +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
-      +       '<dt>Due</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.due_date)) + '</dd>'
-      +       '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.promised_date)) + '</dd>'
-      +       '<dt>Sch. Start</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate(j.scheduled_start)) + '</dd>'
+      +       '<dt>Promised</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.promised_date) || j.promised_date)) + '</dd>'
+      +       '<dt>Actual completion</dt><dd class="cs-beta-mono">' + escapeHtml(fmtDate((det && det.actual_completed_at) || j.actual_completed_at)) + '</dd>'
       +       '<dt>Queue #</dt><dd class="cs-beta-mono">' + (j.queue_order == null ? '—' : j.queue_order) + '</dd>'
       +     '</dl>'
       +   '</div>'
       + '</section>'
 
-      + '<section class="cs-beta-detail-section">'
+      + '<section class="cs-beta-detail-section cs-beta-detail-section--handoff">'
       +   '<h4 class="cs-beta-detail-section__title">Handoff'
       +     (j._reassigned ? ' <span class="cs-beta-detail-section__hint">staged</span>' : '')
       +   '</h4>'
@@ -1435,22 +1625,6 @@
       +   '</div>'
       + '</section>'
 
-      + '<section class="cs-beta-detail-section">'
-      +   '<h4 class="cs-beta-detail-section__title">Parts / Status</h4>'
-      +   '<div class="cs-beta-detail-fields">'
-      +     '<label class="cs-beta-field">'
-      +       '<span class="cs-beta-field__label">Parts Status</span>'
-      +       (det
-                ? '<select class="cs-beta-field__input' + ec('parts_status') + '" data-field="parts_status">' + partsOptions + '</select>'
-                : readOnly(partsLabel(j.parts_status)))
-      +     '</label>'
-      +     '<dl class="cs-beta-detail-kv cs-beta-detail-kv--inline">'
-      +       '<dt>Status</dt><dd><span class="pill ' + statusPillClass(j.status) + '">' + escapeHtml(j.status_label || j.status || '—') + '</span></dd>'
-      +     '</dl>'
-      +     '<div class="cs-beta-detail-section__hint">Status transitions are managed via Tech / QC workflows; not editable here.</div>'
-      +   '</div>'
-      + '</section>'
-
       + '<section class="cs-beta-detail-section cs-beta-detail-section--wide">'
       +   '<h4 class="cs-beta-detail-section__title">Queue Note <span class="cs-beta-detail-section__hint">visible to Tech</span></h4>'
       +   '<textarea class="cs-beta-detail-note' + ec('queue_note') + '" data-field="queue_note" maxlength="240" placeholder="Add a short note for the tech…">' + escapeHtml(betaFieldValue(id, 'queue_note')) + '</textarea>'
@@ -1463,16 +1637,18 @@
           : '<div class="cs-beta-detail-loading">Loading…</div>')
       + '</section>'
 
+      + closeoutHtml
+
       + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
       +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
       +   '<div class="cs-beta-detail-actions">'
-      +     '<button type="button" class="btn btn--secondary" data-action="beta-discard-row"' + (betaState.edits[id] ? '' : ' disabled') + '>'
+      +     '<button type="button" class="slate-btn slate-btn--secondary" data-action="beta-discard-row"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">undo</span>'
       +       'Discard row edits'
       +     '</button>'
-      +     '<button type="button" class="btn btn--primary" data-action="beta-save-row" id="cs-beta-detail-save"' + (betaState.edits[id] ? '' : ' disabled') + '>'
+      +     '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-save-row" id="cs-beta-detail-save"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">save</span>'
-      +       '<span id="cs-beta-detail-save-label">Save edits</span>'
+      +       '<span id="cs-beta-detail-save-label">Save Changes</span>'
       +     '</button>'
       +   '</div>'
       + '</section>';
@@ -1494,15 +1670,538 @@
         t = e.target.closest('[data-action="beta-save-row"]');
         if (t) {
           e.preventDefault();
+          var detailGrid = document.getElementById('cs-beta-detail-grid');
+          var closeoutTarget = betaCloseoutTarget(detailGrid);
+          if (closeoutTarget) {
+            betaCloseoutAction(closeoutTarget);
+            return;
+          }
           saveBeta();
+          return;
+        }
+        t = e.target.closest('[data-action="beta-unblock-ready"]');
+        if (t) {
+          e.preventDefault();
+          betaUnblockAction();
+          return;
         }
       });
     }
   }
 
+  function betaReadyForBuildMissing(id, j) {
+    var missing = [];
+    if (!String(j.so_number || '').trim()) missing.push('SO #');
+    var customer = betaFieldValue(id, 'customer_name') || j.customer || '';
+    var dealer = betaFieldValue(id, 'dealer_name') || j.dealer || '';
+    if (!String(customer).trim() && !String(dealer).trim()) missing.push('customer or dealer');
+    var dueDate = betaFieldValue(id, 'requested_date') || j.promised_date || j.target_ship_date || j.requested_date || j.due_date || '';
+    if (!String(dueDate).trim()) missing.push('due date');
+    var estRaw = betaFieldValue(id, 'estimated_hours');
+    if (estRaw === '' && !betaIsEdited(id, 'estimated_hours') && j.estimated_minutes) {
+      estRaw = String(Number(j.estimated_minutes) / 60);
+    }
+    var est = parseFloat(estRaw);
+    if (!isFinite(est) || est <= 0) missing.push('estimated hours');
+    var partsStatus = String(betaFieldValue(id, 'parts_status') || j.parts_status || 'NOT_READY').toUpperCase();
+    if (partsStatus === 'NOT_READY') missing.push('parts not ready');
+    if (partsStatus === 'HOLD') missing.push('parts on hold');
+    return missing;
+  }
+
+  function betaReadyForBuildValidationMessage(missing) {
+    missing = missing || [];
+    if (missing.indexOf('due date') >= 0) {
+      return 'Add a due date before moving to Ready to Build.';
+    }
+    return 'Ready to Build needs ' + missing.join(', ') + '.';
+  }
+
+  function betaWarnReadyForBuildBlocked(id, missing, control) {
+    if (!id) return;
+    betaState.rowValidation[id] = {
+      message: betaReadyForBuildValidationMessage(missing),
+      dueRequired: (missing || []).indexOf('due date') >= 0
+    };
+    if (control) {
+      control.classList.add('is-invalid');
+      control.value = betaStatusKey((betaJobById(id) || {}).status || 'INTAKE');
+    }
+    showToast(betaState.rowValidation[id].message);
+    renderBeta();
+    if (betaState.selected === id) renderBetaDetail();
+  }
+
+  function betaRowStatusControlHtml(j) {
+    var status = betaStatusKey(j.status);
+    var editable = [
+      'INTAKE',
+      'NEEDS_SO',
+      'READY_FOR_BUILD',
+      'BLOCKED',
+      'QC',
+      'AWAITING_PICKUP'
+    ].indexOf(status) >= 0;
+    if (!editable) {
+      return '<span class="pill ' + statusPillClass(status) + '">' + escapeHtml(j.status_label || betaStatusLabel(status) || '—') + '</span>';
+    }
+    var readyDeps = betaReadyForBuildMissing(j.id, j);
+    return betaStatusControlHtml(status, j.status_label || betaStatusLabel(status), readyDeps, true);
+  }
+
+  function betaRowPartsControlHtml(j) {
+    var status = betaStatusKey(j.status);
+    if (['IN_PROGRESS', 'QC', 'AWAITING_PICKUP', 'COMPLETE', 'CANCELLED'].indexOf(status) >= 0) {
+      return '<span class="pill ' + partsPillClass(j.parts_status) + '">' + escapeHtml(partsLabel(j.parts_status)) + '</span>';
+    }
+    var values = ['NOT_READY', 'PARTIAL', 'READY', 'HOLD'];
+    return '<select class="cs-beta-row__select cs-beta-row__partsselect" data-field="parts_status" aria-label="Parts status">'
+      + values.map(function (v) {
+          return '<option value="' + v + '"' + (String(j.parts_status || '').toUpperCase() === v ? ' selected' : '') + '>' + escapeHtml(partsLabel(v)) + '</option>';
+        }).join('')
+      + '</select>';
+  }
+
+  function betaStatusControlHtml(status, label, readyDeps, isRow) {
+    var options = [];
+    var hint = '';
+    var controlTitle = '';
+
+    function addOption(value, optionLabel, disabled) {
+      options.push({
+        value: value,
+        label: optionLabel,
+        disabled: !!disabled
+      });
+    }
+
+    if (status === 'INTAKE' || status === 'NEEDS_SO' || status === 'READY_FOR_BUILD') {
+      addOption('INTAKE', 'Pending', false);
+      if (status === 'NEEDS_SO') {
+        options.push({ value: 'NEEDS_SO', label: 'Needs SO', disabled: false });
+      }
+      addOption(
+        'READY_FOR_BUILD',
+        'Ready to Build',
+        false
+      );
+      if (readyDeps.length) {
+        controlTitle = 'Ready to Build needs ' + readyDeps.join(', ');
+      }
+    } else if (status === 'QC') {
+      addOption('QC', label || 'Ready to Close', false);
+      addOption('AWAITING_PICKUP', isRow ? 'Awaiting Pickup' : 'Complete - Awaiting Pickup', false);
+      hint = 'Complete the closeout checklist before moving to pickup.';
+    } else if (status === 'AWAITING_PICKUP') {
+      addOption('AWAITING_PICKUP', isRow ? 'Awaiting Pickup' : (label || 'Complete - Awaiting Pickup'), false);
+      addOption('COMPLETE', 'Closed', false);
+      hint = 'Close only after pickup or delivery handoff is complete.';
+    } else if (status === 'BLOCKED') {
+      addOption('BLOCKED', label || 'Blocked', false);
+      addOption('READY_FOR_BUILD', 'Unblock - Ready to Build', false);
+      if (readyDeps.length) {
+        controlTitle = 'Ready to Build needs ' + readyDeps.join(', ');
+      }
+      hint = 'Only CS or a supervisor should unblock after the issue is resolved.';
+    } else {
+      addOption(status, label || status, false);
+    }
+
+    if (options.length === 1) {
+      return '<span class="pill ' + statusPillClass(status) + '">' + escapeHtml(label || status || '—') + '</span>';
+    }
+
+    return ''
+      + '<select class="' + (isRow ? 'cs-beta-row__select cs-beta-row__statusselect' : 'cs-beta-field__input cs-beta-status-select') + '" data-action="beta-status-select" aria-label="Job status"' + (controlTitle ? ' title="' + escapeHtml(controlTitle) + '"' : '') + '>'
+      + options.map(function (opt) {
+          return '<option value="' + escapeHtml(opt.value) + '"' + (opt.value === status ? ' selected' : '') + (opt.disabled ? ' disabled' : '') + '>' + escapeHtml(opt.label) + '</option>';
+        }).join('')
+      + '</select>'
+      + (!isRow && hint ? '<div class="cs-beta-detail-section__hint">' + escapeHtml(hint) + '</div>' : '');
+  }
+
+  function betaStatusAction(status) {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+
+    var actionMap = {
+      NEEDS_SO: {
+        selector: '[data-action="beta-mark-needs-so"]',
+        toast: 'Marked Needs SO'
+      },
+      READY_FOR_BUILD: {
+        selector: '[data-action="beta-mark-ready-build"]',
+        toast: 'Marked Ready to Build'
+      }
+    };
+    var action = actionMap[status] || {};
+    var btn = action.selector ? grid.querySelector(action.selector) : null;
+    if (btn) btn.disabled = true;
+
+    betaSaveSelectedEdits(id)
+      .then(function () {
+        return fetch(api.root + '/jobs/' + id + '/status', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce':   api.nonce,
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      },
+      body: JSON.stringify({ status: status })
+        });
+      })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Status update failed');
+        }
+        showToast(action.toast || 'Status updated');
+        betaState.loaded = false;
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Status update failed');
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  function betaPruneEdits(id, fields) {
+    var bag = betaState.edits[id];
+    if (!bag) return;
+    fields.forEach(function (f) { delete bag[f]; });
+    if (Object.keys(bag).length === 0) delete betaState.edits[id];
+  }
+
+  function betaAutosaveRowDropdown(id, field, value, control) {
+    var api = betaApi();
+    var snap = betaJobById(id);
+    if (!api || !snap) return;
+
+    var oldValue = betaEffectiveJob(snap)[field];
+    recordBetaEdit(id, field, value);
+    if (!betaState.edits[id] || !(field in betaState.edits[id])) return;
+
+    if (control) control.disabled = true;
+    showToast('Saving...');
+
+    var request;
+    if (field === 'assigned_user_id') {
+      request = fetch(api.root + '/cs/queue', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-WP-Nonce': api.nonce,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ updates: [{ id: id, assigned_user_id: value }] })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.body || !res.body.ok) throw new Error('Tech assignment save failed');
+          snap.assigned_user_id = value;
+          snap.assigned_tech = value ? (betaTechDirectory()[value] || ('User #' + value)) : '';
+          if (betaState.jobDetails[id]) betaState.jobDetails[id].assigned_user_id = value;
+        });
+    } else if (field === 'status') {
+      request = fetch(api.root + '/jobs/' + id + '/status', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-WP-Nonce': api.nonce,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ status: value })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error((res.body && (res.body.message || res.body.code)) || 'Status save failed');
+          snap.status = betaStatusKey(value);
+          snap.status_label = betaStatusLabel(value);
+          if (betaState.jobDetails[id]) {
+            betaState.jobDetails[id].status = snap.status;
+            betaState.jobDetails[id].status_label = snap.status_label;
+          }
+          if (snap.status === 'COMPLETE') {
+            betaState.jobs = betaState.jobs.filter(function (job) { return job.id !== id; });
+          }
+        });
+    } else if (field === 'parts_status') {
+      request = fetch(api.root + '/jobs/' + id, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: {
+          'X-WP-Nonce': api.nonce,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ parts_status: value })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error((res.body && (res.body.message || res.body.code)) || 'Parts save failed');
+          snap.parts_status = value;
+          if (betaState.jobDetails[id]) betaState.jobDetails[id].parts_status = value;
+        });
+    } else {
+      request = Promise.reject(new Error('Unsupported autosave field'));
+    }
+
+    request
+      .then(function () {
+        betaPruneEdits(id, [field]);
+        if (field === 'status') delete betaState.jobDetails[id];
+        renderBeta();
+        showToast('Saved');
+      })
+      .catch(function (err) {
+        betaPruneEdits(id, [field]);
+        if (field === 'assigned_user_id') snap.assigned_user_id = oldValue;
+        if (field === 'parts_status') snap.parts_status = oldValue;
+        if (field === 'status') {
+          snap.status = betaStatusKey(oldValue);
+          snap.status_label = betaStatusLabel(oldValue);
+        }
+        renderBeta();
+        showToast(err && err.message ? err.message : 'Save failed');
+      })
+      .finally(function () {
+        if (control) control.disabled = false;
+      });
+  }
+
+  function betaSaveSelectedEdits(id) {
+    var api = betaApi();
+    var e = betaState.edits[id];
+    if (!api || !e) return Promise.resolve();
+
+    var qBody = { id: id };
+    var jBody = {};
+    var hasQ = false;
+    var hasJ = false;
+    Object.keys(e).forEach(function (field) {
+      var v = e[field];
+      if (betaIsJobField(field)) {
+        jBody[field] = v == null ? '' : v;
+        hasJ = true;
+      } else {
+        qBody[field] = field === 'queue_visible' ? !!v : v;
+        hasQ = true;
+      }
+    });
+
+    var step = Promise.resolve();
+    if (hasQ) {
+      step = step.then(function () {
+        return fetch(api.root + '/cs/queue', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify({ updates: [qBody] })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+          .then(function (res) {
+            if (!res.ok || !res.body || !res.body.ok) {
+              throw new Error('Queue save failed');
+            }
+            betaPruneEdits(id, BETA_QUEUE_FIELDS);
+          });
+      });
+    }
+
+    if (hasJ) {
+      step = step.then(function () {
+        return fetch(api.root + '/jobs/' + id, {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify(jBody)
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+          .then(function (res) {
+            if (!res.ok) {
+              throw new Error((res.body && (res.body.message || res.body.code)) || 'Job save failed');
+            }
+            betaPruneEdits(id, BETA_JOB_FIELDS);
+          });
+      });
+    }
+
+    return step;
+  }
+
+  function betaCloseoutPayload(grid) {
+    var checks = {};
+    $$('[data-closeout-check]', grid).forEach(function (input) {
+      checks[input.getAttribute('data-closeout-check')] = !!input.checked;
+    });
+    var noteEl = grid.querySelector('[data-closeout-note]');
+    return {
+      closeout_checklist: checks,
+      closeout_note: noteEl ? noteEl.value.trim() : ''
+    };
+  }
+
+  function betaCloseoutAllChecked(grid) {
+    if (!grid) return false;
+    var checks = $$('[data-closeout-check]', grid);
+    return checks.length > 0 && checks.every(function (input) { return !!input.checked; });
+  }
+
+  function betaDetailStatus(grid) {
+    if (!grid) return '';
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return '';
+    var snap = betaJobById(id);
+    if (!snap) return '';
+    return betaStatusKey(betaEffectiveJob(snap).status);
+  }
+
+  function betaCloseoutTarget(grid) {
+    var status = betaDetailStatus(grid);
+    if (status === 'QC' && betaCloseoutAllChecked(grid)) return 'AWAITING_PICKUP';
+    if (status === 'AWAITING_PICKUP') return 'COMPLETE';
+    return '';
+  }
+
+  function betaCloseoutAction(status) {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+
+    var payload = betaCloseoutPayload(grid);
+    payload.status = status;
+
+    var btn = grid.querySelector(status === 'COMPLETE' ? '[data-action="beta-mark-closed"]' : '[data-action="beta-mark-awaiting"]');
+    if (btn) btn.disabled = true;
+    betaSaveSelectedEdits(id)
+      .then(function () {
+        return fetch(api.root + '/jobs/' + id + '/status', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce':   api.nonce,
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      },
+      body: JSON.stringify(payload)
+        });
+      })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Status update failed');
+        }
+        showToast(status === 'COMPLETE' ? 'Marked Closed' : 'Marked Complete - Awaiting Pickup');
+        betaState.loaded = false;
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Status update failed');
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  function betaUnblockAction() {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+    var btn = grid.querySelector('[data-action="beta-unblock-ready"]');
+    var job = betaEffectiveJob(betaJobById(id));
+    var missing = job ? betaReadyForBuildMissing(id, job) : [];
+    if (missing.length) {
+      showToast('Ready to Build needs ' + missing.join(', '));
+      return;
+    }
+    if (btn) btn.disabled = true;
+
+    betaSaveSelectedEdits(id)
+      .then(function () {
+        return fetch(api.root + '/jobs/' + id + '/status', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-WP-Nonce':   api.nonce,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json'
+          },
+          body: JSON.stringify({ status: 'READY_FOR_BUILD' })
+        });
+      })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Unblock failed');
+        }
+        showToast('Unblocked to Ready to Build');
+        betaState.loaded = false;
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Unblock failed');
+        if (btn) btn.disabled = false;
+      });
+  }
+
   function betaDetailInputHandler(e) {
     var t = e.target;
-    if (!t || !t.dataset || !t.dataset.field) return;
+    if (!t || !t.dataset) return;
+    if (t.hasAttribute('data-closeout-check') || t.hasAttribute('data-closeout-note')) {
+      updateBetaSaveButton();
+      return;
+    }
+    if (t.dataset.action === 'beta-status-select') {
+      var nextStatus = String(t.value || '').trim();
+      var rowEl = t.closest('.cs-beta-row');
+      var rowJobId = rowEl ? parseInt(rowEl.getAttribute('data-job'), 10) : 0;
+      var idForStatus = rowJobId || betaState.selected || 0;
+      var currentJob = betaJobById(idForStatus);
+      if (!nextStatus || !currentJob || nextStatus === betaStatusKey(currentJob.status || '')) return;
+      if (nextStatus === 'READY_FOR_BUILD') {
+        var missingReady = betaReadyForBuildMissing(idForStatus, betaEffectiveJob(currentJob));
+        if (missingReady.length) {
+          betaWarnReadyForBuildBlocked(idForStatus, missingReady, t);
+          return;
+        }
+      }
+      if (rowJobId) {
+        delete betaState.rowValidation[rowJobId];
+        recordBetaEdit(rowJobId, 'status', nextStatus);
+        renderBeta();
+        showToast('Status staged — Save Changes to commit');
+        return;
+      }
+      if (nextStatus === 'AWAITING_PICKUP' || nextStatus === 'COMPLETE') betaCloseoutAction(nextStatus);
+      else betaStatusAction(nextStatus);
+      return;
+    }
+    if (!t.dataset.field) return;
     var grid = document.getElementById('cs-beta-detail-grid');
     if (!grid) return;
     var id = parseInt(grid.getAttribute('data-job-id'), 10);
@@ -1520,6 +2219,7 @@
     // Normalise empty-string job-text fields to '' for clean comparison
     // against the cached snapshot value.
     if (typeof value === 'string') value = value.trim() === '' ? '' : value;
+    if (field === 'requested_date') delete betaState.rowValidation[id];
     recordBetaEdit(id, field, value);
     if (betaState.edits[id]) t.classList.add('is-edited');
     else t.classList.remove('is-edited');
@@ -1532,6 +2232,9 @@
       'queue_order',
       'queue_visible',
       'parts_status',
+      'estimated_hours',
+      'requested_date',
+      'status',
       'customer_name',
       'dealer_name'
     ].indexOf(field) >= 0) {
@@ -1596,11 +2299,16 @@
     var detailBtn = document.getElementById('cs-beta-detail-save');
     if (detailBtn) {
       var selected = betaState.selected;
-      detailBtn.disabled = !(selected != null && betaState.edits[selected]);
+      var grid = document.getElementById('cs-beta-detail-grid');
+      detailBtn.disabled = !(selected != null && (betaState.edits[selected] || betaCloseoutTarget(grid)));
     }
     var detailLabel = document.getElementById('cs-beta-detail-save-label');
     if (detailLabel) {
-      detailLabel.textContent = 'Save edits';
+      var detailGrid = document.getElementById('cs-beta-detail-grid');
+      var closeoutTarget = betaCloseoutTarget(detailGrid);
+      detailLabel.textContent = closeoutTarget === 'AWAITING_PICKUP'
+        ? 'Save and Move to Pickup'
+        : (closeoutTarget === 'COMPLETE' ? 'Save and Close' : 'Save Changes');
     }
   }
 
@@ -1633,6 +2341,42 @@
     showToast('Queue numbers normalized — Save to commit');
   }
 
+  function betaAutoNumberMissingQueues() {
+    var jobs   = betaState.jobs.map(betaEffectiveJob);
+    var groups = {};
+    jobs.forEach(function (j) {
+      if (!j.assigned_user_id || !j.queue_visible || j.queue_order != null) return;
+      var key = 'u:' + j.assigned_user_id;
+      (groups[key] = groups[key] || []).push(j);
+    });
+
+    var changed = 0;
+    Object.keys(groups).forEach(function (k) {
+      var assignedId = k.slice(2);
+      var used = {};
+      var maxOrder = 0;
+      jobs.forEach(function (j) {
+        if (String(j.assigned_user_id || '') !== assignedId || !j.queue_visible || j.queue_order == null) return;
+        used[j.queue_order] = true;
+        if (j.queue_order > maxOrder) maxOrder = j.queue_order;
+      });
+
+      groups[k].sort(function (a, b) {
+        return (a.job_number || '').localeCompare(b.job_number || '');
+      });
+
+      var next = maxOrder + 1;
+      groups[k].forEach(function (j) {
+        while (used[next]) next++;
+        recordBetaEdit(j.id, 'queue_order', next);
+        used[next] = true;
+        changed++;
+      });
+    });
+
+    return changed;
+  }
+
   function resetBetaDemo() {
     var api = betaApi();
     var btn = document.getElementById('cs-beta-demo-reset');
@@ -1663,6 +2407,7 @@
         betaState.edits             = {};
         betaState.jobDetails        = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed  = {};
         showBetaNotice('Demo queue reset. Duplicate, parts-hold, and missing-tech warnings are ready to test.', 'success');
         loadBeta();
         showToast('Demo queue reset');
@@ -1800,6 +2545,8 @@
         betaState.edits             = {};
         betaState.jobDetails        = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed  = {};
+        clearBetaSelection();
         loadBeta();
       })
       .catch(function (err) {
@@ -1813,13 +2560,14 @@
         showToast(msg);
         if (btn) btn.disabled = false;
         if (lbl) lbl.textContent = 'Save Changes';
-        if (detailLbl) detailLbl.textContent = 'Save edits';
+        if (detailLbl) detailLbl.textContent = 'Save Changes';
         // Refresh the queue snapshot so already-saved fields stop
         // flagging dirty in the UI; remaining edits stay queued.
         if (savedQueue > 0 || savedJobs > 0) {
           betaState.loaded            = false;
           betaState.jobDetails        = {};
           betaState.jobDetailsLoading = {};
+          betaState.jobDetailsFailed  = {};
           loadBeta();
         } else {
           updateBetaSaveButton();
@@ -2003,6 +2751,7 @@
         betaState.edits  = {};
         betaState.jobDetails = {};
         betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
         loadBeta();
       })
       .catch(function (err) {
@@ -2036,11 +2785,20 @@
     if (e.key !== 'Escape') return;
     var m = document.getElementById('cs-beta-newjob-modal');
     if (m && !m.hidden) betaCloseNewJob();
+    var detail = document.getElementById('cs-beta-detail');
+    if (detail && !detail.hidden) clearBetaSelection();
   });
 
   var betaDetailClose = document.getElementById('cs-beta-detail-close');
   if (betaDetailClose) {
     betaDetailClose.addEventListener('click', clearBetaSelection);
+  }
+  var betaDetailModal = document.getElementById('cs-beta-detail');
+  if (betaDetailModal) {
+    betaDetailModal.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-action="cs-beta-detail-close"]');
+      if (t) { e.preventDefault(); clearBetaSelection(); }
+    });
   }
 
   // Defensive: any row left with draggable="true" after a handle mousedown
@@ -2075,6 +2833,10 @@
   };
   function applyHashRoute() {
     var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();
+    if (!raw) {
+      try { raw = (window.localStorage.getItem(CS_TAB_STORAGE_KEY) || '').toLowerCase().trim(); }
+      catch (_) { raw = ''; }
+    }
     if (!raw) return;
     var key = betaHashAliases[raw];
     if (!key) return;

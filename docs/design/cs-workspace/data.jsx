@@ -9,13 +9,13 @@ const TECHS = [
 ];
 
 const STATUS = {
-  intake:    { label: 'Intake',     tone: 'sand' },
+  intake:    { label: 'Pending',    tone: 'sand' },
   scheduled: { label: 'Scheduled',  tone: 'info' },
   ready:     { label: 'Ready',      tone: 'sage' },
   inprog:    { label: 'In Progress',tone: 'arches' },
   blocked:   { label: 'Blocked',    tone: 'bad' },
   parts:     { label: 'Parts Hold', tone: 'warn' },
-  closeout:  { label: 'Ready for Closeout', tone: 'redwood' },
+  closeout:  { label: 'Ready to Close', tone: 'redwood' },
   build:     { label: 'Build Ready', tone: 'sage' },
 };
 

@@ -76,13 +76,13 @@ function DesignNotes() {
               'Remove the Workspace tab\'s legacy CS iframe entirely. Replaced by the detail panel.',
               'Remove the standalone Queue tab. Mark "removing" for one staging cycle, then delete.',
               'Remove "By Tech / All Jobs" toggle in the legacy table — grouping is the default now.',
-              'Remove duplicated header KPIs (Intake / Ready for Build / Ready for Closeout) — folded into the filter bar counts.',
+              'Remove duplicated header KPIs (Pending / Ready to Build / Ready to Close) — folded into the filter bar counts.',
               'Drop the right-side persistent edit drawer from the legacy iframe.',
             ]}/>
           </Card>
           <Card title="Keep from existing pages" accent="sage">
             <Bullets items={[
-              'Status & parts vocabulary — Intake, Scheduled, In Progress, Blocked, Parts Hold, Build Ready, Ready for Closeout.',
+              'Status & parts vocabulary — Pending, Scheduled, In Progress, Blocked, Parts Hold, Build Ready, Ready to Close.',
               'Tech grouping with per-tech queue numbers (the current Queue tab\'s core idea).',
               'Normalize Queue action — invaluable when queue numbers drift; promote to header.',
               'SO# / VIN / Salesperson identity fields — relocated into the detail panel.',

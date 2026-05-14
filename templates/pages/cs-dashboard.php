@@ -39,13 +39,21 @@ $health        = $payload['health'];
 $parts         = $payload['parts'];
 $qc            = $payload['qc'];
 $pickup        = $payload['pickup'];
+$drawer_seed   = $priorities[0] ?? [
+  'id'     => '',
+  'cust'   => '',
+  'status' => '',
+  'owner'  => '',
+  'action' => 'Open queue',
+  'detail' => 'Open the Job Queue to review live work.',
+];
 
 $pill_class_map = [
-  'parts'   => 'pill--parts',
-  'qc'      => 'pill--qc',
-  'pickup'  => 'pill--pickup',
-  'blocked' => 'pill--blocked',
-  'ready'   => 'pill--ready',
+  'parts'   => 'pill--danger',
+  'qc'      => 'pill--warn',
+  'pickup'  => 'pill--success',
+  'blocked' => 'pill--danger',
+  'ready'   => 'pill--success',
   'neutral' => 'pill--neutral',
 ];
 
@@ -78,7 +86,7 @@ $health_tone_class_map = [
           <button class="range-chip" data-range="week">This week</button>
           <button class="range-chip" data-range="all">All open</button>
         </div>
-        <button class="btn btn--secondary" id="refresh-btn" title="Refresh data">
+        <button class="slate-btn slate-btn--secondary" id="refresh-btn" title="Refresh data">
           <span class="material-symbols-outlined">refresh</span>
           <span id="refresh-label">Refreshed 2m ago</span>
         </button>
@@ -123,7 +131,7 @@ $health_tone_class_map = [
         <div class="ops-kpi__sub">Needs supervisor sign-off</div>
       </div>
       <div class="ops-kpi" data-kpi="pickup">
-        <div class="ops-kpi__label">Ready for Pickup</div>
+        <div class="ops-kpi__label">Awaiting Pickup</div>
         <div class="ops-kpi__value" data-target="<?php echo esc_attr((string) $kpis['pickup']); ?>"><?php echo esc_html((string) $kpis['pickup']); ?></div>
         <div class="ops-kpi__sub">Customer can be notified</div>
       </div>
@@ -174,7 +182,7 @@ $health_tone_class_map = [
         </table>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);">Click any row to view detail · <span class="kbd">↑</span> <span class="kbd">↓</span> to navigate</span>
-          <button class="ops-link" type="button" data-jump="queue" data-filter-target="all">View all open jobs <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="slate-btn slate-btn--secondary" type="button" data-jump="queue" data-filter-target="all">View all open jobs <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -199,7 +207,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);">Updated every 5 minutes</span>
-          <button class="ops-link" type="button" data-jump="queue" data-filter-target="blocked">Review blockers <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="slate-btn slate-btn--secondary" type="button" data-jump="queue" data-filter-target="blocked">Review blockers <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -229,7 +237,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['parts']); ?> jobs affected</span>
-          <button class="ops-link" type="button" data-jump="queue" data-filter-target="blocked">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="slate-btn slate-btn--secondary" type="button" data-jump="queue" data-filter-target="blocked">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -254,7 +262,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['qc']); ?> awaiting sign-off</span>
-          <button class="ops-link" type="button" data-jump="queue" data-filter-target="closeout">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="slate-btn slate-btn--secondary" type="button" data-jump="queue" data-filter-target="closeout">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -279,7 +287,7 @@ $health_tone_class_map = [
         </div>
         <div class="ops-card__foot">
           <span style="font-size:11px;color:var(--slate-ink-subtle);"><?php echo esc_html((string) $kpis['pickup']); ?> ready · 1 awaiting reply</span>
-          <button class="ops-link" type="button" data-jump="queue" data-filter-target="closeout">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
+          <button class="slate-btn slate-btn--secondary" type="button" data-jump="queue" data-filter-target="closeout">Open queue <span class="material-symbols-outlined">arrow_forward</span></button>
         </div>
       </div>
 
@@ -296,15 +304,15 @@ $health_tone_class_map = [
     <div class="ops-cs-workspace-beta cs-beta">
       <header class="cs-beta__header">
         <div class="cs-beta__actions">
-          <button type="button" class="btn btn--secondary" id="cs-beta-new" title="Create a new job (CS intake)">
+          <button type="button" class="slate-btn slate-btn--accent" id="cs-beta-new" title="Create a new job (CS intake)">
             <span class="material-symbols-outlined">add</span>
             New Job
           </button>
-          <button type="button" class="btn btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
+          <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
             <span class="material-symbols-outlined">low_priority</span>
             Normalize Order
           </button>
-          <button type="button" class="btn btn--secondary" id="cs-beta-refresh" title="Reload queue data">
+          <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-refresh" title="Reload queue data">
             <span class="material-symbols-outlined">refresh</span>
             Refresh
           </button>
@@ -315,12 +323,12 @@ $health_tone_class_map = [
             || (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'local');
           ?>
           <?php if ($cs_demo_local && current_user_can(Slate_Ops_Utils::CAP_ADMIN)) : ?>
-          <button type="button" class="btn btn--secondary cs-beta__demo-reset" id="cs-beta-demo-reset" title="Reset the local CS demo queue">
+          <button type="button" class="slate-btn slate-btn--secondary cs-beta__demo-reset" id="cs-beta-demo-reset" title="Reset the local CS demo queue">
             <span class="material-symbols-outlined">restart_alt</span>
             Reset demo
           </button>
           <?php endif; ?>
-          <button type="button" class="btn btn--primary" id="cs-beta-save" disabled>
+          <button type="button" class="slate-btn slate-btn--primary" id="cs-beta-save" disabled>
             <span class="material-symbols-outlined">save</span>
             <span id="cs-beta-save-label">Save Changes</span>
           </button>
@@ -333,19 +341,22 @@ $health_tone_class_map = [
           <input type="search" id="cs-beta-search" placeholder="Search jobs…" autocomplete="off">
         </label>
         <div class="cs-beta__chips" id="cs-beta-chips" role="tablist" aria-label="Filter queue">
-          <button type="button" class="cs-beta-chip is-active" data-filter="all" role="tab" aria-selected="true">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip is-active" data-filter="all" role="tab" aria-selected="true">
             <span>All</span><span class="cs-beta-chip__count" data-count="all">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="scheduled" role="tab" aria-selected="false">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="scheduled" role="tab" aria-selected="false">
             <span>Scheduled</span><span class="cs-beta-chip__count" data-count="scheduled">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="blocked" role="tab" aria-selected="false">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="blocked" role="tab" aria-selected="false">
             <span>Blocked</span><span class="cs-beta-chip__count" data-count="blocked">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
-            <span>Ready for Closeout</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
+            <span>Ready to Close</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
           </button>
-          <button type="button" class="cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="pickup" role="tab" aria-selected="false">
+            <span>Awaiting Pickup</span><span class="cs-beta-chip__count" data-count="pickup">0</span>
+          </button>
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
             <span>Unassigned</span><span class="cs-beta-chip__count" data-count="unassigned">0</span>
           </button>
         </div>
@@ -365,21 +376,24 @@ $health_tone_class_map = [
         Tech page surfaces only Current Job / Next Job / Up Next. CS owns the full queue order here; techs do not manage it.
       </div>
 
-      <aside class="cs-beta__detail" id="cs-beta-detail" hidden aria-label="Job detail">
-        <div class="cs-beta__detail-bar">
-          <div class="cs-beta__detail-id">
-            <span class="cs-beta__detail-eyebrow">Job Detail</span>
-            <span class="cs-beta__detail-job" id="cs-beta-detail-job">—</span>
-            <span class="cs-beta__detail-cust" id="cs-beta-detail-cust"></span>
+      <div class="cs-beta-modal cs-beta-job-modal" id="cs-beta-detail" hidden role="dialog" aria-modal="true" aria-labelledby="cs-beta-detail-job">
+        <div class="cs-beta-modal__backdrop" data-action="cs-beta-detail-close"></div>
+        <div class="cs-beta-modal__panel cs-beta-job-modal__panel" role="document">
+          <div class="cs-beta-modal__head cs-beta__detail-bar">
+            <div class="cs-beta__detail-id">
+              <span class="cs-beta__detail-eyebrow">Job Detail</span>
+              <span class="cs-beta__detail-job" id="cs-beta-detail-job">—</span>
+              <span class="cs-beta__detail-cust" id="cs-beta-detail-cust"></span>
+            </div>
+            <div class="cs-beta__detail-bar-actions">
+              <button type="button" class="cs-beta__detail-close" id="cs-beta-detail-close" data-action="cs-beta-detail-close" aria-label="Close detail">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
           </div>
-          <div class="cs-beta__detail-bar-actions">
-            <button type="button" class="cs-beta__detail-close" id="cs-beta-detail-close" aria-label="Close detail">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
+          <div class="cs-beta__detail-grid" id="cs-beta-detail-grid"></div>
         </div>
-        <div class="cs-beta__detail-grid" id="cs-beta-detail-grid"></div>
-      </aside>
+      </div>
     </div>
   </div>
 
@@ -391,8 +405,8 @@ $health_tone_class_map = [
   <div class="ops-drawer__head">
     <div>
       <div class="ops-drawer__title">Job Detail</div>
-      <h3 class="ops-drawer__job" id="drawer-job"><?php echo esc_html($priorities[0]['id']); ?></h3>
-      <div class="ops-drawer__cust" id="drawer-cust"><?php echo esc_html($priorities[0]['cust']); ?></div>
+      <h3 class="ops-drawer__job" id="drawer-job"><?php echo esc_html($drawer_seed['id']); ?></h3>
+      <div class="ops-drawer__cust" id="drawer-cust"><?php echo esc_html($drawer_seed['cust']); ?></div>
     </div>
     <button class="ops-drawer__close" id="drawer-close" aria-label="Close">
       <span class="material-symbols-outlined">close</span>
@@ -401,39 +415,31 @@ $health_tone_class_map = [
   <div class="ops-drawer__body">
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Status</span>
-      <span class="pill" id="drawer-pill"><?php echo esc_html($priorities[0]['status']); ?></span>
+      <span class="pill" id="drawer-pill"><?php echo esc_html($drawer_seed['status']); ?></span>
     </div>
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Action needed</span>
-      <div class="ops-drawer__text" id="drawer-action"><?php echo esc_html($priorities[0]['detail']); ?></div>
+      <div class="ops-drawer__text" id="drawer-action"><?php echo esc_html($drawer_seed['detail']); ?></div>
     </div>
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Job summary</span>
       <dl class="ops-drawer__kv" id="drawer-kv">
-        <dt>Owner</dt><dd id="drawer-owner"><?php echo esc_html($priorities[0]['owner']); ?></dd>
-        <dt>Opened</dt><dd>Apr 22, 2026</dd>
-        <dt>Promised</dt><dd>May 6, 2026</dd>
-        <dt>Workcenter</dt><dd>Bay 2 · Main floor</dd>
-        <dt>Last update</dt><dd id="drawer-update">2 hours ago — CS</dd>
+        <dt>Owner</dt><dd id="drawer-owner"><?php echo esc_html($drawer_seed['owner']); ?></dd>
+        <dt>Review location</dt><dd>Job Queue</dd>
+        <dt>Source</dt><dd>Live Ops jobs</dd>
       </dl>
     </div>
     <div class="ops-drawer__section">
       <span class="ops-drawer__label">Recent activity</span>
       <div class="ops-drawer__text" style="font-size:12px;line-height:1.7;">
-        <div>· Apr 28 — Parts ETA pushed by vendor (electrical kit)</div>
-        <div>· Apr 27 — Intake complete, scope confirmed by dealer</div>
-        <div>· Apr 26 — Job opened from dealer ticket #4421</div>
+        <div>Open the matching Job Queue filter to update status, blocker notes, parts, due date, and assignment.</div>
       </div>
     </div>
   </div>
   <div class="ops-drawer__foot">
-    <button class="btn btn--primary" id="drawer-action-btn">
+    <button class="slate-btn slate-btn--primary" id="drawer-action-btn">
       <span class="material-symbols-outlined">check</span>
-      <span id="drawer-action-btn-label"><?php echo esc_html($priorities[0]['action']); ?></span>
-    </button>
-    <button class="btn btn--secondary">
-      <span class="material-symbols-outlined">edit_note</span>
-      Add note
+      <span id="drawer-action-btn-label"><?php echo esc_html($drawer_seed['action']); ?></span>
     </button>
   </div>
 </aside>
@@ -529,8 +535,8 @@ $health_tone_class_map = [
       </div>
 
       <footer class="cs-beta-modal__foot">
-        <button type="button" class="btn btn--secondary" data-action="cs-beta-newjob-close">Cancel</button>
-        <button type="submit" class="btn btn--primary" id="cs-beta-newjob-submit">
+        <button type="button" class="slate-btn slate-btn--secondary" data-action="cs-beta-newjob-close">Cancel</button>
+        <button type="submit" class="slate-btn slate-btn--primary" id="cs-beta-newjob-submit">
           <span class="material-symbols-outlined">add</span>
           <span id="cs-beta-newjob-submit-label">Create Job</span>
         </button>

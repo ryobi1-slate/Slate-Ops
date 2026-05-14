@@ -1,6 +1,6 @@
 <?php
 /**
- * Renders the Slate Ops version badge.
+ * Renders the Slate OPS version badge.
  *
  * Reads version via slate_ops_get_version() which prefers VERSION.txt over the
  * plugin header constant, so a file-based deploy can update it without editing PHP.
@@ -10,6 +10,6 @@
  */
 if (!defined('ABSPATH')) exit;
 ?>
-<div class="ops-version-badge" aria-label="Slate Ops version">
-  <strong>Slate Ops</strong> v<?php echo esc_html(slate_ops_get_version()); ?>
+<div class="ops-version-badge" aria-label="Slate OPS version">
+  <strong>Slate OPS</strong> v<?php echo esc_html(slate_ops_get_version()); ?>
 </div>
