@@ -20,8 +20,8 @@
     var showBlockedReasons = rolloutMode !== 'PHASE_1_TIMER_HABIT';
     return new Promise(function (resolve) {
       var NORMAL_REASONS = [
-        ['END_OF_SHIFT', 'End of shift', 'Pause and continue later.', false],
-        ['SWITCH_JOB', 'Switching to another job', 'Priority changed or tech was redirected.', true]
+        ['END_OF_SHIFT', 'End of shift', 'Stop timer now.', false],
+        ['SWITCH_JOB', 'Switching to another job', 'Choose the next job when known.', false]
       ];
       var BLOCKED_REASONS = [
         ['WAITING_ON_PARTS', 'Waiting on parts', 'Parts are missing, wrong, damaged, or not staged.'],
@@ -102,7 +102,7 @@
               '</div>' +
               (targetOptions
                 ? '<div class="ops-pw-field" id="ops-pw-target-field" hidden>' +
-                    '<label class="ops-pw-label" for="ops-pw-target-job">Switch target <span class="ops-pw-optional">(optional)</span></label>' +
+                    '<label class="ops-pw-label" for="ops-pw-target-job">Next job <span class="ops-pw-required">(required)</span></label>' +
                     '<select id="ops-pw-target-job" class="ops-pw-select"><option value="">Select job...</option>' + targetOptions + '</select>' +
                   '</div>'
                 : '') +
@@ -168,9 +168,20 @@
         return checked ? checked.value : '';
       }
 
+      function selectedTargetLabel() {
+        if (!targetJobEl || !targetJobEl.value) return '';
+        return targetJobEl.options[targetJobEl.selectedIndex].text.replace(/\s+/g, ' ').trim();
+      }
+
+      function switchNeedsTypedNote() {
+        return selectedReason === 'SWITCH_JOB' && !selectedTargetLabel();
+      }
+
       function isComplete() {
         if (!selectedReason) return false;
         var meta = reasonMeta[selectedReason] || {};
+        if (selectedReason === 'SWITCH_JOB' && targetFieldEl && !selectedTargetLabel()) return false;
+        if (switchNeedsTypedNote() && !noteEl.value.trim()) return false;
         if (meta.noteRequired && !noteEl.value.trim()) return false;
         if (meta.blocked && !selectedScope()) return false;
         if (
@@ -232,15 +243,32 @@
         btn.addEventListener('click', function () {
           selectedReason = btn.getAttribute('data-reason') || '';
           var meta = reasonMeta[selectedReason] || {};
+          var isSwitch = selectedReason === 'SWITCH_JOB';
           overlay.querySelectorAll('.ops-pw-choice').forEach(function (b) {
             b.classList.toggle('is-selected', b === btn);
             b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
           });
-          noteFieldEl.hidden = !meta.noteRequired;
-          noteStateEl.textContent = meta.noteRequired ? '(required)' : '(optional)';
-          noteStateEl.className = meta.noteRequired ? 'ops-pw-required' : 'ops-pw-optional';
+          if (selectedReason === 'END_OF_SHIFT' && !needsAfterHoursNote()) {
+            done({
+              pause_reason: selectedReason,
+              pause_note: '',
+              pause_type: 'paused',
+              source: 'tech_manual',
+              blocked: false,
+              requires_clearance: false,
+              after_hours: false,
+              after_hours_note: '',
+              overtime_note: '',
+              other_work_can_continue: null,
+              target_job_id: 0
+            });
+            return;
+          }
+          noteFieldEl.hidden = !(meta.noteRequired || isSwitch);
+          noteStateEl.textContent = meta.noteRequired || switchNeedsTypedNote() ? '(required)' : '(optional)';
+          noteStateEl.className = meta.noteRequired || switchNeedsTypedNote() ? 'ops-pw-required' : 'ops-pw-optional';
           blockScopeEl.hidden = !meta.blocked;
-          if (targetFieldEl) targetFieldEl.hidden = selectedReason !== 'SWITCH_JOB';
+          if (targetFieldEl) targetFieldEl.hidden = !isSwitch;
           afterFieldEl.hidden = !needsAfterHoursNote();
           placeDetailsAfter(btn, meta);
           errEl.hidden = true;
@@ -251,6 +279,13 @@
       [noteEl, afterNoteEl].forEach(function (el) {
         if (el) el.addEventListener('input', updateSubmit);
       });
+      if (targetJobEl) {
+        targetJobEl.addEventListener('change', function () {
+          noteStateEl.textContent = switchNeedsTypedNote() ? '(required)' : '(optional)';
+          noteStateEl.className = switchNeedsTypedNote() ? 'ops-pw-required' : 'ops-pw-optional';
+          updateSubmit();
+        });
+      }
       overlay.querySelectorAll('input[name="ops-pw-scope"]').forEach(function (el) {
         el.addEventListener('change', updateSubmit);
       });
@@ -269,9 +304,20 @@
           setError('Select a pause reason.', overlay.querySelector('.ops-pw-choice'));
           return;
         }
+        if (selectedReason === 'SWITCH_JOB' && targetFieldEl && !selectedTargetLabel()) {
+          setError('Choose the next job.', targetJobEl);
+          return;
+        }
+        if (switchNeedsTypedNote() && !note) {
+          setError('Add a short note for this switch.', noteEl);
+          return;
+        }
         if (meta.noteRequired && !note) {
           setError('Add a short note for this reason.', noteEl);
           return;
+        }
+        if (selectedReason === 'SWITCH_JOB' && !note) {
+          note = 'Switched to ' + selectedTargetLabel() + '.';
         }
         if (meta.blocked && !scope) {
           setError('Choose whether other work can continue.', overlay.querySelector('input[name="ops-pw-scope"]'));
