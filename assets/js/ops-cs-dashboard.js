@@ -1626,7 +1626,7 @@
       + '</section>'
 
       + '<section class="cs-beta-detail-section cs-beta-detail-section--wide">'
-      +   '<h4 class="cs-beta-detail-section__title">Queue Note <span class="cs-beta-detail-section__hint">visible to Tech</span></h4>'
+      +   '<h4 class="cs-beta-detail-section__title">Job Notes <span class="cs-beta-detail-section__hint">visible to Tech</span></h4>'
       +   '<textarea class="cs-beta-detail-note' + ec('queue_note') + '" data-field="queue_note" maxlength="240" placeholder="Add a short note for the tech…">' + escapeHtml(betaFieldValue(id, 'queue_note')) + '</textarea>'
       + '</section>'
 

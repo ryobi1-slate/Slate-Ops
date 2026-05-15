@@ -524,7 +524,7 @@ $health_tone_class_map = [
         </label>
 
         <label class="cs-beta-field cs-beta-field--span4">
-          <span class="cs-beta-field__label">Queue Note<span class="cs-beta-field__hint">visible to Tech, optional</span></span>
+          <span class="cs-beta-field__label">Job Notes<span class="cs-beta-field__hint">visible to Tech, optional</span></span>
           <textarea class="cs-beta-field__input" name="queue_note" rows="2" maxlength="240" placeholder="Short instruction or context for the technician…"></textarea>
         </label>
 
