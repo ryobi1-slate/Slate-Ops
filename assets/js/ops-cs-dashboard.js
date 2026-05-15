@@ -2683,7 +2683,7 @@
       parts_status:     val('parts_status') || 'NOT_READY',
       requested_date:   val('requested_date'),
       sales_person:     val('sales_person'),
-      job_description:  val('job_description'),
+      queue_note:       val('queue_note'),
       notes:            val('notes')
     };
 

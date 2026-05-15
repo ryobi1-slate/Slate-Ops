@@ -2270,6 +2270,7 @@ foreach ($rows as &$r) {
     }
 
     $sales_person = sanitize_text_field($body['sales_person'] ?? '');
+    $queue_note = sanitize_textarea_field($body['queue_note'] ?? '');
     $notes = sanitize_textarea_field($body['notes'] ?? '');
     $notes_type = sanitize_key($body['notes_type'] ?? '');
     if ($notes !== '' && $notes_type === 'parts' && stripos($notes, 'Parts:') !== 0) {
@@ -2301,6 +2302,7 @@ foreach ($rows as &$r) {
       'estimated_minutes' => $estimated_minutes,
       'requested_date' => $requested_date ?: null,
       'sales_person' => $sales_person ?: null,
+      'queue_note' => $queue_note ?: null,
       'notes' => $notes ?: null,
       'scope_summary' => $scope_summary ?: null,
       'queue_order'    => $queue_order,
