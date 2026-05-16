@@ -92,21 +92,14 @@
   window.__slateOpsPauseWork = function (options) {
     options = options || {};
     var afterHoursRequired = !!(options.afterHoursRequired || options.overtimeRequired);
-    var rolloutMode = options.rolloutMode || (window.slateOpsSettings && window.slateOpsSettings.tech_rollout_mode) || 'PHASE_1_TIMER_HABIT';
-    var showBlockedReasons = rolloutMode !== 'PHASE_1_TIMER_HABIT';
     return new Promise(function (resolve) {
       var NORMAL_REASONS = [
-        ['END_OF_SHIFT', 'End of shift', 'Stop timer now.', false],
-        ['SWITCH_JOB', 'Switching to another job', 'Choose the next job when known.', false]
-      ];
-      var BLOCKED_REASONS = [
-        ['WAITING_ON_PARTS', 'Waiting on parts', 'Parts are missing, wrong, damaged, or not staged.'],
-        ['TECH_SUPPORT_NEEDED', 'Tech support needed', 'Another tech or supervisor needs to help resolve an install issue.'],
-        ['VEHICLE_ISSUE', 'Vehicle issue', 'Vehicle condition is stopping work.'],
-        ['CUSTOMER_DEALER_QUESTION', 'Customer / dealer question', 'CS needs clarification before work continues.'],
-        ['SCOPE_OR_JOB_ISSUE', 'Scope or job issue', 'Quote, SO, job details, or requested work do not match.'],
-        ['QUALITY_REWORK_ISSUE', 'Quality / rework issue', 'A quality issue needs correction before work continues.'],
-        ['OTHER_ISSUE', 'Other issue', 'Use only if none of the above fit.']
+        ['END_OF_SHIFT', 'End of shift', 'Clock out and stop labor.', false, false, 'END_OF_SHIFT'],
+        ['SWITCH_JOB', 'Switching jobs', 'Pause here and move to another assigned job.', false, true, 'SWITCH_JOB'],
+        ['HELPING_TECH', 'Helping another technician', 'Pause this job while you help nearby.', false, true, 'SWITCH_JOB'],
+        ['BREAK_LUNCH', 'Break/lunch', 'Step away and resume after break.', false, true, 'SWITCH_JOB'],
+        ['WAITING_BRIEFLY', 'Waiting briefly', 'Short pause without escalation.', false, true, 'SWITCH_JOB'],
+        ['OTHER_PAUSE', 'Other', 'Use a quick note if helpful.', false, true, 'SWITCH_JOB']
       ];
       var reasonMeta = {};
 
@@ -124,6 +117,8 @@
           label: reason[1],
           group: group,
           noteRequired: !!noteRequired,
+          showNote: !!reason[4],
+          backendReason: reason[5] || reason[0],
           blocked: group === 'blocked'
         };
         return '<button type="button" class="ops-pw-choice" data-reason="' + esc(reason[0]) + '">' +
@@ -135,9 +130,6 @@
       var normalButtons = NORMAL_REASONS.map(function (reason) {
         return reasonButton(reason, 'pause', reason[3]);
       }).join('');
-      var blockedButtons = BLOCKED_REASONS.map(function (reason) {
-        return reasonButton(reason, 'blocked', true);
-      }).join('');
       var switchTargets = Array.isArray(options.switchTargets) ? options.switchTargets : [];
       var targetOptions = switchTargets.map(function (job) {
         var id = parseInt(job.job_id || job.id || 0, 10);
@@ -148,25 +140,21 @@
       }).join('');
 
       var overlay = document.createElement('div');
-      overlay.className = 'ops-pw-overlay';
+      overlay.className = 'ops-pw-overlay ops-pw-overlay--pause';
       overlay.innerHTML =
-        '<div class="ops-pw-modal" role="dialog" aria-modal="true" aria-labelledby="ops-pw-title">' +
+        '<div class="ops-pw-modal ops-pw-modal--pause" role="dialog" aria-modal="true" aria-labelledby="ops-pw-title">' +
           '<div class="ops-pw-head">' +
             '<div>' +
               '<h2 id="ops-pw-title" class="ops-pw-title">Pause work</h2>' +
-              '<p class="ops-pw-body">Select why this job is stopping.</p>' +
+              '<p class="ops-pw-body">Choose a quick reason. Add a note only if it helps the next step.</p>' +
             '</div>' +
             '<button id="ops-pw-x" type="button" class="ops-pw-x" aria-label="Cancel">&times;</button>' +
           '</div>' +
           '<div class="ops-pw-content">' +
             '<section class="ops-pw-section">' +
-              '<h3 class="ops-pw-section-title">Normal pause</h3>' +
-              '<div class="ops-pw-choices" role="listbox" aria-label="Normal pause reason">' + normalButtons + '</div>' +
+              '<h3 class="ops-pw-section-title">Reason</h3>' +
+              '<div class="ops-pw-choices" role="listbox" aria-label="Pause reason">' + normalButtons + '</div>' +
             '</section>' +
-            (showBlockedReasons ? '<section class="ops-pw-section">' +
-              '<h3 class="ops-pw-section-title">Blocked - needs action</h3>' +
-              '<div class="ops-pw-choices" role="listbox" aria-label="Blocked reason">' + blockedButtons + '</div>' +
-            '</section>' : '') +
             '<div id="ops-pw-err" class="ops-pw-field-err" hidden>Select a pause reason.</div>' +
             '<div id="ops-pw-detail-fields" class="ops-pw-detail-fields" hidden>' +
               '<div class="ops-pw-field" id="ops-pw-block-scope" hidden>' +
@@ -186,7 +174,7 @@
                 '<label class="ops-pw-label" for="ops-pw-note">' +
                   'Note <span id="ops-pw-note-state" class="ops-pw-optional">(optional)</span>' +
                 '</label>' +
-                '<textarea id="ops-pw-note" class="ops-pw-textarea" placeholder="Add details..." rows="3"></textarea>' +
+                '<textarea id="ops-pw-note" class="ops-pw-textarea" placeholder="Optional note for this pause..." rows="3"></textarea>' +
               '</div>' +
               '<div class="ops-pw-field" id="ops-pw-after-field" hidden>' +
                 '<label class="ops-pw-label" for="ops-pw-after-note">After-hours note <span class="ops-pw-required">(required)</span></label>' +
@@ -253,6 +241,23 @@
         return selectedReason === 'SWITCH_JOB' && !targetFieldEl;
       }
 
+      function selectedBackendReason() {
+        var meta = reasonMeta[selectedReason] || {};
+        return meta.backendReason || selectedReason;
+      }
+
+      function selectedUiLabel() {
+        var meta = reasonMeta[selectedReason] || {};
+        return meta.label || selectedReason;
+      }
+
+      function formattedPauseNote(note) {
+        var backendReason = selectedBackendReason();
+        if (!selectedReason || selectedReason === backendReason) return note;
+        var label = selectedUiLabel();
+        return note ? label + ' - ' + note : label;
+      }
+
       function isComplete() {
         if (!selectedReason) return false;
         var meta = reasonMeta[selectedReason] || {};
@@ -285,6 +290,7 @@
       function placeDetailsAfter(btn, meta) {
         var shouldShowDetails = !!(
           meta.noteRequired ||
+          meta.showNote ||
           meta.blocked ||
           selectedReason === 'SWITCH_JOB' ||
           needsAfterHoursNote()
@@ -326,7 +332,7 @@
           });
           if (selectedReason === 'END_OF_SHIFT' && !needsAfterHoursNote()) {
             done({
-              pause_reason: selectedReason,
+              pause_reason: selectedBackendReason(),
               pause_note: '',
               pause_type: 'paused',
               source: 'tech_manual',
@@ -340,7 +346,7 @@
             });
             return;
           }
-          noteFieldEl.hidden = !(meta.noteRequired || isSwitch);
+          noteFieldEl.hidden = !(meta.noteRequired || meta.showNote || isSwitch);
           noteStateEl.textContent = meta.noteRequired || switchNeedsTypedNote() ? '(required)' : '(optional)';
           noteStateEl.className = meta.noteRequired || switchNeedsTypedNote() ? 'ops-pw-required' : 'ops-pw-optional';
           blockScopeEl.hidden = !meta.blocked;
@@ -395,6 +401,7 @@
         if (selectedReason === 'SWITCH_JOB' && !note) {
           note = 'Switched to ' + selectedTargetLabel() + '.';
         }
+        note = formattedPauseNote(note);
         if (meta.blocked && !scope) {
           setError('Choose whether other work can continue.', overlay.querySelector('input[name="ops-pw-scope"]'));
           return;
@@ -407,7 +414,7 @@
           return;
         }
         done({
-          pause_reason: selectedReason,
+          pause_reason: selectedBackendReason(),
           pause_note: note,
           pause_type: meta.blocked ? 'blocked' : 'paused',
           source: 'tech_manual',
