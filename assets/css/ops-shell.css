@@ -1728,6 +1728,201 @@ body.slate-ops.ops-page-tech #slate-ops-app.ops-shell {
   -webkit-line-clamp: 2;
 }
 
+/* ─── 15. Tech screen: Active Labor card V1 polish ─────────────────
+ * Visual-only refinements for the current React markup. These selectors
+ * intentionally target the first Tech section so queue/help markup and
+ * behavior stay untouched for this release slice.
+ */
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div:first-child {
+  color: var(--slate-ink-muted) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.11em !important;
+  margin-bottom: 10px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white {
+  border: 1px solid rgba(15, 52, 42, 0.12) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 12px 34px rgba(15, 52, 42, 0.10) !important;
+  overflow: hidden !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child {
+  border-bottom-color: rgba(15, 52, 42, 0.10) !important;
+  padding: 18px 18px 16px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:first-child {
+  align-items: flex-start !important;
+  gap: 14px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:first-child > div:first-child {
+  min-width: 0 !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:first-child > div:first-child > div:first-child {
+  color: var(--sage) !important;
+  font-family: var(--font-mono);
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.07em !important;
+  line-height: 1.2 !important;
+  margin-bottom: 5px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:first-child > div:first-child > div:nth-child(2) {
+  color: var(--slate-ink) !important;
+  font-size: clamp(24px, 7vw, 34px) !important;
+  font-weight: 760 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.05 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:first-child > div:first-child > div:nth-child(3) {
+  color: var(--slate-ink-muted) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.09em !important;
+  margin-top: 8px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:first-child > span {
+  background: rgba(47, 62, 57, 0.10) !important;
+  border-color: rgba(47, 62, 57, 0.18) !important;
+  color: var(--sage) !important;
+  flex: 0 0 auto !important;
+  margin-top: 1px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:nth-child(2) {
+  background: var(--slate-redwood) !important;
+  border-radius: 14px !important;
+  box-shadow: inset 0 0 0 1px rgba(225, 223, 200, 0.08) !important;
+  margin-top: 16px !important;
+  padding: 18px 18px 16px !important;
+  text-align: left !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:nth-child(2) > div:first-child {
+  color: rgba(225, 223, 200, 0.62) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.12em !important;
+  margin-bottom: 8px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:nth-child(2) > div:nth-child(2) {
+  color: var(--slate-sand) !important;
+  font-size: clamp(56px, 15vw, 82px) !important;
+  font-weight: 720 !important;
+  letter-spacing: 0 !important;
+  line-height: 0.95 !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:nth-child(2) > div:nth-child(3) {
+  justify-content: flex-start !important;
+  margin-top: 14px !important;
+  padding-top: 12px !important;
+}
+
+.ops-page-tech #ops-view .slate-job-progress {
+  background: rgba(47, 62, 57, 0.045);
+  border: 1px solid rgba(47, 62, 57, 0.09);
+  border-radius: 14px;
+  margin: 14px 18px 0;
+  padding: 12px;
+}
+
+.ops-page-tech #ops-view .slate-job-progress__row {
+  align-items: baseline;
+  border-bottom: 1px solid rgba(47, 62, 57, 0.07);
+  gap: 14px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+
+.ops-page-tech #ops-view .slate-job-progress__row:last-of-type {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ops-page-tech #ops-view .slate-job-progress__label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.ops-page-tech #ops-view .slate-job-progress__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.ops-page-tech #ops-view .slate-progress-bar {
+  background: rgba(47, 62, 57, 0.14);
+  height: 8px;
+  margin-top: 12px;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:last-child {
+  display: grid !important;
+  gap: 10px !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  padding: 16px 18px 18px !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:last-child .slate-work-btn {
+  border-radius: 14px !important;
+  min-height: 64px !important;
+  padding: 14px 16px !important;
+  width: 100% !important;
+}
+
+.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:last-child .slate-work-btn[aria-label="Notes"] {
+  min-width: 64px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+@media (max-width: 560px) {
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white {
+    border-radius: 20px !important;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child {
+    padding: 16px 16px 14px !important;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:first-child {
+    flex-direction: column !important;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:first-child > div:nth-child(2) {
+    padding: 16px !important;
+  }
+
+  .ops-page-tech #ops-view .slate-job-progress {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:last-child {
+    grid-template-columns: 1fr !important;
+    padding: 14px 16px 16px !important;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:last-child .slate-work-btn {
+    flex-direction: row !important;
+    min-height: 54px !important;
+  }
+
+  .ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div.bg-white > div:last-child .slate-work-btn .material-symbols-outlined {
+    display: inline-flex !important;
+  }
+}
+
 /* ─── 15. Tech screen: slate-work-btn system ────────────────────────
  * Base + variant classes for the Tech page work-action buttons.
  * Base sets shape/layout; variants add color.
