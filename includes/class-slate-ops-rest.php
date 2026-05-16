@@ -235,6 +235,12 @@ class Slate_Ops_REST {
         'callback' => [__CLASS__, 'submit_qc'],
       ]);
 
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/closeout/submit', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_submit_qc'],
+        'callback' => [__CLASS__, 'submit_qc'],
+      ]);
+
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/review', [
         'methods' => 'POST',
         'permission_callback' => [__CLASS__, 'perm_review_qc'],
@@ -2772,8 +2778,8 @@ return self::get_job(['id' => $job_id]);
   }
 
   /**
-   * Tech submits job for QC review.
-   * POST /jobs/{id}/qc/submit  { notes }
+   * Tech marks job ready for CS closeout.
+   * POST /jobs/{id}/closeout/submit  { notes }
    */
   public static function submit_qc($req) {
     global $wpdb;
@@ -2786,16 +2792,24 @@ return self::get_job(['id' => $job_id]);
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-    if ($job['status'] !== 'IN_PROGRESS') {
-      return new WP_Error('invalid_state', 'Job must be In Progress to submit for QC', ['status' => 422]);
+    $user_id = get_current_user_id();
+    $job_status = Slate_Ops_Statuses::normalize((string)($job['status'] ?? ''));
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $has_active_timer = (bool) $wpdb->get_var($wpdb->prepare(
+      "SELECT 1 FROM $segments WHERE user_id=%d AND job_id=%d AND end_ts IS NULL AND state='active' LIMIT 1",
+      $user_id,
+      $job_id
+    ));
+
+    if ($job_status !== Slate_Ops_Statuses::IN_PROGRESS && !$has_active_timer) {
+      return new WP_Error('invalid_state', 'Job must be In Progress or actively timed to mark ready for closeout.', ['status' => 422]);
     }
 
-    $user_id = get_current_user_id();
     $assigned_id = (int)($job['assigned_user_id'] ?? 0);
-    $can_submit_for_qc = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+    $can_submit_for_closeout = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
       || current_user_can(Slate_Ops_Utils::CAP_ADMIN)
       || ($assigned_id > 0 && $assigned_id === $user_id);
-    if (!$can_submit_for_qc) {
+    if (!$can_submit_for_closeout) {
       return new WP_Error('assigned_tech_required', 'Only the assigned tech can finish this job.', ['status' => 403]);
     }
 
@@ -2806,10 +2820,10 @@ return self::get_job(['id' => $job_id]);
     // Auto-stop any active timer for this user on this job.
     self::stop_active_timer_for_job($user_id, $job_id);
 
-    // Create QC record.
+    // Create a lightweight handoff record for closeout history.
     $wpdb->insert($qc, [
       'job_id'      => $job_id,
-      'checkpoint'  => 'TECH_QC',
+      'checkpoint'  => 'TECH_CLOSEOUT',
       'result'      => 'SUBMITTED',
       'checked_by'  => $user_id,
       'notes'       => $notes,
@@ -2817,14 +2831,14 @@ return self::get_job(['id' => $job_id]);
       'created_at'  => $now,
     ]);
 
-    // Transition job to QC (v2; was PENDING_QC).
+    // Transition job to Ready to Close.
     $wpdb->update($t, [
       'status'            => Slate_Ops_Statuses::QC,
       'status_updated_at' => $now,
       'updated_at'        => $now,
     ], ['job_id' => $job_id]);
 
-    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::QC, 'QC submitted: ' . $notes);
+    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::QC, 'Ready for closeout: ' . $notes);
 
     $updated = self::job_by_id($job_id);
     self::maybe_push_dealer_portal_status($updated);

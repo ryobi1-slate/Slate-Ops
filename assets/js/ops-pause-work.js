@@ -13,6 +13,82 @@
     }, 3500);
   };
 
+  window.__slateOpsConfirmCloseout = function () {
+    return new Promise(function (resolve) {
+      var overlay = document.createElement('div');
+      overlay.className = 'ops-pw-overlay';
+      overlay.innerHTML =
+        '<div class="ops-pw-modal" role="dialog" aria-modal="true" aria-labelledby="ops-closeout-title">' +
+          '<div class="ops-pw-head">' +
+            '<div>' +
+              '<h2 id="ops-closeout-title" class="ops-pw-title">Ready for closeout?</h2>' +
+              '<p class="ops-pw-body">This will stop active labor and send the job to CS closeout.</p>' +
+            '</div>' +
+            '<button id="ops-closeout-x" type="button" class="ops-pw-x" aria-label="Cancel">&times;</button>' +
+          '</div>' +
+          '<div class="ops-pw-actions">' +
+            '<button id="ops-closeout-cancel" type="button" class="ops-pw-btn ops-pw-btn--cancel">Cancel</button>' +
+            '<button id="ops-closeout-confirm" type="button" class="ops-pw-btn ops-pw-btn--primary">Ready for closeout</button>' +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(overlay);
+      document.body.classList.add('ops-pw-open');
+
+      var modal = overlay.querySelector('.ops-pw-modal');
+      var cancelEl = overlay.querySelector('#ops-closeout-cancel');
+      var xEl = overlay.querySelector('#ops-closeout-x');
+      var confirmEl = overlay.querySelector('#ops-closeout-confirm');
+      var FOCUSABLE = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
+
+      function done(result) {
+        overlay.remove();
+        document.body.classList.remove('ops-pw-open');
+        document.removeEventListener('keydown', onKey);
+        resolve(result);
+      }
+
+      function getFocusable() {
+        return Array.prototype.slice.call(modal.querySelectorAll(FOCUSABLE));
+      }
+
+      function onKey(e) {
+        if (e.key === 'Escape') {
+          done(false);
+          return;
+        }
+        if (e.key === 'Enter') {
+          done(true);
+          return;
+        }
+        if (e.key !== 'Tab') return;
+
+        var focusable = getFocusable();
+        if (!focusable.length) {
+          e.preventDefault();
+          return;
+        }
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+
+      cancelEl.addEventListener('click', function () { done(false); });
+      xEl.addEventListener('click', function () { done(false); });
+      confirmEl.addEventListener('click', function () { done(true); });
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) done(false); });
+      document.addEventListener('keydown', onKey);
+
+      setTimeout(function () { confirmEl.focus(); }, 50);
+    });
+  };
+
   window.__slateOpsPauseWork = function (options) {
     options = options || {};
     var afterHoursRequired = !!(options.afterHoursRequired || options.overtimeRequired);
@@ -174,7 +250,7 @@
       }
 
       function switchNeedsTypedNote() {
-        return selectedReason === 'SWITCH_JOB' && !selectedTargetLabel();
+        return selectedReason === 'SWITCH_JOB' && !targetFieldEl;
       }
 
       function isComplete() {
