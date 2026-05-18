@@ -26,6 +26,23 @@ html {
   overflow-y: auto;
 }
 
+body.slate-ops.ops-page-tech .ops-tech-readonly-banner {
+  margin: 16px auto 0;
+  max-width: min(1040px, calc(100vw - 32px));
+  border: 1px solid rgba(64, 79, 75, .22);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1f2d29;
+  font-size: .86rem;
+  font-weight: 650;
+  line-height: 1.35;
+  padding: 10px 12px;
+}
+
+body.slate-ops.ops-page-tech.ops-tech-readonly .ops-tech-readonly-action {
+  display: none !important;
+}
+
 @media (max-width: 900px),
        (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
 

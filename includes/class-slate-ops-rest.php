@@ -2966,7 +2966,7 @@ return self::get_job(['id' => $job_id]);
       if ((int)$open['job_id'] === $job_id) {
         return ['segment_id' => (int)$open['segment_id'], 'job_id' => $job_id, 'started_at' => $open['start_ts']];
       }
-      return new WP_Error('timer_conflict', 'You already have an active timer on another job. Pause it before starting a new one.', ['status' => 409]);
+      return new WP_Error('timer_conflict', 'You already have an active timer on another job. Use Pause work, then Switching to another job.', ['status' => 409]);
     }
 
     // Reason required when not assigned (and assignment exists).
@@ -3095,6 +3095,53 @@ return self::get_job(['id' => $job_id]);
       );
     }
 
+    $switch_target_job = null;
+    if ($pause_reason === 'SWITCH_JOB') {
+      if ($target_job_id <= 0) {
+        return new WP_Error('switch_target_required', 'Choose the next job before switching.', ['status' => 422]);
+      }
+      if ($target_job_id === (int)$open['job_id']) {
+        return new WP_Error('invalid_switch_target', 'Choose a different job before switching.', ['status' => 422]);
+      }
+
+      $switch_target_job = self::job_by_id($target_job_id);
+      if (!$switch_target_job) {
+        return new WP_Error('switch_target_not_found', 'Next job not found.', ['status' => 404]);
+      }
+
+      $startable = [
+        Slate_Ops_Statuses::READY_FOR_BUILD,
+        Slate_Ops_Statuses::SCHEDULED,
+        Slate_Ops_Statuses::IN_PROGRESS,
+        Slate_Ops_Statuses::QUEUED,
+      ];
+      $target_status = Slate_Ops_Statuses::normalize((string)($switch_target_job['status'] ?? ''));
+      if (!in_array($target_status, array_map([Slate_Ops_Statuses::class, 'normalize'], $startable), true)) {
+        return new WP_Error('invalid_switch_target_status', 'Next job cannot be started in its current status.', ['status' => 422]);
+      }
+
+      $target_parts_status = strtoupper((string)($switch_target_job['parts_status'] ?? ''));
+      if (in_array($target_parts_status, ['NOT_READY', 'HOLD'], true)) {
+        $msg = $target_parts_status === 'HOLD'
+          ? 'Cannot switch to a job while parts are on hold.'
+          : 'Cannot switch to a job while parts are not ready.';
+        return new WP_Error('switch_target_parts_blocked', $msg, [
+          'status'       => 422,
+          'field'        => 'parts_status',
+          'parts_status' => $target_parts_status,
+        ]);
+      }
+
+      $other_open = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' AND segment_id<>%d ORDER BY start_ts DESC LIMIT 1",
+        $user_id,
+        (int)$open['segment_id']
+      ), ARRAY_A);
+      if ($other_open) {
+        return new WP_Error('timer_conflict', 'You already have another active timer. Pause it before switching jobs.', ['status' => 409]);
+      }
+    }
+
     $update = [
       'end_ts'     => $effective_stop,
       'source'     => $source,
@@ -3199,7 +3246,62 @@ return self::get_job(['id' => $job_id]);
 
     Slate_Ops_Jobs::recompute_actuals((int) $open['job_id']);
 
-    return [
+    $switch_result = null;
+    if ($switch_target_job) {
+      $target_status = Slate_Ops_Statuses::normalize((string)($switch_target_job['status'] ?? ''));
+      $assigned = (int)($switch_target_job['assigned_user_id'] ?? 0);
+      $switch_reason = ($assigned && $assigned !== $user_id) ? 'helping_assigned_tech' : null;
+      $target_note = $pause_note !== '' ? $pause_note : 'Switched from job #' . (int)$open['job_id'] . '.';
+
+      $wpdb->insert($segments, [
+        'job_id' => $target_job_id,
+        'user_id' => $user_id,
+        'start_ts' => $now,
+        'end_ts' => null,
+        'reason' => $switch_reason,
+        'note' => $target_note,
+        'source' => 'timer',
+        'state' => 'active',
+        'approval_status' => 'approved',
+        'created_by' => $user_id,
+        'created_at' => $now,
+        'updated_at' => $now,
+      ]);
+
+      $switch_segment_id = (int)$wpdb->insert_id;
+      self::audit('segment', $switch_segment_id, 'create', null, null, wp_json_encode(['job_id' => $target_job_id, 'user_id' => $user_id]), 'Timer started by switch job');
+
+      $shift_state = self::get_shift_window_state($now);
+      if (empty($shift_state['within_shift'])) {
+        self::audit('segment', $switch_segment_id, 'note', null, null, null, 'Timer started outside scheduled shift.');
+        self::audit('job', $target_job_id, 'note', null, null, null, 'Timer started outside scheduled shift.');
+      }
+
+      if (!in_array($target_status, [Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::QC, Slate_Ops_Statuses::AWAITING_PICKUP, Slate_Ops_Statuses::COMPLETE], true)) {
+        $wpdb->update($jobs, [
+          'status'            => Slate_Ops_Statuses::IN_PROGRESS,
+          'status_detail'     => null,
+          'status_updated_at' => $now,
+          'updated_at'        => $now,
+        ], ['job_id' => $target_job_id]);
+        self::audit('job', $target_job_id, 'update', 'status', $switch_target_job['status'], Slate_Ops_Statuses::IN_PROGRESS, 'Auto set by switch job');
+      } elseif (strpos((string)($switch_target_job['status_detail'] ?? ''), 'Paused - ') === 0) {
+        $wpdb->update($jobs, [
+          'status_detail' => null,
+          'updated_at'    => $now,
+        ], ['job_id' => $target_job_id]);
+        self::audit('job', $target_job_id, 'resume_work', 'status_detail', $switch_target_job['status_detail'], null, 'Work resumed by switch job');
+      }
+
+      Slate_Ops_Jobs::recompute_actuals((int) $target_job_id);
+      $switch_result = [
+        'job_id' => $target_job_id,
+        'segment_id' => $switch_segment_id,
+        'started_at' => $now,
+      ];
+    }
+
+    $response = [
       'segment_id'             => (int)$open['segment_id'],
       'job_id'                 => (int)$open['job_id'],
       'stopped_at'             => $effective_stop,
@@ -3211,6 +3313,10 @@ return self::get_job(['id' => $job_id]);
       'pause_reason'           => $pause_reason,
       'blocked_by_pause'       => $blocked_by_pause,
     ];
+    if ($switch_result) {
+      $response['switched_to'] = $switch_result;
+    }
+    return $response;
   }
 
   public static function time_correction_request($req) {

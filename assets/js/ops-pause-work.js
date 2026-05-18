@@ -139,12 +139,28 @@
         return reasonButton(reason, 'blocked', true);
       }).join('');
       var switchTargets = Array.isArray(options.switchTargets) ? options.switchTargets : [];
+      var currentJobId = parseInt(options.currentJobId || options.job_id || options.jobId || 0, 10);
+      var seenTargets = {};
       var targetOptions = switchTargets.map(function (job) {
         var id = parseInt(job.job_id || job.id || 0, 10);
         if (!id) return '';
+        if (currentJobId && id === currentJobId) return '';
+        if (seenTargets[id]) return '';
+        seenTargets[id] = true;
+        var currentUserId = window.slateOpsSettings && window.slateOpsSettings.user
+          ? parseInt(window.slateOpsSettings.user.id || 0, 10)
+          : 0;
+        var assignedUserId = parseInt(job.assigned_user_id || 0, 10);
+        var role = job.switch_role || job.assignment_type || '';
+        var roleLabel = 'Unassigned';
+        if (role === 'assigned' || (currentUserId && assignedUserId === currentUserId)) {
+          roleLabel = 'My job';
+        } else if (role === 'help' || (assignedUserId && assignedUserId !== currentUserId)) {
+          roleLabel = 'Help';
+        }
         var label = job.so_number || job.customer_name || ('Job #' + id);
         var meta = job.customer_name && job.so_number ? ' - ' + job.customer_name : '';
-        return '<option value="' + id + '">' + esc(label + meta) + '</option>';
+        return '<option value="' + id + '">' + esc(roleLabel + ' - ' + label + meta) + '</option>';
       }).join('');
 
       var overlay = document.createElement('div');
