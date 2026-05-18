@@ -265,6 +265,8 @@ add_action('wp_enqueue_scripts', function() {
       if ($is_tech) {
         $ver_tech_readonly = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-readonly.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-readonly.js') : SLATE_OPS_VERSION;
         wp_enqueue_script('slate-ops-tech-readonly', SLATE_OPS_URL . 'assets/js/ops-tech-readonly.js', ['slate-ops-react'], $ver_tech_readonly, true);
+        $ver_tech_polish = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') : SLATE_OPS_VERSION;
+        wp_enqueue_script('slate-ops-tech-polish', SLATE_OPS_URL . 'assets/js/ops-tech-polish.js', ['slate-ops-react'], $ver_tech_polish, true);
       }
     }
 

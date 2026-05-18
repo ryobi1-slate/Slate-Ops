@@ -132,11 +132,18 @@
       }).join('');
       var switchTargets = Array.isArray(options.switchTargets) ? options.switchTargets : [];
       var currentJobId = parseInt(options.currentJobId || options.job_id || options.jobId || 0, 10);
+      var currentSoNumber = String(options.currentSoNumber || options.currentSo || '').trim().toUpperCase();
+      if (!currentSoNumber && document && document.body) {
+        var activeMatch = (document.body.innerText || '').match(/ON SO#\s+([A-Z0-9-]+)/i);
+        currentSoNumber = activeMatch && activeMatch[1] ? activeMatch[1].trim().toUpperCase() : '';
+      }
       var seenTargets = {};
       var targetOptions = switchTargets.map(function (job) {
         var id = parseInt(job.job_id || job.id || 0, 10);
         if (!id) return '';
         if (currentJobId && id === currentJobId) return '';
+        var soNumber = String(job.so_number || '').trim().toUpperCase();
+        if (currentSoNumber && soNumber && soNumber === currentSoNumber) return '';
         if (seenTargets[id]) return '';
         seenTargets[id] = true;
         var currentUserId = window.slateOpsSettings && window.slateOpsSettings.user

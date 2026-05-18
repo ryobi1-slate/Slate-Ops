@@ -43,6 +43,10 @@ body.slate-ops.ops-page-tech.ops-tech-readonly .ops-tech-readonly-action {
   display: none !important;
 }
 
+body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
+  display: none !important;
+}
+
 @media (max-width: 900px),
        (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
 
