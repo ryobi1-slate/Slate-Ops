@@ -89,6 +89,7 @@ class Slate_Ops_ClickUp_Import_Admin {
 			? count( file( self::jsonl_path(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ) )
 			: 0;
 		$backup_exists = file_exists( self::backup_path() );
+		$backup_label  = 'backup/jobs-pre-clickup-import.json';
 
 		// ── HTML ─────────────────────────────────────────────────────────────
 		?>
@@ -130,7 +131,7 @@ class Slate_Ops_ClickUp_Import_Admin {
 			<h2 style="margin-top:0">2. Run Steps</h2>
 			<p>
 				<?php if ( $backup_exists ) : ?>
-					<span style="color:#1e7e34">&#10003; Backup file present at <code>backup/jobs-pre-clickup-import.json</code></span>
+					<span style="color:#1e7e34">&#10003; Backup file present at <code><?php echo esc_html( $backup_label ); ?></code></span>
 				<?php else : ?>
 					<span style="color:#856404">&#9888; No backup yet — run Backup before any execute step</span>
 				<?php endif; ?>
@@ -143,30 +144,37 @@ class Slate_Ops_ClickUp_Import_Admin {
 					'style'   => 'secondary',
 					'confirm' => false,
 					'desc'    => 'Snapshot all existing jobs to backup/jobs-pre-clickup-import.json. Safe.',
+					'enabled' => true,
 				],
 				'clear-dry'      => [
 					'label'   => 'Clear (dry-run)',
 					'style'   => 'secondary',
 					'confirm' => false,
 					'desc'    => 'Count jobs + time records that would be deleted. No changes.',
+					'enabled' => true,
 				],
 				'import-dry'     => [
 					'label'   => 'Import (dry-run)',
 					'style'   => 'secondary',
 					'confirm' => false,
 					'desc'    => 'Parse JSONL and preview what would be inserted. No changes.',
+					'enabled' => $jsonl_exists,
 				],
 				'clear-execute'  => [
 					'label'   => 'Clear (execute)',
 					'style'   => 'primary',
 					'confirm' => 'This will DELETE all jobs and time records permanently. Run Backup first. Continue?',
 					'desc'    => 'Delete all jobs and time records. Requires backup to be run first.',
+					'enabled' => $backup_exists,
 				],
 				'import-execute' => [
 					'label'   => 'Import (execute)',
 					'style'   => 'primary',
 					'confirm' => 'This will INSERT rows from the JSONL into the database. Continue?',
-					'desc'    => 'Insert all 23 rows from the JSONL. Expected: 23 inserted, 0 skipped.',
+					'desc'    => $jsonl_exists
+						? 'Insert rows from the uploaded JSONL. Run Import dry-run first and review the output.'
+						: 'Insert rows from the uploaded JSONL. Upload a JSONL file first.',
+					'enabled' => $jsonl_exists,
 				],
 			];
 			?>
@@ -181,6 +189,7 @@ class Slate_Ops_ClickUp_Import_Admin {
 				</thead>
 				<tbody>
 				<?php foreach ( $steps as $step_key => $step ) :
+					$enabled = ! empty( $step['enabled'] );
 					$onclick = $step['confirm']
 						? 'onclick="return confirm(' . esc_attr( wp_json_encode( $step['confirm'] ) ) . ')"'
 						: '';
@@ -195,9 +204,21 @@ class Slate_Ops_ClickUp_Import_Admin {
 								<input type="hidden" name="step" value="<?php echo esc_attr( $step_key ); ?>">
 								<button type="submit"
 									class="button button-<?php echo esc_attr( $step['style'] ); ?>"
+									<?php disabled( ! $enabled ); ?>
 									<?php echo $onclick; // already escaped above ?>>
 									<?php echo esc_html( $step['label'] ); ?>
 								</button>
+								<?php if ( ! $enabled ) : ?>
+									<p class="description" style="margin:.35rem 0 0">
+										<?php
+										echo esc_html(
+											$step_key === 'clear-execute'
+												? 'Run Backup first.'
+												: 'Upload JSONL first.'
+										);
+										?>
+									</p>
+								<?php endif; ?>
 							</form>
 						</td>
 					</tr>
@@ -255,6 +276,10 @@ class Slate_Ops_ClickUp_Import_Admin {
 				break;
 
 			case 'clear-execute':
+				if ( ! file_exists( $backup_path ) ) {
+					$log[] = 'ERROR: Backup file is missing. Run Backup before Clear execute.';
+					break;
+				}
 				$result = Slate_Ops_ClickUp_Importer::clear_execute( true );
 				if ( is_wp_error( $result ) ) {
 					$log[] = 'ERROR: ' . $result->get_error_message();
