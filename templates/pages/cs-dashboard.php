@@ -95,13 +95,13 @@ $health_tone_class_map = [
   </div>
 
   <!-- Sub-tabs -->
-  <nav class="ops-subnav" id="ops-subnav">
-    <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
-    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Job Queue <span class="count" id="queue-tab-count">0</span></button>
+  <nav class="ops-subnav" id="ops-subnav" hidden>
+    <button class="ops-subtab" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
+    <button class="ops-subtab active" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Job Queue <span class="count" id="queue-tab-count">0</span></button>
   </nav>
 
   <!-- ── OVERVIEW TAB ── -->
-  <div class="ops-tab-content" data-tab-content="overview">
+  <div class="ops-tab-content" data-tab-content="overview" hidden>
 
     <!-- KPI grid: 8 cards, 4 columns -->
     <div class="ops-kpi-grid" id="kpi-grid">
@@ -300,17 +300,13 @@ $health_tone_class_map = [
        list, filter chips, search, drag/drop, and a bottom detail panel.
        Uses the existing /cs/queue endpoint for queue fields; job detail
        edits continue through the existing /jobs/{id} endpoint. -->
-  <div class="ops-tab-content" data-tab-content="queue" hidden>
+  <div class="ops-tab-content" data-tab-content="queue">
     <div class="ops-cs-workspace-beta cs-beta">
       <header class="cs-beta__header">
         <div class="cs-beta__actions">
           <button type="button" class="slate-btn slate-btn--accent" id="cs-beta-new" title="Create a new job (CS intake)">
             <span class="material-symbols-outlined">add</span>
             New Job
-          </button>
-          <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
-            <span class="material-symbols-outlined">low_priority</span>
-            Normalize Order
           </button>
           <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-refresh" title="Reload queue data">
             <span class="material-symbols-outlined">refresh</span>
@@ -347,9 +343,6 @@ $health_tone_class_map = [
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="scheduled" role="tab" aria-selected="false">
             <span>Scheduled</span><span class="cs-beta-chip__count" data-count="scheduled">0</span>
           </button>
-          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="blocked" role="tab" aria-selected="false">
-            <span>Blocked</span><span class="cs-beta-chip__count" data-count="blocked">0</span>
-          </button>
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="closeout" role="tab" aria-selected="false">
             <span>Ready to Close</span><span class="cs-beta-chip__count" data-count="closeout">0</span>
           </button>
@@ -358,6 +351,9 @@ $health_tone_class_map = [
           </button>
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
             <span>Unassigned</span><span class="cs-beta-chip__count" data-count="unassigned">0</span>
+          </button>
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="closed" role="tab" aria-selected="false">
+            <span>Closed</span><span class="cs-beta-chip__count" data-count="closed">0</span>
           </button>
         </div>
       </div>
@@ -524,8 +520,8 @@ $health_tone_class_map = [
         </label>
 
         <label class="cs-beta-field cs-beta-field--span4">
-          <span class="cs-beta-field__label">Job Description<span class="cs-beta-field__hint">scope summary, optional</span></span>
-          <textarea class="cs-beta-field__input" name="job_description" rows="2" maxlength="2000" placeholder="Brief scope of the job…"></textarea>
+          <span class="cs-beta-field__label">Job Notes<span class="cs-beta-field__hint">visible to Tech, optional</span></span>
+          <textarea class="cs-beta-field__input" name="queue_note" rows="2" maxlength="240" placeholder="Short instruction or context for the technician…"></textarea>
         </label>
 
         <label class="cs-beta-field cs-beta-field--span4">

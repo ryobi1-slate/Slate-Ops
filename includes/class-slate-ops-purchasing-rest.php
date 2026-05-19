@@ -229,6 +229,7 @@ class Slate_Ops_Purchasing_REST {
     $timestamp  = $req->get_header('x-slate-timestamp') ?? '';
     $event_type = $req->get_header('x-slate-event-type') ?? '';
     $flow_id    = $req->get_header('x-slate-flow-id') ?? '';
+    $callback_secret = $req->get_header('x-slate-callback-secret') ?? '';
 
     $hmac_configured   = !empty(get_option(Slate_Ops_PA_Events::OPT_SECRET, ''));
     $unsigned_eligible = in_array($event_type, self::READONLY_SYNC_EVENTS, true) ||
@@ -240,7 +241,7 @@ class Slate_Ops_Purchasing_REST {
     // HMAC is always enforced once a secret is set, and purchase writeback
     // events are never eligible for this bypass.
     if ($hmac_configured || !$unsigned_eligible) {
-      if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp)) {
+      if (!Slate_Ops_PA_Events::verify_inbound($body, $signature, $timestamp, $callback_secret)) {
         return new WP_Error('invalid_signature', 'Signature invalid or expired.', ['status' => 401]);
       }
     }
@@ -295,17 +296,19 @@ class Slate_Ops_Purchasing_REST {
         break;
 
       case 'bc.openPo.synced':
-        Slate_Ops_PA_Events::process_po_sync($payload);
-        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success', 'Processed', $payload_hash);
-        Slate_Ops_PA_Events::record_feed_sync('po', $now, 'success', 'Synced');
+        $po_count = Slate_Ops_PA_Events::process_po_sync($payload);
+        Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success',
+          'Processed ' . $po_count . ' open PO(s)', $payload_hash);
+        Slate_Ops_PA_Events::record_feed_sync('po', $now, 'success',
+          'Synced ' . $po_count . ' open PO(s)');
         break;
 
       case 'bc.demand.synced':
         $demand_count = Slate_Ops_PA_Events::process_item_sync($payload);
         Slate_Ops_PA_Events::log_callback($event_id, $event_type, $flow_id, 'success',
-          'Processed ' . $demand_count . ' item(s)', $payload_hash);
+          'Processed ' . $demand_count . ' demand item(s)', $payload_hash);
         Slate_Ops_PA_Events::record_feed_sync('demand', $now, 'success',
-          'Synced ' . $demand_count . ' item(s)');
+          'Synced ' . $demand_count . ' demand item(s)');
         break;
 
       case 'bc.sync.failed':

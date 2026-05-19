@@ -29,11 +29,11 @@ REPORT_OUT  = REPO_ROOT / 'local-imports' / 'import-report.txt'
 # ── Status / parts mappings ──────────────────────────────────────────────────
 
 STATUS_MAP = {
-    'in progress':               'In Progress',
-    'scheduled - ready to start': 'Scheduled',
-    'scheduled - not arrived':    'Scheduled',
-    'delay - parts':              'Delayed',
-    'complete - awaiting pickup': 'Complete - Awaiting Pickup',
+    'in progress':               'IN_PROGRESS',
+    'scheduled - ready to start': 'SCHEDULED',
+    'scheduled - not arrived':    'SCHEDULED',
+    'delay - parts':              'SCHEDULED',
+    'complete - awaiting pickup': 'AWAITING_PICKUP',
 }
 
 PARTS_MAP = {
@@ -132,6 +132,12 @@ def build():
                             'reason': 'Missing both customer_name and so_number'})
             continue
 
+        # Skip known ClickUp/demo placeholder rows.
+        if not so and customer.strip().lower() in ('test', 'test task'):
+            skipped.append({'row': i, 'id': task_id, 'name': customer,
+                            'reason': 'Demo placeholder row'})
+            continue
+
         # Warn (but do NOT skip) if SO# absent — common for ClickUp-originated jobs
         if not so:
             warnings.append({'row': i, 'id': task_id, 'name': customer,
@@ -141,7 +147,7 @@ def build():
         start_date = parse_date(r.get('Start Date', ''))
         due_date   = parse_date(r.get('Due Date', ''))
         lead_tech  = clean_tech(r.get('Assigned Tech (labels)', ''))
-        notes      = r.get('Latest Comment', '').strip()
+        tech_note  = r.get('Latest Comment', '').strip()
 
         obj = {
             'source_task_id': task_id,
@@ -154,7 +160,7 @@ def build():
             'est_hours':      est_hours,
             'start_date':     start_date,
             'due_date':       due_date,
-            'notes':          notes,
+            'tech_note':      tech_note,
             'parts_status':   PARTS_MAP[status_raw],
             'job_status':     STATUS_MAP[status_raw],
             'import_lane':    'active',
@@ -203,8 +209,8 @@ def build():
             lines.append(f'      Est:  {o["est_hours"]}h')
         if o['start_date'] or o['due_date']:
             lines.append(f'      Dates: start={o["start_date"] or "-"}  due={o["due_date"] or "-"}')
-        if o['notes']:
-            lines.append(f'      Notes: {o["notes"]}')
+        if o['tech_note']:
+            lines.append(f'      Tech note: {o["tech_note"]}')
     lines.append('')
 
     # Warnings

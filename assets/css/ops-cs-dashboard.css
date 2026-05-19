@@ -549,6 +549,12 @@
   min-width: 0;
 }
 
+/* Launch view hides the CS overview tabs, but the queue toolbar still needs
+   a little air below the page header divider. */
+.ops-page-header + .ops-subnav[hidden] + .ops-tab-content[hidden] + .ops-tab-content .cs-beta {
+  margin-top: 14px;
+}
+
 /* Header */
 .cs-beta__header {
   display: flex;
@@ -926,7 +932,7 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 68px 100px minmax(170px, 1.1fr) 152px 106px minmax(190px, 0.9fr) 88px minmax(160px, 1fr) 58px;
+  grid-template-columns: 24px 68px 100px minmax(170px, 1.05fr) 140px 98px minmax(136px, 0.65fr) 88px minmax(252px, 1.45fr) 36px;
   align-items: center;
   gap: 10px;
   padding: 6px 14px;
@@ -941,6 +947,9 @@
   color: var(--slate-ink-subtle);
   padding-top: 8px;
   padding-bottom: 8px;
+}
+.cs-beta-list__head span:nth-child(2) {
+  text-align: center;
 }
 .cs-beta-row {
   border-bottom: 1px solid var(--slate-divider-soft);
@@ -970,7 +979,6 @@
   background: var(--slate-sand-wash);
   border-left-color: var(--slate-sage);
 }
-.cs-beta-row.is-hidden { opacity: 0.55; }
 .cs-beta-row.is-dup .cs-beta-row__qinput {
   border-color: var(--slate-arches);
 }
@@ -993,6 +1001,13 @@
 }
 .cs-beta-row.is-ready-validation.is-selected {
   background: var(--slate-sand-wash);
+}
+.cs-beta-row.is-closed {
+  background: var(--slate-surface-tint);
+}
+.cs-beta-row.is-closed .cs-beta-row__handle {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .cs-beta-row__handle {
@@ -1129,6 +1144,7 @@
 .cs-beta-row__qnum {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
 }
 .cs-beta-row__qinput {
@@ -1218,9 +1234,9 @@
   text-overflow: ellipsis;
 }
 .cs-beta-row__techselect {
-  flex: 1 1 150px;
-  min-width: 150px;
-  max-width: 170px;
+  flex: 0 1 136px;
+  min-width: 124px;
+  max-width: 138px;
   height: 28px;
   padding: 3px 24px 3px 8px;
   border: 1px solid var(--slate-divider-strong);
@@ -1290,8 +1306,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 2px;
-  min-width: 58px;
+  gap: 0;
+  min-width: 0;
 }
 .cs-beta-row__iconbtn {
   /* Same WP-theme override pattern as the chips. */
@@ -1662,11 +1678,11 @@ select.cs-beta-field__input {
    Keep the new queue interactions, but tune the list back toward the original
    compact CS table: smaller controls, clearer grid lines, and flatter rows. */
 .cs-beta {
-  gap: 10px;
+  gap: 8px;
 }
 
 .cs-beta__header {
-  margin-bottom: -2px;
+  margin-bottom: 0;
 }
 
 .cs-beta .btn {
@@ -1678,7 +1694,7 @@ select.cs-beta-field__input {
 
 .cs-beta__filterbar {
   gap: 8px;
-  padding: 7px 0 10px;
+  padding: 6px 0 10px;
 }
 
 .cs-beta__search {
@@ -1866,7 +1882,6 @@ select.cs-beta-field__input {
 }
 
 .cs-beta-row__select {
-  width: 100%;
   min-width: 0;
   padding-left: 7px;
   padding-right: 20px;
@@ -1876,13 +1891,19 @@ select.cs-beta-field__input {
   text-overflow: ellipsis;
 }
 
-.cs-beta-row__statusselect { min-width: 136px; }
-.cs-beta-row__partsselect { min-width: 92px; }
+.cs-beta-row__statusselect {
+  width: 136px;
+  min-width: 136px;
+}
+.cs-beta-row__partsselect {
+  width: 94px;
+  min-width: 94px;
+}
 
 @media (min-width: 1101px) {
   .cs-beta-list__head,
   .cs-beta-row {
-    grid-template-columns: 22px 62px 96px minmax(160px, 1.2fr) 152px 106px minmax(180px, 0.85fr) 76px minmax(92px, 0.6fr) 54px;
+    grid-template-columns: 22px 62px 96px minmax(160px, 1.08fr) 140px 98px minmax(136px, 0.62fr) 76px minmax(252px, 1.45fr) 36px;
   }
 
   .cs-beta-row__status,

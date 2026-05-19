@@ -35,13 +35,30 @@ class Slate_Ops_PA_Events {
   }
 
   /**
-   * Verify an inbound signature. Rejects replays older than 300 s.
+   * Sign a request body using base64 output for tools that cannot easily emit
+   * a lowercase hex HMAC. Uses the same signed_string as sign().
    */
-  public static function verify_inbound($body, $signature, $timestamp) {
+  public static function sign_base64($body, $timestamp, $secret) {
+    return 'sha256-base64=' . base64_encode(hash_hmac('sha256', $timestamp . '.' . $body, $secret, true));
+  }
+
+  /**
+   * Verify an inbound callback. Rejects replays older than 300 s.
+   */
+  public static function verify_inbound($body, $signature, $timestamp, $callback_secret = '') {
     $secret = get_option(self::OPT_SECRET, '');
-    if (!$secret || !$signature || !$timestamp) return false;
+    if (!$secret || !$timestamp) return false;
     if (abs(time() - (int) $timestamp) > 300)    return false;
-    return hash_equals(self::sign($body, (string) $timestamp, $secret), $signature);
+
+    $signature = trim((string) $signature);
+    if ($signature &&
+        (hash_equals(self::sign($body, (string) $timestamp, $secret), $signature) ||
+         hash_equals(self::sign_base64($body, (string) $timestamp, $secret), $signature))) {
+      return true;
+    }
+
+    $callback_secret = trim((string) $callback_secret);
+    return $callback_secret !== '' && hash_equals($secret, $callback_secret);
   }
 
   // ── Status (safe for UI — no secret values) ────────────────────────────────
@@ -372,11 +389,18 @@ class Slate_Ops_PA_Events {
     $tv  = $wpdb->prefix . 'slate_ops_pur_vendors';
     $now = Slate_Ops_Utils::now_gmt();
 
-    // Support both a single-item payload {itemNo, ...} and a batch payload
-    // {items: [{itemNo, ...}, ...]} — PA typically sends a batch.
+    if (isset($payload['items']) && is_string($payload['items'])) {
+      $decoded_items = json_decode($payload['items'], true);
+      if (is_array($decoded_items)) {
+        $payload['items'] = $decoded_items;
+      }
+    }
+
+    // Support both Slate-native itemNo payloads and BC v2 item payloads that
+    // use number/displayName. PA typically sends a batch.
     if (isset($payload['items']) && is_array($payload['items'])) {
       $records = $payload['items'];
-    } elseif (!empty($payload['itemNo'])) {
+    } elseif (!empty($payload['itemNo']) || !empty($payload['number'])) {
       $records = [$payload];
     } else {
       return 0;
@@ -387,11 +411,13 @@ class Slate_Ops_PA_Events {
     // 2N SELECTs (one per record).
     $item_nos   = [];
     $vendor_nos = [];
-    foreach ($records as $r) {
-      $ino = sanitize_text_field($r['itemNo'] ?? '');
+    foreach ($records as $i) {
+      $ino = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
       if ($ino === '') continue;
-      $item_nos[] = $ino;
-      $vno = sanitize_text_field($r['vendorNo'] ?? '');
+      if (!self::is_ignored_item($i)) {
+        $item_nos[] = $ino;
+      }
+      $vno = sanitize_text_field($i['vendorNo'] ?? '');
       if ($vno !== '') $vendor_nos[$vno] = true;
     }
     if (empty($item_nos)) return 0;
@@ -420,24 +446,28 @@ class Slate_Ops_PA_Events {
     }
 
     $count = 0;
-    foreach ($records as $r) {
-      $item_no = sanitize_text_field($r['itemNo'] ?? '');
+    foreach ($records as $i) {
+      $item_no = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
       if ($item_no === '') continue;
+      if (self::is_ignored_item($i)) {
+        $wpdb->delete($ti, ['bc_item_id' => $item_no]);
+        continue;
+      }
 
-      $vendor_no = sanitize_text_field($r['vendorNo'] ?? '');
+      $vendor_no           = sanitize_text_field($i['vendorNo'] ?? '');
       $preferred_vendor_id = ($vendor_no !== '' && isset($vendor_map[$vendor_no])) ? $vendor_map[$vendor_no] : null;
 
       $data = [
         'bc_item_id'          => $item_no,
-        'part_number'         => sanitize_text_field($r['itemNo']          ?? $item_no),
-        'description'         => sanitize_text_field($r['description']     ?? ''),
+        'part_number'         => sanitize_text_field($i['itemNo']          ?? $i['number'] ?? $item_no),
+        'description'         => sanitize_text_field($i['description']     ?? $i['displayName'] ?? ''),
         'preferred_vendor_id' => $preferred_vendor_id,
-        'on_hand'             => (int) ($r['onHand']                       ?? 0),
-        'reorder_point'       => max(0, (int) ($r['reorderPoint']          ?? 0)),
-        'unit_cost'           => max(0.0, (float) ($r['unitCost']          ?? 0)),
-        'demand_level'        => sanitize_text_field($r['demandLevel']     ?? 'low'),
-        'forecasted_need'     => max(0, (int) ($r['forecastedNeed']        ?? 0)),
-        'suggested_order'     => max(0, (int) ($r['suggestedOrder']        ?? 0)),
+        'on_hand'             => (int) ($i['onHand']                       ?? 0),
+        'reorder_point'       => max(0, (int) ($i['reorderPoint']          ?? 0)),
+        'unit_cost'           => max(0.0, (float) ($i['unitCost']          ?? 0)),
+        'demand_level'        => sanitize_text_field($i['demandLevel']     ?? 'low'),
+        'forecasted_need'     => max(0, (int) ($i['forecastedNeed']        ?? 0)),
+        'suggested_order'     => max(0, (int) ($i['suggestedOrder']        ?? 0)),
         'updated_at'          => $now,
       ];
 
@@ -454,14 +484,48 @@ class Slate_Ops_PA_Events {
   }
 
   public static function process_po_sync($payload) {
+    if (isset($payload['purchaseOrders']) && is_string($payload['purchaseOrders'])) {
+      $decoded_orders = json_decode($payload['purchaseOrders'], true);
+      if (is_array($decoded_orders)) {
+        $payload['purchaseOrders'] = $decoded_orders;
+      }
+    }
+    if (isset($payload['openPos']) && is_string($payload['openPos'])) {
+      $decoded_orders = json_decode($payload['openPos'], true);
+      if (is_array($decoded_orders)) {
+        $payload['openPos'] = $decoded_orders;
+      }
+    }
+
+    if (isset($payload['purchaseOrders']) && is_array($payload['purchaseOrders'])) {
+      $records = $payload['purchaseOrders'];
+    } elseif (isset($payload['openPos']) && is_array($payload['openPos'])) {
+      $records = $payload['openPos'];
+    } elseif (!empty($payload['poNo']) || !empty($payload['number'])) {
+      $records = [$payload];
+    } else {
+      return 0;
+    }
+
+    $count = 0;
+    foreach ($records as $record) {
+      if (self::process_single_po_sync($record)) {
+        $count++;
+      }
+    }
+
+    return $count;
+  }
+
+  private static function process_single_po_sync($payload) {
     global $wpdb;
     $to  = $wpdb->prefix . 'slate_ops_pur_orders';
     $tl  = $wpdb->prefix . 'slate_ops_pur_order_lines';
     $tv  = $wpdb->prefix . 'slate_ops_pur_vendors';
     $now = Slate_Ops_Utils::now_gmt();
 
-    $po_no = sanitize_text_field($payload['poNo'] ?? '');
-    if (!$po_no) return;
+    $po_no = sanitize_text_field($payload['poNo'] ?? $payload['number'] ?? '');
+    if (!$po_no) return false;
 
     $vendor_id = null;
     $vendor_no = sanitize_text_field($payload['vendorNo'] ?? '');
@@ -491,7 +555,7 @@ class Slate_Ops_PA_Events {
 
     $header = [
       'bc_po_id'      => $po_no,
-      'po_number'     => sanitize_text_field($payload['poNo']     ?? $po_no),
+      'po_number'     => sanitize_text_field($payload['poNo']     ?? $payload['number'] ?? $po_no),
       'vendor_id'     => $vendor_id,
       'status'        => sanitize_text_field($payload['status']   ?? 'submitted'),
       'ordered_at'    => $ordered_at,
@@ -509,9 +573,14 @@ class Slate_Ops_PA_Events {
       $po_id = (int) $wpdb->insert_id;
     }
 
-    if (!$po_id) return;
+    if (!$po_id) return false;
 
-    $lines = isset($payload['lines']) && is_array($payload['lines']) ? $payload['lines'] : [];
+    $lines = $payload['lines'] ?? $payload['purchaseOrderLines'] ?? [];
+    if (is_string($lines)) {
+      $decoded_lines = json_decode($lines, true);
+      $lines = is_array($decoded_lines) ? $decoded_lines : [];
+    }
+    $lines = is_array($lines) ? $lines : [];
     $wpdb->query('START TRANSACTION');
     $wpdb->delete($tl, ['po_id' => $po_id]);
     $ok = true;
@@ -532,6 +601,8 @@ class Slate_Ops_PA_Events {
     } else {
       $wpdb->query('ROLLBACK');
     }
+
+    return $ok;
   }
 
   public static function process_po_received($payload) {
@@ -574,6 +645,18 @@ class Slate_Ops_PA_Events {
 
   private static function feed_sync_opt($feed, $key) {
     return 'slate_ops_pa_sync_' . $feed . '_' . $key;
+  }
+
+  private static function is_ignored_item($item) {
+    $item_no = sanitize_text_field($item['itemNo'] ?? $item['number'] ?? '');
+    if (stripos($item_no, 'BOM') === 0) {
+      return true;
+    }
+
+    $type = strtolower(sanitize_text_field($item['type'] ?? ''));
+    $type = str_replace('_x002d_', '-', $type);
+    $type = preg_replace('/[^a-z0-9]/', '', $type);
+    return $type === 'noninventory';
   }
 
   private static function uuid4() {

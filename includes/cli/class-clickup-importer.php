@@ -29,8 +29,21 @@ class Slate_Ops_ClickUp_Importer {
 	// ── Status / parts maps ──────────────────────────────────────────────────
 
 	private static $status_map = [
-		'Delayed'                    => 'DELAYED',
-		'Scheduled'                  => 'QUEUED',
+		// Canonical Slate Ops statuses.
+		'INTAKE'                     => 'INTAKE',
+		'NEEDS_SO'                   => 'NEEDS_SO',
+		'READY_FOR_BUILD'            => 'READY_FOR_BUILD',
+		'SCHEDULED'                  => 'SCHEDULED',
+		'IN_PROGRESS'                => 'IN_PROGRESS',
+		'QC'                         => 'QC',
+		'AWAITING_PICKUP'            => 'AWAITING_PICKUP',
+		'COMPLETE'                   => 'COMPLETE',
+		'ON_HOLD'                    => 'ON_HOLD',
+		'CANCELLED'                  => 'CANCELLED',
+
+		// Legacy/display labels accepted for older generated JSONL files.
+		'Delayed'                    => 'SCHEDULED',
+		'Scheduled'                  => 'SCHEDULED',
 		'In Progress'                => 'IN_PROGRESS',
 		'Complete - Awaiting Pickup' => 'AWAITING_PICKUP',
 		'Complete'                   => 'COMPLETE',
@@ -140,6 +153,7 @@ class Slate_Ops_ClickUp_Importer {
 
 		$preview = [];
 		foreach ( $rows as $r ) {
+			$tech_note = $r['tech_note'] ?? ( $r['notes'] ?? '' );
 			$preview[] = [
 				'customer_name'  => $r['customer_name'],
 				'status'         => self::$status_map[ $r['job_status'] ] ?? '?',
@@ -148,7 +162,7 @@ class Slate_Ops_ClickUp_Importer {
 				'scheduled_start'=> $r['start_date'] ?: null,
 				'scheduled_finish'=> $r['due_date'] ?: null,
 				'lead_tech'      => $r['lead_tech'],
-				'notes'          => $r['notes'],
+				'tech_note'      => $tech_note,
 				'clickup_task_id'=> $r['source_task_id'],
 			];
 		}
@@ -187,9 +201,10 @@ class Slate_Ops_ClickUp_Importer {
 		foreach ( $rows as $r ) {
 			$status       = self::$status_map[ $r['job_status'] ]   ?? 'INTAKE';
 			$parts_status = self::$parts_map[ $r['parts_status'] ]  ?? 'NOT_READY';
+			$tech_note    = $r['tech_note'] ?? ( $r['notes'] ?? '' );
 
-			// For DELAYED jobs, set a delay_reason so the UI can reflect it
-			$delay_reason = ( $status === 'DELAYED' ) ? 'parts' : null;
+			// ClickUp's "delay - parts" lane imports as scheduled work with parts not ready.
+			$delay_reason = null;
 
 			// Lead tech goes into schedule_notes (no user-ID lookup possible at import time)
 			$schedule_notes = $r['lead_tech'] ? 'Lead Tech: ' . $r['lead_tech'] : null;
@@ -225,8 +240,9 @@ class Slate_Ops_ClickUp_Importer {
 				'scheduled_start'    => ( $r['start_date'] !== '' ) ? $r['start_date'] : null,
 				'scheduled_finish'   => ( $r['due_date'] !== '' ) ? $r['due_date'] : null,
 
-				// Notes
-				'notes'              => ( $r['notes'] !== '' ) ? $r['notes'] : null,
+				// Notes. ClickUp latest comment is tech-visible work context, not CS-internal history.
+				'queue_note'         => ( $tech_note !== '' ) ? $tech_note : null,
+				'notes'              => null,
 				'schedule_notes'     => $schedule_notes,
 
 				// Defaults
@@ -303,6 +319,10 @@ class Slate_Ops_ClickUp_Importer {
 			$so       = trim( $r['so_number'] ?? '' );
 			if ( $customer === '' && $so === '' ) {
 				$skipped[] = [ 'customer_name' => '(blank)', 'reason' => 'No identifier (customer_name + so_number both empty)' ];
+				continue;
+			}
+			if ( $so === '' && in_array( strtolower( $customer ), [ 'test', 'test task' ], true ) ) {
+				$skipped[] = [ 'customer_name' => $customer, 'reason' => 'Demo placeholder row' ];
 				continue;
 			}
 

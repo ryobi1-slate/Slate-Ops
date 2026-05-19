@@ -25,7 +25,7 @@
   // ─── State ────────────────────────────────────────────────────────────
   var state = {
     selectedRow: 0,
-    activeTab: 'overview'
+    activeTab: 'queue'
   };
   var CS_TAB_STORAGE_KEY = 'slateOpsCsActiveTab';
 
@@ -346,8 +346,20 @@
   var BETA_QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
   function betaIsJobField(name) { return BETA_JOB_FIELDS.indexOf(name) >= 0; }
 
+  function betaConfig() {
+    if (window.slateOpsCsDashboard) return window.slateOpsCsDashboard;
+    if (typeof slateOpsCsDashboard !== 'undefined') return slateOpsCsDashboard;
+    return null;
+  }
+
   function betaApi() {
-    return (window.slateOpsCsDashboard && window.slateOpsCsDashboard.api) || null;
+    var cfg = betaConfig();
+    return (cfg && cfg.api) || null;
+  }
+
+  function betaCanDeleteJobs() {
+    var cfg = betaConfig();
+    return !!(cfg && cfg.user && cfg.user.caps && cfg.user.caps.delete_jobs);
   }
 
   function activateBeta() {
@@ -371,7 +383,7 @@
         body.innerHTML = '<div class="cs-beta__placeholder"><span class="material-symbols-outlined cs-beta__spinner">progress_activity</span><span>Loading queue…</span></div>';
       }
     }
-    var queueRequest = fetch(api.root + '/cs/queue', {
+    var queueRequest = fetch(api.root + '/cs/queue?include_closed=1', {
       method: 'GET',
       credentials: 'same-origin',
       headers: { 'X-WP-Nonce': api.nonce, 'Accept': 'application/json' }
@@ -541,6 +553,11 @@
     }
   }
 
+  function betaIsClosedStatus(status) {
+    var st = betaStatusKey(status);
+    return st === 'COMPLETE' || st === 'CANCELLED';
+  }
+
   // Shared display helpers used by the row, the detail panel, and the
   // overview's existing pills.
   function statusPillClass(status) {
@@ -629,7 +646,7 @@
   function betaPassesChip(j) {
     var status = betaStatusKey(j.status);
     switch (betaState.filter) {
-      case 'all':        return true;
+      case 'all':        return !betaIsClosedStatus(status);
       case 'ready':      return status === 'READY_FOR_BUILD';
       case 'scheduled':  return status === 'SCHEDULED';
       case 'inprog':     return status === 'IN_PROGRESS';
@@ -637,8 +654,9 @@
       case 'closeout':   return status === 'QC';
       case 'pickup':     return status === 'AWAITING_PICKUP';
       case 'unassigned': return !j.assigned_user_id;
+      case 'closed':     return betaIsClosedStatus(status);
       case 'parts':      return betaIsPartsHold(j.parts_status);
-      default:           return true;
+      default:           return !betaIsClosedStatus(status);
     }
   }
 
@@ -653,18 +671,20 @@
   }
 
   function betaCounts(jobs) {
-    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, pickup: 0, unassigned: 0, parts: 0 };
+    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, pickup: 0, unassigned: 0, closed: 0, parts: 0 };
     jobs.forEach(function (j) {
       var status = betaStatusKey(j.status);
-      c.all++;
+      var isClosed = betaIsClosedStatus(status);
+      if (!isClosed) c.all++;
       if (status === 'READY_FOR_BUILD')                    c.ready++;
       if (status === 'SCHEDULED')                          c.scheduled++;
       if (status === 'IN_PROGRESS')                        c.inprog++;
       if (status === 'BLOCKED')                            c.blocked++;
       if (status === 'QC')                                 c.closeout++;
       if (status === 'AWAITING_PICKUP')                    c.pickup++;
-      if (!j.assigned_user_id)                             c.unassigned++;
-      if (betaIsPartsHold(j.parts_status))                 c.parts++;
+      if (!isClosed && !j.assigned_user_id)                c.unassigned++;
+      if (isClosed)                                        c.closed++;
+      if (!isClosed && betaIsPartsHold(j.parts_status))    c.parts++;
     });
     return c;
   }
@@ -710,6 +730,7 @@
   function betaWarningsByGroup(allJobs) {
     var groups = {};
     allJobs.forEach(function (j) {
+      if (betaIsClosedStatus(j.status)) return;
       var key = betaGroupKey(j);
       if (!groups[key]) {
         groups[key] = {
@@ -828,19 +849,18 @@
         return (a.job_number || '').localeCompare(b.job_number || '');
       });
 
-      // Detect duplicate visible queue numbers within the group.
+      // Detect duplicate queue numbers within the group.
       var seen = {}, dupSet = {};
       g.jobs.forEach(function (j) {
-        if (!j.queue_visible || j.queue_order == null) return;
+        if (j.queue_order == null) return;
         if (seen[j.queue_order]) dupSet[j.queue_order] = true;
         seen[j.queue_order] = true;
       });
 
-      var visibleCount = g.jobs.filter(function (j) { return j.queue_visible; }).length;
-
       var rows = g.jobs.map(function (j) {
-        var dup        = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
-        var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
+        var isClosed   = betaIsClosedStatus(j.status);
+        var dup        = !isClosed && j.queue_order != null && dupSet[j.queue_order];
+        var blockedTop = !isClosed && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
         var blockedSeverity = betaBlockedSeverity(j);
         var sel        = (betaState.selected === j.id);
         var validation = betaState.rowValidation[j.id] || null;
@@ -852,12 +872,12 @@
         var rowCls = 'cs-beta-row';
         if (j._dirty)         rowCls += ' is-dirty';
         if (sel)              rowCls += ' is-selected';
-        if (!j.queue_visible) rowCls += ' is-hidden';
         if (dup)              rowCls += ' is-dup';
         if (blockedTop)       rowCls += ' is-warn';
         if (blockedSeverity)  rowCls += ' is-blocked-' + blockedSeverity;
         if (j._reassigned)    rowCls += ' is-reassigned';
         if (validation)        rowCls += ' is-ready-validation';
+        if (isClosed)          rowCls += ' is-closed';
         if (j.status === 'SCHEDULED' && !j.assigned_user_id) rowCls += ' is-missing-tech';
 
         var noteText = betaFmtNote(j.queue_note);
@@ -865,13 +885,13 @@
 
         return ''
           + '<div class="' + rowCls + '" data-job="' + j.id + '" tabindex="0" role="button">'
-          +   '<div class="cs-beta-row__handle" title="Drag to reorder within ' + escapeHtml(g.label) + '" aria-label="Drag handle">'
+          +   '<div class="cs-beta-row__handle" title="' + (isClosed ? 'Closed jobs are reference only' : ('Drag to reorder within ' + escapeHtml(g.label))) + '" aria-label="Drag handle">'
           +     '<span class="material-symbols-outlined">drag_indicator</span>'
           +   '</div>'
           +   '<div class="cs-beta-row__qnum">'
           +     '<input type="number" min="1" step="1" class="cs-beta-row__qinput"'
           +       ' value="' + (j.queue_order == null ? '' : j.queue_order) + '"'
-          +       ' data-field="queue_order" aria-label="Queue number" title="' + escapeHtml(qTitle) + '">'
+          +       ' data-field="queue_order" aria-label="Queue number" title="' + escapeHtml(qTitle) + '"' + (isClosed ? ' disabled' : '') + '>'
           +     (dup ? '<span class="cs-beta-row__dup" title="Duplicate queue number">!</span>' : '')
           +   '</div>'
           +   '<div class="cs-beta-row__so"><span class="cs-beta-mono">' + escapeHtml(j.so_number || j.job_number || '') + '</span></div>'
@@ -900,7 +920,7 @@
           +   '<div class="cs-beta-row__status">' + betaRowStatusControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__parts">' + betaRowPartsControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__tech">'
-          +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech">'
+          +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech"' + (isClosed ? ' disabled' : '') + '>'
           +       betaTechOptions(j.assigned_user_id)
           +     '</select>'
           +   '</div>'
@@ -912,11 +932,6 @@
           +     '<span class="cs-beta-row__notetext">' + (noteText ? escapeHtml(noteText) : '<span class="cs-beta-row__notetext--empty">—</span>') + '</span>'
           +   '</div>'
           +   '<div class="cs-beta-row__actions">'
-          +     '<button type="button" class="cs-beta-row__iconbtn" data-action="toggle-visible"'
-          +       ' aria-pressed="' + (j.queue_visible ? 'true' : 'false') + '"'
-          +       ' title="' + (j.queue_visible ? 'Hide from queue' : 'Show in queue') + '">'
-          +       '<span class="material-symbols-outlined">' + (j.queue_visible ? 'visibility' : 'visibility_off') + '</span>'
-          +     '</button>'
           +     '<button type="button" class="cs-beta-row__iconbtn" data-action="open-detail" title="Open job detail" aria-label="Open job detail">'
           +       '<span class="material-symbols-outlined">chevron_right</span>'
           +     '</button>'
@@ -935,7 +950,7 @@
         +       '<span class="cs-beta-avatar cs-beta-avatar--lg' + (g.unassigned ? ' cs-beta-avatar--ghost' : '') + '" aria-hidden="true">' + escapeHtml(betaInitials(g.label)) + '</span>'
         +       '<div>'
         +         '<div class="cs-beta-group__title">' + escapeHtml(g.label) + '</div>'
-        +         '<div class="cs-beta-group__meta">' + g.jobs.length + ' jobs · ' + visibleCount + ' visible' + (g.unassigned ? ' · needs assignment' : '') + '</div>'
+        +         '<div class="cs-beta-group__meta">' + g.jobs.length + ' jobs' + (g.unassigned ? ' · needs assignment' : '') + '</div>'
         +         (g.unassigned ? '<div class="cs-beta-group__helper">Assign a tech before queue order affects the Tech page.</div>' : '')
         +       '</div>'
         +     '</div>'
@@ -1015,18 +1030,6 @@
       });
     });
 
-    $$('.cs-beta-row__iconbtn[data-action="toggle-visible"]', body).forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var row = btn.closest('.cs-beta-row'); if (!row) return;
-        var id  = parseInt(row.dataset.job, 10);
-        var snap = betaJobById(id); if (!snap) return;
-        var cur  = betaEffectiveJob(snap);
-        recordBetaEdit(id, 'queue_visible', !cur.queue_visible);
-        renderBeta();
-      });
-    });
-
     $$('.cs-beta-row__iconbtn[data-action="open-detail"]', body).forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -1060,6 +1063,7 @@
     $$('.cs-beta-row__handle', body).forEach(function (handle) {
       handle.addEventListener('mousedown', function () {
         var row = handle.closest('.cs-beta-row');
+        if (row && row.classList.contains('is-closed')) return;
         if (row) row.setAttribute('draggable', 'true');
       });
     });
@@ -1220,6 +1224,7 @@
       if (allJobs[i].id === draggedId) { dragged = allJobs[i]; break; }
     }
     if (!dragged) return;
+    if (betaIsClosedStatus(dragged.status)) return;
 
     var srcKey = dragged.assigned_user_id ? ('u:' + dragged.assigned_user_id) : 'unassigned';
     var tgtKey;
@@ -1500,8 +1505,6 @@
       ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
       : '';
     var status = betaStatusKey(j.status);
-    var canMarkAwaiting = status === 'QC';
-    var canMarkClosed = status === 'AWAITING_PICKUP';
     var blockedSeverity = betaBlockedSeverity(j);
     var unblockDeps = status === 'BLOCKED' ? betaReadyForBuildMissing(id, j) : [];
     var blockerHtml = status === 'BLOCKED'
@@ -1521,21 +1524,7 @@
         +   '</button>'
         + '</section>'
       : '';
-    var closeoutHtml = (canMarkAwaiting || canMarkClosed)
-      ? ''
-        + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-closeout">'
-        +   '<h4 class="cs-beta-detail-section__title">Closeout</h4>'
-        +   (canMarkAwaiting
-              ? '<div class="cs-beta-closeout__checks">'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="jacket_received"><span>Jacket received</span></label>'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="invoice_completed"><span>Invoice completed</span></label>'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="notified"><span>Customer/dealer notified</span></label>'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="pickup_arranged"><span>Pickup or delivery arranged</span></label>'
-              + '</div>'
-              : '<div class="cs-beta-detail-section__hint cs-beta-closeout__hint">Confirm pickup or delivery handoff is complete before closing.</div>')
-        +   '<textarea class="cs-beta-detail-note cs-beta-closeout__note" data-closeout-note maxlength="1000" placeholder="Closeout note…"></textarea>'
-        + '</section>'
-      : '';
+    var closeoutHtml = '';
 
     grid.innerHTML = ''
       + loadingNote
@@ -1618,15 +1607,11 @@
       +       '<span class="cs-beta-field__label">Queue #</span>'
       +       '<input type="number" min="1" step="1" class="cs-beta-mono cs-beta-field__input' + ec('queue_order') + '" data-field="queue_order" value="' + fv('queue_order') + '" placeholder="—">'
       +     '</label>'
-      +     '<label class="cs-beta-field cs-beta-field--inline">'
-      +       '<input type="checkbox" data-field="queue_visible"' + (j.queue_visible ? ' checked' : '') + '>'
-      +       '<span>Visible on tech queue</span>'
-      +     '</label>'
       +   '</div>'
       + '</section>'
 
       + '<section class="cs-beta-detail-section cs-beta-detail-section--wide">'
-      +   '<h4 class="cs-beta-detail-section__title">Queue Note <span class="cs-beta-detail-section__hint">visible to Tech</span></h4>'
+      +   '<h4 class="cs-beta-detail-section__title">Job Notes <span class="cs-beta-detail-section__hint">visible to Tech</span></h4>'
       +   '<textarea class="cs-beta-detail-note' + ec('queue_note') + '" data-field="queue_note" maxlength="240" placeholder="Add a short note for the tech…">' + escapeHtml(betaFieldValue(id, 'queue_note')) + '</textarea>'
       + '</section>'
 
@@ -1642,13 +1627,19 @@
       + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
       +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
       +   '<div class="cs-beta-detail-actions">'
+      +     (betaCanDeleteJobs()
+              ? '<button type="button" class="slate-btn slate-btn--danger" data-action="beta-delete-job">'
+              +   '<span class="material-symbols-outlined">delete</span>'
+              +   'Delete job'
+              + '</button>'
+              : '')
       +     '<button type="button" class="slate-btn slate-btn--secondary" data-action="beta-discard-row"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">undo</span>'
       +       'Discard row edits'
       +     '</button>'
       +     '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-save-row" id="cs-beta-detail-save"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">save</span>'
-      +       '<span id="cs-beta-detail-save-label">Save Changes</span>'
+      +       '<span id="cs-beta-detail-save-label">Save and Return</span>'
       +     '</button>'
       +   '</div>'
       + '</section>';
@@ -1670,13 +1661,13 @@
         t = e.target.closest('[data-action="beta-save-row"]');
         if (t) {
           e.preventDefault();
-          var detailGrid = document.getElementById('cs-beta-detail-grid');
-          var closeoutTarget = betaCloseoutTarget(detailGrid);
-          if (closeoutTarget) {
-            betaCloseoutAction(closeoutTarget);
-            return;
-          }
           saveBeta();
+          return;
+        }
+        t = e.target.closest('[data-action="beta-delete-job"]');
+        if (t) {
+          e.preventDefault();
+          betaDeleteSelectedJob(t);
           return;
         }
         t = e.target.closest('[data-action="beta-unblock-ready"]');
@@ -1930,9 +1921,6 @@
             betaState.jobDetails[id].status = snap.status;
             betaState.jobDetails[id].status_label = snap.status_label;
           }
-          if (snap.status === 'COMPLETE') {
-            betaState.jobs = betaState.jobs.filter(function (job) { return job.id !== id; });
-          }
         });
     } else if (field === 'parts_status') {
       request = fetch(api.root + '/jobs/' + id, {
@@ -2169,6 +2157,46 @@
       });
   }
 
+  function betaDeleteSelectedJob(btn) {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid || !betaCanDeleteJobs()) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+    var snap = betaJobById(id);
+    var job = snap ? betaEffectiveJob(snap) : null;
+    var label = (job && (job.so_number || job.job_number || job.customer)) || ('job #' + id);
+    if (!window.confirm('Delete ' + label + '? This removes only this job from Ops. This cannot be undone.')) return;
+
+    if (btn) btn.disabled = true;
+    fetch(api.root + '/jobs/' + id, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce': api.nonce,
+        'Accept': 'application/json'
+      }
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body || !res.body.deleted) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Delete failed');
+        }
+        showToast('Job deleted');
+        betaState.loaded = false;
+        betaState.edits = {};
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
+        clearBetaSelection();
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Delete failed');
+        if (btn) btn.disabled = false;
+      });
+  }
+
   function betaDetailInputHandler(e) {
     var t = e.target;
     if (!t || !t.dataset) return;
@@ -2299,16 +2327,11 @@
     var detailBtn = document.getElementById('cs-beta-detail-save');
     if (detailBtn) {
       var selected = betaState.selected;
-      var grid = document.getElementById('cs-beta-detail-grid');
-      detailBtn.disabled = !(selected != null && (betaState.edits[selected] || betaCloseoutTarget(grid)));
+      detailBtn.disabled = !(selected != null && betaState.edits[selected]);
     }
     var detailLabel = document.getElementById('cs-beta-detail-save-label');
     if (detailLabel) {
-      var detailGrid = document.getElementById('cs-beta-detail-grid');
-      var closeoutTarget = betaCloseoutTarget(detailGrid);
-      detailLabel.textContent = closeoutTarget === 'AWAITING_PICKUP'
-        ? 'Save and Move to Pickup'
-        : (closeoutTarget === 'COMPLETE' ? 'Save and Close' : 'Save Changes');
+      detailLabel.textContent = 'Save and Return';
     }
   }
 
@@ -2316,6 +2339,7 @@
     var jobs   = betaState.jobs.map(betaEffectiveJob);
     var groups = {};
     jobs.forEach(function (j) {
+      if (betaIsClosedStatus(j.status)) return;
       var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
       (groups[key] = groups[key] || []).push(j);
     });
@@ -2345,7 +2369,7 @@
     var jobs   = betaState.jobs.map(betaEffectiveJob);
     var groups = {};
     jobs.forEach(function (j) {
-      if (!j.assigned_user_id || !j.queue_visible || j.queue_order != null) return;
+      if (betaIsClosedStatus(j.status) || !j.assigned_user_id || !j.queue_visible || j.queue_order != null) return;
       var key = 'u:' + j.assigned_user_id;
       (groups[key] = groups[key] || []).push(j);
     });
@@ -2356,7 +2380,7 @@
       var used = {};
       var maxOrder = 0;
       jobs.forEach(function (j) {
-        if (String(j.assigned_user_id || '') !== assignedId || !j.queue_visible || j.queue_order == null) return;
+        if (betaIsClosedStatus(j.status) || String(j.assigned_user_id || '') !== assignedId || !j.queue_visible || j.queue_order == null) return;
         used[j.queue_order] = true;
         if (j.queue_order > maxOrder) maxOrder = j.queue_order;
       });
@@ -2560,7 +2584,7 @@
         showToast(msg);
         if (btn) btn.disabled = false;
         if (lbl) lbl.textContent = 'Save Changes';
-        if (detailLbl) detailLbl.textContent = 'Save Changes';
+        if (detailLbl) detailLbl.textContent = 'Save and Return';
         // Refresh the queue snapshot so already-saved fields stop
         // flagging dirty in the UI; remaining edits stay queued.
         if (savedQueue > 0 || savedJobs > 0) {
@@ -2683,7 +2707,7 @@
       parts_status:     val('parts_status') || 'NOT_READY',
       requested_date:   val('requested_date'),
       sales_person:     val('sales_person'),
-      job_description:  val('job_description'),
+      queue_note:       val('queue_note'),
       notes:            val('notes')
     };
 
@@ -2829,7 +2853,7 @@
     'cs-workspace':   'queue',
     'workspace-beta': 'queue',
     'queue':          'queue',
-    'overview':       'overview'
+    'overview':       'queue'
   };
   function applyHashRoute() {
     var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();

@@ -1009,6 +1009,11 @@
             <label><div class="label" style="margin-bottom:6px;">Lunch (min)</div><input class="input" id="lunch_minutes" type="number" min="0" value="${parseInt(s.lunch_minutes)||30}" /></label>
             <label><div class="label" style="margin-bottom:6px;">Break (min)</div><input class="input" id="break_minutes" type="number" min="0" value="${parseInt(s.break_minutes)||20}" /></label>
             <label><div class="label" style="margin-bottom:6px;">Shift-end grace (min)</div><input class="input" id="shift_end_grace_minutes" type="number" min="0" max="120" value="${parseInt(s.shift_end_grace_minutes)||10}" /></label>
+            <label><div class="label" style="margin-bottom:6px;">Tech rollout mode</div><select class="input" id="tech_rollout_mode">
+              <option value="PHASE_1_TIMER_HABIT" ${s.tech_rollout_mode === 'PHASE_1_TIMER_HABIT' ? 'selected' : ''}>Phase 1 - Timer habit</option>
+              <option value="PHASE_2_BLOCKERS" ${s.tech_rollout_mode === 'PHASE_2_BLOCKERS' ? 'selected' : ''}>Phase 2 - Blockers</option>
+              <option value="PHASE_3_REPORTING_READY" ${s.tech_rollout_mode === 'PHASE_3_REPORTING_READY' ? 'selected' : ''}>Phase 3 - Reporting ready</option>
+            </select></label>
             <label style="display:flex;align-items:center;gap:8px;margin-top:22px;"><input type="checkbox" id="auto_stop_job_timers_at_shift_end" ${s.auto_stop_job_timers_at_shift_end !== false ? 'checked' : ''} /> Auto-stop job timers at shift end</label>
           </div>
           <div style="padding:12px 20px;background:rgba(0,0,0,0.025);border-top:1px solid rgba(0,0,0,0.08);display:flex;justify-content:flex-end;">
@@ -1093,6 +1098,7 @@
         break_minutes: parseInt($('#break_minutes').value, 10) || 0,
         shift_end_grace_minutes: parseInt($('#shift_end_grace_minutes').value, 10) || 0,
         auto_stop_job_timers_at_shift_end: $('#auto_stop_job_timers_at_shift_end').checked,
+        tech_rollout_mode: $('#tech_rollout_mode').value,
         dealers,
         sales_people: salesPeople,
       };
@@ -2832,6 +2838,7 @@ async function loadTech() {
       const pausePayload = window.__slateOpsPauseWork
         ? await window.__slateOpsPauseWork({
             afterHoursRequired: afterHoursRequired,
+            rolloutMode: (window.slateOpsSettings && window.slateOpsSettings.tech_rollout_mode) || 'PHASE_1_TIMER_HABIT',
             switchTargets: queue.map(j => ({
               job_id: j.job_id,
               so_number: j.so_number,
@@ -3467,6 +3474,14 @@ async function loadAdmin() {
           <div class="label" style="margin-bottom:6px;">Shift-end Grace</div>
           <input class="input" id="shift_end_grace_minutes" value="${settingsResp.shift_end_grace_minutes || 10}" />
         </div>
+        <div style="flex:1 1 220px;">
+          <div class="label" style="margin-bottom:6px;">Tech rollout mode</div>
+          <select class="input" id="tech_rollout_mode">
+            <option value="PHASE_1_TIMER_HABIT" ${settingsResp.tech_rollout_mode === 'PHASE_1_TIMER_HABIT' ? 'selected' : ''}>Phase 1 - Timer habit</option>
+            <option value="PHASE_2_BLOCKERS" ${settingsResp.tech_rollout_mode === 'PHASE_2_BLOCKERS' ? 'selected' : ''}>Phase 2 - Blockers</option>
+            <option value="PHASE_3_REPORTING_READY" ${settingsResp.tech_rollout_mode === 'PHASE_3_REPORTING_READY' ? 'selected' : ''}>Phase 3 - Reporting ready</option>
+          </select>
+        </div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;margin:0 0 14px;">
         <input type="checkbox" id="auto_stop_job_timers_at_shift_end" ${settingsResp.auto_stop_job_timers_at_shift_end !== false ? 'checked' : ''} />
@@ -3643,6 +3658,7 @@ async function loadAdmin() {
         break_minutes:  parseInt($('#break_minutes').value, 10),
         shift_end_grace_minutes: parseInt($('#shift_end_grace_minutes').value, 10) || 0,
         auto_stop_job_timers_at_shift_end: $('#auto_stop_job_timers_at_shift_end').checked,
+        tech_rollout_mode: $('#tech_rollout_mode').value,
         dealers,
         sales_people: salesPeople,
         bays,

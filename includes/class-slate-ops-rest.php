@@ -33,6 +33,12 @@ class Slate_Ops_REST {
     'slate_ops_viewer'     => 'Viewer',
   ];
 
+  private const TECH_ROLLOUT_MODES = [
+    'PHASE_1_TIMER_HABIT',
+    'PHASE_2_BLOCKERS',
+    'PHASE_3_REPORTING_READY',
+  ];
+
   private static function scheduler_debug_enabled() {
     return defined('SLATE_OPS_DEBUG_SCHEDULER') && SLATE_OPS_DEBUG_SCHEDULER;
   }
@@ -224,6 +230,12 @@ class Slate_Ops_REST {
       ]);
 
       register_rest_route($ns, '/jobs/(?P<id>\d+)/qc/submit', [
+        'methods' => 'POST',
+        'permission_callback' => [__CLASS__, 'perm_submit_qc'],
+        'callback' => [__CLASS__, 'submit_qc'],
+      ]);
+
+      register_rest_route($ns, '/jobs/(?P<id>\d+)/closeout/submit', [
         'methods' => 'POST',
         'permission_callback' => [__CLASS__, 'perm_submit_qc'],
         'callback' => [__CLASS__, 'submit_qc'],
@@ -1149,6 +1161,7 @@ return ['ok' => true, 'id' => $id];
     if (!isset($row['shift_end_grace_minutes'])) $row['shift_end_grace_minutes'] = 10;
     $row['auto_stop_job_timers_at_shift_end'] = (bool) $row['auto_stop_job_timers_at_shift_end'];
     $row['shift_end_grace_minutes'] = (int) $row['shift_end_grace_minutes'];
+    $row['tech_rollout_mode'] = self::tech_rollout_mode();
     $row['daily_deduction_minutes'] = (int)($row['lunch_minutes'] ?? 30) + ((int)($row['break_count']) * (int)($row['break_minutes'] ?? 10));
     return $row;
   }
@@ -1201,6 +1214,7 @@ return ['ok' => true, 'id' => $id];
     if (isset($body['company_name']))     update_option('slate_ops_company_name',     sanitize_text_field($body['company_name']));
     if (isset($body['timezone']))         update_option('slate_ops_timezone',         sanitize_text_field($body['timezone']));
     if (isset($body['currency_display'])) update_option('slate_ops_currency_display', sanitize_text_field($body['currency_display']));
+    if (isset($body['tech_rollout_mode'])) update_option('slate_ops_tech_rollout_mode', self::sanitize_tech_rollout_mode($body['tech_rollout_mode']));
     if (isset($body['holiday_sync']))     update_option('slate_ops_holiday_sync',     !empty($body['holiday_sync']) ? 1 : 0);
     if (isset($body['notifications']) && is_array($body['notifications'])) {
       $notif = array_map('rest_sanitize_boolean', $body['notifications']);
@@ -1226,6 +1240,7 @@ return ['ok' => true, 'id' => $id];
       'break_minutes' => $breaks,
       'auto_stop_job_timers_at_shift_end' => $auto_stop,
       'shift_end_grace_minutes' => $grace_minutes,
+      'tech_rollout_mode' => self::tech_rollout_mode(),
       'dealers' => $dealers,
       'sales_people' => $sales_people,
     ]), 'Settings updated');
@@ -2065,15 +2080,17 @@ foreach ($rows as &$r) {
     global $wpdb;
     $job_id = intval($req['id']);
     $t      = $wpdb->prefix . 'slate_ops_jobs';
+    $segs_t = $wpdb->prefix . 'slate_ops_time_segments';
 
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
     self::audit('job', $job_id, 'delete', null, null, null, 'Job deleted by ' . wp_get_current_user()->display_name);
 
+    $segments_deleted = (int) $wpdb->delete($segs_t, ['job_id' => $job_id], ['%d']);
     $wpdb->delete($t, ['job_id' => $job_id], ['%d']);
 
-    return new WP_REST_Response(['deleted' => true, 'job_id' => $job_id], 200);
+    return new WP_REST_Response(['deleted' => true, 'job_id' => $job_id, 'time_segments_deleted' => $segments_deleted], 200);
   }
 
   public static function add_note($req) {
@@ -2261,6 +2278,7 @@ foreach ($rows as &$r) {
     }
 
     $sales_person = sanitize_text_field($body['sales_person'] ?? '');
+    $queue_note = sanitize_textarea_field($body['queue_note'] ?? '');
     $notes = sanitize_textarea_field($body['notes'] ?? '');
     $notes_type = sanitize_key($body['notes_type'] ?? '');
     if ($notes !== '' && $notes_type === 'parts' && stripos($notes, 'Parts:') !== 0) {
@@ -2292,6 +2310,7 @@ foreach ($rows as &$r) {
       'estimated_minutes' => $estimated_minutes,
       'requested_date' => $requested_date ?: null,
       'sales_person' => $sales_person ?: null,
+      'queue_note' => $queue_note ?: null,
       'notes' => $notes ?: null,
       'scope_summary' => $scope_summary ?: null,
       'queue_order'    => $queue_order,
@@ -2719,6 +2738,9 @@ return self::get_job(['id' => $job_id]);
     if (!$br || empty($reason_config[$br]['blocked'])) {
       return new WP_Error('block_reason_required', 'Block reason is required.', ['status' => 422]);
     }
+    if (!self::tech_rollout_allows_blockers()) {
+      return new WP_Error('blockers_not_enabled', 'Blocked reasons are not enabled for the current Tech screen rollout phase.', ['status' => 403]);
+    }
     if (!$bn) {
       return new WP_Error('block_note_required', 'Block note is required.', ['status' => 422]);
     }
@@ -2758,8 +2780,8 @@ return self::get_job(['id' => $job_id]);
   }
 
   /**
-   * Tech submits job for QC review.
-   * POST /jobs/{id}/qc/submit  { notes }
+   * Tech marks job ready for CS closeout.
+   * POST /jobs/{id}/closeout/submit  { notes }
    */
   public static function submit_qc($req) {
     global $wpdb;
@@ -2772,16 +2794,24 @@ return self::get_job(['id' => $job_id]);
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
-    if ($job['status'] !== 'IN_PROGRESS') {
-      return new WP_Error('invalid_state', 'Job must be In Progress to submit for QC', ['status' => 422]);
+    $user_id = get_current_user_id();
+    $job_status = Slate_Ops_Statuses::normalize((string)($job['status'] ?? ''));
+    $segments = $wpdb->prefix . 'slate_ops_time_segments';
+    $has_active_timer = (bool) $wpdb->get_var($wpdb->prepare(
+      "SELECT 1 FROM $segments WHERE user_id=%d AND job_id=%d AND end_ts IS NULL AND state='active' LIMIT 1",
+      $user_id,
+      $job_id
+    ));
+
+    if ($job_status !== Slate_Ops_Statuses::IN_PROGRESS && !$has_active_timer) {
+      return new WP_Error('invalid_state', 'Job must be In Progress or actively timed to mark ready for closeout.', ['status' => 422]);
     }
 
-    $user_id = get_current_user_id();
     $assigned_id = (int)($job['assigned_user_id'] ?? 0);
-    $can_submit_for_qc = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+    $can_submit_for_closeout = current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
       || current_user_can(Slate_Ops_Utils::CAP_ADMIN)
       || ($assigned_id > 0 && $assigned_id === $user_id);
-    if (!$can_submit_for_qc) {
+    if (!$can_submit_for_closeout) {
       return new WP_Error('assigned_tech_required', 'Only the assigned tech can finish this job.', ['status' => 403]);
     }
 
@@ -2792,10 +2822,10 @@ return self::get_job(['id' => $job_id]);
     // Auto-stop any active timer for this user on this job.
     self::stop_active_timer_for_job($user_id, $job_id);
 
-    // Create QC record.
+    // Create a lightweight handoff record for closeout history.
     $wpdb->insert($qc, [
       'job_id'      => $job_id,
-      'checkpoint'  => 'TECH_QC',
+      'checkpoint'  => 'TECH_CLOSEOUT',
       'result'      => 'SUBMITTED',
       'checked_by'  => $user_id,
       'notes'       => $notes,
@@ -2803,14 +2833,14 @@ return self::get_job(['id' => $job_id]);
       'created_at'  => $now,
     ]);
 
-    // Transition job to QC (v2; was PENDING_QC).
+    // Transition job to Ready to Close.
     $wpdb->update($t, [
       'status'            => Slate_Ops_Statuses::QC,
       'status_updated_at' => $now,
       'updated_at'        => $now,
     ], ['job_id' => $job_id]);
 
-    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::QC, 'QC submitted: ' . $notes);
+    self::audit('job', $job_id, 'update', 'status', $job['status'], Slate_Ops_Statuses::QC, 'Ready for closeout: ' . $notes);
 
     $updated = self::job_by_id($job_id);
     self::maybe_push_dealer_portal_status($updated);
@@ -2938,7 +2968,7 @@ return self::get_job(['id' => $job_id]);
       if ((int)$open['job_id'] === $job_id) {
         return ['segment_id' => (int)$open['segment_id'], 'job_id' => $job_id, 'started_at' => $open['start_ts']];
       }
-      return new WP_Error('timer_conflict', 'You already have an active timer on another job. Pause it before starting a new one.', ['status' => 409]);
+      return new WP_Error('timer_conflict', 'You already have an active timer on another job. Use Pause work, then Switching to another job.', ['status' => 409]);
     }
 
     // Reason required when not assigned (and assignment exists).
@@ -3011,6 +3041,8 @@ return self::get_job(['id' => $job_id]);
     $pause_note = trim(sanitize_textarea_field((string)($body['pause_note'] ?? '')));
     $after_hours_note = trim(sanitize_textarea_field((string)($body['after_hours_note'] ?? $body['overtime_note'] ?? $body['note'] ?? $pause_note)));
     $target_job_id = isset($body['target_job_id']) ? max(0, intval($body['target_job_id'])) : 0;
+    $source = sanitize_key((string)($body['source'] ?? 'tech_manual'));
+    if ($source === '') $source = 'tech_manual';
     $other_work_can_continue = array_key_exists('other_work_can_continue', $body)
       ? rest_sanitize_boolean($body['other_work_can_continue'])
       : null;
@@ -3039,8 +3071,14 @@ return self::get_job(['id' => $job_id]);
     if (!empty($config['note_required']) && $pause_note === '') {
       return new WP_Error('pause_note_required', 'Add a note for this pause reason.', ['status' => 422]);
     }
+    $is_lightweight_step_away = $pause_reason === 'SWITCH_JOB'
+      && $target_job_id <= 0
+      && stripos($pause_note, 'Step away') === 0;
 
     $is_blocked_reason = !empty($config['blocked']);
+    if ($is_blocked_reason && !self::tech_rollout_allows_blockers()) {
+      return new WP_Error('blockers_not_enabled', 'Blocked reasons are not enabled for the current Tech screen rollout phase.', ['status' => 403]);
+    }
     if ($is_blocked_reason && $other_work_can_continue === null) {
       return new WP_Error('block_scope_required', 'Choose whether other work can continue.', [
         'status' => 422,
@@ -3048,7 +3086,7 @@ return self::get_job(['id' => $job_id]);
       ]);
     }
 
-    $needs_after_hours_note = $overtime_seconds > 0 && !in_array($pause_reason, ['END_OF_SHIFT', 'SWITCH_JOB'], true);
+    $needs_after_hours_note = $overtime_seconds > 0 && $pause_reason !== 'END_OF_SHIFT';
     if ($needs_after_hours_note && $after_hours_note === '') {
       return new WP_Error(
         'after_hours_note_required',
@@ -3062,8 +3100,60 @@ return self::get_job(['id' => $job_id]);
       );
     }
 
+    $switch_target_job = null;
+    if ($pause_reason === 'SWITCH_JOB') {
+      if ($target_job_id <= 0 && !$is_lightweight_step_away) {
+        return new WP_Error('switch_target_required', 'Choose the next job before switching.', ['status' => 422]);
+      }
+      if ($target_job_id <= 0 && $is_lightweight_step_away) {
+        $switch_target_job = null;
+      } else {
+        if ($target_job_id === (int)$open['job_id']) {
+          return new WP_Error('invalid_switch_target', 'Choose a different job before switching.', ['status' => 422]);
+        }
+
+        $switch_target_job = self::job_by_id($target_job_id);
+        if (!$switch_target_job) {
+          return new WP_Error('switch_target_not_found', 'Next job not found.', ['status' => 404]);
+        }
+
+        $startable = [
+          Slate_Ops_Statuses::READY_FOR_BUILD,
+          Slate_Ops_Statuses::SCHEDULED,
+          Slate_Ops_Statuses::IN_PROGRESS,
+          Slate_Ops_Statuses::QUEUED,
+        ];
+        $target_status = Slate_Ops_Statuses::normalize((string)($switch_target_job['status'] ?? ''));
+        if (!in_array($target_status, array_map([Slate_Ops_Statuses::class, 'normalize'], $startable), true)) {
+          return new WP_Error('invalid_switch_target_status', 'Next job cannot be started in its current status.', ['status' => 422]);
+        }
+
+        $target_parts_status = strtoupper((string)($switch_target_job['parts_status'] ?? ''));
+        if (in_array($target_parts_status, ['NOT_READY', 'HOLD'], true)) {
+          $msg = $target_parts_status === 'HOLD'
+            ? 'Cannot switch to a job while parts are on hold.'
+            : 'Cannot switch to a job while parts are not ready.';
+          return new WP_Error('switch_target_parts_blocked', $msg, [
+            'status'       => 422,
+            'field'        => 'parts_status',
+            'parts_status' => $target_parts_status,
+          ]);
+        }
+
+        $other_open = $wpdb->get_row($wpdb->prepare(
+          "SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' AND segment_id<>%d ORDER BY start_ts DESC LIMIT 1",
+          $user_id,
+          (int)$open['segment_id']
+        ), ARRAY_A);
+        if ($other_open) {
+          return new WP_Error('timer_conflict', 'You already have another active timer. Pause it before switching jobs.', ['status' => 409]);
+        }
+      }
+    }
+
     $update = [
       'end_ts'     => $effective_stop,
+      'source'     => $source,
       'state'      => 'closed',
       'updated_at' => $now,
     ];
@@ -3089,7 +3179,7 @@ return self::get_job(['id' => $job_id]);
 
     $wpdb->update($segments, $update, ['segment_id' => (int)$open['segment_id']]);
 
-    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, $is_blocked_reason ? 'Timer stopped for blocker' : 'Timer paused');
+    self::audit('segment', (int)$open['segment_id'], 'update', 'end_ts', null, $effective_stop, ($is_blocked_reason ? 'Timer stopped for blocker' : 'Timer paused') . ' via ' . $source);
 
     $blocked_by_pause = false;
     $jobs = $wpdb->prefix . 'slate_ops_jobs';
@@ -3165,7 +3255,62 @@ return self::get_job(['id' => $job_id]);
 
     Slate_Ops_Jobs::recompute_actuals((int) $open['job_id']);
 
-    return [
+    $switch_result = null;
+    if ($switch_target_job) {
+      $target_status = Slate_Ops_Statuses::normalize((string)($switch_target_job['status'] ?? ''));
+      $assigned = (int)($switch_target_job['assigned_user_id'] ?? 0);
+      $switch_reason = ($assigned && $assigned !== $user_id) ? 'helping_assigned_tech' : null;
+      $target_note = $pause_note !== '' ? $pause_note : 'Switched from job #' . (int)$open['job_id'] . '.';
+
+      $wpdb->insert($segments, [
+        'job_id' => $target_job_id,
+        'user_id' => $user_id,
+        'start_ts' => $now,
+        'end_ts' => null,
+        'reason' => $switch_reason,
+        'note' => $target_note,
+        'source' => 'timer',
+        'state' => 'active',
+        'approval_status' => 'approved',
+        'created_by' => $user_id,
+        'created_at' => $now,
+        'updated_at' => $now,
+      ]);
+
+      $switch_segment_id = (int)$wpdb->insert_id;
+      self::audit('segment', $switch_segment_id, 'create', null, null, wp_json_encode(['job_id' => $target_job_id, 'user_id' => $user_id]), 'Timer started by switch job');
+
+      $shift_state = self::get_shift_window_state($now);
+      if (empty($shift_state['within_shift'])) {
+        self::audit('segment', $switch_segment_id, 'note', null, null, null, 'Timer started outside scheduled shift.');
+        self::audit('job', $target_job_id, 'note', null, null, null, 'Timer started outside scheduled shift.');
+      }
+
+      if (!in_array($target_status, [Slate_Ops_Statuses::IN_PROGRESS, Slate_Ops_Statuses::QC, Slate_Ops_Statuses::AWAITING_PICKUP, Slate_Ops_Statuses::COMPLETE], true)) {
+        $wpdb->update($jobs, [
+          'status'            => Slate_Ops_Statuses::IN_PROGRESS,
+          'status_detail'     => null,
+          'status_updated_at' => $now,
+          'updated_at'        => $now,
+        ], ['job_id' => $target_job_id]);
+        self::audit('job', $target_job_id, 'update', 'status', $switch_target_job['status'], Slate_Ops_Statuses::IN_PROGRESS, 'Auto set by switch job');
+      } elseif (strpos((string)($switch_target_job['status_detail'] ?? ''), 'Paused - ') === 0) {
+        $wpdb->update($jobs, [
+          'status_detail' => null,
+          'updated_at'    => $now,
+        ], ['job_id' => $target_job_id]);
+        self::audit('job', $target_job_id, 'resume_work', 'status_detail', $switch_target_job['status_detail'], null, 'Work resumed by switch job');
+      }
+
+      Slate_Ops_Jobs::recompute_actuals((int) $target_job_id);
+      $switch_result = [
+        'job_id' => $target_job_id,
+        'segment_id' => $switch_segment_id,
+        'started_at' => $now,
+      ];
+    }
+
+    $response = [
       'segment_id'             => (int)$open['segment_id'],
       'job_id'                 => (int)$open['job_id'],
       'stopped_at'             => $effective_stop,
@@ -3177,6 +3322,10 @@ return self::get_job(['id' => $job_id]);
       'pause_reason'           => $pause_reason,
       'blocked_by_pause'       => $blocked_by_pause,
     ];
+    if ($switch_result) {
+      $response['switched_to'] = $switch_result;
+    }
+    return $response;
   }
 
   public static function time_correction_request($req) {
@@ -3276,6 +3425,7 @@ return self::get_job(['id' => $job_id]);
         'end_ts' => $stop_at,
         'reason' => 'END_OF_SHIFT',
         'note' => $note,
+        'source' => 'SYSTEM_AUTO_STOP',
         'state' => 'closed',
         'updated_at' => $now_gmt,
       ], ['segment_id' => (int)$open['segment_id']]);
@@ -3639,7 +3789,7 @@ return self::get_job(['id' => $job_id]);
         'group' => 'pause',
         'label' => 'Switching to another job',
         'display' => 'Paused - Switched job',
-        'note_required' => false,
+        'note_required' => true,
         'blocked' => false,
         'requires_clearance' => false,
         'owner' => '',
@@ -3708,6 +3858,26 @@ return self::get_job(['id' => $job_id]);
         'owner' => 'Ryan',
       ],
     ];
+  }
+
+  private static function sanitize_tech_rollout_mode($mode): string {
+    $mode = strtoupper(sanitize_key((string) $mode));
+    return in_array($mode, self::TECH_ROLLOUT_MODES, true) ? $mode : 'PHASE_1_TIMER_HABIT';
+  }
+
+  private static function tech_rollout_mode(): string {
+    if (defined('SLATE_OPS_TECH_ROLLOUT_MODE')) {
+      return self::sanitize_tech_rollout_mode((string) SLATE_OPS_TECH_ROLLOUT_MODE);
+    }
+    return self::sanitize_tech_rollout_mode(get_option('slate_ops_tech_rollout_mode', 'PHASE_1_TIMER_HABIT'));
+  }
+
+  public static function tech_rollout_mode_for_ui(): string {
+    return self::tech_rollout_mode();
+  }
+
+  private static function tech_rollout_allows_blockers(): bool {
+    return self::tech_rollout_mode() !== 'PHASE_1_TIMER_HABIT';
   }
 
   private static function normalize_pause_reason_key($reason): string {
@@ -4790,21 +4960,30 @@ self::maybe_push_dealer_portal_status($job);
   // / Admin may write through these handlers.
   //
   // Queue scope: all non-archived CS-visible active jobs, including intake
-  // work that still needs assignment or an SO. Closed/cancelled jobs are excluded.
+  // work that still needs assignment or an SO. Closed jobs are opt-in for
+  // the CS reference filter.
 
-  private static function cs_queue_active_statuses(): array {
-    return [
+  private static function cs_queue_active_statuses($include_closed = false): array {
+    $statuses = [
       Slate_Ops_Statuses::INTAKE,
       Slate_Ops_Statuses::NEEDS_SO,
       Slate_Ops_Statuses::READY_FOR_BUILD,
       Slate_Ops_Statuses::SCHEDULED,
       Slate_Ops_Statuses::IN_PROGRESS,
       Slate_Ops_Statuses::BLOCKED,
+      Slate_Ops_Statuses::QUEUED,
+      Slate_Ops_Statuses::DELAYED,
       Slate_Ops_Statuses::QC,
       Slate_Ops_Statuses::AWAITING_PICKUP,
       Slate_Ops_Statuses::PENDING_QC,
       Slate_Ops_Statuses::READY_FOR_PICKUP,
     ];
+
+    if ($include_closed) {
+      $statuses[] = Slate_Ops_Statuses::COMPLETE;
+    }
+
+    return $statuses;
   }
 
   /**
@@ -4814,7 +4993,8 @@ self::maybe_push_dealer_portal_status($job);
     global $wpdb;
     $t = $wpdb->prefix . 'slate_ops_jobs';
 
-    $statuses     = self::cs_queue_active_statuses();
+    $include_closed = self::truthy($req->get_param('include_closed'));
+    $statuses       = self::cs_queue_active_statuses($include_closed);
     $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
 
     $sql = "SELECT job_id, so_number, customer_name, dealer_name,

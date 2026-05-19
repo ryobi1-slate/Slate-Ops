@@ -262,6 +262,12 @@ add_action('wp_enqueue_scripts', function() {
 
     if (!$route_blocked) {
       wp_enqueue_script('slate-ops-react', SLATE_OPS_URL . 'assets/react/app.js', ['wp-element', 'slate-ops-guard', 'slate-ops-pause-work'], $ver_app_js, true);
+      if ($is_tech) {
+        $ver_tech_readonly = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-readonly.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-readonly.js') : SLATE_OPS_VERSION;
+        wp_enqueue_script('slate-ops-tech-readonly', SLATE_OPS_URL . 'assets/js/ops-tech-readonly.js', ['slate-ops-react'], $ver_tech_readonly, true);
+        $ver_tech_polish = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') : SLATE_OPS_VERSION;
+        wp_enqueue_script('slate-ops-tech-polish', SLATE_OPS_URL . 'assets/js/ops-tech-polish.js', ['slate-ops-react'], $ver_tech_polish, true);
+      }
     }
 
     $current_user = wp_get_current_user();
@@ -290,6 +296,7 @@ add_action('wp_enqueue_scripts', function() {
         'white' => esc_url_raw(SLATE_OPS_URL . 'assets/logos/Slate-Logo-White-CMYK.png'),
       ],
       'dealers' => array_values(Slate_Ops_Utils::dealer_list()),
+      'tech_rollout_mode' => Slate_Ops_REST::tech_rollout_mode_for_ui(),
       'page_access' => [
         'roles' => slate_ops_get_role_page_access(),
         'defaults' => slate_ops_get_default_role_page_access(),
