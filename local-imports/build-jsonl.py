@@ -32,7 +32,7 @@ STATUS_MAP = {
     'in progress':               'In Progress',
     'scheduled - ready to start': 'Scheduled',
     'scheduled - not arrived':    'Scheduled',
-    'delay - parts':              'Delayed',
+    'delay - parts':              'Scheduled',
     'complete - awaiting pickup': 'Complete - Awaiting Pickup',
 }
 

@@ -29,7 +29,7 @@ class Slate_Ops_ClickUp_Importer {
 	// ── Status / parts maps ──────────────────────────────────────────────────
 
 	private static $status_map = [
-		'Delayed'                    => 'BLOCKED',
+		'Delayed'                    => 'SCHEDULED',
 		'Scheduled'                  => 'SCHEDULED',
 		'In Progress'                => 'IN_PROGRESS',
 		'Complete - Awaiting Pickup' => 'AWAITING_PICKUP',
@@ -188,10 +188,8 @@ class Slate_Ops_ClickUp_Importer {
 			$status       = self::$status_map[ $r['job_status'] ]   ?? 'INTAKE';
 			$parts_status = self::$parts_map[ $r['parts_status'] ]  ?? 'NOT_READY';
 
-			// ClickUp's "delay - parts" lane imports as a launch-visible blocker.
-			$delay_reason = ( $status === 'BLOCKED' ) ? 'parts' : null;
-			$block_reason = ( $status === 'BLOCKED' ) ? 'PARTS' : null;
-			$block_note   = ( $status === 'BLOCKED' ) ? 'Imported from ClickUp delay - parts lane.' : null;
+			// ClickUp's "delay - parts" lane imports as scheduled work with parts not ready.
+			$delay_reason = null;
 
 			// Lead tech goes into schedule_notes (no user-ID lookup possible at import time)
 			$schedule_notes = $r['lead_tech'] ? 'Lead Tech: ' . $r['lead_tech'] : null;
@@ -220,8 +218,6 @@ class Slate_Ops_ClickUp_Importer {
 				'status'             => $status,
 				'status_updated_at'  => $now,
 				'delay_reason'       => $delay_reason,
-				'block_reason'       => $block_reason,
-				'block_note'         => $block_note,
 
 				// Scheduling
 				'priority'           => 3,
