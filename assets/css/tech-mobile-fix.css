@@ -113,3 +113,93 @@ body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
     margin-bottom: 1rem !important;
   }
 }
+
+@media (max-width: 640px) {
+  body.slate-ops.ops-page-tech {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  body.slate-ops.ops-page-tech .ops-content > #ops-view {
+    padding-bottom: calc(148px + env(safe-area-inset-bottom)) !important;
+  }
+
+  body.slate-ops.ops-page-tech .ops-content .py-12 {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+
+  body.slate-ops.ops-page-tech .ops-content .p-8 {
+    padding: 1rem !important;
+  }
+
+  body.slate-ops.ops-page-tech .ops-content .p-6 {
+    padding: .95rem !important;
+  }
+
+  body.slate-ops.ops-page-tech .ops-content .p-4 {
+    padding: .75rem !important;
+  }
+
+  body.slate-ops.ops-page-tech .ops-content .gap-4 {
+    gap: .75rem !important;
+  }
+
+  body.slate-ops.ops-page-tech .ops-content [class*="space-y-4"] > * + * {
+    margin-top: .75rem !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div {
+    border-radius: 22px !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type .text-5xl {
+    font-size: clamp(2.25rem, 14vw, 3rem) !important;
+    line-height: .95 !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type .text-base {
+    font-size: .8rem !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-job-progress {
+    margin: 8px 12px 0;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-job-progress__row {
+    font-size: 11px;
+    line-height: 1.3;
+    margin-bottom: 3px;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view div[class~="p-4"][class~="flex"][class~="gap-3"] {
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom)) !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view div[class~="p-4"][class~="flex"][class~="gap-3"] .slate-work-btn {
+    min-height: 54px !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-work-btn--secondary:not([disabled]) {
+    background: #fff !important;
+    border-color: rgba(47, 62, 57, .28) !important;
+    color: var(--sage) !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .ops-tech-note {
+    background: rgba(47, 62, 57, .055);
+    border-style: solid;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .ops-banner-error {
+    border-radius: 10px;
+    font-size: .8rem;
+    line-height: 1.3;
+    margin-bottom: .75rem;
+    padding: .6rem .75rem;
+  }
+
+  body.ops-pw-open .ops-pw-overlay {
+    align-items: flex-end;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+}
