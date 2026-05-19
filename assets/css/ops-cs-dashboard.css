@@ -942,6 +942,9 @@
   padding-top: 8px;
   padding-bottom: 8px;
 }
+.cs-beta-list__head span:nth-child(2) {
+  text-align: center;
+}
 .cs-beta-row {
   border-bottom: 1px solid var(--slate-divider-soft);
   cursor: pointer;
@@ -1135,6 +1138,7 @@
 .cs-beta-row__qnum {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
 }
 .cs-beta-row__qinput {
