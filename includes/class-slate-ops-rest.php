@@ -4962,6 +4962,8 @@ self::maybe_push_dealer_portal_status($job);
       Slate_Ops_Statuses::SCHEDULED,
       Slate_Ops_Statuses::IN_PROGRESS,
       Slate_Ops_Statuses::BLOCKED,
+      Slate_Ops_Statuses::QUEUED,
+      Slate_Ops_Statuses::DELAYED,
       Slate_Ops_Statuses::QC,
       Slate_Ops_Statuses::AWAITING_PICKUP,
       Slate_Ops_Statuses::PENDING_QC,
