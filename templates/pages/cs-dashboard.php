@@ -355,6 +355,9 @@ $health_tone_class_map = [
           <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="unassigned" role="tab" aria-selected="false">
             <span>Unassigned</span><span class="cs-beta-chip__count" data-count="unassigned">0</span>
           </button>
+          <button type="button" class="slate-btn slate-btn--ghost slate-btn--sm cs-beta-chip" data-filter="closed" role="tab" aria-selected="false">
+            <span>Closed</span><span class="cs-beta-chip__count" data-count="closed">0</span>
+          </button>
         </div>
       </div>
 

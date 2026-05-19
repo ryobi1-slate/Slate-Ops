@@ -4951,10 +4951,11 @@ self::maybe_push_dealer_portal_status($job);
   // / Admin may write through these handlers.
   //
   // Queue scope: all non-archived CS-visible active jobs, including intake
-  // work that still needs assignment or an SO. Closed/cancelled jobs are excluded.
+  // work that still needs assignment or an SO. Closed jobs are opt-in for
+  // the CS reference filter.
 
-  private static function cs_queue_active_statuses(): array {
-    return [
+  private static function cs_queue_active_statuses($include_closed = false): array {
+    $statuses = [
       Slate_Ops_Statuses::INTAKE,
       Slate_Ops_Statuses::NEEDS_SO,
       Slate_Ops_Statuses::READY_FOR_BUILD,
@@ -4966,6 +4967,12 @@ self::maybe_push_dealer_portal_status($job);
       Slate_Ops_Statuses::PENDING_QC,
       Slate_Ops_Statuses::READY_FOR_PICKUP,
     ];
+
+    if ($include_closed) {
+      $statuses[] = Slate_Ops_Statuses::COMPLETE;
+    }
+
+    return $statuses;
   }
 
   /**
@@ -4975,7 +4982,8 @@ self::maybe_push_dealer_portal_status($job);
     global $wpdb;
     $t = $wpdb->prefix . 'slate_ops_jobs';
 
-    $statuses     = self::cs_queue_active_statuses();
+    $include_closed = self::truthy($req->get_param('include_closed'));
+    $statuses       = self::cs_queue_active_statuses($include_closed);
     $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
 
     $sql = "SELECT job_id, so_number, customer_name, dealer_name,

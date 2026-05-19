@@ -371,7 +371,7 @@
         body.innerHTML = '<div class="cs-beta__placeholder"><span class="material-symbols-outlined cs-beta__spinner">progress_activity</span><span>Loading queue…</span></div>';
       }
     }
-    var queueRequest = fetch(api.root + '/cs/queue', {
+    var queueRequest = fetch(api.root + '/cs/queue?include_closed=1', {
       method: 'GET',
       credentials: 'same-origin',
       headers: { 'X-WP-Nonce': api.nonce, 'Accept': 'application/json' }
@@ -541,6 +541,11 @@
     }
   }
 
+  function betaIsClosedStatus(status) {
+    var st = betaStatusKey(status);
+    return st === 'COMPLETE' || st === 'CANCELLED';
+  }
+
   // Shared display helpers used by the row, the detail panel, and the
   // overview's existing pills.
   function statusPillClass(status) {
@@ -629,7 +634,7 @@
   function betaPassesChip(j) {
     var status = betaStatusKey(j.status);
     switch (betaState.filter) {
-      case 'all':        return true;
+      case 'all':        return !betaIsClosedStatus(status);
       case 'ready':      return status === 'READY_FOR_BUILD';
       case 'scheduled':  return status === 'SCHEDULED';
       case 'inprog':     return status === 'IN_PROGRESS';
@@ -637,8 +642,9 @@
       case 'closeout':   return status === 'QC';
       case 'pickup':     return status === 'AWAITING_PICKUP';
       case 'unassigned': return !j.assigned_user_id;
+      case 'closed':     return betaIsClosedStatus(status);
       case 'parts':      return betaIsPartsHold(j.parts_status);
-      default:           return true;
+      default:           return !betaIsClosedStatus(status);
     }
   }
 
@@ -653,18 +659,20 @@
   }
 
   function betaCounts(jobs) {
-    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, pickup: 0, unassigned: 0, parts: 0 };
+    var c = { all: 0, ready: 0, scheduled: 0, inprog: 0, blocked: 0, closeout: 0, pickup: 0, unassigned: 0, closed: 0, parts: 0 };
     jobs.forEach(function (j) {
       var status = betaStatusKey(j.status);
-      c.all++;
+      var isClosed = betaIsClosedStatus(status);
+      if (!isClosed) c.all++;
       if (status === 'READY_FOR_BUILD')                    c.ready++;
       if (status === 'SCHEDULED')                          c.scheduled++;
       if (status === 'IN_PROGRESS')                        c.inprog++;
       if (status === 'BLOCKED')                            c.blocked++;
       if (status === 'QC')                                 c.closeout++;
       if (status === 'AWAITING_PICKUP')                    c.pickup++;
-      if (!j.assigned_user_id)                             c.unassigned++;
-      if (betaIsPartsHold(j.parts_status))                 c.parts++;
+      if (!isClosed && !j.assigned_user_id)                c.unassigned++;
+      if (isClosed)                                        c.closed++;
+      if (!isClosed && betaIsPartsHold(j.parts_status))    c.parts++;
     });
     return c;
   }
@@ -710,6 +718,7 @@
   function betaWarningsByGroup(allJobs) {
     var groups = {};
     allJobs.forEach(function (j) {
+      if (betaIsClosedStatus(j.status)) return;
       var key = betaGroupKey(j);
       if (!groups[key]) {
         groups[key] = {
@@ -837,8 +846,9 @@
       });
 
       var rows = g.jobs.map(function (j) {
-        var dup        = j.queue_order != null && dupSet[j.queue_order];
-        var blockedTop = j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
+        var isClosed   = betaIsClosedStatus(j.status);
+        var dup        = !isClosed && j.queue_order != null && dupSet[j.queue_order];
+        var blockedTop = !isClosed && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
         var blockedSeverity = betaBlockedSeverity(j);
         var sel        = (betaState.selected === j.id);
         var validation = betaState.rowValidation[j.id] || null;
@@ -855,6 +865,7 @@
         if (blockedSeverity)  rowCls += ' is-blocked-' + blockedSeverity;
         if (j._reassigned)    rowCls += ' is-reassigned';
         if (validation)        rowCls += ' is-ready-validation';
+        if (isClosed)          rowCls += ' is-closed';
         if (j.status === 'SCHEDULED' && !j.assigned_user_id) rowCls += ' is-missing-tech';
 
         var noteText = betaFmtNote(j.queue_note);
@@ -862,13 +873,13 @@
 
         return ''
           + '<div class="' + rowCls + '" data-job="' + j.id + '" tabindex="0" role="button">'
-          +   '<div class="cs-beta-row__handle" title="Drag to reorder within ' + escapeHtml(g.label) + '" aria-label="Drag handle">'
+          +   '<div class="cs-beta-row__handle" title="' + (isClosed ? 'Closed jobs are reference only' : ('Drag to reorder within ' + escapeHtml(g.label))) + '" aria-label="Drag handle">'
           +     '<span class="material-symbols-outlined">drag_indicator</span>'
           +   '</div>'
           +   '<div class="cs-beta-row__qnum">'
           +     '<input type="number" min="1" step="1" class="cs-beta-row__qinput"'
           +       ' value="' + (j.queue_order == null ? '' : j.queue_order) + '"'
-          +       ' data-field="queue_order" aria-label="Queue number" title="' + escapeHtml(qTitle) + '">'
+          +       ' data-field="queue_order" aria-label="Queue number" title="' + escapeHtml(qTitle) + '"' + (isClosed ? ' disabled' : '') + '>'
           +     (dup ? '<span class="cs-beta-row__dup" title="Duplicate queue number">!</span>' : '')
           +   '</div>'
           +   '<div class="cs-beta-row__so"><span class="cs-beta-mono">' + escapeHtml(j.so_number || j.job_number || '') + '</span></div>'
@@ -897,7 +908,7 @@
           +   '<div class="cs-beta-row__status">' + betaRowStatusControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__parts">' + betaRowPartsControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__tech">'
-          +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech">'
+          +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech"' + (isClosed ? ' disabled' : '') + '>'
           +       betaTechOptions(j.assigned_user_id)
           +     '</select>'
           +   '</div>'
@@ -1040,6 +1051,7 @@
     $$('.cs-beta-row__handle', body).forEach(function (handle) {
       handle.addEventListener('mousedown', function () {
         var row = handle.closest('.cs-beta-row');
+        if (row && row.classList.contains('is-closed')) return;
         if (row) row.setAttribute('draggable', 'true');
       });
     });
@@ -1200,6 +1212,7 @@
       if (allJobs[i].id === draggedId) { dragged = allJobs[i]; break; }
     }
     if (!dragged) return;
+    if (betaIsClosedStatus(dragged.status)) return;
 
     var srcKey = dragged.assigned_user_id ? ('u:' + dragged.assigned_user_id) : 'unassigned';
     var tgtKey;
@@ -1906,9 +1919,6 @@
             betaState.jobDetails[id].status = snap.status;
             betaState.jobDetails[id].status_label = snap.status_label;
           }
-          if (snap.status === 'COMPLETE') {
-            betaState.jobs = betaState.jobs.filter(function (job) { return job.id !== id; });
-          }
         });
     } else if (field === 'parts_status') {
       request = fetch(api.root + '/jobs/' + id, {
@@ -2292,6 +2302,7 @@
     var jobs   = betaState.jobs.map(betaEffectiveJob);
     var groups = {};
     jobs.forEach(function (j) {
+      if (betaIsClosedStatus(j.status)) return;
       var key = j.assigned_user_id ? ('u:' + j.assigned_user_id) : 'unassigned';
       (groups[key] = groups[key] || []).push(j);
     });
@@ -2321,7 +2332,7 @@
     var jobs   = betaState.jobs.map(betaEffectiveJob);
     var groups = {};
     jobs.forEach(function (j) {
-      if (!j.assigned_user_id || !j.queue_visible || j.queue_order != null) return;
+      if (betaIsClosedStatus(j.status) || !j.assigned_user_id || !j.queue_visible || j.queue_order != null) return;
       var key = 'u:' + j.assigned_user_id;
       (groups[key] = groups[key] || []).push(j);
     });
@@ -2332,7 +2343,7 @@
       var used = {};
       var maxOrder = 0;
       jobs.forEach(function (j) {
-        if (String(j.assigned_user_id || '') !== assignedId || !j.queue_visible || j.queue_order == null) return;
+        if (betaIsClosedStatus(j.status) || String(j.assigned_user_id || '') !== assignedId || !j.queue_visible || j.queue_order == null) return;
         used[j.queue_order] = true;
         if (j.queue_order > maxOrder) maxOrder = j.queue_order;
       });

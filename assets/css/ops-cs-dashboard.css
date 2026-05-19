@@ -993,6 +993,13 @@
 .cs-beta-row.is-ready-validation.is-selected {
   background: var(--slate-sand-wash);
 }
+.cs-beta-row.is-closed {
+  background: var(--slate-surface-tint);
+}
+.cs-beta-row.is-closed .cs-beta-row__handle {
+  cursor: default;
+  opacity: 0.45;
+}
 
 .cs-beta-row__handle {
   color: var(--slate-ink-placeholder);
