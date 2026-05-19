@@ -549,10 +549,10 @@
   min-width: 0;
 }
 
-/* Launch view hides the CS overview tabs, so the queue controls should tuck
-   closer to the page header divider instead of inheriting the old tab rhythm. */
+/* Launch view hides the CS overview tabs, but the queue toolbar still needs
+   a little air below the page header divider. */
 .ops-page-header + .ops-subnav[hidden] + .ops-tab-content[hidden] + .ops-tab-content .cs-beta {
-  margin-top: -8px;
+  margin-top: 14px;
 }
 
 /* Header */
@@ -1678,11 +1678,11 @@ select.cs-beta-field__input {
    Keep the new queue interactions, but tune the list back toward the original
    compact CS table: smaller controls, clearer grid lines, and flatter rows. */
 .cs-beta {
-  gap: 6px;
+  gap: 8px;
 }
 
 .cs-beta__header {
-  margin-bottom: -5px;
+  margin-bottom: 0;
 }
 
 .cs-beta .btn {
@@ -1694,7 +1694,7 @@ select.cs-beta-field__input {
 
 .cs-beta__filterbar {
   gap: 8px;
-  padding: 3px 0 9px;
+  padding: 6px 0 10px;
 }
 
 .cs-beta__search {
