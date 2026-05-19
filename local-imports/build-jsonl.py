@@ -132,6 +132,12 @@ def build():
                             'reason': 'Missing both customer_name and so_number'})
             continue
 
+        # Skip known ClickUp/demo placeholder rows.
+        if not so and customer.strip().lower() in ('test', 'test task'):
+            skipped.append({'row': i, 'id': task_id, 'name': customer,
+                            'reason': 'Demo placeholder row'})
+            continue
+
         # Warn (but do NOT skip) if SO# absent — common for ClickUp-originated jobs
         if not so:
             warnings.append({'row': i, 'id': task_id, 'name': customer,

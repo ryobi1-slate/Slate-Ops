@@ -321,6 +321,10 @@ class Slate_Ops_ClickUp_Importer {
 				$skipped[] = [ 'customer_name' => '(blank)', 'reason' => 'No identifier (customer_name + so_number both empty)' ];
 				continue;
 			}
+			if ( $so === '' && in_array( strtolower( $customer ), [ 'test', 'test task' ], true ) ) {
+				$skipped[] = [ 'customer_name' => $customer, 'reason' => 'Demo placeholder row' ];
+				continue;
+			}
 
 			$valid[] = $r;
 		}
