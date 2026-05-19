@@ -25,7 +25,7 @@
   // ─── State ────────────────────────────────────────────────────────────
   var state = {
     selectedRow: 0,
-    activeTab: 'overview'
+    activeTab: 'queue'
   };
   var CS_TAB_STORAGE_KEY = 'slateOpsCsActiveTab';
 
@@ -2816,7 +2816,7 @@
     'cs-workspace':   'queue',
     'workspace-beta': 'queue',
     'queue':          'queue',
-    'overview':       'overview'
+    'overview':       'queue'
   };
   function applyHashRoute() {
     var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();

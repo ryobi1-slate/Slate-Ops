@@ -95,13 +95,13 @@ $health_tone_class_map = [
   </div>
 
   <!-- Sub-tabs -->
-  <nav class="ops-subnav" id="ops-subnav">
-    <button class="ops-subtab active" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
-    <button class="ops-subtab" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Job Queue <span class="count" id="queue-tab-count">0</span></button>
+  <nav class="ops-subnav" id="ops-subnav" hidden>
+    <button class="ops-subtab" data-tab="overview"><span class="material-symbols-outlined">dashboard</span>Overview</button>
+    <button class="ops-subtab active" data-tab="queue"><span class="material-symbols-outlined">format_list_numbered</span>Job Queue <span class="count" id="queue-tab-count">0</span></button>
   </nav>
 
   <!-- ── OVERVIEW TAB ── -->
-  <div class="ops-tab-content" data-tab-content="overview">
+  <div class="ops-tab-content" data-tab-content="overview" hidden>
 
     <!-- KPI grid: 8 cards, 4 columns -->
     <div class="ops-kpi-grid" id="kpi-grid">
@@ -300,7 +300,7 @@ $health_tone_class_map = [
        list, filter chips, search, drag/drop, and a bottom detail panel.
        Uses the existing /cs/queue endpoint for queue fields; job detail
        edits continue through the existing /jobs/{id} endpoint. -->
-  <div class="ops-tab-content" data-tab-content="queue" hidden>
+  <div class="ops-tab-content" data-tab-content="queue">
     <div class="ops-cs-workspace-beta cs-beta">
       <header class="cs-beta__header">
         <div class="cs-beta__actions">
