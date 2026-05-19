@@ -3071,6 +3071,9 @@ return self::get_job(['id' => $job_id]);
     if (!empty($config['note_required']) && $pause_note === '') {
       return new WP_Error('pause_note_required', 'Add a note for this pause reason.', ['status' => 422]);
     }
+    $is_lightweight_step_away = $pause_reason === 'SWITCH_JOB'
+      && $target_job_id <= 0
+      && stripos($pause_note, 'Step away') === 0;
 
     $is_blocked_reason = !empty($config['blocked']);
     if ($is_blocked_reason && !self::tech_rollout_allows_blockers()) {
@@ -3099,48 +3102,52 @@ return self::get_job(['id' => $job_id]);
 
     $switch_target_job = null;
     if ($pause_reason === 'SWITCH_JOB') {
-      if ($target_job_id <= 0) {
+      if ($target_job_id <= 0 && !$is_lightweight_step_away) {
         return new WP_Error('switch_target_required', 'Choose the next job before switching.', ['status' => 422]);
       }
-      if ($target_job_id === (int)$open['job_id']) {
-        return new WP_Error('invalid_switch_target', 'Choose a different job before switching.', ['status' => 422]);
-      }
+      if ($target_job_id <= 0 && $is_lightweight_step_away) {
+        $switch_target_job = null;
+      } else {
+        if ($target_job_id === (int)$open['job_id']) {
+          return new WP_Error('invalid_switch_target', 'Choose a different job before switching.', ['status' => 422]);
+        }
 
-      $switch_target_job = self::job_by_id($target_job_id);
-      if (!$switch_target_job) {
-        return new WP_Error('switch_target_not_found', 'Next job not found.', ['status' => 404]);
-      }
+        $switch_target_job = self::job_by_id($target_job_id);
+        if (!$switch_target_job) {
+          return new WP_Error('switch_target_not_found', 'Next job not found.', ['status' => 404]);
+        }
 
-      $startable = [
-        Slate_Ops_Statuses::READY_FOR_BUILD,
-        Slate_Ops_Statuses::SCHEDULED,
-        Slate_Ops_Statuses::IN_PROGRESS,
-        Slate_Ops_Statuses::QUEUED,
-      ];
-      $target_status = Slate_Ops_Statuses::normalize((string)($switch_target_job['status'] ?? ''));
-      if (!in_array($target_status, array_map([Slate_Ops_Statuses::class, 'normalize'], $startable), true)) {
-        return new WP_Error('invalid_switch_target_status', 'Next job cannot be started in its current status.', ['status' => 422]);
-      }
+        $startable = [
+          Slate_Ops_Statuses::READY_FOR_BUILD,
+          Slate_Ops_Statuses::SCHEDULED,
+          Slate_Ops_Statuses::IN_PROGRESS,
+          Slate_Ops_Statuses::QUEUED,
+        ];
+        $target_status = Slate_Ops_Statuses::normalize((string)($switch_target_job['status'] ?? ''));
+        if (!in_array($target_status, array_map([Slate_Ops_Statuses::class, 'normalize'], $startable), true)) {
+          return new WP_Error('invalid_switch_target_status', 'Next job cannot be started in its current status.', ['status' => 422]);
+        }
 
-      $target_parts_status = strtoupper((string)($switch_target_job['parts_status'] ?? ''));
-      if (in_array($target_parts_status, ['NOT_READY', 'HOLD'], true)) {
-        $msg = $target_parts_status === 'HOLD'
-          ? 'Cannot switch to a job while parts are on hold.'
-          : 'Cannot switch to a job while parts are not ready.';
-        return new WP_Error('switch_target_parts_blocked', $msg, [
-          'status'       => 422,
-          'field'        => 'parts_status',
-          'parts_status' => $target_parts_status,
-        ]);
-      }
+        $target_parts_status = strtoupper((string)($switch_target_job['parts_status'] ?? ''));
+        if (in_array($target_parts_status, ['NOT_READY', 'HOLD'], true)) {
+          $msg = $target_parts_status === 'HOLD'
+            ? 'Cannot switch to a job while parts are on hold.'
+            : 'Cannot switch to a job while parts are not ready.';
+          return new WP_Error('switch_target_parts_blocked', $msg, [
+            'status'       => 422,
+            'field'        => 'parts_status',
+            'parts_status' => $target_parts_status,
+          ]);
+        }
 
-      $other_open = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' AND segment_id<>%d ORDER BY start_ts DESC LIMIT 1",
-        $user_id,
-        (int)$open['segment_id']
-      ), ARRAY_A);
-      if ($other_open) {
-        return new WP_Error('timer_conflict', 'You already have another active timer. Pause it before switching jobs.', ['status' => 409]);
+        $other_open = $wpdb->get_row($wpdb->prepare(
+          "SELECT * FROM $segments WHERE user_id=%d AND end_ts IS NULL AND state='active' AND segment_id<>%d ORDER BY start_ts DESC LIMIT 1",
+          $user_id,
+          (int)$open['segment_id']
+        ), ARRAY_A);
+        if ($other_open) {
+          return new WP_Error('timer_conflict', 'You already have another active timer. Pause it before switching jobs.', ['status' => 409]);
+        }
       }
     }
 
