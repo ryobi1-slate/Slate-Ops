@@ -406,19 +406,25 @@ class Slate_Ops_PA_Events {
       return 0;
     }
 
-    // Collect all valid item numbers up front so we can pre-fetch existing
-    // rows in a single IN query instead of one SELECT per record (N+1).
-    $item_nos = [];
+    // Collect valid item numbers + referenced vendor numbers up front so we
+    // can pre-fetch existing rows + vendor IDs in two IN queries instead of
+    // 2N SELECTs (one per record).
+    $item_nos   = [];
+    $vendor_nos = [];
     foreach ($records as $i) {
       $ino = sanitize_text_field($i['itemNo'] ?? $i['number'] ?? '');
-      if (self::is_ignored_item($i)) continue;
-      if ($ino !== '') $item_nos[] = $ino;
+      if ($ino === '') continue;
+      if (!self::is_ignored_item($i)) {
+        $item_nos[] = $ino;
+      }
+      $vno = sanitize_text_field($i['vendorNo'] ?? '');
+      if ($vno !== '') $vendor_nos[$vno] = true;
     }
     if (empty($item_nos)) return 0;
 
-    $placeholders = implode(',', array_fill(0, count($item_nos), '%s'));
+    $item_placeholders = implode(',', array_fill(0, count($item_nos), '%s'));
     $existing_rows = $wpdb->get_results(
-      $wpdb->prepare("SELECT id, bc_item_id FROM $ti WHERE bc_item_id IN ($placeholders)", $item_nos),
+      $wpdb->prepare("SELECT id, bc_item_id FROM $ti WHERE bc_item_id IN ($item_placeholders)", $item_nos),
       ARRAY_A
     );
     $existing_map = [];
@@ -426,18 +432,12 @@ class Slate_Ops_PA_Events {
       $existing_map[$row['bc_item_id']] = (int) $row['id'];
     }
 
-    // Pre-fetch vendor id mappings in a single IN query.
-    $vendor_nos = [];
-    foreach ($records as $i) {
-      $vno = sanitize_text_field($i['vendorNo'] ?? '');
-      if ($vno !== '') $vendor_nos[] = $vno;
-    }
     $vendor_map = [];
     if (!empty($vendor_nos)) {
-      $vendor_nos = array_values(array_unique($vendor_nos));
-      $v_placeholders = implode(',', array_fill(0, count($vendor_nos), '%s'));
+      $vno_list = array_keys($vendor_nos);
+      $vendor_placeholders = implode(',', array_fill(0, count($vno_list), '%s'));
       $vendor_rows = $wpdb->get_results(
-        $wpdb->prepare("SELECT id, bc_vendor_id FROM $tv WHERE bc_vendor_id IN ($v_placeholders)", $vendor_nos),
+        $wpdb->prepare("SELECT id, bc_vendor_id FROM $tv WHERE bc_vendor_id IN ($vendor_placeholders)", $vno_list),
         ARRAY_A
       );
       foreach ($vendor_rows as $row) {
