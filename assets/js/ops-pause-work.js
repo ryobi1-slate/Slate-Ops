@@ -258,11 +258,11 @@
 
       function updateSubmit() {
         if (!selectedAction) {
-          submitEl.textContent = 'Pause job';
+          submitEl.textContent = 'Choose an action';
         } else if (selectedAction === 'SWITCH_JOB') {
-          submitEl.textContent = 'Pause and switch';
+          submitEl.textContent = selectedTargetLabel() ? 'Pause & Switch' : 'Select Job';
         } else {
-          submitEl.textContent = 'Pause job';
+          submitEl.textContent = 'Pause Job';
         }
         submitEl.disabled = !isComplete();
       }

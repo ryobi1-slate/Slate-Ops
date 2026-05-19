@@ -3200,9 +3200,9 @@ body.ops-page-tech .ops-pw-modal--pause .ops-pw-choice:focus-visible {
 }
 
 body.ops-page-tech .ops-pw-modal--pause .ops-pw-choice.is-selected {
-  background: rgba(47, 62, 57, 0.08) !important;
-  border-color: rgba(47, 62, 57, 0.54) !important;
-  box-shadow: inset 0 0 0 1px rgba(47, 62, 57, 0.42) !important;
+  background: rgba(47, 62, 57, 0.10) !important;
+  border-color: rgba(47, 62, 57, 0.72) !important;
+  box-shadow: inset 0 0 0 2px rgba(47, 62, 57, 0.50), 0 10px 22px rgba(15, 52, 42, 0.10) !important;
 }
 
 body.ops-page-tech .ops-pw-modal--pause .ops-pw-choice__title {
