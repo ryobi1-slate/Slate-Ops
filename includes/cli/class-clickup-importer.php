@@ -29,6 +29,19 @@ class Slate_Ops_ClickUp_Importer {
 	// ── Status / parts maps ──────────────────────────────────────────────────
 
 	private static $status_map = [
+		// Canonical Slate Ops statuses.
+		'INTAKE'                     => 'INTAKE',
+		'NEEDS_SO'                   => 'NEEDS_SO',
+		'READY_FOR_BUILD'            => 'READY_FOR_BUILD',
+		'SCHEDULED'                  => 'SCHEDULED',
+		'IN_PROGRESS'                => 'IN_PROGRESS',
+		'QC'                         => 'QC',
+		'AWAITING_PICKUP'            => 'AWAITING_PICKUP',
+		'COMPLETE'                   => 'COMPLETE',
+		'ON_HOLD'                    => 'ON_HOLD',
+		'CANCELLED'                  => 'CANCELLED',
+
+		// Legacy/display labels accepted for older generated JSONL files.
 		'Delayed'                    => 'SCHEDULED',
 		'Scheduled'                  => 'SCHEDULED',
 		'In Progress'                => 'IN_PROGRESS',
@@ -140,6 +153,7 @@ class Slate_Ops_ClickUp_Importer {
 
 		$preview = [];
 		foreach ( $rows as $r ) {
+			$tech_note = $r['tech_note'] ?? ( $r['notes'] ?? '' );
 			$preview[] = [
 				'customer_name'  => $r['customer_name'],
 				'status'         => self::$status_map[ $r['job_status'] ] ?? '?',
@@ -148,7 +162,7 @@ class Slate_Ops_ClickUp_Importer {
 				'scheduled_start'=> $r['start_date'] ?: null,
 				'scheduled_finish'=> $r['due_date'] ?: null,
 				'lead_tech'      => $r['lead_tech'],
-				'notes'          => $r['notes'],
+				'tech_note'      => $tech_note,
 				'clickup_task_id'=> $r['source_task_id'],
 			];
 		}
@@ -187,6 +201,7 @@ class Slate_Ops_ClickUp_Importer {
 		foreach ( $rows as $r ) {
 			$status       = self::$status_map[ $r['job_status'] ]   ?? 'INTAKE';
 			$parts_status = self::$parts_map[ $r['parts_status'] ]  ?? 'NOT_READY';
+			$tech_note    = $r['tech_note'] ?? ( $r['notes'] ?? '' );
 
 			// ClickUp's "delay - parts" lane imports as scheduled work with parts not ready.
 			$delay_reason = null;
@@ -225,8 +240,9 @@ class Slate_Ops_ClickUp_Importer {
 				'scheduled_start'    => ( $r['start_date'] !== '' ) ? $r['start_date'] : null,
 				'scheduled_finish'   => ( $r['due_date'] !== '' ) ? $r['due_date'] : null,
 
-				// Notes
-				'notes'              => ( $r['notes'] !== '' ) ? $r['notes'] : null,
+				// Notes. ClickUp latest comment is tech-visible work context, not CS-internal history.
+				'queue_note'         => ( $tech_note !== '' ) ? $tech_note : null,
+				'notes'              => null,
 				'schedule_notes'     => $schedule_notes,
 
 				// Defaults
