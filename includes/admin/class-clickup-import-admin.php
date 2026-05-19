@@ -315,6 +315,9 @@ class Slate_Ops_ClickUp_Import_Admin {
 						if ( $s || $f ) {
 							$log[] = '      Dates : start=' . ( $s ?: '-' ) . '  due=' . ( $f ?: '-' );
 						}
+						if ( ! empty( $r['tech_note'] ) ) {
+							$log[] = '      Tech note: ' . $r['tech_note'];
+						}
 					}
 				}
 				if ( ! empty( $result['skipped'] ) ) {
