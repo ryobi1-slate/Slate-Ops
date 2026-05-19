@@ -57,6 +57,7 @@ class Slate_Ops_Purchasing {
        FROM $ti i
        LEFT JOIN $tv v ON i.preferred_vendor_id = v.id
        WHERE i.part_number NOT LIKE 'BOM%'
+         AND COALESCE(i.blocked, 0) = 0
        ORDER BY i.part_number ASC",
       ARRAY_A
     ) ?: [];
@@ -205,7 +206,26 @@ class Slate_Ops_Purchasing {
     $open_requests        = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tr WHERE status NOT IN ('cancelled')");
     $pending_review       = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tr WHERE status = 'review'");
     $items_tracked        = (int) $wpdb->get_var("SELECT COUNT(*) FROM $ti");
-    $items_below_reorder  = (int) $wpdb->get_var("SELECT COUNT(*) FROM $ti WHERE on_hand <= reorder_point AND reorder_point > 0");
+    $items_below_reorder  = (int) $wpdb->get_var(
+      "SELECT COUNT(*) FROM $ti
+       WHERE COALESCE(blocked, 0) = 0
+         AND (
+           (
+             reordering_policy = 'Lot-for-Lot'
+             AND (on_hand + qty_on_purchase_order - qty_on_sales_order - qty_on_component_lines - safety_stock_quantity) < 0
+           )
+           OR (
+             reordering_policy IN ('Fixed Reorder Qty.', 'Maximum Qty.')
+             AND (on_hand + qty_on_purchase_order) <= reorder_point
+             AND reorder_point > 0
+           )
+           OR (
+             (reordering_policy IS NULL OR reordering_policy = '')
+             AND on_hand <= reorder_point
+             AND reorder_point > 0
+           )
+         )"
+    );
     $active_vendors       = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tv WHERE status = 'active'");
     $total_vendors        = (int) $wpdb->get_var("SELECT COUNT(*) FROM $tv");
     $open_orders          = (int) $wpdb->get_var("SELECT COUNT(*) FROM $to WHERE status NOT IN ('received', 'closed')");

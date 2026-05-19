@@ -68,36 +68,10 @@ $visible_links = array_values(array_filter($quick_links, function ($link) use ($
   return $can($link['slug']);
 }));
 
-$changelog = [
-  [
-    'when' => 'May 11',
-    'version' => 'v0.58.1',
-    'title' => 'CS Workspace queue ordering and tech reassignment',
-    'description' => 'Queue tools help CS manage intake, assignment, visibility, and notes from one workspace.',
-    'tags' => ['CS'],
-  ],
-  [
-    'when' => 'May 9',
-    'version' => 'v0.58.0',
-    'title' => 'Tech screen timer and QC flow polish',
-    'description' => 'The tech surface keeps active work, timers, up next, and QC actions in the shop workflow.',
-    'tags' => ['Tech', 'UI'],
-  ],
-  [
-    'when' => 'May 7',
-    'version' => 'v0.57.0',
-    'title' => 'Resource Hub visual alignment',
-    'description' => 'Docs, breadcrumbs, and headers now better match the operational shell.',
-    'tags' => ['Docs', 'UI'],
-  ],
-  [
-    'when' => 'May 5',
-    'version' => 'v0.56.0',
-    'title' => 'Access rules and role-based navigation cleanup',
-    'description' => 'Navigation now follows the page access matrix so users only see reachable workspaces.',
-    'tags' => ['Admin'],
-  ],
-];
+$shop_update_data = include SLATE_OPS_PATH . 'includes/data/ops-home-updates.php';
+$shop_updates = is_array($shop_update_data['updates'] ?? null) ? $shop_update_data['updates'] : [];
+$shop_updates_reviewed_on = (string) ($shop_update_data['reviewed_on'] ?? '');
+$shop_updates_source_version = (string) ($shop_update_data['source_version'] ?? '');
 
 $guidance = [
   [
@@ -132,7 +106,7 @@ $guidance = [
         <p>Quick links, launch notes, and workspace guidance.</p>
       </div>
       <div class="ops-home__meta" aria-label="OPS Home metadata">
-        <span class="ops-home__status"><span aria-hidden="true"></span>Updated today</span>
+        <span class="ops-home__status"><span aria-hidden="true"></span>Reviewed <?php echo esc_html($shop_updates_reviewed_on); ?></span>
         <span>Build <strong><?php echo esc_html(SLATE_OPS_VERSION); ?></strong></span>
       </div>
     </header>
@@ -164,18 +138,29 @@ $guidance = [
     <section class="ops-home__split" aria-label="OPS Home guidance">
       <div class="ops-home-card">
         <div class="ops-home-card__head">
-          <h2>What Changed Recently <span><?php echo esc_html(count($changelog)); ?> entries</span></h2>
+          <h2>What Changed Recently <span><?php echo esc_html(count($shop_updates)); ?> shop updates</span></h2>
+          <?php if ($shop_updates_source_version !== '') : ?>
+            <span class="ops-home-card__source">Current through <?php echo esc_html($shop_updates_source_version); ?></span>
+          <?php endif; ?>
         </div>
         <div class="ops-home-changelog">
-          <?php foreach ($changelog as $entry) : ?>
+          <?php foreach ($shop_updates as $entry) : ?>
             <article class="ops-home-change">
               <div class="ops-home-change__date">
                 <?php echo esc_html($entry['when']); ?>
                 <span><?php echo esc_html($entry['version']); ?></span>
               </div>
               <div class="ops-home-change__body">
-                <h3><?php echo esc_html($entry['title']); ?></h3>
+                <h3>
+                  <?php if (!empty($entry['priority'])) : ?>
+                    <span class="ops-home-change__priority"><?php echo esc_html($entry['priority']); ?></span>
+                  <?php endif; ?>
+                  <?php echo esc_html($entry['title']); ?>
+                </h3>
                 <p><?php echo esc_html($entry['description']); ?></p>
+                <?php if (!empty($entry['action'])) : ?>
+                  <p class="ops-home-change__action"><?php echo esc_html($entry['action']); ?></p>
+                <?php endif; ?>
               </div>
               <div class="ops-home-change__tags">
                 <?php foreach ($entry['tags'] as $tag) : ?>

@@ -429,7 +429,7 @@ class Slate_Ops_PA_Events {
     // Pre-fetch vendor id mappings in a single IN query.
     $vendor_nos = [];
     foreach ($records as $i) {
-      $vno = sanitize_text_field($i['vendorNo'] ?? '');
+      $vno = sanitize_text_field(self::first_value($i, ['vendorNo', 'vendorNumber', 'vendor_No'], ''));
       if ($vno !== '') $vendor_nos[] = $vno;
     }
     $vendor_map = [];
@@ -454,20 +454,35 @@ class Slate_Ops_PA_Events {
         continue;
       }
 
-      $vendor_no           = sanitize_text_field($i['vendorNo'] ?? '');
+      $vendor_no           = sanitize_text_field(self::first_value($i, ['vendorNo', 'vendorNumber', 'vendor_No'], ''));
       $preferred_vendor_id = ($vendor_no !== '' && isset($vendor_map[$vendor_no])) ? $vendor_map[$vendor_no] : null;
 
       $data = [
         'bc_item_id'          => $item_no,
         'part_number'         => sanitize_text_field($i['itemNo']          ?? $i['number'] ?? $item_no),
         'description'         => sanitize_text_field($i['description']     ?? $i['displayName'] ?? ''),
+        'item_type'           => sanitize_text_field(self::first_value($i, ['type', 'itemType'], '')),
+        'blocked'             => self::truthy(self::first_value($i, ['blocked', 'Blocked'], false)) ? 1 : 0,
+        'item_category_code'   => sanitize_text_field(self::first_value($i, ['itemCategoryCode', 'categoryCode'], '')),
         'preferred_vendor_id' => $preferred_vendor_id,
-        'on_hand'             => (int) ($i['onHand']                       ?? 0),
-        'reorder_point'       => max(0, (int) ($i['reorderPoint']          ?? 0)),
+        'vendor_item_no'      => sanitize_text_field(self::first_value($i, ['vendorItemNo', 'vendorItemNumber'], '')),
+        'base_unit_of_measure'=> sanitize_text_field(self::first_value($i, ['baseUnitOfMeasure', 'baseUom'], '')),
+        'on_hand'             => (int) self::first_value($i, ['onHand', 'inventory'], 0),
+        'reordering_policy'   => self::normalize_reordering_policy(self::first_value($i, ['reorderingPolicy'], '')),
+        'reorder_point'       => max(0, (int) self::first_value($i, ['reorderPoint'], 0)),
+        'reorder_quantity'    => max(0, (int) self::first_value($i, ['reorderQuantity'], 0)),
+        'maximum_inventory'   => max(0, (int) self::first_value($i, ['maximumInventory', 'maxInventory'], 0)),
+        'safety_stock_quantity' => max(0, (int) self::first_value($i, ['safetyStockQuantity'], 0)),
+        'lead_time_calculation' => sanitize_text_field(self::first_value($i, ['leadTimeCalculation', 'leadTime'], '')),
+        'minimum_order_quantity' => max(0, (int) self::first_value($i, ['minimumOrderQuantity', 'minOrderQuantity'], 0)),
+        'order_multiple'      => max(0, (int) self::first_value($i, ['orderMultiple'], 0)),
+        'qty_on_purchase_order' => max(0, (int) self::first_value($i, ['qtyOnPurchaseOrder', 'quantityOnPurchaseOrder'], 0)),
+        'qty_on_sales_order'  => max(0, (int) self::first_value($i, ['qtyOnSalesOrder', 'quantityOnSalesOrder'], 0)),
+        'qty_on_component_lines' => max(0, (int) self::first_value($i, ['qtyOnComponentLines', 'quantityOnComponentLines'], 0)),
         'unit_cost'           => max(0.0, (float) ($i['unitCost']          ?? 0)),
         'demand_level'        => sanitize_text_field($i['demandLevel']     ?? 'low'),
-        'forecasted_need'     => max(0, (int) ($i['forecastedNeed']        ?? 0)),
-        'suggested_order'     => max(0, (int) ($i['suggestedOrder']        ?? 0)),
+        'forecasted_need'     => 0,
+        'suggested_order'     => 0,
         'updated_at'          => $now,
       ];
 
@@ -653,10 +668,41 @@ class Slate_Ops_PA_Events {
       return true;
     }
 
-    $type = strtolower(sanitize_text_field($item['type'] ?? ''));
+    if (self::truthy(self::first_value($item, ['blocked', 'Blocked'], false))) {
+      return true;
+    }
+
+    $type = strtolower(sanitize_text_field(self::first_value($item, ['type', 'itemType'], '')));
     $type = str_replace('_x002d_', '-', $type);
     $type = preg_replace('/[^a-z0-9]/', '', $type);
-    return $type === 'noninventory';
+    return $type !== '' && $type !== 'inventory';
+  }
+
+  private static function first_value($row, $keys, $default = null) {
+    foreach ($keys as $key) {
+      if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+        return $row[$key];
+      }
+    }
+    return $default;
+  }
+
+  private static function truthy($value) {
+    if (is_bool($value)) return $value;
+    if (is_numeric($value)) return (int) $value === 1;
+    $value = strtolower(trim((string) $value));
+    return in_array($value, ['1', 'true', 'yes'], true);
+  }
+
+  private static function normalize_reordering_policy($value) {
+    $raw = sanitize_text_field((string) $value);
+    $key = strtolower($raw);
+    $key = str_replace('_x002e_', '', $key);
+    $key = preg_replace('/[^a-z0-9]/', '', $key);
+    if ($key === 'lotforlot') return 'Lot-for-Lot';
+    if ($key === 'fixedreorderqty') return 'Fixed Reorder Qty.';
+    if ($key === 'maximumqty') return 'Maximum Qty.';
+    return $raw;
   }
 
   private static function uuid4() {

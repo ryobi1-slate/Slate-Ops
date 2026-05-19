@@ -3069,7 +3069,6 @@ return self::get_job(['id' => $job_id]);
     if (!empty($config['note_required']) && $pause_note === '') {
       return new WP_Error('pause_note_required', 'Add a note for this pause reason.', ['status' => 422]);
     }
-
     $is_blocked_reason = !empty($config['blocked']);
     if ($is_blocked_reason && !self::tech_rollout_allows_blockers()) {
       return new WP_Error('blockers_not_enabled', 'Blocked reasons are not enabled for the current Tech screen rollout phase.', ['status' => 403]);

@@ -3,7 +3,7 @@
  *
  * Standalone vanilla-JS module. Loaded only on /ops/purchasing.
  * Phase 1: reads from local WordPress purchasing tables via REST.
- * No Business Central. No Power Automate. No jQuery.
+ * Business Central syncs only through Power Automate. No jQuery.
  *
  * Tabs: Overview · Demand · Purchase Requests · Vendors · Open POs · API Status
  */
@@ -33,6 +33,7 @@
       search:  '',
       urgency: 'all',
       vendor:  'all',
+      bucket:  'all',
     },
     activeRequestId: null,
     activeVendorId:       null,
@@ -688,7 +689,7 @@
         item_id:          parseInt(d.id, 10),
         item_description: String(d.description || d.part_number || 'Unknown item'),
         vendor_id:        parseInt(d.preferred_vendor_id, 10),
-        qty:              parseInt(d.suggested_order, 10) > 0 ? parseInt(d.suggested_order, 10) : 1,
+        qty:              1,
         unit_cost:        parseFloat(d.unit_cost) || 0,
       };
     });
@@ -713,6 +714,65 @@
   }
 
   // ─── Demand tab ───────────────────────────────────────────────────────────
+  function asInt(value) {
+    var n = parseInt(value, 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function normalizePolicy(value) {
+    return String(value || '').toLowerCase().replace(/_x002e_/g, '').replace(/[^a-z0-9]/g, '');
+  }
+
+  function itemBucket(d) {
+    var policy = normalizePolicy(d.reordering_policy);
+    if (policy === 'lotforlot') return 'job';
+    if (policy === 'fixedreorderqty' || policy === 'maximumqty') return 'stocked';
+    return 'unclassified';
+  }
+
+  function bucketLabel(d) {
+    var bucket = itemBucket(d);
+    if (bucket === 'job') return 'Job-driven';
+    if (bucket === 'stocked') return 'Stocked';
+    return 'Unclassified';
+  }
+
+  function projectedAvailable(d) {
+    return asInt(d.on_hand) +
+      asInt(d.qty_on_purchase_order) -
+      asInt(d.qty_on_sales_order) -
+      asInt(d.qty_on_component_lines) -
+      asInt(d.safety_stock_quantity);
+  }
+
+  function demandFlag(d) {
+    var bucket = itemBucket(d);
+    if (bucket === 'job') {
+      var projected = projectedAvailable(d);
+      return {
+        flagged: projected < 0,
+        value: projected,
+        label: projected < 0 ? 'Short' : 'Covered',
+      };
+    }
+
+    if (bucket === 'stocked') {
+      var available = asInt(d.on_hand) + asInt(d.qty_on_purchase_order);
+      var reorder = asInt(d.reorder_point);
+      return {
+        flagged: reorder > 0 && available <= reorder,
+        value: available,
+        label: reorder > 0 && available <= reorder ? 'At reorder' : 'Above reorder',
+      };
+    }
+
+    return {
+      flagged: false,
+      value: asInt(d.on_hand) + asInt(d.qty_on_purchase_order),
+      label: 'Needs policy',
+    };
+  }
+
   function filteredDemand() {
     var f = state.filters;
     return state.demand.filter(function (d) {
@@ -723,6 +783,7 @@
       }
       if (f.urgency !== 'all' && d.demand_level !== f.urgency) return false;
       if (f.vendor !== 'all' && (d.preferred_vendor_name || '') !== f.vendor) return false;
+      if (f.bucket !== 'all' && itemBucket(d) !== f.bucket) return false;
       return true;
     });
   }
@@ -747,6 +808,12 @@
       '<select class="pur-filter-select" data-filter="vendor">' +
         '<option value="all"' + (state.filters.vendor === 'all' ? ' selected' : '') + '>All vendors</option>' +
         vendorOptions +
+      '</select>' +
+      '<select class="pur-filter-select" data-filter="bucket">' +
+        '<option value="all"' + (state.filters.bucket === 'all' ? ' selected' : '') + '>All buckets</option>' +
+        '<option value="job"' + (state.filters.bucket === 'job' ? ' selected' : '') + '>Job-driven</option>' +
+        '<option value="stocked"' + (state.filters.bucket === 'stocked' ? ' selected' : '') + '>Stocked</option>' +
+        '<option value="unclassified"' + (state.filters.bucket === 'unclassified' ? ' selected' : '') + '>Unclassified</option>' +
       '</select>' +
     '</div>';
   }
@@ -780,8 +847,8 @@
     if (state.loading) return renderLoading();
 
     var items = filteredDemand();
-    var belowReorder = items.filter(function (d) {
-      return parseInt(d.reorder_point, 10) > 0 && parseInt(d.on_hand, 10) <= parseInt(d.reorder_point, 10);
+    var flaggedCount = items.filter(function (d) {
+      return demandFlag(d).flagged;
     }).length;
 
     var body;
@@ -791,17 +858,17 @@
       body = renderEmpty('search_off', 'No results', 'Try adjusting the filters.');
     } else {
       var eligibleIds = items
-        .filter(function (d) { return d.preferred_vendor_id; })
+        .filter(function (d) { return d.preferred_vendor_id && demandFlag(d).flagged; })
         .map(function (d) { return String(d.id); });
       var allSelected = eligibleIds.length > 0 && eligibleIds.every(function (id) {
         return state.selectedDemandIds.indexOf(id) !== -1;
       });
 
       var rows = items.map(function (d) {
-        var onHand      = parseInt(d.on_hand, 10);
-        var reorder     = parseInt(d.reorder_point, 10);
-        var needsReorder = reorder > 0 && onHand <= reorder;
-        var isDisabled  = !d.preferred_vendor_id;
+        var onHand      = asInt(d.on_hand);
+        var reorder     = asInt(d.reorder_point);
+        var flag        = demandFlag(d);
+        var isDisabled  = !d.preferred_vendor_id || !flag.flagged;
         var isSelected  = state.selectedDemandIds.indexOf(String(d.id)) !== -1;
         var pct         = reorder > 0 ? Math.min(100, Math.round((onHand / reorder) * 100)) : 100;
         var level       = d.demand_level || 'low';
@@ -809,7 +876,7 @@
                         : level === 'medium' ? 'pur-demand-bar--medium'
                         : 'pur-demand-bar--low';
         var rowClasses  = [
-          needsReorder ? 'pur-row-alert'    : '',
+          flag.flagged ? 'pur-row-alert'    : '',
           isSelected   ? 'pur-row-selected' : '',
           isDisabled   ? 'pur-row-disabled' : '',
         ].filter(Boolean).join(' ');
@@ -822,14 +889,16 @@
           '</td>' +
           '<td class="pur-col-mono">' + esc(d.part_number) + '</td>' +
           '<td>' + esc(d.description) + '</td>' +
+          '<td class="pur-col-muted">' + esc(bucketLabel(d)) + '</td>' +
           '<td class="pur-col-muted">' + esc(d.preferred_vendor_name || '—') + '</td>' +
-          '<td class="pur-col-num' + (needsReorder ? ' pur-col-alert' : '') + '">' + onHand + '</td>' +
+          '<td class="pur-col-num' + (flag.flagged ? ' pur-col-alert' : '') + '">' + onHand + '</td>' +
+          '<td class="pur-col-num">' + esc(asInt(d.qty_on_purchase_order)) + '</td>' +
           '<td class="pur-col-num pur-col-muted">' + reorder + '</td>' +
           '<td class="pur-col-num">' +
             '<div class="pur-demand-bar-wrap"><div class="pur-demand-bar ' + barClass + '" style="width:' + pct + '%"></div></div>' +
           '</td>' +
-          '<td class="pur-col-num">' + esc(d.forecasted_need || 0) + '</td>' +
-          '<td class="pur-col-num">' + esc(d.suggested_order || 0) + '</td>' +
+          '<td class="pur-col-num' + (flag.flagged ? ' pur-col-alert' : '') + '">' + esc(flag.value) + '</td>' +
+          '<td>' + esc(flag.label) + '</td>' +
         '</tr>';
       }).join('');
       body = '<div class="pur-table-wrap"><table class="pur-table">' +
@@ -841,24 +910,26 @@
           '</th>' +
           '<th>Part #</th>' +
           '<th>Description</th>' +
+          '<th>Bucket</th>' +
           '<th>Vendor</th>' +
           '<th style="text-align:right">On Hand</th>' +
+          '<th style="text-align:right">On PO</th>' +
           '<th style="text-align:right">Reorder Pt.</th>' +
           '<th style="text-align:right">Stock Level</th>' +
-          '<th style="text-align:right">Forecasted Need</th>' +
-          '<th style="text-align:right">Suggested Order</th>' +
+          '<th style="text-align:right">Projected/Available</th>' +
+          '<th>Flag</th>' +
         '</tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table></div>';
     }
 
     var meta = state.demand.length
-      ? items.length + ' of ' + state.demand.length + ' items · ' + belowReorder + ' below reorder'
+      ? items.length + ' of ' + state.demand.length + ' items · ' + flaggedCount + ' flagged'
       : '';
 
     return '<div class="pur-card">' +
       '<div class="pur-card-header">' +
-        '<h2 class="pur-card-title">Demand Forecast</h2>' +
+        '<h2 class="pur-card-title">Demand</h2>' +
         '<span class="pur-card-meta">' + esc(meta) + '</span>' +
       '</div>' +
       renderDemandFilters() +
@@ -1046,7 +1117,7 @@
       '<div class="pur-api-card-title">Integration Readiness</div>' +
       (d ? (
         checkRow('Power Automate',       d.enabled,              d.enabled ? 'Enabled' : 'Disabled') +
-        checkRow('HMAC Secret',          d.hmac_configured) +
+        checkRow('HMAC secret',          d.hmac_configured, d.hmac_configured ? 'Configured (value hidden)' : 'Not configured') +
         checkRow('PR Approved Flow',     flows.pr) +
         checkRow('Vendor Sync Flow',     flows.vendor) +
         checkRow('Item Sync Flow',       flows.item) +
@@ -1186,13 +1257,13 @@
         flowField('Open PO Sync Flow', 'flow_po_url',     'po') +
         flowField('Demand Sync Flow',  'flow_demand_url', 'demand') +
         '<div class="pur-int-row">' +
-          '<label class="pur-int-label">HMAC Secret</label>' +
+          '<label class="pur-int-label">HMAC secret</label>' +
           '<input type="password" class="pur-int-input" autocomplete="new-password"' +
             ' placeholder="' + (d && d.hmac_configured ? '••••••••' : 'Enter secret…') + '"' +
             ' data-integration-field="hmac_secret">' +
           (d && d.hmac_configured
             ? '<button class="pur-btn pur-btn--outline pur-int-clear-btn" data-action="clear-hmac-secret">' +
-                '<span class="material-symbols-outlined">delete</span>Clear' +
+                '<span class="material-symbols-outlined">delete</span>Clear HMAC secret' +
               '</button>'
             : '') +
         '</div>' +
@@ -1304,7 +1375,7 @@
     el.querySelectorAll('[data-action="select-all-demand"]').forEach(function (cb) {
       cb.addEventListener('change', function () {
         var eligibleIds = filteredDemand()
-          .filter(function (d) { return d.preferred_vendor_id; })
+          .filter(function (d) { return d.preferred_vendor_id && demandFlag(d).flagged; })
           .map(function (d) { return String(d.id); });
         state.selectedDemandIds = cb.checked ? eligibleIds : [];
         render();
@@ -1471,7 +1542,7 @@
     var selectAll = el.querySelector('[data-action="select-all-demand"]');
     if (selectAll) {
       var eligibleIds = filteredDemand()
-        .filter(function (d) { return d.preferred_vendor_id; })
+        .filter(function (d) { return d.preferred_vendor_id && demandFlag(d).flagged; })
         .map(function (d) { return String(d.id); });
       var selCount = eligibleIds.filter(function (id) {
         return state.selectedDemandIds.indexOf(id) !== -1;

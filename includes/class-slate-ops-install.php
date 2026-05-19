@@ -25,6 +25,7 @@ class Slate_Ops_Install {
     global $wpdb;
     $jobs = $wpdb->prefix . 'slate_ops_jobs';
     $settings = $wpdb->prefix . 'slate_ops_settings';
+    $pur_items = $wpdb->prefix . 'slate_ops_pur_items';
 
     $cols = $wpdb->get_col("SHOW COLUMNS FROM `{$jobs}`", 0);
 
@@ -74,6 +75,30 @@ class Slate_Ops_Install {
     }
     if (!in_array('shift_end_grace_minutes', $setting_cols, true)) {
       $wpdb->query("ALTER TABLE `{$settings}` ADD COLUMN `shift_end_grace_minutes` SMALLINT UNSIGNED NOT NULL DEFAULT 10 AFTER `auto_stop_job_timers_at_shift_end`");
+    }
+
+    $pur_item_cols = $wpdb->get_col("SHOW COLUMNS FROM `{$pur_items}`", 0);
+    $pur_item_adds = [
+      'item_type'              => "ALTER TABLE `{$pur_items}` ADD COLUMN `item_type` VARCHAR(40) NULL AFTER `description`",
+      'blocked'                => "ALTER TABLE `{$pur_items}` ADD COLUMN `blocked` TINYINT(1) NOT NULL DEFAULT 0 AFTER `item_type`",
+      'item_category_code'     => "ALTER TABLE `{$pur_items}` ADD COLUMN `item_category_code` VARCHAR(64) NULL AFTER `blocked`",
+      'vendor_item_no'         => "ALTER TABLE `{$pur_items}` ADD COLUMN `vendor_item_no` VARCHAR(128) NULL AFTER `preferred_vendor_id`",
+      'base_unit_of_measure'   => "ALTER TABLE `{$pur_items}` ADD COLUMN `base_unit_of_measure` VARCHAR(32) NULL AFTER `vendor_item_no`",
+      'reordering_policy'      => "ALTER TABLE `{$pur_items}` ADD COLUMN `reordering_policy` VARCHAR(40) NULL AFTER `on_hand`",
+      'reorder_quantity'       => "ALTER TABLE `{$pur_items}` ADD COLUMN `reorder_quantity` INT NOT NULL DEFAULT 0 AFTER `reorder_point`",
+      'maximum_inventory'      => "ALTER TABLE `{$pur_items}` ADD COLUMN `maximum_inventory` INT NOT NULL DEFAULT 0 AFTER `reorder_quantity`",
+      'safety_stock_quantity'  => "ALTER TABLE `{$pur_items}` ADD COLUMN `safety_stock_quantity` INT NOT NULL DEFAULT 0 AFTER `maximum_inventory`",
+      'lead_time_calculation'  => "ALTER TABLE `{$pur_items}` ADD COLUMN `lead_time_calculation` VARCHAR(40) NULL AFTER `safety_stock_quantity`",
+      'minimum_order_quantity' => "ALTER TABLE `{$pur_items}` ADD COLUMN `minimum_order_quantity` INT NOT NULL DEFAULT 0 AFTER `lead_time_calculation`",
+      'order_multiple'         => "ALTER TABLE `{$pur_items}` ADD COLUMN `order_multiple` INT NOT NULL DEFAULT 0 AFTER `minimum_order_quantity`",
+      'qty_on_purchase_order'  => "ALTER TABLE `{$pur_items}` ADD COLUMN `qty_on_purchase_order` INT NOT NULL DEFAULT 0 AFTER `order_multiple`",
+      'qty_on_sales_order'     => "ALTER TABLE `{$pur_items}` ADD COLUMN `qty_on_sales_order` INT NOT NULL DEFAULT 0 AFTER `qty_on_purchase_order`",
+      'qty_on_component_lines' => "ALTER TABLE `{$pur_items}` ADD COLUMN `qty_on_component_lines` INT NOT NULL DEFAULT 0 AFTER `qty_on_sales_order`",
+    ];
+    foreach ($pur_item_adds as $column => $sql) {
+      if (!in_array($column, $pur_item_cols, true)) {
+        $wpdb->query($sql);
+      }
     }
   }
 
@@ -615,9 +640,24 @@ KEY awaiting_idx (awaiting_direction)
       bc_item_id VARCHAR(64) NULL,
       part_number VARCHAR(64) NOT NULL,
       description VARCHAR(255) NOT NULL,
+      item_type VARCHAR(40) NULL,
+      blocked TINYINT(1) NOT NULL DEFAULT 0,
+      item_category_code VARCHAR(64) NULL,
       preferred_vendor_id BIGINT UNSIGNED NULL,
+      vendor_item_no VARCHAR(128) NULL,
+      base_unit_of_measure VARCHAR(32) NULL,
       on_hand INT NOT NULL DEFAULT 0,
+      reordering_policy VARCHAR(40) NULL,
       reorder_point INT NOT NULL DEFAULT 0,
+      reorder_quantity INT NOT NULL DEFAULT 0,
+      maximum_inventory INT NOT NULL DEFAULT 0,
+      safety_stock_quantity INT NOT NULL DEFAULT 0,
+      lead_time_calculation VARCHAR(40) NULL,
+      minimum_order_quantity INT NOT NULL DEFAULT 0,
+      order_multiple INT NOT NULL DEFAULT 0,
+      qty_on_purchase_order INT NOT NULL DEFAULT 0,
+      qty_on_sales_order INT NOT NULL DEFAULT 0,
+      qty_on_component_lines INT NOT NULL DEFAULT 0,
       unit_cost DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
       demand_level VARCHAR(10) NOT NULL DEFAULT 'low',
       forecasted_need INT NOT NULL DEFAULT 0,

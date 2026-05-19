@@ -1,5 +1,7 @@
 node_modules/
 react-ui/node_modules/
+.DS_Store
+.codex-worktrees/
 
 # One-time import artifacts — raw exports and generated data files
 local-imports/*.csv
@@ -7,3 +9,9 @@ local-imports/*.jsonl
 
 # Pre-import backups contain live job data
 backup/*.json
+
+# macOS
+.DS_Store
+
+# QA/local artifacts
+docs/qa-screenshots/
