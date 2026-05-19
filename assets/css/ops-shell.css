@@ -3219,6 +3219,15 @@ body.ops-page-tech .ops-pw-modal--pause .ops-pw-choice__sub {
   margin-top: 2px;
 }
 
+body.ops-page-tech .ops-pw-modal--pause .ops-pw-choice__hint {
+  color: rgba(47, 62, 57, 0.66);
+  display: block;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.35;
+  margin-top: 7px;
+}
+
 body.ops-page-tech .ops-pw-modal--pause .ops-pw-detail-fields {
   background: rgba(234, 232, 220, 0.46);
   border: 1px solid rgba(15, 52, 42, 0.12);
@@ -3260,6 +3269,37 @@ body.ops-page-tech .ops-pw-modal--pause .ops-pw-field-err {
   font-weight: 700;
   margin-bottom: 10px;
   padding: 9px 10px;
+}
+
+body.ops-page-tech .ops-pw-modal--pause .ops-pw-clockout {
+  align-items: center;
+  border-top: 1px solid rgba(15, 52, 42, 0.10);
+  color: var(--slate-ink-muted);
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+body.ops-page-tech .ops-pw-modal--pause .ops-pw-clockout button {
+  background: #ffffff !important;
+  border: 1px solid rgba(47, 62, 57, 0.18) !important;
+  border-radius: 999px;
+  color: var(--sage) !important;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 36px;
+  padding: 8px 14px;
+}
+
+body.ops-page-tech .ops-pw-modal--pause .ops-pw-clockout button:hover,
+body.ops-page-tech .ops-pw-modal--pause .ops-pw-clockout button:focus-visible {
+  background: rgba(234, 232, 220, 0.42) !important;
+  border-color: rgba(47, 62, 57, 0.36) !important;
 }
 
 body.ops-page-tech .ops-pw-modal--pause .ops-pw-actions {

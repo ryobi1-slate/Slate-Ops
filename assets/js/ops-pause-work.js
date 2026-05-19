@@ -94,9 +94,8 @@
     var afterHoursRequired = !!(options.afterHoursRequired || options.overtimeRequired);
     return new Promise(function (resolve) {
       var ACTIONS = [
-        ['STEP_AWAY', 'Step Away', 'Break, lunch, waiting briefly, or quick interruption.'],
-        ['SWITCH_JOB', 'Switch Job', 'Move to another assigned job.'],
-        ['END_OF_SHIFT', 'End Shift', 'Clock out and stop labor.']
+        ['STEP_AWAY', 'Step Away', 'Quick interruption or brief wait.', 'Scheduled breaks and lunch are handled automatically.'],
+        ['SWITCH_JOB', 'Switch Job', 'Move to another assigned job or help nearby.', '']
       ];
 
       function esc(value) {
@@ -112,6 +111,7 @@
         return '<button type="button" class="ops-pw-choice" data-action="' + esc(action[0]) + '"' + (disabled ? ' disabled aria-disabled="true"' : '') + '>' +
           '<span class="ops-pw-choice__title">' + esc(action[1]) + '</span>' +
           '<span class="ops-pw-choice__sub">' + esc(disabled ? 'No available jobs to switch to.' : action[2]) + '</span>' +
+          (action[3] && !disabled ? '<span class="ops-pw-choice__hint">' + esc(action[3]) + '</span>' : '') +
         '</button>';
       }
 
@@ -158,7 +158,7 @@
           '<div class="ops-pw-head">' +
             '<div>' +
               '<h2 id="ops-pw-title" class="ops-pw-title">Pause work</h2>' +
-              '<p class="ops-pw-body">Choose a quick reason. Add a note only if it helps the next step.</p>' +
+              '<p class="ops-pw-body">Choose what you need to do next. Add a note only if it helps the next step.</p>' +
             '</div>' +
             '<button id="ops-pw-x" type="button" class="ops-pw-x" aria-label="Cancel">&times;</button>' +
           '</div>' +
@@ -186,6 +186,10 @@
                 '<textarea id="ops-pw-after-note" class="ops-pw-textarea" placeholder="Why was work needed after shift?" rows="2"></textarea>' +
               '</div>' +
             '</div>' +
+            '<div class="ops-pw-clockout">' +
+              '<span>Leaving for the day?</span>' +
+              '<button id="ops-pw-clockout" type="button">Clock Out</button>' +
+            '</div>' +
           '</div>' +
           '<div class="ops-pw-actions">' +
             '<button id="ops-pw-cancel" type="button" class="ops-pw-btn ops-pw-btn--cancel">Cancel</button>' +
@@ -209,6 +213,7 @@
       var cancelEl = overlay.querySelector('#ops-pw-cancel');
       var xEl      = overlay.querySelector('#ops-pw-x');
       var submitEl = overlay.querySelector('#ops-pw-submit');
+      var clockoutEl = overlay.querySelector('#ops-pw-clockout');
       var selectedAction = '';
 
       function needsAfterHoursNote() {
@@ -256,8 +261,6 @@
           submitEl.textContent = 'Pause job';
         } else if (selectedAction === 'SWITCH_JOB') {
           submitEl.textContent = 'Pause and switch';
-        } else if (selectedAction === 'END_OF_SHIFT') {
-          submitEl.textContent = 'End shift';
         } else {
           submitEl.textContent = 'Pause job';
         }
@@ -328,6 +331,21 @@
 
       cancelEl.addEventListener('click', function () { done(null); });
       xEl.addEventListener('click', function () { done(null); });
+      clockoutEl.addEventListener('click', function () {
+        done({
+          pause_reason: 'END_OF_SHIFT',
+          pause_note: '',
+          pause_type: 'paused',
+          source: 'tech_manual',
+          blocked: false,
+          requires_clearance: false,
+          after_hours: false,
+          after_hours_note: '',
+          overtime_note: '',
+          other_work_can_continue: null,
+          target_job_id: 0
+        });
+      });
       overlay.addEventListener('click', function (e) { if (e.target === overlay) done(null); });
       document.addEventListener('keydown', onKey);
 
