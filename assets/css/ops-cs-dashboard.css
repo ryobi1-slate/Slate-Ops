@@ -926,7 +926,7 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 68px 100px minmax(170px, 1.1fr) 152px 106px minmax(190px, 0.9fr) 88px minmax(160px, 1fr) 58px;
+  grid-template-columns: 24px 68px 100px minmax(170px, 1.1fr) 152px 106px minmax(190px, 0.9fr) 88px minmax(160px, 1fr) 36px;
   align-items: center;
   gap: 10px;
   padding: 6px 14px;
@@ -1289,8 +1289,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 2px;
-  min-width: 58px;
+  gap: 0;
+  min-width: 0;
 }
 .cs-beta-row__iconbtn {
   /* Same WP-theme override pattern as the chips. */
