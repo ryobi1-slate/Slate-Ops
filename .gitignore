@@ -15,3 +15,6 @@ backup/*.json
 
 # QA/local artifacts
 docs/qa-screenshots/
+
+# Local design exports
+docs/design/Slate Ops Design Touchups/
