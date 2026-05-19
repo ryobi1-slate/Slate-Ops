@@ -346,15 +346,20 @@
   var BETA_QUEUE_FIELDS = ['queue_order', 'queue_visible', 'queue_note', 'assigned_user_id'];
   function betaIsJobField(name) { return BETA_JOB_FIELDS.indexOf(name) >= 0; }
 
+  function betaConfig() {
+    if (window.slateOpsCsDashboard) return window.slateOpsCsDashboard;
+    if (typeof slateOpsCsDashboard !== 'undefined') return slateOpsCsDashboard;
+    return null;
+  }
+
   function betaApi() {
-    return (window.slateOpsCsDashboard && window.slateOpsCsDashboard.api) || null;
+    var cfg = betaConfig();
+    return (cfg && cfg.api) || null;
   }
 
   function betaCanDeleteJobs() {
-    return !!(window.slateOpsCsDashboard
-      && window.slateOpsCsDashboard.user
-      && window.slateOpsCsDashboard.user.caps
-      && window.slateOpsCsDashboard.user.caps.delete_jobs);
+    var cfg = betaConfig();
+    return !!(cfg && cfg.user && cfg.user.caps && cfg.user.caps.delete_jobs);
   }
 
   function activateBeta() {
