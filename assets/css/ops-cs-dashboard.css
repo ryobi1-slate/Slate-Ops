@@ -932,7 +932,7 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 68px 100px minmax(170px, 1.05fr) 152px 106px minmax(190px, 0.8fr) 88px minmax(220px, 1.35fr) 36px;
+  grid-template-columns: 24px 68px 100px minmax(170px, 1.05fr) 152px 106px minmax(136px, 0.65fr) 88px minmax(240px, 1.45fr) 36px;
   align-items: center;
   gap: 10px;
   padding: 6px 14px;
@@ -1234,9 +1234,9 @@
   text-overflow: ellipsis;
 }
 .cs-beta-row__techselect {
-  flex: 1 1 150px;
-  min-width: 150px;
-  max-width: 170px;
+  flex: 0 1 136px;
+  min-width: 124px;
+  max-width: 138px;
   height: 28px;
   padding: 3px 24px 3px 8px;
   border: 1px solid var(--slate-divider-strong);
@@ -1898,7 +1898,7 @@ select.cs-beta-field__input {
 @media (min-width: 1101px) {
   .cs-beta-list__head,
   .cs-beta-row {
-    grid-template-columns: 22px 62px 96px minmax(160px, 1.08fr) 152px 106px minmax(180px, 0.75fr) 76px minmax(220px, 1.35fr) 36px;
+    grid-template-columns: 22px 62px 96px minmax(160px, 1.08fr) 152px 106px minmax(136px, 0.62fr) 76px minmax(240px, 1.45fr) 36px;
   }
 
   .cs-beta-row__status,
