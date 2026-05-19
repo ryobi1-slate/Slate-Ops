@@ -1493,8 +1493,6 @@
       ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
       : '';
     var status = betaStatusKey(j.status);
-    var canMarkAwaiting = status === 'QC';
-    var canMarkClosed = status === 'AWAITING_PICKUP';
     var blockedSeverity = betaBlockedSeverity(j);
     var unblockDeps = status === 'BLOCKED' ? betaReadyForBuildMissing(id, j) : [];
     var blockerHtml = status === 'BLOCKED'
@@ -1514,21 +1512,7 @@
         +   '</button>'
         + '</section>'
       : '';
-    var closeoutHtml = (canMarkAwaiting || canMarkClosed)
-      ? ''
-        + '<section class="cs-beta-detail-section cs-beta-detail-section--wide cs-beta-closeout">'
-        +   '<h4 class="cs-beta-detail-section__title">Closeout</h4>'
-        +   (canMarkAwaiting
-              ? '<div class="cs-beta-closeout__checks">'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="jacket_received"><span>Jacket received</span></label>'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="invoice_completed"><span>Invoice completed</span></label>'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="notified"><span>Customer/dealer notified</span></label>'
-              +   '<label class="cs-beta-field cs-beta-field--inline"><input type="checkbox" data-closeout-check="pickup_arranged"><span>Pickup or delivery arranged</span></label>'
-              + '</div>'
-              : '<div class="cs-beta-detail-section__hint cs-beta-closeout__hint">Confirm pickup or delivery handoff is complete before closing.</div>')
-        +   '<textarea class="cs-beta-detail-note cs-beta-closeout__note" data-closeout-note maxlength="1000" placeholder="Closeout note…"></textarea>'
-        + '</section>'
-      : '';
+    var closeoutHtml = '';
 
     grid.innerHTML = ''
       + loadingNote
@@ -1637,7 +1621,7 @@
       +     '</button>'
       +     '<button type="button" class="slate-btn slate-btn--primary" data-action="beta-save-row" id="cs-beta-detail-save"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">save</span>'
-      +       '<span id="cs-beta-detail-save-label">Save Changes</span>'
+      +       '<span id="cs-beta-detail-save-label">Save and Return</span>'
       +     '</button>'
       +   '</div>'
       + '</section>';
@@ -1659,12 +1643,6 @@
         t = e.target.closest('[data-action="beta-save-row"]');
         if (t) {
           e.preventDefault();
-          var detailGrid = document.getElementById('cs-beta-detail-grid');
-          var closeoutTarget = betaCloseoutTarget(detailGrid);
-          if (closeoutTarget) {
-            betaCloseoutAction(closeoutTarget);
-            return;
-          }
           saveBeta();
           return;
         }
@@ -2285,16 +2263,11 @@
     var detailBtn = document.getElementById('cs-beta-detail-save');
     if (detailBtn) {
       var selected = betaState.selected;
-      var grid = document.getElementById('cs-beta-detail-grid');
-      detailBtn.disabled = !(selected != null && (betaState.edits[selected] || betaCloseoutTarget(grid)));
+      detailBtn.disabled = !(selected != null && betaState.edits[selected]);
     }
     var detailLabel = document.getElementById('cs-beta-detail-save-label');
     if (detailLabel) {
-      var detailGrid = document.getElementById('cs-beta-detail-grid');
-      var closeoutTarget = betaCloseoutTarget(detailGrid);
-      detailLabel.textContent = closeoutTarget === 'AWAITING_PICKUP'
-        ? 'Save and Move to Pickup'
-        : (closeoutTarget === 'COMPLETE' ? 'Save and Close' : 'Save Changes');
+      detailLabel.textContent = 'Save and Return';
     }
   }
 
@@ -2547,7 +2520,7 @@
         showToast(msg);
         if (btn) btn.disabled = false;
         if (lbl) lbl.textContent = 'Save Changes';
-        if (detailLbl) detailLbl.textContent = 'Save Changes';
+        if (detailLbl) detailLbl.textContent = 'Save and Return';
         // Refresh the queue snapshot so already-saved fields stop
         // flagging dirty in the UI; remaining edits stay queued.
         if (savedQueue > 0 || savedJobs > 0) {
