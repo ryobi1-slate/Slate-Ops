@@ -308,10 +308,6 @@ $health_tone_class_map = [
             <span class="material-symbols-outlined">add</span>
             New Job
           </button>
-          <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-normalize" title="Renumber visible queue jobs to 1, 2, 3 within each tech group">
-            <span class="material-symbols-outlined">low_priority</span>
-            Normalize Order
-          </button>
           <button type="button" class="slate-btn slate-btn--secondary" id="cs-beta-refresh" title="Reload queue data">
             <span class="material-symbols-outlined">refresh</span>
             Refresh
