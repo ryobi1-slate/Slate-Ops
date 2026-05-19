@@ -115,8 +115,27 @@ body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
 }
 
 @media (max-width: 640px) {
+  html,
   body.slate-ops.ops-page-tech {
+    min-width: 0;
+    overflow-x: hidden;
+    scroll-padding-bottom: calc(180px + env(safe-area-inset-bottom));
+  }
+
+  body.slate-ops.ops-page-tech {
+    min-height: 100svh;
+    min-height: 100dvh;
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  body.slate-ops.ops-page-tech .ops-shell,
+  body.slate-ops.ops-page-tech .ops-shell-body,
+  body.slate-ops.ops-page-tech .ops-body,
+  body.slate-ops.ops-page-tech .ops-content,
+  body.slate-ops.ops-page-tech .ops-content > #ops-view {
+    max-width: 100vw;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   body.slate-ops.ops-page-tech .ops-content > #ops-view {
@@ -150,6 +169,7 @@ body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
 
   body.slate-ops.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type > div {
     border-radius: 22px !important;
+    overflow: visible !important;
   }
 
   body.slate-ops.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type .text-5xl {
@@ -162,17 +182,73 @@ body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
   }
 
   body.slate-ops.ops-page-tech #ops-view .slate-job-progress {
-    margin: 8px 12px 0;
+    background: rgba(255, 255, 255, .96) !important;
+    border: 1px solid rgba(47, 62, 57, .14) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 2px rgba(15, 52, 42, .08) !important;
+    display: block !important;
+    margin: 8px 12px 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 10px 11px !important;
+    visibility: visible !important;
   }
 
   body.slate-ops.ops-page-tech #ops-view .slate-job-progress__row {
+    align-items: baseline;
+    border-bottom: 1px solid rgba(47, 62, 57, .08);
+    display: flex !important;
     font-size: 11px;
+    gap: 10px;
+    justify-content: space-between;
     line-height: 1.3;
-    margin-bottom: 3px;
+    margin-bottom: 6px !important;
+    padding-bottom: 6px;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-job-progress__row:last-of-type {
+    border-bottom: 0;
+    margin-bottom: 0 !important;
+    padding-bottom: 0;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-job-progress__label {
+    color: rgba(47, 62, 57, .62) !important;
+    flex: 0 0 auto;
+    font-size: 10px !important;
+    font-weight: 800;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-job-progress__value {
+    color: #1f2d29 !important;
+    font-size: 12px !important;
+    font-weight: 800;
+    min-width: 0;
+    text-align: right;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-job-progress__percent {
+    color: rgba(47, 62, 57, .64) !important;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-progress-bar {
+    background: rgba(47, 62, 57, .16) !important;
+    border-radius: 999px !important;
+    display: block !important;
+    height: 7px !important;
+    margin-top: 8px !important;
+    overflow: hidden !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view .slate-progress-bar__fill {
+    display: block !important;
+    min-width: 2px;
   }
 
   body.slate-ops.ops-page-tech #ops-view div[class~="p-4"][class~="flex"][class~="gap-3"] {
-    padding: 10px 12px calc(12px + env(safe-area-inset-bottom)) !important;
+    padding: 10px 12px calc(18px + env(safe-area-inset-bottom)) !important;
   }
 
   body.slate-ops.ops-page-tech #ops-view div[class~="p-4"][class~="flex"][class~="gap-3"] .slate-work-btn {
@@ -183,6 +259,11 @@ body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
     background: #fff !important;
     border-color: rgba(47, 62, 57, .28) !important;
     color: var(--sage) !important;
+  }
+
+  body.slate-ops.ops-page-tech #ops-view button[aria-label="Notes"],
+  body.slate-ops.ops-page-tech #ops-view .ops-tech-unwired-note-action {
+    display: none !important;
   }
 
   body.slate-ops.ops-page-tech #ops-view .ops-tech-note {
