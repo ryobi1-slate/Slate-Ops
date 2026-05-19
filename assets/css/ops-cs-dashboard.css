@@ -926,7 +926,7 @@
 .cs-beta-list__head,
 .cs-beta-row {
   display: grid;
-  grid-template-columns: 24px 68px 100px minmax(170px, 1.1fr) 152px 106px minmax(190px, 0.9fr) 88px minmax(160px, 1fr) 36px;
+  grid-template-columns: 24px 68px 100px minmax(170px, 1.05fr) 152px 106px minmax(190px, 0.8fr) 88px minmax(220px, 1.35fr) 36px;
   align-items: center;
   gap: 10px;
   padding: 6px 14px;
@@ -1892,7 +1892,7 @@ select.cs-beta-field__input {
 @media (min-width: 1101px) {
   .cs-beta-list__head,
   .cs-beta-row {
-    grid-template-columns: 22px 62px 96px minmax(160px, 1.2fr) 152px 106px minmax(180px, 0.85fr) 76px minmax(92px, 0.6fr) 54px;
+    grid-template-columns: 22px 62px 96px minmax(160px, 1.08fr) 152px 106px minmax(180px, 0.75fr) 76px minmax(220px, 1.35fr) 36px;
   }
 
   .cs-beta-row__status,
