@@ -970,7 +970,6 @@
   background: var(--slate-sand-wash);
   border-left-color: var(--slate-sage);
 }
-.cs-beta-row.is-hidden { opacity: 0.55; }
 .cs-beta-row.is-dup .cs-beta-row__qinput {
   border-color: var(--slate-arches);
 }

@@ -828,19 +828,17 @@
         return (a.job_number || '').localeCompare(b.job_number || '');
       });
 
-      // Detect duplicate visible queue numbers within the group.
+      // Detect duplicate queue numbers within the group.
       var seen = {}, dupSet = {};
       g.jobs.forEach(function (j) {
-        if (!j.queue_visible || j.queue_order == null) return;
+        if (j.queue_order == null) return;
         if (seen[j.queue_order]) dupSet[j.queue_order] = true;
         seen[j.queue_order] = true;
       });
 
-      var visibleCount = g.jobs.filter(function (j) { return j.queue_visible; }).length;
-
       var rows = g.jobs.map(function (j) {
-        var dup        = j.queue_visible && j.queue_order != null && dupSet[j.queue_order];
-        var blockedTop = j.queue_visible && j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
+        var dup        = j.queue_order != null && dupSet[j.queue_order];
+        var blockedTop = j.queue_order === 1 && (j.status === 'BLOCKED' || betaIsPartsHold(j.parts_status));
         var blockedSeverity = betaBlockedSeverity(j);
         var sel        = (betaState.selected === j.id);
         var validation = betaState.rowValidation[j.id] || null;
@@ -852,7 +850,6 @@
         var rowCls = 'cs-beta-row';
         if (j._dirty)         rowCls += ' is-dirty';
         if (sel)              rowCls += ' is-selected';
-        if (!j.queue_visible) rowCls += ' is-hidden';
         if (dup)              rowCls += ' is-dup';
         if (blockedTop)       rowCls += ' is-warn';
         if (blockedSeverity)  rowCls += ' is-blocked-' + blockedSeverity;
@@ -912,11 +909,6 @@
           +     '<span class="cs-beta-row__notetext">' + (noteText ? escapeHtml(noteText) : '<span class="cs-beta-row__notetext--empty">—</span>') + '</span>'
           +   '</div>'
           +   '<div class="cs-beta-row__actions">'
-          +     '<button type="button" class="cs-beta-row__iconbtn" data-action="toggle-visible"'
-          +       ' aria-pressed="' + (j.queue_visible ? 'true' : 'false') + '"'
-          +       ' title="' + (j.queue_visible ? 'Hide from queue' : 'Show in queue') + '">'
-          +       '<span class="material-symbols-outlined">' + (j.queue_visible ? 'visibility' : 'visibility_off') + '</span>'
-          +     '</button>'
           +     '<button type="button" class="cs-beta-row__iconbtn" data-action="open-detail" title="Open job detail" aria-label="Open job detail">'
           +       '<span class="material-symbols-outlined">chevron_right</span>'
           +     '</button>'
@@ -935,7 +927,7 @@
         +       '<span class="cs-beta-avatar cs-beta-avatar--lg' + (g.unassigned ? ' cs-beta-avatar--ghost' : '') + '" aria-hidden="true">' + escapeHtml(betaInitials(g.label)) + '</span>'
         +       '<div>'
         +         '<div class="cs-beta-group__title">' + escapeHtml(g.label) + '</div>'
-        +         '<div class="cs-beta-group__meta">' + g.jobs.length + ' jobs · ' + visibleCount + ' visible' + (g.unassigned ? ' · needs assignment' : '') + '</div>'
+        +         '<div class="cs-beta-group__meta">' + g.jobs.length + ' jobs' + (g.unassigned ? ' · needs assignment' : '') + '</div>'
         +         (g.unassigned ? '<div class="cs-beta-group__helper">Assign a tech before queue order affects the Tech page.</div>' : '')
         +       '</div>'
         +     '</div>'
@@ -1012,18 +1004,6 @@
         if (select.dataset.field === 'parts_status') {
           betaAutosaveRowDropdown(id, 'parts_status', String(select.value || '').trim(), select);
         }
-      });
-    });
-
-    $$('.cs-beta-row__iconbtn[data-action="toggle-visible"]', body).forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var row = btn.closest('.cs-beta-row'); if (!row) return;
-        var id  = parseInt(row.dataset.job, 10);
-        var snap = betaJobById(id); if (!snap) return;
-        var cur  = betaEffectiveJob(snap);
-        recordBetaEdit(id, 'queue_visible', !cur.queue_visible);
-        renderBeta();
       });
     });
 
@@ -1617,10 +1597,6 @@
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Queue #</span>'
       +       '<input type="number" min="1" step="1" class="cs-beta-mono cs-beta-field__input' + ec('queue_order') + '" data-field="queue_order" value="' + fv('queue_order') + '" placeholder="—">'
-      +     '</label>'
-      +     '<label class="cs-beta-field cs-beta-field--inline">'
-      +       '<input type="checkbox" data-field="queue_visible"' + (j.queue_visible ? ' checked' : '') + '>'
-      +       '<span>Visible on tech queue</span>'
       +     '</label>'
       +   '</div>'
       + '</section>'
