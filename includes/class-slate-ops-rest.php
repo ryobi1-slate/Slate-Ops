@@ -2080,15 +2080,17 @@ foreach ($rows as &$r) {
     global $wpdb;
     $job_id = intval($req['id']);
     $t      = $wpdb->prefix . 'slate_ops_jobs';
+    $segs_t = $wpdb->prefix . 'slate_ops_time_segments';
 
     $job = self::job_by_id($job_id);
     if (!$job) return new WP_Error('not_found', 'Job not found', ['status' => 404]);
 
     self::audit('job', $job_id, 'delete', null, null, null, 'Job deleted by ' . wp_get_current_user()->display_name);
 
+    $segments_deleted = (int) $wpdb->delete($segs_t, ['job_id' => $job_id], ['%d']);
     $wpdb->delete($t, ['job_id' => $job_id], ['%d']);
 
-    return new WP_REST_Response(['deleted' => true, 'job_id' => $job_id], 200);
+    return new WP_REST_Response(['deleted' => true, 'job_id' => $job_id, 'time_segments_deleted' => $segments_deleted], 200);
   }
 
   public static function add_note($req) {

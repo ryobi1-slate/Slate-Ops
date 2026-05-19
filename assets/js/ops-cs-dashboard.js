@@ -350,6 +350,13 @@
     return (window.slateOpsCsDashboard && window.slateOpsCsDashboard.api) || null;
   }
 
+  function betaCanDeleteJobs() {
+    return !!(window.slateOpsCsDashboard
+      && window.slateOpsCsDashboard.user
+      && window.slateOpsCsDashboard.user.caps
+      && window.slateOpsCsDashboard.user.caps.delete_jobs);
+  }
+
   function activateBeta() {
     if (betaState.loaded || betaState.loading) {
       renderBeta();
@@ -1615,6 +1622,12 @@
       + '<section class="cs-beta-detail-section cs-beta-detail-section--actions">'
       +   '<h4 class="cs-beta-detail-section__title">Actions</h4>'
       +   '<div class="cs-beta-detail-actions">'
+      +     (betaCanDeleteJobs()
+              ? '<button type="button" class="slate-btn slate-btn--danger" data-action="beta-delete-job">'
+              +   '<span class="material-symbols-outlined">delete</span>'
+              +   'Delete job'
+              + '</button>'
+              : '')
       +     '<button type="button" class="slate-btn slate-btn--secondary" data-action="beta-discard-row"' + (betaState.edits[id] ? '' : ' disabled') + '>'
       +       '<span class="material-symbols-outlined">undo</span>'
       +       'Discard row edits'
@@ -1644,6 +1657,12 @@
         if (t) {
           e.preventDefault();
           saveBeta();
+          return;
+        }
+        t = e.target.closest('[data-action="beta-delete-job"]');
+        if (t) {
+          e.preventDefault();
+          betaDeleteSelectedJob(t);
           return;
         }
         t = e.target.closest('[data-action="beta-unblock-ready"]');
@@ -2129,6 +2148,46 @@
       })
       .catch(function (err) {
         showToast(err && err.message ? err.message : 'Unblock failed');
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  function betaDeleteSelectedJob(btn) {
+    var api = betaApi();
+    var grid = document.getElementById('cs-beta-detail-grid');
+    if (!api || !grid || !betaCanDeleteJobs()) return;
+    var id = parseInt(grid.getAttribute('data-job-id'), 10);
+    if (!id || isNaN(id)) return;
+    var snap = betaJobById(id);
+    var job = snap ? betaEffectiveJob(snap) : null;
+    var label = (job && (job.so_number || job.job_number || job.customer)) || ('job #' + id);
+    if (!window.confirm('Delete ' + label + '? This removes only this job from Ops. This cannot be undone.')) return;
+
+    if (btn) btn.disabled = true;
+    fetch(api.root + '/jobs/' + id, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: {
+        'X-WP-Nonce': api.nonce,
+        'Accept': 'application/json'
+      }
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body || !res.body.deleted) {
+          throw new Error((res.body && (res.body.message || res.body.code)) || 'Delete failed');
+        }
+        showToast('Job deleted');
+        betaState.loaded = false;
+        betaState.edits = {};
+        betaState.jobDetails = {};
+        betaState.jobDetailsLoading = {};
+        betaState.jobDetailsFailed = {};
+        clearBetaSelection();
+        loadBeta();
+      })
+      .catch(function (err) {
+        showToast(err && err.message ? err.message : 'Delete failed');
         if (btn) btn.disabled = false;
       });
   }
