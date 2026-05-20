@@ -261,6 +261,7 @@ body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
     background: linear-gradient(145deg, #0f3a2b, #0d4b31) !important;
     border-radius: 14px !important;
     margin-top: 14px !important;
+    overflow: hidden !important;
     padding: 16px 16px 18px !important;
   }
 
@@ -273,9 +274,16 @@ body.slate-ops.ops-page-tech .ops-tech-unwired-note-action {
 
   body.slate-ops.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type .text-5xl {
     color: #eae8dc !important;
-    font-size: clamp(3.8rem, 17vw, 5.25rem) !important;
+    display: block !important;
+    font-size: clamp(3rem, 13vw, 4.1rem) !important;
+    font-variant-numeric: tabular-nums;
     font-weight: 800 !important;
+    letter-spacing: 0 !important;
     line-height: .95 !important;
+    max-width: 100% !important;
+    overflow-wrap: normal !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
   }
 
   body.slate-ops.ops-page-tech #ops-view main > div > div > div[class*="space-y-4"] > section:first-of-type .text-base {
