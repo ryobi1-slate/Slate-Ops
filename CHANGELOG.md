@@ -1,5 +1,18 @@
 # Slate Ops Changelog
 
+## 0.62.0 — Quality module
+
+- Added responsive Quality module that digitizes the five QMS sign-off forms (QMS-004, 005, 006, 009, 010) onto existing Ops jobs.
+- Added `/ops/quality` desktop dashboard (status buckets, search, job list) and per-job supervisor review at `/ops/quality/job/{id}`.
+- Added mobile-first form runner (5-step stepper) at `/ops/quality/job/{id}/form/{code}` with PASS/FAIL toggles, required fail notes, camera-first photo slot uploader, typed-signature submit, and submit lock.
+- Added supervisor review actions (Pass, Needs Correction, Unlock with reason) keyed off the canonical six-status vocabulary.
+- Added tablet two-panel layout for the form runner (checklist left, detail/photos right) at ≥768px without altering the React bundle.
+- Injected a Quality section into each `.ops-tech-card` on `/ops/tech` (status pill, per-form chips, deep links) via a vanilla JS overlay that does not modify the React app.
+- Added `slate_ops_quality_forms` table for per-(job, form) storage of payload, photos (WP media attachment IDs by slot), submission metadata, and lock state.
+- Added `Slate_Ops_Quality` data layer with form template registry, photo slot catalogues, status rollup, and storage helpers.
+- Added `Slate_Ops_Quality_REST` endpoints (registry, dashboard, job, form GET/draft/submit/review/unlock/photos) gated on existing CAP_SUBMIT_QC / CAP_REVIEW_QC capabilities.
+- Added Quality to feature flags, page-access matrix, and sidebar navigation.
+
 ## 0.61.3 — Item sync batch parity
 
 - `process_item_sync` now accepts batch `{items: [...]}` payloads from Power Automate in addition to single-item payloads, matching the vendor sync contract.

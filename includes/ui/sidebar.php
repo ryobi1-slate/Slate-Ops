@@ -65,6 +65,9 @@ if (!function_exists('ops_nav_link')) {
       if (in_array('purchasing', $allowed, true)) :
         ops_nav_link('/ops/purchasing', '/purchasing', 'shopping_cart', 'Purchasing');
       endif;
+      if (in_array('quality', $allowed, true)) :
+        ops_nav_link('/ops/quality', '/quality', 'verified', 'Quality');
+      endif;
       if (in_array('resource-hub', $allowed, true)) :
         ops_nav_link('/ops/resource-hub', '/resource-hub', 'menu_book', 'Resource Hub');
       endif;

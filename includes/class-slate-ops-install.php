@@ -115,6 +115,7 @@ class Slate_Ops_Install {
     $resources       = $wpdb->prefix . 'slate_ops_resources';
     $resource_links  = $wpdb->prefix . 'slate_ops_resource_links';
     $field_notes     = $wpdb->prefix . 'slate_ops_resource_field_notes';
+    $quality_forms   = $wpdb->prefix . 'slate_ops_quality_forms';
 
     $sql_jobs = "CREATE TABLE $jobs (
 job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -790,6 +791,31 @@ KEY awaiting_idx (awaiting_direction)
       KEY promoted_resource_idx (promoted_resource_id)
     ) $charset_collate;";
 
+    // ── Quality module ────────────────────────────────
+
+    $sql_quality_forms = "CREATE TABLE $quality_forms (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      job_id BIGINT UNSIGNED NOT NULL,
+      form_code VARCHAR(20) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'not_started',
+      payload LONGTEXT NULL,
+      photos LONGTEXT NULL,
+      signature_name VARCHAR(255) NULL,
+      submitted_by BIGINT UNSIGNED NULL,
+      submitted_at DATETIME NULL,
+      reviewed_by BIGINT UNSIGNED NULL,
+      reviewed_at DATETIME NULL,
+      locked_at DATETIME NULL,
+      created_by BIGINT UNSIGNED NULL,
+      updated_by BIGINT UNSIGNED NULL,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY job_form_idx (job_id, form_code),
+      KEY status_idx (status),
+      KEY updated_idx (updated_at)
+    ) $charset_collate;";
+
     // ── Run all dbDelta ─────────────────────────────────
 
     dbDelta($sql_jobs);
@@ -823,6 +849,7 @@ KEY awaiting_idx (awaiting_direction)
     dbDelta($sql_resources);
     dbDelta($sql_resource_links);
     dbDelta($sql_field_notes);
+    dbDelta($sql_quality_forms);
 
     // ── Data migrations ─────────────────────────────────
 
