@@ -46,7 +46,11 @@ if (isset($segments[1]) && $segments[1] === 'job' && !empty($segments[2])) {
 
 $current_user_caps = Slate_Ops_Utils::current_user_caps_summary();
 $can_review = !empty($current_user_caps['supervisor']) || !empty($current_user_caps['admin']);
-$can_submit = !empty($current_user_caps['tech']) || !empty($current_user_caps['admin']);
+$can_submit = !empty($current_user_caps['tech']) || !empty($current_user_caps['admin']) || !empty($current_user_caps['supervisor']);
+$is_tech_only = !empty($current_user_caps['tech'])
+  && empty($current_user_caps['supervisor'])
+  && empty($current_user_caps['admin'])
+  && empty($current_user_caps['cs']);
 
 $registry = Slate_Ops_Quality::form_registry();
 
@@ -72,7 +76,16 @@ if (!function_exists('slate_ops_quality_form_chip')) {
 ?>
 <div class="oq" data-view="<?php echo esc_attr($view); ?>" data-job-id="<?php echo (int) $job_id; ?>" data-form-code="<?php echo esc_attr($form_code); ?>">
 
-<?php if ($view === 'dashboard') :
+<?php if ($view === 'dashboard' && $is_tech_only) : ?>
+
+  <div class="oq-empty-panel">
+    <div class="ops-page-eyebrow">Quality</div>
+    <h1 class="ops-page-title">Open Quality from your job</h1>
+    <p>Quality forms live on each assigned job. Open your Tech page and use the Quality section on the job card.</p>
+    <a class="oq-btn oq-btn--primary" href="<?php echo esc_url(home_url('/ops/tech')); ?>">Go to Tech →</a>
+  </div>
+
+<?php elseif ($view === 'dashboard') :
   $buckets = Slate_Ops_Quality::bucket_counts();
   $jobs    = Slate_Ops_Quality::list_jobs(['limit' => 200]);
 ?>

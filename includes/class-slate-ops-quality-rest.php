@@ -22,6 +22,7 @@ class Slate_Ops_Quality_REST {
     return is_user_logged_in() && (
       current_user_can(Slate_Ops_Utils::CAP_SUBMIT_QC) ||
       current_user_can(Slate_Ops_Utils::CAP_TECH) ||
+      current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) ||
       current_user_can(Slate_Ops_Utils::CAP_ADMIN)
     );
   }
@@ -32,6 +33,58 @@ class Slate_Ops_Quality_REST {
       current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR) ||
       current_user_can(Slate_Ops_Utils::CAP_ADMIN)
     );
+  }
+
+  /**
+   * Validates that a (job, form_code) tuple is well-formed and that the
+   * form_code is required for the job's type. Returns either an
+   * [$job_row, $template] pair or a WP_Error.
+   *
+   * This is the single chokepoint every mutating endpoint goes through so
+   * the job-type → form-set contract cannot be bypassed by hand-crafted
+   * REST calls.
+   */
+  private static function resolve_job_form($job_id, $form_code) {
+    $job_id    = (int) $job_id;
+    $form_code = strtoupper(sanitize_text_field((string) $form_code));
+
+    if ($job_id <= 0) {
+      return new WP_Error('quality_invalid_job', 'Invalid job id.', ['status' => 400]);
+    }
+    if (!class_exists('Slate_Ops_Jobs')) {
+      return new WP_Error('quality_jobs_unavailable', 'Jobs data layer unavailable.', ['status' => 500]);
+    }
+    $job = Slate_Ops_Jobs::get($job_id);
+    if (!$job) {
+      return new WP_Error('quality_job_not_found', 'Job not found.', ['status' => 404]);
+    }
+    $template = Slate_Ops_Quality::get_form_template($form_code);
+    if (!$template) {
+      return new WP_Error('quality_unknown_form', 'Unknown form code.', ['status' => 404]);
+    }
+    $required = Slate_Ops_Quality::required_forms_for_job_type($job['job_type'] ?? '');
+    if (!in_array($form_code, $required, true)) {
+      return new WP_Error('quality_form_not_required', 'This form is not part of the required set for this job type.', ['status' => 409]);
+    }
+    return [$job, $template];
+  }
+
+  /**
+   * Submit/draft/photo gate. Techs may only touch forms for jobs assigned
+   * to them (assigned_user_id or primary_owner_id). Supervisors and admins
+   * may always touch any job's form.
+   */
+  private static function user_can_edit_job($job) {
+    $uid = get_current_user_id();
+    if (!$uid) return false;
+    if (current_user_can(Slate_Ops_Utils::CAP_ADMIN))      return true;
+    if (current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)) return true;
+    if (current_user_can(Slate_Ops_Utils::CAP_TECH)) {
+      $assigned = (int) ($job['assigned_user_id'] ?? 0);
+      $owner    = (int) ($job['primary_owner_id'] ?? 0);
+      return ($uid === $assigned || $uid === $owner);
+    }
+    return false;
   }
 
   // ── Route registration ─────────────────────────────────────────────────
@@ -106,12 +159,28 @@ class Slate_Ops_Quality_REST {
     if ($status && !in_array($status, Slate_Ops_Quality::allowed_statuses(), true)) {
       $status = null;
     }
+    $jobs = Slate_Ops_Quality::list_jobs([
+      'status' => $status,
+      'limit'  => 200,
+    ]);
+
+    // Tech-only viewers see their own assignments only. CS / supervisor /
+    // admin see everything.
+    $is_tech_only = current_user_can(Slate_Ops_Utils::CAP_TECH)
+      && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+      && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)
+      && !current_user_can(Slate_Ops_Utils::CAP_CS)
+      && !current_user_can(Slate_Ops_Utils::CAP_CS_LEGACY);
+    if ($is_tech_only) {
+      $uid = get_current_user_id();
+      $jobs = array_values(array_filter($jobs, function ($j) use ($uid) {
+        return $uid && ((int) ($j['assigned_user_id'] ?? 0) === $uid);
+      }));
+    }
+
     return rest_ensure_response([
       'buckets' => Slate_Ops_Quality::bucket_counts(),
-      'jobs'    => Slate_Ops_Quality::list_jobs([
-        'status' => $status,
-        'limit'  => 200,
-      ]),
+      'jobs'    => $jobs,
     ]);
   }
 
@@ -121,17 +190,28 @@ class Slate_Ops_Quality_REST {
     if (!$desc) {
       return new WP_Error('quality_job_not_found', 'Job not found.', ['status' => 404]);
     }
+    // Tech-only viewers may only read jobs assigned to them. CS / supervisor
+    // / admin see every job in the queue.
+    $is_tech_only = current_user_can(Slate_Ops_Utils::CAP_TECH)
+      && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+      && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)
+      && !current_user_can(Slate_Ops_Utils::CAP_CS)
+      && !current_user_can(Slate_Ops_Utils::CAP_CS_LEGACY);
+    if ($is_tech_only) {
+      $uid = (int) get_current_user_id();
+      if ($uid !== (int) ($desc['assigned_user_id'] ?? 0)) {
+        return new WP_Error('quality_forbidden', 'This job is not assigned to you.', ['status' => 403]);
+      }
+    }
     return rest_ensure_response($desc);
   }
 
   public static function h_form(WP_REST_Request $r) {
-    $job_id    = (int) $r['job_id'];
-    $form_code = strtoupper(sanitize_text_field((string) $r['form_code']));
-    $template  = Slate_Ops_Quality::get_form_template($form_code);
-    if (!$template) {
-      return new WP_Error('quality_unknown_form', 'Unknown form code.', ['status' => 404]);
-    }
-    $row = Slate_Ops_Quality::ensure_form_row($job_id, $form_code);
+    $resolved = self::resolve_job_form($r['job_id'], $r['form_code']);
+    if (is_wp_error($resolved)) return $resolved;
+    list($job, $template) = $resolved;
+
+    $row = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
     return rest_ensure_response([
       'template' => $template,
       'row'      => $row,
@@ -140,31 +220,50 @@ class Slate_Ops_Quality_REST {
   }
 
   public static function h_save_draft(WP_REST_Request $r) {
-    $job_id    = (int) $r['job_id'];
-    $form_code = strtoupper(sanitize_text_field((string) $r['form_code']));
-    $payload   = $r->get_json_params();
-    if (!is_array($payload)) $payload = [];
+    $resolved = self::resolve_job_form($r['job_id'], $r['form_code']);
+    if (is_wp_error($resolved)) return $resolved;
+    list($job, $template) = $resolved;
 
+    if (!self::user_can_edit_job($job)) {
+      return new WP_Error('quality_forbidden', 'You can only edit Quality forms for jobs assigned to you.', ['status' => 403]);
+    }
+    $row = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
+    if (self::row_is_locked_for_edits($row)) {
+      return new WP_Error('quality_locked', 'This form is locked. A supervisor must unlock it before changes.', ['status' => 423]);
+    }
+
+    $payload = $r->get_json_params();
+    if (!is_array($payload)) $payload = [];
     $payload = self::sanitize_payload($payload);
-    $result  = Slate_Ops_Quality::save_draft($job_id, $form_code, $payload);
+    $result  = Slate_Ops_Quality::save_draft((int) $job['job_id'], $template['code'], $payload);
     if (is_wp_error($result)) return $result;
     return rest_ensure_response($result);
   }
 
   public static function h_submit(WP_REST_Request $r) {
-    $job_id    = (int) $r['job_id'];
-    $form_code = strtoupper(sanitize_text_field((string) $r['form_code']));
-    $body      = $r->get_json_params();
+    $resolved = self::resolve_job_form($r['job_id'], $r['form_code']);
+    if (is_wp_error($resolved)) return $resolved;
+    list($job, $template) = $resolved;
+
+    if (!self::user_can_edit_job($job)) {
+      return new WP_Error('quality_forbidden', 'You can only submit Quality forms for jobs assigned to you.', ['status' => 403]);
+    }
+
+    $body = $r->get_json_params();
     if (!is_array($body)) $body = [];
+
+    $row_before = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
+    if (self::row_is_locked_for_edits($row_before)) {
+      return new WP_Error('quality_locked', 'This form is locked.', ['status' => 423]);
+    }
 
     if (!empty($body['payload']) && is_array($body['payload'])) {
       $payload = self::sanitize_payload($body['payload']);
-      Slate_Ops_Quality::save_draft($job_id, $form_code, $payload);
+      Slate_Ops_Quality::save_draft((int) $job['job_id'], $template['code'], $payload);
     }
 
-    $template = Slate_Ops_Quality::get_form_template($form_code);
-    $row      = Slate_Ops_Quality::get_form($job_id, $form_code);
-    $errors   = self::validate_for_submit($template, $row);
+    $row    = Slate_Ops_Quality::get_form((int) $job['job_id'], $template['code']);
+    $errors = self::validate_for_submit($template, $row);
     if (!empty($errors)) {
       return new WP_Error('quality_incomplete', 'Some items still need to be completed.', [
         'status' => 422, 'errors' => $errors,
@@ -174,15 +273,17 @@ class Slate_Ops_Quality_REST {
     $signature = [
       'typed_name' => sanitize_text_field($body['signature']['typed_name'] ?? ''),
     ];
-    $result = Slate_Ops_Quality::submit_form($job_id, $form_code, $signature);
+    $result = Slate_Ops_Quality::submit_form((int) $job['job_id'], $template['code'], $signature);
     if (is_wp_error($result)) return $result;
     return rest_ensure_response($result);
   }
 
   public static function h_review(WP_REST_Request $r) {
-    $job_id    = (int) $r['job_id'];
-    $form_code = strtoupper(sanitize_text_field((string) $r['form_code']));
-    $body      = $r->get_json_params();
+    $resolved = self::resolve_job_form($r['job_id'], $r['form_code']);
+    if (is_wp_error($resolved)) return $resolved;
+    list($job, $template) = $resolved;
+
+    $body = $r->get_json_params();
     if (!is_array($body)) $body = [];
 
     $decision = sanitize_key($body['decision'] ?? '');
@@ -192,27 +293,48 @@ class Slate_Ops_Quality_REST {
       return new WP_Error('quality_invalid_decision', 'Decision must be passed or needs_correction.', ['status' => 400]);
     }
 
-    $result = Slate_Ops_Quality::review_form($job_id, $form_code, $decision, $note);
+    $result = Slate_Ops_Quality::review_form((int) $job['job_id'], $template['code'], $decision, $note);
     if (is_wp_error($result)) return $result;
     return rest_ensure_response($result);
   }
 
   public static function h_unlock(WP_REST_Request $r) {
-    $job_id    = (int) $r['job_id'];
-    $form_code = strtoupper(sanitize_text_field((string) $r['form_code']));
-    $body      = $r->get_json_params();
-    $reason    = (string) ($body['reason'] ?? '');
-    $result    = Slate_Ops_Quality::unlock_form($job_id, $form_code, $reason);
+    $resolved = self::resolve_job_form($r['job_id'], $r['form_code']);
+    if (is_wp_error($resolved)) return $resolved;
+    list($job, $template) = $resolved;
+
+    $body   = $r->get_json_params();
+    $reason = (string) ($body['reason'] ?? '');
+    $result = Slate_Ops_Quality::unlock_form((int) $job['job_id'], $template['code'], $reason);
     if (is_wp_error($result)) return $result;
     return rest_ensure_response($result);
   }
 
   public static function h_upload_photo(WP_REST_Request $r) {
-    $job_id    = (int) $r['job_id'];
-    $form_code = strtoupper(sanitize_text_field((string) $r['form_code']));
-    $slot_key  = sanitize_key((string) ($_POST['slot'] ?? ''));
+    $resolved = self::resolve_job_form($r['job_id'], $r['form_code']);
+    if (is_wp_error($resolved)) return $resolved;
+    list($job, $template) = $resolved;
+
+    if (!self::user_can_edit_job($job)) {
+      return new WP_Error('quality_forbidden', 'You can only attach photos for jobs assigned to you.', ['status' => 403]);
+    }
+
+    $slot_key = sanitize_key((string) ($_POST['slot'] ?? ''));
     if ($slot_key === '') {
       return new WP_Error('quality_slot_required', 'Photo slot is required.', ['status' => 400]);
+    }
+    // Slot must belong to the form's defined slot catalogue.
+    $valid_slot = false;
+    foreach (($template['photo_slots'] ?? []) as $s) {
+      if ($s['key'] === $slot_key) { $valid_slot = true; break; }
+    }
+    if (!$valid_slot) {
+      return new WP_Error('quality_unknown_slot', 'Unknown photo slot for this form.', ['status' => 400]);
+    }
+
+    $row_before = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
+    if (self::row_is_locked_for_edits($row_before)) {
+      return new WP_Error('quality_locked', 'This form is locked.', ['status' => 423]);
     }
 
     if (empty($_FILES['file'])) {
@@ -223,14 +345,25 @@ class Slate_Ops_Quality_REST {
       require_once ABSPATH . 'wp-admin/includes/media.php';
       require_once ABSPATH . 'wp-admin/includes/image.php';
     }
-    $attachment_id = media_handle_upload('file', 0);
+    // Restrict to image MIME types — Quality slots are intake/sign-off photos.
+    $overrides = [
+      'test_form' => false,
+      'mimes'     => [
+        'jpg|jpeg|jpe' => 'image/jpeg',
+        'png'          => 'image/png',
+        'gif'          => 'image/gif',
+        'webp'         => 'image/webp',
+        'heic'         => 'image/heic',
+      ],
+    ];
+    $attachment_id = media_handle_upload('file', 0, [], $overrides);
     if (is_wp_error($attachment_id)) return $attachment_id;
 
-    update_post_meta($attachment_id, '_slate_ops_quality_job_id', $job_id);
-    update_post_meta($attachment_id, '_slate_ops_quality_form_code', $form_code);
-    update_post_meta($attachment_id, '_slate_ops_quality_slot', $slot_key);
+    update_post_meta($attachment_id, '_slate_ops_quality_job_id',   (int) $job['job_id']);
+    update_post_meta($attachment_id, '_slate_ops_quality_form_code', $template['code']);
+    update_post_meta($attachment_id, '_slate_ops_quality_slot',     $slot_key);
 
-    $row = Slate_Ops_Quality::attach_photo($job_id, $form_code, $slot_key, (int) $attachment_id);
+    $row = Slate_Ops_Quality::attach_photo((int) $job['job_id'], $template['code'], $slot_key, (int) $attachment_id);
     if (is_wp_error($row)) return $row;
 
     return rest_ensure_response([
@@ -240,6 +373,18 @@ class Slate_Ops_Quality_REST {
       'row'           => $row,
       'photos'        => self::hydrate_photos($row['photos'] ?? []),
     ]);
+  }
+
+  /**
+   * A form is locked for tech edits when it has a non-null locked_at, OR
+   * when it's already in a terminal review state (passed or submitted).
+   * Supervisor Unlock clears locked_at and resets status to in_progress.
+   */
+  private static function row_is_locked_for_edits($row) {
+    if (!$row) return false;
+    if (!empty($row['locked_at'])) return true;
+    if (in_array($row['status'], [Slate_Ops_Quality::STATUS_SUBMITTED, Slate_Ops_Quality::STATUS_PASSED], true)) return true;
+    return false;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────

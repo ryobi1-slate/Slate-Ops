@@ -8,12 +8,32 @@
  * Class prefix: .oq- (Ops Quality)
  */
 
-/* ── Page layout ────────────────────────────────────────────────────── */
+/* ── Page-scoped derived tokens ──────────────────────────────────────
+ *
+ * Quality reuses the documented Slate Ops tokens declared in ops-shell.css
+ * (--slate-sage, --slate-sand, --slate-arches, --slate-redwood, --slate-flag
+ *  and their ink/wash siblings). The five aliases below are NOT new brand
+ * colors; they are local names for derived states that the design package
+ * uses with subtly different tone than the canonical washes:
+ *
+ *   --oq-redwood-soft → soft success backdrop on a sand page (passed pill,
+ *     "completed" form chip). The shipped --slate-redwood-wash is too cool
+ *     on sand; this is a 1-step lighter mix sampled from the design package.
+ *   --oq-arches-soft / --oq-arches-line → softer warm fill + edge used by
+ *     fail / needs-correction states, matching the design package's amber
+ *     callouts.
+ *   --oq-arches-deep → deeper Arches for FAIL text contrast on the soft
+ *     amber field; matches --slate-arches-ink intent but tuned slightly.
+ *   --oq-locked / --oq-locked-soft → muted sage-grey for locked rows so
+ *     they read disabled without competing with Needs Correction.
+ *
+ * No new global tokens are introduced and no new font families are added.
+ */
 .oq {
   --oq-redwood-soft: #DDE6E1;
-  --oq-arches-soft:  #FAE5D2;
+  --oq-arches-soft:  var(--slate-arches-wash);
   --oq-arches-line:  #F0C089;
-  --oq-arches-deep:  #B35515;
+  --oq-arches-deep:  var(--slate-arches-ink);
   --oq-locked:       #6A7873;
   --oq-locked-soft:  #D8D6BF;
 }
@@ -368,6 +388,9 @@
 }
 .oq-photo-slot {
   aspect-ratio: 4/3;
+  /* Sand-tinted hatch as an "empty slot" placeholder. The two greys are
+     local derivations of --slate-sand-deep so empty slots read as a
+     printable form field rather than as a colored surface. */
   background:
     repeating-linear-gradient(45deg, #D8D3B9 0 6px, #CFC9AD 6px 12px);
   border: 1px dashed var(--slate-divider-strong);

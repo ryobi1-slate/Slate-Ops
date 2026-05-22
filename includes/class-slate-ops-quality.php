@@ -296,13 +296,41 @@ class Slate_Ops_Quality {
 
   /**
    * Normalize a job's stored job_type to a Quality bucket.
+   *
+   * Slate Ops `slate_ops_jobs.job_type` currently carries the values listed
+   * in Slate_Ops_Utils::cs_job_types(): UPFIT, COMMERCIAL_UPFIT,
+   * COMMERCIAL_BUILD, RV_BUILD, RV_UPFIT, PARTS_ONLY, SERVICE, WARRANTY.
+   * Only the RV_* family runs the RVIA sign-off track; everything else
+   * (including PARTS_ONLY / SERVICE / WARRANTY) gets the shorter Commercial
+   * & Non-RVIA pair as a safe fallback per the QMS spec.
+   *
+   * Match is whitelist-first on a normalized token so unknown future values
+   * cannot accidentally land in the RVIA bucket.
+   *
    * Returns 'rvia' or 'commercial'.
    */
   public static function quality_job_type($job_type) {
-    $jt = strtoupper((string) $job_type);
-    if (in_array($jt, ['RV_BUILD', 'RV_UPFIT', 'RVIA', 'RVIA_BUILD'], true)) {
+    $jt = strtoupper(trim((string) $job_type));
+
+    // Whitelist of values that must take the RVIA track.
+    $rvia_set = [
+      'RV_BUILD',
+      'RV_UPFIT',
+      'RVIA',
+      'RVIA_BUILD',
+      'RVIA_UPFIT',
+    ];
+    if (in_array($jt, $rvia_set, true)) {
       return 'rvia';
     }
+
+    // Allow downstream integrations to override mapping for custom job-type
+    // labels without forking this class.
+    $override = apply_filters('slate_ops_quality_job_type_bucket', null, $jt);
+    if ($override === 'rvia' || $override === 'commercial') {
+      return $override;
+    }
+
     return 'commercial';
   }
 
