@@ -75,26 +75,46 @@
   gap: var(--slate-space-md);
   margin-bottom: var(--slate-space-xl);
 }
+/* .oq-bucket is a <button>, so we explicitly reset native button styling
+   (color, border, font, appearance) and lock every property to Slate
+   tokens. Without this the parent theme's default button color bled
+   through and rendered counts/borders in a non-brand pink. */
 .oq-bucket {
+  appearance: none;
+  -webkit-appearance: none;
   background: var(--slate-surface);
   border: 1px solid var(--slate-divider);
   border-radius: var(--slate-radius-lg);
   padding: 14px 16px;
   text-align: left;
   cursor: pointer;
-  transition: border-color .12s, background .12s, transform .04s;
+  transition: border-color .12s, background .12s, color .12s, box-shadow .12s;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  font: inherit;
+  color: var(--slate-ink);
+  box-shadow: none;
 }
-.oq-bucket:hover { border-color: var(--slate-sage); }
+.oq-bucket:hover {
+  border-color: var(--slate-sage);
+  background: var(--slate-surface-tint);
+  color: var(--slate-ink);
+}
+.oq-bucket:focus-visible {
+  outline: 2px solid var(--slate-sage);
+  outline-offset: 2px;
+}
 .oq-bucket.is-active {
   background: var(--slate-sage);
   border-color: var(--slate-sage);
-  color: #fff;
+  color: var(--slate-sand-wash);
 }
 .oq-bucket.is-active .oq-bucket__label,
-.oq-bucket.is-active .oq-bucket__hint { color: rgba(255,255,255,0.78); }
+.oq-bucket.is-active .oq-bucket__hint,
+.oq-bucket.is-active .oq-bucket__count {
+  color: var(--slate-sand-wash);
+}
 .oq-bucket__label {
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -107,12 +127,27 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
-  color: inherit;
+  /* Always Slate ink in the resting state — never inherit so theme
+     button defaults can't repaint the count. Active state overrides
+     this to the sand wash for contrast on the sage background. */
+  color: var(--slate-ink);
+  font-variant-numeric: tabular-nums;
 }
 .oq-bucket__hint {
   font-size: 11.5px;
   color: var(--slate-ink-muted);
 }
+
+/* Bucket modifier accent line — a single hue on the left edge so the
+   six statuses are distinguishable at rest without flooding the card
+   with color. Default state uses divider; only the active state fills. */
+.oq-bucket--not-started      { border-left: 3px solid var(--slate-divider-strong); }
+.oq-bucket--in-progress      { border-left: 3px solid var(--slate-sage); }
+.oq-bucket--submitted        { border-left: 3px solid var(--slate-sage); }
+.oq-bucket--needs-correction { border-left: 3px solid var(--slate-arches); }
+.oq-bucket--passed           { border-left: 3px solid var(--slate-redwood); }
+.oq-bucket--locked           { border-left: 3px solid var(--slate-divider-strong); }
+.oq-bucket.is-active { border-left-color: var(--slate-sage); }
 
 @media (max-width: 1000px) {
   .oq-buckets { grid-template-columns: repeat(3, 1fr); }
@@ -132,18 +167,25 @@
 .oq-search {
   position: relative;
   flex: 0 1 320px;
-  display: flex;
-  align-items: center;
+  /* Block layout so the absolutely-positioned icon overlays the input
+     instead of pushing it off the leading edge. */
+  display: block;
 }
 .oq-search input {
   width: 100%;
   height: 36px;
-  padding: 0 12px 0 34px;
+  padding: 0 12px 0 36px;
   border: 1px solid var(--slate-divider);
   border-radius: var(--slate-radius-md);
   background: var(--slate-surface);
   font-size: 13px;
   color: var(--slate-ink);
+  font-family: inherit;
+}
+.oq-search input:focus {
+  outline: none;
+  border-color: var(--slate-sage);
+  box-shadow: 0 0 0 3px rgba(64, 79, 75, 0.18);
 }
 .oq-search .material-symbols-outlined {
   position: absolute;
@@ -152,6 +194,7 @@
   transform: translateY(-50%);
   color: var(--slate-ink-subtle);
   font-size: 18px;
+  pointer-events: none;
 }
 .oq-filterbar__count {
   margin-left: auto;
