@@ -347,7 +347,7 @@
             render();
           }}, [
             el('div', { class: 'oq-meta-row' }, [
-              el('span', { class: 'oq-eyebrow' }, item.key.toUpperCase()),
+              el('span', { class: 'oq-eyebrow' }, (item.code || item.label || item.key)),
               resp.result === 'pass' ? pill('passed') : resp.result === 'fail' ? el('span', { class: 'oq-pill oq-pill--needs-correction' }, 'FAIL') : null
             ]),
             el('div', { class: 'oq-cl-item__title' }, item.label),
@@ -386,7 +386,7 @@
       var resp = (state.row.payload.checklist[section.key] || {})[item.key] || {};
       var card = el('div', { class: 'oq-cl-item is-active' }, [
         el('div', { class: 'oq-meta-row' }, [
-          el('span', { class: 'oq-eyebrow' }, item.key.toUpperCase()),
+          el('span', { class: 'oq-eyebrow' }, (item.code || item.label || item.key)),
           resp.result === 'pass' ? pill('passed') : resp.result === 'fail' ? el('span', { class: 'oq-pill oq-pill--needs-correction' }, 'FAIL') : null,
         ]),
         el('div', { class: 'oq-cl-item__title' }, item.label),
