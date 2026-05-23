@@ -1,0 +1,871 @@
+/*
+ * Slate Ops — Quality module styles.
+ *
+ * Maps the revised Claude Design package visuals onto existing Slate Ops
+ * tokens (Sage, Sand, Arches, Redwood). No new color introductions, no
+ * Inter / JetBrains Mono. Mobile-first layout for the form runner.
+ *
+ * Class prefix: .oq- (Ops Quality)
+ */
+
+/* ── Page-scoped derived tokens ──────────────────────────────────────
+ *
+ * Quality reuses the documented Slate Ops tokens declared in ops-shell.css
+ * (--slate-sage, --slate-sand, --slate-arches, --slate-redwood, --slate-flag
+ *  and their ink/wash siblings). The five aliases below are NOT new brand
+ * colors; they are local names for derived states that the design package
+ * uses with subtly different tone than the canonical washes:
+ *
+ *   --oq-redwood-soft → soft success backdrop on a sand page (passed pill,
+ *     "completed" form chip). The shipped --slate-redwood-wash is too cool
+ *     on sand; this is a 1-step lighter mix sampled from the design package.
+ *   --oq-arches-soft / --oq-arches-line → softer warm fill + edge used by
+ *     fail / needs-correction states, matching the design package's amber
+ *     callouts.
+ *   --oq-arches-deep → deeper Arches for FAIL text contrast on the soft
+ *     amber field; matches --slate-arches-ink intent but tuned slightly.
+ *   --oq-locked / --oq-locked-soft → muted sage-grey for locked rows so
+ *     they read disabled without competing with Needs Correction.
+ *
+ * No new global tokens are introduced and no new font families are added.
+ */
+.oq {
+  --oq-redwood-soft: #DDE6E1;
+  --oq-arches-soft:  var(--slate-arches-wash);
+  --oq-arches-line:  #F0C089;
+  --oq-arches-deep:  var(--slate-arches-ink);
+  --oq-locked:       #6A7873;
+  --oq-locked-soft:  #D8D6BF;
+}
+
+/* ── Status pill (canonical six) ────────────────────────────────────── */
+.oq-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.oq-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: 0 0 6px;
+}
+.oq-pill--not-started      { background: var(--slate-sand-wash);    color: var(--slate-ink-muted);  border-color: var(--slate-divider-strong); }
+.oq-pill--in-progress      { background: var(--slate-sage-wash);    color: var(--slate-sage);       border-color: var(--slate-divider); }
+.oq-pill--submitted        { background: var(--slate-surface);      color: var(--slate-sage);       border-color: var(--slate-divider); }
+.oq-pill--needs-correction { background: var(--oq-arches-soft);     color: var(--oq-arches-deep);   border-color: var(--oq-arches-line); }
+.oq-pill--passed           { background: var(--oq-redwood-soft);    color: var(--slate-redwood);    border-color: var(--slate-divider); }
+.oq-pill--locked           { background: var(--oq-locked-soft);     color: var(--oq-locked);        border-color: var(--slate-divider-strong); }
+
+/* ── Buckets row (dashboard) ────────────────────────────────────────── */
+.oq-buckets {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--slate-space-md);
+  margin-bottom: var(--slate-space-xl);
+}
+/* .oq-bucket is a <button>, so we explicitly reset native button styling
+   (color, border, font, appearance) and lock every property to Slate
+   tokens. Without this the parent theme's default button color bled
+   through and rendered counts/borders in a non-brand pink. */
+.oq-bucket {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .12s, background .12s, color .12s, box-shadow .12s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font: inherit;
+  color: var(--slate-ink);
+  box-shadow: none;
+}
+.oq-bucket:hover {
+  border-color: var(--slate-sage);
+  background: var(--slate-surface-tint);
+  color: var(--slate-ink);
+}
+.oq-bucket:focus-visible {
+  outline: 2px solid var(--slate-sage);
+  outline-offset: 2px;
+}
+.oq-bucket.is-active {
+  background: var(--slate-sage);
+  border-color: var(--slate-sage);
+  color: var(--slate-sand-wash);
+}
+.oq-bucket.is-active .oq-bucket__label,
+.oq-bucket.is-active .oq-bucket__hint,
+.oq-bucket.is-active .oq-bucket__count {
+  color: var(--slate-sand-wash);
+}
+.oq-bucket__label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate-ink-muted);
+  font-weight: 600;
+}
+.oq-bucket__count {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  /* Always Slate ink in the resting state — never inherit so theme
+     button defaults can't repaint the count. Active state overrides
+     this to the sand wash for contrast on the sage background. */
+  color: var(--slate-ink);
+  font-variant-numeric: tabular-nums;
+}
+.oq-bucket__hint {
+  font-size: 11.5px;
+  color: var(--slate-ink-muted);
+}
+
+/* Bucket modifier accent line — a single hue on the left edge so the
+   six statuses are distinguishable at rest without flooding the card
+   with color. Default state uses divider; only the active state fills. */
+.oq-bucket--not-started      { border-left: 3px solid var(--slate-divider-strong); }
+.oq-bucket--in-progress      { border-left: 3px solid var(--slate-sage); }
+.oq-bucket--submitted        { border-left: 3px solid var(--slate-sage); }
+.oq-bucket--needs-correction { border-left: 3px solid var(--slate-arches); }
+.oq-bucket--passed           { border-left: 3px solid var(--slate-redwood); }
+.oq-bucket--locked           { border-left: 3px solid var(--slate-divider-strong); }
+.oq-bucket.is-active { border-left-color: var(--slate-sage); }
+
+@media (max-width: 1000px) {
+  .oq-buckets { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 600px) {
+  .oq-buckets { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Filter bar ─────────────────────────────────────────────────────── */
+.oq-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: var(--slate-space-lg);
+  flex-wrap: wrap;
+}
+.oq-search {
+  position: relative;
+  flex: 0 1 320px;
+  /* Block layout so the absolutely-positioned icon overlays the input
+     instead of pushing it off the leading edge. */
+  display: block;
+}
+.oq-search input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 36px;
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  background: var(--slate-surface);
+  font-size: 13px;
+  color: var(--slate-ink);
+  font-family: inherit;
+}
+.oq-search input:focus {
+  outline: none;
+  border-color: var(--slate-sage);
+  box-shadow: 0 0 0 3px rgba(64, 79, 75, 0.18);
+}
+.oq-search .material-symbols-outlined {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--slate-ink-subtle);
+  font-size: 18px;
+  pointer-events: none;
+}
+.oq-filterbar__count {
+  margin-left: auto;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate-ink-muted);
+  font-weight: 600;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────── */
+.oq-table-wrap {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  overflow: hidden;
+}
+.oq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.oq-table th {
+  background: var(--slate-sand-wash);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate-ink-muted);
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--slate-divider);
+  font-weight: 600;
+}
+.oq-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+  vertical-align: middle;
+}
+.oq-table tr:last-child td { border-bottom: 0; }
+.oq-table tr:hover td { background: var(--slate-surface-tint); }
+.oq-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.oq-ink-3 { color: var(--slate-ink-muted); }
+.oq-redwood { color: var(--slate-redwood); }
+.oq-warn { color: var(--slate-arches-ink); font-weight: 600; }
+.oq-type {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: var(--slate-sage);
+}
+.oq-col-action { text-align: right; }
+.oq-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--slate-sage);
+  font-weight: 600;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+.oq-link:hover { color: var(--slate-sage-ink); }
+.oq-link .material-symbols-outlined { font-size: 16px; }
+.oq-empty {
+  padding: 36px;
+  text-align: center;
+  color: var(--slate-ink-muted);
+}
+
+/* ── Form chips (table) ─────────────────────────────────────────────── */
+.oq-form-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.oq-form-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.oq-form-chip--present { background: var(--oq-redwood-soft); color: var(--slate-redwood); border-color: var(--slate-divider); }
+.oq-form-chip--missing { background: var(--oq-arches-soft);  color: var(--oq-arches-deep); border-color: var(--oq-arches-line); }
+
+/* ── Job review page ────────────────────────────────────────────────── */
+.oq-breadcrumb { margin-bottom: var(--slate-space-md); }
+.oq-breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--slate-ink-muted);
+  text-decoration: none;
+  font-size: 12.5px;
+}
+.oq-breadcrumb a:hover { color: var(--slate-ink); }
+
+.oq-card {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--slate-space-lg);
+}
+.oq-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+.oq-card__title { font-size: 15px; font-weight: 600; color: var(--slate-ink); }
+.oq-card__sub  { font-size: 12px; color: var(--slate-ink-muted); margin-top: 2px; }
+.oq-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate-ink-muted);
+  font-weight: 600;
+}
+
+.oq-job-header { padding: 20px 22px; }
+.oq-meta-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+.oq-job-header__name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--slate-ink);
+}
+.oq-job-header__facts {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+  color: var(--slate-ink-muted);
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
+.oq-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: var(--slate-space-lg);
+}
+@media (max-width: 900px) {
+  .oq-grid { grid-template-columns: 1fr; }
+}
+
+/* Form list rows inside the job review */
+.oq-form-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+.oq-form-row:last-child { border-bottom: 0; }
+.oq-form-row__badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  background: var(--slate-sand-wash);
+  color: var(--slate-ink-muted);
+  border: 1px solid var(--slate-divider-strong);
+  flex: 0 0 44px;
+}
+.oq-form-row__badge--passed { background: var(--oq-redwood-soft); color: var(--slate-redwood); border-color: var(--slate-divider); }
+.oq-form-row__badge--needs-correction { background: var(--oq-arches-soft); color: var(--oq-arches-deep); border-color: var(--oq-arches-line); }
+.oq-form-row__badge--locked { background: var(--oq-locked-soft); color: var(--oq-locked); }
+.oq-form-row__body { flex: 1; min-width: 0; }
+.oq-form-row__title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+.oq-form-row__meta { font-size: 12px; color: var(--slate-ink-muted); margin-top: 4px; }
+.oq-form-row__actions { flex-shrink: 0; }
+
+/* Fails section */
+.oq-fails { padding: 4px 0; }
+.oq-fail {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--slate-divider-soft);
+  align-items: flex-start;
+}
+.oq-fail:last-child { border-bottom: 0; }
+.oq-fail__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--slate-redwood);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 22px;
+  margin-top: 2px;
+}
+.oq-fail__icon .material-symbols-outlined { font-size: 14px; }
+.oq-fail__task { font-size: 13px; font-weight: 600; }
+.oq-fail__meta { font-size: 11.5px; color: var(--slate-ink-muted); margin-top: 2px; }
+.oq-fail__note {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--oq-redwood-soft);
+  border: 1px solid var(--slate-divider);
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--slate-ink);
+}
+
+/* Photo gallery */
+.oq-photo-grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 700px) {
+  .oq-photo-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.oq-photo-slot {
+  aspect-ratio: 4/3;
+  /* Sand-tinted hatch as an "empty slot" placeholder. The two greys are
+     local derivations of --slate-sand-deep so empty slots read as a
+     printable form field rather than as a colored surface. */
+  background:
+    repeating-linear-gradient(45deg, #D8D3B9 0 6px, #CFC9AD 6px 12px);
+  border: 1px dashed var(--slate-divider-strong);
+  border-radius: var(--slate-radius-md);
+  position: relative;
+  background-size: cover;
+  background-position: center;
+}
+.oq-photo-slot--filled {
+  border-style: solid;
+  border-color: transparent;
+}
+.oq-photo-slot__status {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 16px; height: 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+}
+.oq-photo-slot__status--ok      { background: var(--slate-redwood); }
+.oq-photo-slot__status--missing { background: var(--slate-arches); }
+.oq-photo-slot__label {
+  position: absolute;
+  left: 8px; right: 8px; bottom: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--slate-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.oq-photo-slot--filled .oq-photo-slot__label {
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Supervisor review panel */
+.oq-supervisor { background: var(--slate-sand-wash); border-color: var(--slate-divider-strong); }
+.oq-supervisor__head { padding: 14px 16px; border-bottom: 1px solid var(--slate-divider); }
+.oq-supervisor__title { font-size: 15px; font-weight: 600; margin-top: 4px; }
+.oq-supervisor__sub { font-size: 12px; color: var(--slate-ink-muted); margin-top: 4px; }
+.oq-supervisor__body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.oq-supervisor__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.oq-supervisor__actions .oq-btn { flex: 1; justify-content: center; }
+
+/* Inputs */
+.oq-input {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--slate-divider-strong);
+  border-radius: var(--slate-radius-md);
+  background: var(--slate-surface);
+  font-size: 13.5px;
+  color: var(--slate-ink);
+  width: 100%;
+  font-family: inherit;
+}
+.oq-input:focus { border-color: var(--slate-sage); outline: none; box-shadow: 0 0 0 3px rgba(64, 79, 75, 0.18); }
+.oq-textarea { height: auto; padding: 10px; min-height: 110px; resize: vertical; }
+
+/* Buttons
+ *
+ * Reset native button chrome (appearance, box-shadow) so the parent
+ * theme's default button color cannot bleed through. Every variant
+ * below pins its own background/border/color to Slate tokens. */
+.oq-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--slate-divider-strong);
+  border-radius: var(--slate-radius-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--slate-surface);
+  color: var(--slate-ink);
+  text-decoration: none;
+  font-family: inherit;
+  box-shadow: none;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.oq-btn:hover:not(:disabled) { background: var(--slate-surface-tint); border-color: var(--slate-sage); }
+.oq-btn--primary { background: var(--slate-sage); color: #fff; border-color: var(--slate-sage); }
+.oq-btn--primary:hover:not(:disabled) { background: var(--slate-sage-ink); border-color: var(--slate-sage-ink); color: #fff; }
+.oq-btn--secondary { background: var(--slate-surface); color: var(--slate-ink); border-color: var(--slate-divider-strong); }
+.oq-btn--danger { background: var(--slate-arches); color: #fff; border-color: var(--slate-arches); }
+.oq-btn--danger:hover:not(:disabled) { background: var(--slate-arches-ink); border-color: var(--slate-arches-ink); }
+.oq-btn--ghost { background: transparent; color: var(--slate-ink-muted); border-color: transparent; }
+.oq-btn--ghost:hover:not(:disabled) { background: var(--slate-sage-wash); color: var(--slate-ink); }
+.oq-btn--lg { height: 44px; padding: 0 18px; font-size: 14.5px; }
+.oq-btn--xl { height: 56px; padding: 0 22px; font-size: 16px; }
+.oq-btn--full { width: 100%; }
+.oq-btn:disabled { opacity: .5; cursor: not-allowed; }
+.oq-btn .material-symbols-outlined { font-size: 16px; }
+
+/* Stats grid */
+.oq-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 16px;
+}
+.oq-stat__value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.oq-stat__label { font-size: 11.5px; color: var(--slate-ink-muted); }
+
+.oq-empty-panel {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  padding: 32px;
+  text-align: center;
+}
+
+/* ── Form Runner — responsive (mobile-first stepper) ────────────────── */
+
+.oq-runner {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  overflow: hidden;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+.oq-runner__loading {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  padding: 60px 20px;
+  color: var(--slate-ink-muted);
+}
+.oq-runner__skel-title { font-size: 18px; font-weight: 600; color: var(--slate-ink); margin-top: 6px; }
+
+/* Runner header */
+.oq-rh {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--slate-divider);
+  background: var(--slate-surface);
+  flex-wrap: wrap;
+}
+.oq-rh__left .oq-rh__title { font-size: 16px; font-weight: 700; color: var(--slate-ink); margin-top: 2px; }
+.oq-rh__right { display: flex; align-items: center; gap: 8px; }
+
+/* Step dots */
+.oq-steps {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--slate-surface);
+  border-bottom: 1px solid var(--slate-divider-soft);
+}
+.oq-step { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.oq-step__bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slate-divider-strong);
+}
+.oq-step.is-done .oq-step__bar { background: var(--slate-redwood); }
+.oq-step.is-active .oq-step__bar { background: var(--slate-sage); }
+.oq-step__label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--slate-ink-muted);
+  text-align: center;
+  font-weight: 500;
+}
+.oq-step.is-active .oq-step__label { color: var(--slate-ink); font-weight: 700; }
+
+/* Runner body (scrollable) */
+.oq-rb {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--slate-surface-page);
+}
+
+/* Sticky bottom bar */
+.oq-rfooter {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(20px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--slate-divider);
+  background: var(--slate-surface);
+}
+.oq-rfooter .oq-btn { height: 52px; font-size: 15px; }
+.oq-rfooter .oq-btn--icon { flex: 0 0 60px; padding: 0; }
+.oq-rfooter .oq-btn--primary { flex: 1; }
+
+/* Section header inside runner */
+.oq-rsection-label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate-ink-muted);
+  font-weight: 600;
+  margin: 14px 4px 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Checklist item card (mobile-first) */
+.oq-cl-item {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.oq-cl-item.is-active { border-color: var(--slate-sage); box-shadow: 0 0 0 2px rgba(64, 79, 75, 0.12); }
+.oq-cl-item__title { font-size: 16px; font-weight: 700; color: var(--slate-ink); margin-top: 8px; }
+.oq-cl-item__desc { font-size: 13px; color: var(--slate-ink-muted); margin-top: 6px; line-height: 1.45; }
+
+/* Big PASS/FAIL toggle
+ *
+ * The inner controls are <button> elements, so we explicitly reset native
+ * button styling (appearance, box-shadow, color) and pin every state to
+ * Slate tokens. Without these resets the parent theme's default button
+ * color bled through and rendered the selected PASS/FAIL state in a
+ * non-brand pink. */
+.oq-pf {
+  display: flex;
+  width: 100%;
+  margin-top: 14px;
+  padding: 4px;
+  background: var(--slate-sand-wash);
+  border: 1px solid var(--slate-divider-strong);
+  border-radius: 8px;
+  gap: 4px;
+}
+.oq-pf button {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  padding: 14px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--slate-ink-muted);
+  box-shadow: none;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.oq-pf button:hover:not(:disabled) { background: var(--slate-surface); color: var(--slate-ink); }
+.oq-pf button:focus-visible { outline: 2px solid var(--slate-sage); outline-offset: 2px; }
+.oq-pf button.is-pass {
+  background: var(--slate-redwood);
+  color: var(--slate-sand-wash);
+  border-color: var(--slate-redwood);
+}
+.oq-pf button.is-pass:hover:not(:disabled) {
+  background: var(--slate-redwood-dark);
+  color: var(--slate-sand-wash);
+  border-color: var(--slate-redwood-dark);
+}
+.oq-pf button.is-fail {
+  background: var(--slate-arches);
+  color: #fff;
+  border-color: var(--slate-arches);
+}
+.oq-pf button.is-fail:hover:not(:disabled) {
+  background: var(--slate-arches-ink);
+  color: #fff;
+  border-color: var(--slate-arches-ink);
+}
+
+/* Fail-note panel (required) */
+.oq-fail-panel {
+  margin-top: 14px;
+  background: var(--oq-arches-soft);
+  border: 1px solid var(--oq-arches-line);
+  border-radius: 10px;
+  padding: 12px;
+}
+.oq-fail-panel__head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; font-weight: 700; color: var(--oq-arches-deep);
+  margin-bottom: 8px;
+}
+.oq-fail-panel__head .material-symbols-outlined { font-size: 16px; }
+.oq-fail-panel textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--slate-divider-strong);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--slate-ink);
+  resize: vertical;
+}
+
+/* Photo slot tray (mobile + tablet runner) */
+.oq-photo-tray {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+/* Photo tray switches to 3-col at tablet and 4-col only at desktop so
+   slot tiles stay tappable inside the narrower right pane. */
+@media (min-width: 600px) { .oq-photo-tray { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1100px) { .oq-photo-tray { grid-template-columns: repeat(4, 1fr); } }
+.oq-photo-tray .oq-photo-slot { aspect-ratio: 3/4; cursor: pointer; }
+.oq-photo-tray .oq-photo-slot[role="button"]:focus-visible { outline: 2px solid var(--slate-sage); outline-offset: 2px; }
+
+/* Signature panel */
+.oq-signature {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-lg);
+  padding: 16px;
+}
+.oq-signature label { display: block; font-size: 12.5px; font-weight: 600; color: var(--slate-ink-muted); margin-bottom: 8px; }
+.oq-signature input { width: 100%; height: 44px; padding: 0 12px; font-size: 16px; border: 1px solid var(--slate-divider-strong); border-radius: 6px; background: #fff; }
+.oq-signature__meta { font-size: 11.5px; color: var(--slate-ink-muted); margin-top: 8px; }
+
+/* Submit summary */
+.oq-summary {
+  background: var(--slate-sand-wash);
+  border: 1px solid var(--slate-divider-strong);
+  border-radius: var(--slate-radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.oq-summary__title { font-size: 13.5px; font-weight: 700; color: var(--slate-ink); }
+.oq-summary__sub { font-size: 12px; color: var(--slate-ink-muted); margin-top: 4px; }
+.oq-summary__list { list-style: none; margin: 8px 0 0; padding: 0; }
+.oq-summary__list li {
+  font-size: 12.5px; color: var(--oq-arches-deep);
+  display: flex; align-items: center; gap: 6px; padding: 4px 0;
+}
+
+/* ── Tablet / desktop two-panel layout ──────────────────────────────
+ *
+ * .oq-runner stays column-flex at every viewport. Only .oq-runner__main
+ * switches to a two-column grid at ≥768px so the header sits across the
+ * top, the grid sits in the middle (checklist | active item detail +
+ * photos), and the footer (Back / Next / Sign & submit) sits across the
+ * bottom. An earlier rule made .oq-runner itself flex-direction:row,
+ * which laid out header + main + footer side-by-side and created the
+ * "huge empty left area + sticky action rail on the right" symptom.
+ */
+@media (min-width: 768px) {
+  .oq-runner[data-layout="tablet"] .oq-runner__main {
+    display: grid;
+    /* Mins kept under 600px combined so the layout doesn't overflow on
+       narrow tablets (≈688px content inside the Slate Ops shell at
+       768px viewports). Wider mins kick in at the 1100px breakpoint. */
+    grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+    flex: 1;
+    min-height: 0;
+  }
+  .oq-runner[data-layout="tablet"] .oq-checklist-pane {
+    background: var(--slate-surface);
+    border-right: 1px solid var(--slate-divider);
+    overflow-y: auto;
+    min-width: 0;
+  }
+  .oq-runner[data-layout="tablet"] .oq-detail-pane {
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--slate-surface-page);
+    min-width: 0;
+  }
+  .oq-runner[data-layout="tablet"] .oq-cl-item {
+    border-radius: 0;
+    border-left: 3px solid transparent;
+    border-right: 0;
+    border-top: 0;
+    border-bottom: 1px solid var(--slate-divider-soft);
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+  .oq-runner[data-layout="tablet"] .oq-cl-item.is-active {
+    background: var(--slate-sand-wash);
+    border-left-color: var(--slate-sage);
+    box-shadow: none;
+  }
+
+  /* Footer becomes a full-width horizontal bar across the bottom of the
+     runner, not a sticky vertical rail. Buttons spread evenly with the
+     primary action pinned right. */
+  .oq-runner[data-layout="tablet"] .oq-rfooter {
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+  }
+  .oq-runner[data-layout="tablet"] .oq-rfooter .oq-btn { height: 44px; font-size: 14px; }
+  .oq-runner[data-layout="tablet"] .oq-rfooter .oq-btn--icon { flex: 0 0 48px; }
+  .oq-runner[data-layout="tablet"] .oq-rfooter .oq-btn--primary { flex: 0 0 auto; margin-left: auto; padding: 0 22px; }
+}
+
+/* ── Wider desktop — give the checklist room to breathe ─────────────── */
+@media (min-width: 1100px) {
+  .oq-runner[data-layout="tablet"] .oq-runner__main {
+    grid-template-columns: minmax(380px, 0.9fr) minmax(440px, 1.1fr);
+  }
+}
+
+/* Active checklist card in the tablet detail pane is the full card —
+   reset its mobile-card margin so it doesn't get an extra vertical gap
+   from the also-card styling on .oq-cl-item. */
+@media (min-width: 768px) {
+  .oq-runner[data-layout="tablet"] .oq-detail-pane > .oq-cl-item {
+    margin-bottom: 16px;
+    border-radius: var(--slate-radius-lg);
+    border: 1px solid var(--slate-divider);
+    border-left-color: var(--slate-sage);
+    border-left-width: 3px;
+  }
+}

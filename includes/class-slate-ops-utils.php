@@ -259,6 +259,7 @@ class Slate_Ops_Utils {
       'tech'         => 'Tech',
       'schedule'     => 'Schedule',
       'purchasing'   => 'Purchasing',
+      'quality'      => 'Quality',
       'resource-hub' => 'Resource hub',
       'admin'        => 'Admin',
       'settings'     => 'Settings',
@@ -275,6 +276,7 @@ class Slate_Ops_Utils {
       'tech'         => true,
       'schedule'     => self::scheduler_launch_enabled(),
       'purchasing'   => false,
+      'quality'      => true,
       'resource-hub' => true,
       'admin'        => true,
       'settings'     => true,
@@ -321,10 +323,10 @@ class Slate_Ops_Utils {
     // Scheduler is intentionally absent from non-admin defaults for the
     // initial CS/Tech production launch.
     return [
-      'admin'      => ['executive', 'supervisor-dashboard', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'resource-hub', 'admin', 'settings', 'monitor'],
-      'supervisor' => ['executive', 'supervisor-dashboard', 'tech', 'purchasing', 'resource-hub', 'monitor'],
-      'cs'         => ['cs-dashboard', 'resource-hub'],
-      'tech'       => ['tech', 'resource-hub', 'monitor'],
+      'admin'      => ['executive', 'supervisor-dashboard', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'quality', 'resource-hub', 'admin', 'settings', 'monitor'],
+      'supervisor' => ['executive', 'supervisor-dashboard', 'tech', 'purchasing', 'quality', 'resource-hub', 'monitor'],
+      'cs'         => ['cs-dashboard', 'quality', 'resource-hub'],
+      'tech'       => ['tech', 'quality', 'resource-hub', 'monitor'],
       'executive'  => ['executive', 'resource-hub', 'monitor'],
     ];
   }
@@ -354,7 +356,7 @@ class Slate_Ops_Utils {
   }
 
   public static function sanitize_page_slugs($slugs) {
-    $valid = ['executive','cs','cs-dashboard','supervisor-dashboard','tech','schedule','purchasing','resource-hub','admin','settings','monitor'];
+    $valid = ['executive','cs','cs-dashboard','supervisor-dashboard','tech','schedule','purchasing','quality','resource-hub','admin','settings','monitor'];
     $in = is_array($slugs) ? $slugs : [];
     $out = [];
     foreach ($in as $slug) {
