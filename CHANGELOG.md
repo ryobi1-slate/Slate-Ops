@@ -1,5 +1,13 @@
 # Slate Ops Changelog
 
+## 0.62.3 — Quality runner desktop layout
+
+- Removed the tablet-width `flex-direction: row` rule on `.oq-runner` that laid out the header, body, and footer as three side-by-side columns at ≥768px. That was the cause of the huge empty left area, the stranded header, the compressed detail pane, and the skinny vertical "sticky action rail" on the right at desktop width.
+- `.oq-runner` now stays column-flex at every viewport; only `.oq-runner__main` switches to a two-column grid (checklist | active item detail + photos) at ≥768px.
+- Grid mins tightened to fit the 768px viewport inside the Slate Ops shell without overflow, then widen at 1100+ for desktop comfort.
+- Footer becomes a full-width horizontal bar at desktop with the Sign & submit / Next button pinned right.
+- Photo tray uses 3 columns at tablet, 4 columns only at desktop.
+
 ## 0.62.2 — Quality PASS/FAIL persistence
 
 - Fixed PASS/FAIL selections being dropped in the Quality form runner on reload or rapid input.
