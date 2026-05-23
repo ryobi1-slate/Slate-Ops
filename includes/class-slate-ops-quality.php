@@ -173,6 +173,7 @@ class Slate_Ops_Quality {
         'kind'        => 'testing',
         'job_types'   => ['rvia'],
         'description' => 'Electrical, plumbing, and life-safety verification per RVIA code.',
+        'depends_on'  => [self::FORM_QMS_004],
         'sections'    => [
           [
             'key'   => 'checklist',
@@ -260,7 +261,7 @@ class Slate_Ops_Quality {
                 'desc' => ''],
               ['key' => 'interior_clean',         'label' => 'Interior is cleaned, free of dust and fingerprints',
                 'desc' => ''],
-              ['key' => 'lugs_torqued',           'label' => 'Wheel lugs torqued (Front / Rear)',
+              ['key' => 'lugs_torqued',           'label' => 'Wheel lugs torqued',
                 'desc' => 'Record front and rear torque values in the notes.'],
               ['key' => 'tire_pressure_tpms',     'label' => 'Tires are at the correct air pressure, TPMS Programmed',
                 'desc' => ''],
