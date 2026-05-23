@@ -326,7 +326,7 @@ class Slate_Ops_Utils {
       'admin'      => ['executive', 'supervisor-dashboard', 'cs-dashboard', 'tech', 'schedule', 'purchasing', 'quality', 'resource-hub', 'admin', 'settings', 'monitor'],
       'supervisor' => ['executive', 'supervisor-dashboard', 'tech', 'purchasing', 'quality', 'resource-hub', 'monitor'],
       'cs'         => ['cs-dashboard', 'quality', 'resource-hub'],
-      'tech'       => ['tech', 'quality', 'resource-hub', 'monitor'],
+      'tech'       => ['tech', 'resource-hub', 'monitor'],
       'executive'  => ['executive', 'resource-hub', 'monitor'],
     ];
   }
@@ -339,7 +339,12 @@ class Slate_Ops_Utils {
   public static function get_role_page_access() {
     $defaults = self::get_default_role_page_access();
     $saved = get_option(self::ROLE_PAGE_ACCESS_OPTION, []);
-    if (!is_array($saved)) return $defaults;
+    if (!is_array($saved)) {
+      update_option(self::ROLE_PAGE_ACCESS_OPTION, $defaults, false);
+      return $defaults;
+    }
+
+    $original = $saved;
     foreach ($defaults as $role => $allowed) {
       if (!isset($saved[$role]) || !is_array($saved[$role])) {
         $saved[$role] = $allowed;
@@ -349,8 +354,15 @@ class Slate_Ops_Utils {
         $saved[$role][] = 'supervisor-dashboard';
       }
       if ($role === 'admin') {
-        $saved[$role] = array_values(array_unique(array_merge($saved[$role], ['admin', 'settings'])));
+        $saved[$role] = array_values(array_unique(array_merge($saved[$role], $allowed)));
+      } elseif (in_array($role, ['supervisor', 'cs'], true) && in_array('quality', $allowed, true) && !in_array('quality', $saved[$role], true)) {
+        $saved[$role][] = 'quality';
+      } elseif ($role === 'tech') {
+        $saved[$role] = array_values(array_diff($saved[$role], ['quality']));
       }
+    }
+    if ($saved !== $original) {
+      update_option(self::ROLE_PAGE_ACCESS_OPTION, $saved, false);
     }
     return $saved;
   }
@@ -379,8 +391,23 @@ class Slate_Ops_Utils {
   }
 
   public static function current_user_can_access_ops_page($page_slug) {
+    $page_slug = sanitize_key((string)$page_slug);
     $allowed = self::user_allowed_pages();
-    return in_array(sanitize_key((string)$page_slug), $allowed, true);
+    $can_access = in_array($page_slug, $allowed, true);
+
+    if ($page_slug === 'quality' && current_user_can(self::CAP_ADMIN)) {
+      $matrix = self::get_role_page_access();
+      $features = self::get_feature_flags();
+      error_log('[Slate Ops Quality access debug] ' . wp_json_encode([
+        'current_ops_role_slug' => self::current_ops_role_slug(),
+        'user_allowed_pages' => $allowed,
+        'admin_role_page_access' => isset($matrix['admin']) && is_array($matrix['admin']) ? $matrix['admin'] : [],
+        'quality_feature_enabled' => !empty($features['quality']),
+        'can_access_quality' => $can_access,
+      ]));
+    }
+
+    return $can_access;
   }
 
   // ── Validators ──────────────────────────────────────────────────────────
