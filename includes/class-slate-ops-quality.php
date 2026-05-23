@@ -353,7 +353,7 @@ class Slate_Ops_Quality {
                 'desc' => ''],
               ['key' => 'park_outside',          'label' => 'Park the van outside to be picked up',
                 'desc' => ''],
-              ['key' => 'keys_in_slip',          'label' => 'Place keys in slip with the invoice and hang slip on "Done" hook outside office',
+              ['key' => 'keys_in_slip',          'label' => 'Place keys in slip with the invoice and hang slip "Done" hook outside office',
                 'desc' => ''],
               ['key' => 'completed_checklist',   'label' => 'Completed checklist with invoice',
                 'desc' => ''],
