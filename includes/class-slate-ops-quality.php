@@ -113,8 +113,25 @@ class Slate_Ops_Quality {
    * source of truth for form structure used by both the runner and the
    * supervisor review.
    */
+  /**
+   * Returns the full registry of QMS form templates. Each form's checklist
+   * mirrors the approved paper form one-for-one — same items, same labels,
+   * same descriptions, same order. Do not add items that are not in the
+   * paper form; the paper "Photos" checklist row stays in the checklist
+   * even though we ALSO collect the required digital photo slots via
+   * `photo_slots`. The two serve different purposes:
+   *   • Photos (checklist) is the tech's PASS/FAIL attestation that
+   *     they took the required pictures (matches the paper row).
+   *   • photo_slots is the structured upload tray of specific slots
+   *     the tech must capture (matches the QMS spec photo requirements).
+   *
+   * Source of truth: the QMS-004/005/006/009/010 paper forms shipped with
+   * the design package.
+   */
   public static function form_registry() {
     $registry = [
+      // ── QMS-004 Rev. 1.1 — RVIA Check-In Sign-Off ──────────────────
+      // Paper form: 6 checklist items.
       self::FORM_QMS_004 => [
         'code'        => self::FORM_QMS_004,
         'revision'    => '1.1',
@@ -125,31 +142,29 @@ class Slate_Ops_Quality {
         'description' => 'Documents condition of the chassis at intake before any RVIA work begins.',
         'sections'    => [
           [
-            'key'   => 'inspection',
-            'label' => 'Vehicle inspection',
+            'key'   => 'checklist',
+            'label' => 'RVIA Check-In Checklist',
             'items' => [
-              ['key' => 'exterior',        'label' => 'Exterior inspection',
-                'desc' => 'Walk the chassis. Note any body damage, paint defects, or panel gaps.'],
-              ['key' => 'interior',        'label' => 'Interior inspection',
-                'desc' => 'Check seats, dash, door panels, headliner, and floor.'],
-              ['key' => 'lighting',        'label' => 'Lighting check',
-                'desc' => 'Test every exterior and interior lamp.'],
-              ['key' => 'cluster',         'label' => 'Instrument cluster',
-                'desc' => 'Ensure no warning lights are displayed before delivery.'],
-              ['key' => 'fluids',          'label' => 'Fluid levels',
-                'desc' => 'Verify coolant, oil, washer, brake, and DEF where applicable.'],
-              ['key' => 'tires',           'label' => 'Tires and wheels',
-                'desc' => 'Check tread depth, air pressure, and lug torque.'],
-              ['key' => 'keys',            'label' => 'Keys delivered',
-                'desc' => 'Confirm count of physical keys and key fobs.'],
-              ['key' => 'documents',       'label' => 'Documents present',
-                'desc' => 'Title or MSO, registration, RVIA paperwork.'],
+              ['key' => 'exterior_inspection',  'label' => 'Exterior Inspection',
+                'desc' => 'Check for body damage or defects'],
+              ['key' => 'interior_inspection',  'label' => 'Interior Inspection',
+                'desc' => 'Verify no damage to seats, dash, and door panels'],
+              ['key' => 'lighting_check',       'label' => 'Lighting Check',
+                'desc' => 'Test all interior and exterior lights'],
+              ['key' => 'instrument_cluster',   'label' => 'Instrument Cluster',
+                'desc' => 'Ensure no warning lights are displayed'],
+              ['key' => 'photos',               'label' => 'Photos',
+                'desc' => 'Photos of the van have been taken'],
+              ['key' => 'test_drive',           'label' => 'Test Drive',
+                'desc' => 'Identify any abnormal noises or performance issues'],
             ],
           ],
         ],
         'photo_slots' => self::check_in_photo_slots(),
       ],
 
+      // ── QMS-005 Rev. 1.1 — RVIA Testing Sign-Off ───────────────────
+      // Paper form: 15 checklist items keyed by NEC / NFPA / ANSI codes.
       self::FORM_QMS_005 => [
         'code'        => self::FORM_QMS_005,
         'revision'    => '1.1',
@@ -160,36 +175,63 @@ class Slate_Ops_Quality {
         'description' => 'Electrical, plumbing, and life-safety verification per RVIA code.',
         'sections'    => [
           [
-            'key'   => 'electrical',
-            'label' => 'Electrical & bonding',
+            'key'   => 'checklist',
+            'label' => 'RVIA Testing Checklist',
             'items' => [
-              ['key' => 'highpot',  'label' => '120V high-pot test',     'desc' => 'NEC 551.60 high-pot verification.'],
-              ['key' => 'bond',     'label' => 'Continuity & bonding',   'desc' => 'NEC 551.60(1) chassis ground continuity.'],
-              ['key' => 'polarity', 'label' => 'Polarity test',          'desc' => 'NEC 551.60(3) receptacle polarity.'],
-              ['key' => 'gfci',     'label' => 'GFCI function test',     'desc' => 'NEC 551.60(4) GFCI trip + reset under load.'],
-              ['key' => 'lighting', 'label' => 'Lighting & marker lamp', 'desc' => 'NFPA 1194 exterior marker verification.'],
-              ['key' => 'ground',   'label' => 'Chassis grounding',      'desc' => 'NEC 551.60 chassis ground bond.'],
-            ],
-          ],
-          [
-            'key'   => 'plumbing',
-            'label' => 'Plumbing & gas',
-            'items' => [
-              ['key' => 'trap',     'label' => 'Trap installation',      'desc' => 'NFPA 1192 7.4.4.1 trap fitment for every fixture.'],
-              ['key' => 'water',    'label' => 'Water system pressure',  'desc' => 'Hold 100 psi for 10 minutes — confirm no drop.'],
-              ['key' => 'lpg',      'label' => 'LP gas leak test',       'desc' => 'NFPA 1192 LP system pressure & leak check.'],
-              ['key' => 'fire',     'label' => 'Fire & life safety',     'desc' => 'NFPA 1194 smoke, CO, LP detectors armed.'],
+              ['key' => 'highpot_pre',     'label' => '120V High-Pot Test (Prior to Energizing)',
+                'code' => 'NEC 551.60',
+                'desc' => 'Ensures insulation integrity before power is applied'],
+              ['key' => 'continuity_bond', 'label' => 'Continuity & Bonding Test',
+                'code' => 'NEC 551.60(1)',
+                'desc' => 'Ensures all metal components are properly connected'],
+              ['key' => 'polarity',        'label' => 'Polarity Test',
+                'code' => 'NEC 551.60(3)',
+                'desc' => 'Confirms that hot, neutral, and ground wiring are correctly connected'],
+              ['key' => 'gfci',            'label' => 'GFCI Function Test',
+                'code' => 'NEC 551.60(4)',
+                'desc' => 'Verifies that Ground Fault Circuit Interrupters (GFCIs) function correctly'],
+              ['key' => 'lighting_marker', 'label' => 'Lighting & Exterior Marker Lamp Check',
+                'code' => 'NFPA 1194',
+                'desc' => 'Ensures required lights meet visibility standards'],
+              ['key' => 'fire_safety',     'label' => 'Fire & Life Safety Equip. Verification',
+                'code' => 'NFPA 1194',
+                'desc' => 'Confirms all safety equipment is functional'],
+              ['key' => 'chassis_ground',  'label' => 'Chassis Grounding Verification',
+                'code' => 'NEC 551.60',
+                'desc' => 'Ensures chassis is properly grounded'],
+              ['key' => 'highpot_post',    'label' => 'Final 120V High-Pot Test (Post Assembly)',
+                'code' => 'NEC 551.60',
+                'desc' => 'Verifies insulation integrity post-assembly'],
+              ['key' => 'twelve_v',        'label' => '12V Operational Test',
+                'code' => 'ANSI/RVIA LV 8-1',
+                'desc' => 'Confirms correct function of low-voltage systems'],
+              ['key' => 'sink_install',    'label' => 'Sink Installation Verification',
+                'code' => 'NFPA 1192 7.1.2.1',
+                'desc' => 'Non-listed sink constructed of 304 stainless steel. Used in non-pressurized system with justification memo on file.'],
+              ['key' => 'trap',            'label' => 'Trap Installation (Sink)',
+                'code' => 'NFPA 1192 7.4.4.1',
+                'desc' => 'HepvO ASME A112.18.8-certified waterless trap installed and secured.'],
+              ['key' => 'gravity_drain',   'label' => 'Gravity Drain System',
+                'code' => 'NFPA 1192 7.4.7',
+                'desc' => 'Drain tubing is flexible and secured. Gravity-fed only, no pressurized plumbing.'],
+              ['key' => 'tank_labels',     'label' => 'Tank Identification Labels',
+                'code' => 'RVIA Labeling',
+                'desc' => 'Labels present: "POTABLE WATER ONLY" and "GREY WATER ONLY" on tanks and cabinet.'],
+              ['key' => 'bond_gauge',      'label' => 'Bonding Wire Gauge Check',
+                'code' => 'NEC 551.56(C)',
+                'desc' => 'Grounding wire is 8 AWG copper or larger. Resistance under 0.1 ohms verified.'],
+              ['key' => 'bond_access',     'label' => 'Bonding Point Accessibility',
+                'code' => 'NEC 551.56(B)',
+                'desc' => 'Ground terminal is visible and accessible.'],
             ],
           ],
         ],
-        'photo_slots' => [
-          ['key' => 'panel',      'label' => 'Power panel',      'required' => true],
-          ['key' => 'gfci',       'label' => 'GFCI under load',  'required' => true],
-          ['key' => 'water_test', 'label' => 'Water pressure',   'required' => true],
-          ['key' => 'lpg_test',   'label' => 'LP gas test',      'required' => true],
-        ],
+        // QMS-005 has no required photo slots on the paper form.
+        'photo_slots' => [],
       ],
 
+      // ── QMS-006 Rev. 1.2 — Completed RVIA Sign-Off ─────────────────
+      // Paper form: 13 checklist items, final delivery verification.
       self::FORM_QMS_006 => [
         'code'        => self::FORM_QMS_006,
         'revision'    => '1.2',
@@ -201,25 +243,43 @@ class Slate_Ops_Quality {
         'depends_on'  => [self::FORM_QMS_005],
         'sections'    => [
           [
-            'key'   => 'final',
-            'label' => 'Final delivery checks',
+            'key'   => 'checklist',
+            'label' => 'Completed RVIA Checklist',
             'items' => [
-              ['key' => 'exterior',  'label' => 'Exterior finished',
-                'desc' => 'Body and paint complete, panels aligned, no rework outstanding.'],
-              ['key' => 'interior',  'label' => 'Interior finished',
-                'desc' => 'All fitments installed and clean.'],
-              ['key' => 'systems',   'label' => 'All systems operational',
-                'desc' => 'Power, plumbing, gas, lighting all functioning.'],
-              ['key' => 'cleanup',   'label' => 'Vehicle clean & detailed',
-                'desc' => 'Interior vacuumed, exterior washed.'],
-              ['key' => 'paperwork', 'label' => 'Customer paperwork ready',
-                'desc' => 'Sign-off packet, manuals, warranty registration.'],
+              ['key' => 'work_matches_estimate',  'label' => 'Work completed matches the estimate',
+                'desc' => ''],
+              ['key' => 'power_and_battery',      'label' => 'All power inputs and battery system working',
+                'desc' => ''],
+              ['key' => 'lights_fan_pump',        'label' => 'All installed lights, fan, water pump, monitors working',
+                'desc' => ''],
+              ['key' => 'paperwork_remotes',      'label' => 'Paperwork & remote controls in glovebox',
+                'desc' => ''],
+              ['key' => 'equipment_secured',      'label' => 'All installed equipment secured and travel-ready',
+                'desc' => ''],
+              ['key' => 'windows_stickers',       'label' => 'Windows cleaned, stickers, and protective film removed',
+                'desc' => ''],
+              ['key' => 'interior_clean',         'label' => 'Interior is cleaned, free of dust and fingerprints',
+                'desc' => ''],
+              ['key' => 'lugs_torqued',           'label' => 'Wheel lugs torqued (Front / Rear)',
+                'desc' => 'Record front and rear torque values in the notes.'],
+              ['key' => 'tire_pressure_tpms',     'label' => 'Tires are at the correct air pressure, TPMS Programmed',
+                'desc' => ''],
+              ['key' => 'warning_stickers',       'label' => 'Warning stickers installed',
+                'desc' => ''],
+              ['key' => 'cluster_clear',          'label' => 'Check for warning lights in cluster',
+                'desc' => ''],
+              ['key' => 'leak_test',              'label' => 'Leak-test van (windows, fan, shore power inlet, solar inlet)',
+                'desc' => ''],
+              ['key' => 'final_test_drive',       'label' => 'Test drive to check for rattles/noises',
+                'desc' => ''],
             ],
           ],
         ],
         'photo_slots' => self::final_signoff_photo_slots(),
       ],
 
+      // ── QMS-009 Rev. 1.1 — Commercial & Non-RVIA Check-In Sign-Off ─
+      // Paper form: 6 checklist items.
       self::FORM_QMS_009 => [
         'code'        => self::FORM_QMS_009,
         'revision'    => '1.1',
@@ -230,29 +290,29 @@ class Slate_Ops_Quality {
         'description' => 'Intake inspection for commercial and non-RVIA upfit jobs.',
         'sections'    => [
           [
-            'key'   => 'inspection',
-            'label' => 'Vehicle inspection',
+            'key'   => 'checklist',
+            'label' => 'Commercial & Non-RVIA Check-In Checklist',
             'items' => [
-              ['key' => 'exterior',  'label' => 'Exterior inspection',
-                'desc' => 'Walk the chassis. Note damage, paint, panels.'],
-              ['key' => 'interior',  'label' => 'Interior inspection',
-                'desc' => 'Check seats, dash, doors, cargo area.'],
-              ['key' => 'lighting',  'label' => 'Lighting check',
-                'desc' => 'Test exterior and interior lamps.'],
-              ['key' => 'cluster',   'label' => 'Instrument cluster',
-                'desc' => 'No warning lights displayed.'],
-              ['key' => 'fluids',    'label' => 'Fluid levels',
-                'desc' => 'Coolant, oil, washer, brake.'],
-              ['key' => 'tires',     'label' => 'Tires and wheels',
-                'desc' => 'Tread depth, pressure, torque.'],
-              ['key' => 'keys',      'label' => 'Keys delivered',
-                'desc' => 'Confirm count and condition.'],
+              ['key' => 'exterior_inspection', 'label' => 'Exterior Inspection',
+                'desc' => 'Check for body damage or defects'],
+              ['key' => 'interior_inspection', 'label' => 'Interior Inspection',
+                'desc' => 'Verify no damage to seats, dash, door panels, and floor'],
+              ['key' => 'lighting_check',      'label' => 'Lighting Check',
+                'desc' => 'Test all interior and exterior lights'],
+              ['key' => 'instrument_cluster',  'label' => 'Instrument Cluster',
+                'desc' => 'Ensure no warning lights are displayed'],
+              ['key' => 'photos',              'label' => 'Photos',
+                'desc' => 'Photos of the van have been taken'],
+              ['key' => 'test_drive',          'label' => 'Test Drive',
+                'desc' => 'Identify any abnormal noises or performance issues'],
             ],
           ],
         ],
         'photo_slots' => self::check_in_photo_slots(),
       ],
 
+      // ── QMS-010 Rev. 1.3 — Completed Commercial & Non-RVIA Sign-Off ─
+      // Paper form: 15 checklist items, final delivery verification.
       self::FORM_QMS_010 => [
         'code'        => self::FORM_QMS_010,
         'revision'    => '1.3',
@@ -264,19 +324,39 @@ class Slate_Ops_Quality {
         'depends_on'  => [self::FORM_QMS_009],
         'sections'    => [
           [
-            'key'   => 'final',
-            'label' => 'Final delivery checks',
+            'key'   => 'checklist',
+            'label' => 'Completed Commercial & Non-RVIA Checklist',
             'items' => [
-              ['key' => 'exterior',  'label' => 'Exterior finished',
-                'desc' => 'Body and paint complete, no rework outstanding.'],
-              ['key' => 'interior',  'label' => 'Interior finished',
-                'desc' => 'All fitments installed and clean.'],
-              ['key' => 'equipment', 'label' => 'Installed equipment functional',
-                'desc' => 'Customer-specified upfit equipment tested.'],
-              ['key' => 'cleanup',   'label' => 'Vehicle clean & detailed',
-                'desc' => 'Interior vacuumed, exterior washed.'],
-              ['key' => 'paperwork', 'label' => 'Customer paperwork ready',
-                'desc' => 'Sign-off packet, manuals, warranty registration.'],
+              ['key' => 'work_matches_estimate', 'label' => 'Work completed matches the estimate',
+                'desc' => ''],
+              ['key' => 'hardware_tightened',    'label' => 'Hardware checked and tightened',
+                'desc' => ''],
+              ['key' => 'protective_film',       'label' => 'Remove any protective film from installed items',
+                'desc' => ''],
+              ['key' => 'wipe_down',             'label' => 'Wipe down installed items to be free of fingerprints and dust',
+                'desc' => ''],
+              ['key' => 'vacuum_blowout',        'label' => 'Vacuum and blow out the van to be free of metal shavings and any debris left from installation',
+                'desc' => ''],
+              ['key' => 'driver_compartment',    'label' => "Driver's compartment cleaned and free of debris",
+                'desc' => ''],
+              ['key' => 'seats_normal',          'label' => 'Seats returned to normal positions',
+                'desc' => ''],
+              ['key' => 'customer_items_back',   'label' => 'Place any removed items belonging to the customer back into the van',
+                'desc' => ''],
+              ['key' => 'leak_test',             'label' => 'Leak test if windows, fan, or large hole is cut into van',
+                'desc' => ''],
+              ['key' => 'photos_completed',      'label' => 'Photos of completed van have been taken',
+                'desc' => ''],
+              ['key' => 'intake_form_in_slip',   'label' => 'Van intake form placed in the slip with invoice',
+                'desc' => ''],
+              ['key' => 'test_drive_noises',     'label' => 'Test drive van to check for unusual noises',
+                'desc' => ''],
+              ['key' => 'park_outside',          'label' => 'Park the van outside to be picked up',
+                'desc' => ''],
+              ['key' => 'keys_in_slip',          'label' => 'Place keys in slip with the invoice and hang slip on "Done" hook outside office',
+                'desc' => ''],
+              ['key' => 'completed_checklist',   'label' => 'Completed checklist with invoice',
+                'desc' => ''],
             ],
           ],
         ],
@@ -290,6 +370,26 @@ class Slate_Ops_Quality {
   public static function get_form_template($form_code) {
     $reg = self::form_registry();
     return $reg[$form_code] ?? null;
+  }
+
+  /**
+   * Deterministic short fingerprint of the current registry, derived from
+   * the item-key topology only (section keys + item keys per form, in
+   * order). Surfaced on REST responses so staging/prod can prove which
+   * registry version the server is actually serving when a cache layer is
+   * suspected.
+   */
+  public static function registry_fingerprint() {
+    $topology = [];
+    foreach (self::form_registry() as $code => $tpl) {
+      $section_keys = [];
+      foreach (($tpl['sections'] ?? []) as $section) {
+        $item_keys = array_map(function ($i) { return $i['key'] ?? ''; }, $section['items'] ?? []);
+        $section_keys[] = ($section['key'] ?? '') . ':' . implode(',', $item_keys);
+      }
+      $topology[] = $code . '#' . ($tpl['revision'] ?? '') . '#' . implode('|', $section_keys);
+    }
+    return substr(hash('sha256', implode("\n", $topology)), 0, 12);
   }
 
   // ── Job type → form set resolution ──────────────────────────────────────
@@ -401,14 +501,61 @@ class Slate_Ops_Quality {
   }
 
   /**
-   * Decode JSON payload columns and add convenience fields.
+   * Decode JSON payload columns and add convenience fields. The checklist
+   * inside the payload is normalized against the current registry template
+   * for non-terminal rows so saved drafts can never resurrect items that
+   * were removed from the registry.
+   *
+   * Historical (submitted/passed) rows keep their on-disk payload intact —
+   * normalization on those would rewrite the historical record.
    */
   private static function hydrate_row(array $row) {
     $row['payload'] = json_decode((string)($row['payload'] ?? '{}'), true) ?: [];
     $row['photos']  = json_decode((string)($row['photos']  ?? '{}'), true) ?: [];
     $row['status_label'] = self::status_label($row['status']);
     $row['locked']  = !empty($row['locked_at']);
+
+    $is_historical = in_array($row['status'], [self::STATUS_SUBMITTED, self::STATUS_PASSED], true);
+    if (!$is_historical) {
+      $template = self::get_form_template($row['form_code'] ?? '');
+      if ($template) {
+        $row['payload'] = self::normalize_payload_against_template($row['payload'], $template);
+      }
+    }
     return $row;
+  }
+
+  /**
+   * Reshape a saved payload so its `checklist` keys mirror the current
+   * registry template exactly. Per-item responses (result / note / initials
+   * / user_id / timestamp) are preserved when their (section_key, item_key)
+   * still exists in the registry; obsolete keys are dropped. New registry
+   * items appear as missing (no entry in the checklist).
+   *
+   * Photos, vehicle, notes, signature, review, and unlocks are passed
+   * through untouched — they're identified by their own keys, not by
+   * checklist position. This intentionally only edits the checklist
+   * sub-tree; it does NOT delete uploaded media or audit trail data.
+   */
+  public static function normalize_payload_against_template(array $payload, array $template) {
+    $saved_checklist = is_array($payload['checklist'] ?? null) ? $payload['checklist'] : [];
+    $current = [];
+    foreach (($template['sections'] ?? []) as $section) {
+      $sk = $section['key'] ?? '';
+      if ($sk === '') continue;
+      $current[$sk] = [];
+      $saved_section = is_array($saved_checklist[$sk] ?? null) ? $saved_checklist[$sk] : [];
+      foreach (($section['items'] ?? []) as $item) {
+        $ik = $item['key'] ?? '';
+        if ($ik === '') continue;
+        if (isset($saved_section[$ik]) && is_array($saved_section[$ik])) {
+          $current[$sk][$ik] = $saved_section[$ik];
+        }
+        // Else: leave it absent (renders as unanswered).
+      }
+    }
+    $payload['checklist'] = $current;
+    return $payload;
   }
 
   /**
@@ -445,6 +592,15 @@ class Slate_Ops_Quality {
     $row = self::ensure_form_row($job_id, $form_code);
     if (!empty($row['locked_at'])) {
       return new WP_Error('quality_locked', 'This form is locked. Ask a supervisor to unlock it before editing.', ['status' => 423]);
+    }
+
+    // Normalize the incoming checklist against the current registry so
+    // obsolete item keys submitted by a stale client are dropped before
+    // they get persisted. Photos / vehicle / notes / signature / review
+    // are passed through untouched.
+    $template = self::get_form_template($form_code);
+    if ($template) {
+      $payload = self::normalize_payload_against_template($payload, $template);
     }
 
     $new_status = ($row['status'] === self::STATUS_NOT_STARTED || $row['status'] === self::STATUS_NEEDS_CORRECTION)

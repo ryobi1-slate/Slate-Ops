@@ -1,5 +1,11 @@
 # Slate Ops Changelog
 
+## 0.62.1 — Quality registry fingerprint
+
+- Added a deterministic short fingerprint of the form registry topology (sha256 of section + item keys per form, truncated to 12 chars) so staging/prod can prove which registry version the server is actually serving when a cache layer is suspected.
+- Surfaced the fingerprint and `SLATE_OPS_VERSION` on `GET /quality/registry` and `GET /quality/jobs/{id}/forms/{code}`.
+- Bumped plugin version to force `Slate_Ops_Install::maybe_upgrade()` so deployments that wrap the install hook with an opcache reset pick up the corrected form registry. No schema change.
+
 ## 0.62.0 — Quality module
 
 - Added responsive Quality module that digitizes the five QMS sign-off forms (QMS-004, 005, 006, 009, 010) onto existing Ops jobs.
