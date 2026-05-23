@@ -235,10 +235,26 @@
 
     function ensureChecklist() {
       state.row.payload = state.row.payload || {};
-      state.row.payload.checklist = state.row.payload.checklist || {};
+      if (!isPlainObject(state.row.payload.checklist)) {
+        state.row.payload.checklist = {};
+      }
       state.template.sections.forEach(function (s) {
-        state.row.payload.checklist[s.key] = state.row.payload.checklist[s.key] || {};
+        if (!isPlainObject(state.row.payload.checklist[s.key])) {
+          state.row.payload.checklist[s.key] = {};
+        }
       });
+    }
+
+    function isPlainObject(value) {
+      return !!value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function draftBody() {
+      return JSON.parse(JSON.stringify({
+        checklist: state.row.payload.checklist || {},
+        vehicle: state.row.payload.vehicle || {},
+        notes: state.row.payload.notes || ''
+      }));
     }
 
     function setResult(sectionKey, itemKey, result) {
@@ -259,13 +275,15 @@
     }
 
     var saveTimer = null;
+    var saveSeq = 0;
     function saveDraft() {
+      var seq = ++saveSeq;
+      var body = draftBody();
       if (saveTimer) clearTimeout(saveTimer);
       saveTimer = setTimeout(function () {
-        var body = { checklist: state.row.payload.checklist || {}, vehicle: state.row.payload.vehicle || {}, notes: state.row.payload.notes || '' };
         api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/draft', body)
           .then(function (row) {
-            state.row = row;
+            if (seq === saveSeq) state.row = row;
           }).catch(function () { /* keep local optimistic state */ });
       }, 400);
     }
