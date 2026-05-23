@@ -149,8 +149,10 @@ class Slate_Ops_Quality_REST {
 
   public static function h_registry() {
     return rest_ensure_response([
-      'forms'    => array_values(Slate_Ops_Quality::form_registry()),
-      'statuses' => Slate_Ops_Quality::allowed_statuses(),
+      'forms'       => array_values(Slate_Ops_Quality::form_registry()),
+      'statuses'    => Slate_Ops_Quality::allowed_statuses(),
+      'fingerprint' => Slate_Ops_Quality::registry_fingerprint(),
+      'version'     => defined('SLATE_OPS_VERSION') ? SLATE_OPS_VERSION : null,
     ]);
   }
 
@@ -213,9 +215,11 @@ class Slate_Ops_Quality_REST {
 
     $row = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
     return rest_ensure_response([
-      'template' => $template,
-      'row'      => $row,
-      'photos'   => self::hydrate_photos($row['photos'] ?? []),
+      'template'    => $template,
+      'row'         => $row,
+      'photos'      => self::hydrate_photos($row['photos'] ?? []),
+      'fingerprint' => Slate_Ops_Quality::registry_fingerprint(),
+      'version'     => defined('SLATE_OPS_VERSION') ? SLATE_OPS_VERSION : null,
     ]);
   }
 

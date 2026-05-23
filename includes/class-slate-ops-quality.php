@@ -372,6 +372,26 @@ class Slate_Ops_Quality {
     return $reg[$form_code] ?? null;
   }
 
+  /**
+   * Deterministic short fingerprint of the current registry, derived from
+   * the item-key topology only (section keys + item keys per form, in
+   * order). Surfaced on REST responses so staging/prod can prove which
+   * registry version the server is actually serving when a cache layer is
+   * suspected.
+   */
+  public static function registry_fingerprint() {
+    $topology = [];
+    foreach (self::form_registry() as $code => $tpl) {
+      $section_keys = [];
+      foreach (($tpl['sections'] ?? []) as $section) {
+        $item_keys = array_map(function ($i) { return $i['key'] ?? ''; }, $section['items'] ?? []);
+        $section_keys[] = ($section['key'] ?? '') . ':' . implode(',', $item_keys);
+      }
+      $topology[] = $code . '#' . ($tpl['revision'] ?? '') . '#' . implode('|', $section_keys);
+    }
+    return substr(hash('sha256', implode("\n", $topology)), 0, 12);
+  }
+
   // ── Job type → form set resolution ──────────────────────────────────────
 
   /**
