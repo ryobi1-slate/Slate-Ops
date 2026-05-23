@@ -758,7 +758,10 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
-@media (min-width: 600px) { .oq-photo-tray { grid-template-columns: repeat(4, 1fr); } }
+/* Photo tray switches to 3-col at tablet and 4-col only at desktop so
+   slot tiles stay tappable inside the narrower right pane. */
+@media (min-width: 600px) { .oq-photo-tray { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1100px) { .oq-photo-tray { grid-template-columns: repeat(4, 1fr); } }
 .oq-photo-tray .oq-photo-slot { aspect-ratio: 3/4; cursor: pointer; }
 .oq-photo-tray .oq-photo-slot[role="button"]:focus-visible { outline: 2px solid var(--slate-sage); outline-offset: 2px; }
 
@@ -789,12 +792,23 @@
   display: flex; align-items: center; gap: 6px; padding: 4px 0;
 }
 
-/* ── Tablet two-panel layout ────────────────────────────────────────── */
+/* ── Tablet / desktop two-panel layout ──────────────────────────────
+ *
+ * .oq-runner stays column-flex at every viewport. Only .oq-runner__main
+ * switches to a two-column grid at ≥768px so the header sits across the
+ * top, the grid sits in the middle (checklist | active item detail +
+ * photos), and the footer (Back / Next / Sign & submit) sits across the
+ * bottom. An earlier rule made .oq-runner itself flex-direction:row,
+ * which laid out header + main + footer side-by-side and created the
+ * "huge empty left area + sticky action rail on the right" symptom.
+ */
 @media (min-width: 768px) {
-  .oq-runner[data-layout="tablet"] { flex-direction: row; min-height: 80vh; }
   .oq-runner[data-layout="tablet"] .oq-runner__main {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    /* Mins kept under 600px combined so the layout doesn't overflow on
+       narrow tablets (≈688px content inside the Slate Ops shell at
+       768px viewports). Wider mins kick in at the 1100px breakpoint. */
+    grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
     flex: 1;
     min-height: 0;
   }
@@ -802,11 +816,13 @@
     background: var(--slate-surface);
     border-right: 1px solid var(--slate-divider);
     overflow-y: auto;
+    min-width: 0;
   }
   .oq-runner[data-layout="tablet"] .oq-detail-pane {
     overflow-y: auto;
     padding: 20px;
     background: var(--slate-surface-page);
+    min-width: 0;
   }
   .oq-runner[data-layout="tablet"] .oq-cl-item {
     border-radius: 0;
@@ -822,11 +838,34 @@
     border-left-color: var(--slate-sage);
     box-shadow: none;
   }
+
+  /* Footer becomes a full-width horizontal bar across the bottom of the
+     runner, not a sticky vertical rail. Buttons spread evenly with the
+     primary action pinned right. */
+  .oq-runner[data-layout="tablet"] .oq-rfooter {
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+  }
+  .oq-runner[data-layout="tablet"] .oq-rfooter .oq-btn { height: 44px; font-size: 14px; }
+  .oq-runner[data-layout="tablet"] .oq-rfooter .oq-btn--icon { flex: 0 0 48px; }
+  .oq-runner[data-layout="tablet"] .oq-rfooter .oq-btn--primary { flex: 0 0 auto; margin-left: auto; padding: 0 22px; }
 }
 
-/* ── Desktop — same as tablet but wider panels ──────────────────────── */
-@media (min-width: 1200px) {
+/* ── Wider desktop — give the checklist room to breathe ─────────────── */
+@media (min-width: 1100px) {
   .oq-runner[data-layout="tablet"] .oq-runner__main {
-    grid-template-columns: 380px 1fr;
+    grid-template-columns: minmax(380px, 0.9fr) minmax(440px, 1.1fr);
+  }
+}
+
+/* Active checklist card in the tablet detail pane is the full card —
+   reset its mobile-card margin so it doesn't get an extra vertical gap
+   from the also-card styling on .oq-cl-item. */
+@media (min-width: 768px) {
+  .oq-runner[data-layout="tablet"] .oq-detail-pane > .oq-cl-item {
+    margin-bottom: 16px;
+    border-radius: var(--slate-radius-lg);
+    border: 1px solid var(--slate-divider);
+    border-left-color: var(--slate-sage);
+    border-left-width: 3px;
   }
 }
