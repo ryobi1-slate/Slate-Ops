@@ -196,15 +196,79 @@
       photoCache: {},      // slot → [{attachment_id, url, thumb_url}]
     };
 
+    // Per-cell local-edit ledger. Any PASS/FAIL/note touched in this
+    // session is keyed as "sectionKey/itemKey" so the server merge can
+    // tell which items are already newer locally than whatever the
+    // server returned. Survives across renders.
+    var localTouched = {};
+    function markTouched(sectionKey, itemKey) {
+      localTouched[sectionKey + '/' + itemKey] = true;
+    }
+    function isTouched(sectionKey, itemKey) {
+      return !!localTouched[sectionKey + '/' + itemKey];
+    }
+
+    /**
+     * Merge a server-returned row into local state without clobbering
+     * in-flight local edits. Used by both the initial GET hydration and
+     * every save/upload response.
+     *
+     *  - Top-level fields (status, locked_at, submitted_*, reviewed_*,
+     *    updated_*) are always adopted from the server — they're the
+     *    source of truth for review state.
+     *  - payload.checklist items are adopted from the server ONLY when
+     *    the same (section, item) hasn't been touched locally. Touched
+     *    items keep their local value (which a save call has either
+     *    already persisted or will persist on the next flush).
+     *  - payload.vehicle / notes / signature / review / unlocks are
+     *    adopted only if the local payload doesn't already hold a
+     *    value for that key, so a tech editing notes won't have them
+     *    wiped by an in-flight GET response.
+     */
+    function mergeServerRow(serverRow) {
+      if (!serverRow || typeof serverRow !== 'object') return;
+      ['status', 'status_label', 'locked', 'locked_at',
+       'submitted_by', 'submitted_at', 'reviewed_by', 'reviewed_at',
+       'signature_name', 'updated_by', 'updated_at',
+       'created_by', 'created_at'].forEach(function (k) {
+        if (serverRow[k] !== undefined) state.row[k] = serverRow[k];
+      });
+
+      state.row.payload = state.row.payload || {};
+      var sPayload = serverRow.payload || {};
+
+      // Checklist: merge by (section, item), preferring local for touched cells.
+      var sChecklist = sPayload.checklist || {};
+      state.row.payload.checklist = state.row.payload.checklist || {};
+      Object.keys(sChecklist).forEach(function (sec) {
+        state.row.payload.checklist[sec] = state.row.payload.checklist[sec] || {};
+        Object.keys(sChecklist[sec] || {}).forEach(function (it) {
+          if (!isTouched(sec, it)) {
+            state.row.payload.checklist[sec][it] = sChecklist[sec][it];
+          }
+        });
+      });
+
+      // Vehicle / notes / signature / review / unlocks: adopt only when
+      // local doesn't already have a value, so server data fills in
+      // without clobbering an in-flight edit.
+      ['vehicle', 'notes', 'signature', 'review', 'unlocks'].forEach(function (k) {
+        if (state.row.payload[k] === undefined && sPayload[k] !== undefined) {
+          state.row.payload[k] = sPayload[k];
+        }
+      });
+    }
+
     // Hydrate via REST so we (a) get the freshest template from the live
     // registry — not whatever was baked into the page HTML at render time
     // (defeats stale page caches), and (b) get photo URLs for any
-    // attachments already on the row.
+    // attachments already on the row. Uses mergeServerRow so any clicks
+    // that landed while the fetch was in flight are preserved.
     api('GET', '/quality/jobs/' + jobId + '/forms/' + code).then(function (res) {
       if (res && res.template) state.template = res.template;
-      state.row        = res.row || state.row;
-      state.photos     = res.photos || {};
-      state.photoCache = res.photos || {};
+      mergeServerRow(res && res.row);
+      state.photos     = (res && res.photos) || {};
+      state.photoCache = (res && res.photos) || {};
       // If the live registry no longer contains the item the user was
       // looking at, reset the active item to the first one in the
       // current template so the tablet detail pane doesn't blank out.
@@ -245,8 +309,12 @@
       ensureChecklist();
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
-      bucket[itemKey].result = result;
-      saveDraft();
+      bucket[itemKey].result    = result;
+      bucket[itemKey].timestamp = new Date().toISOString();
+      markTouched(sectionKey, itemKey);
+      // PASS/FAIL is a deliberate, low-frequency click — flush immediately
+      // so a reload right after a tap can't lose the selection.
+      saveDraft({ immediate: true });
       render();
     }
 
@@ -255,20 +323,70 @@
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
       bucket[itemKey].note = note;
+      markTouched(sectionKey, itemKey);
+      // Notes are typed — debounce to coalesce keystrokes.
       saveDraft();
     }
 
-    var saveTimer = null;
-    function saveDraft() {
-      if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(function () {
-        var body = { checklist: state.row.payload.checklist || {}, vehicle: state.row.payload.vehicle || {}, notes: state.row.payload.notes || '' };
-        api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/draft', body)
-          .then(function (row) {
-            state.row = row;
-          }).catch(function () { /* keep local optimistic state */ });
-      }, 400);
+    function buildSaveBody() {
+      var p = state.row.payload || {};
+      return {
+        checklist: p.checklist || {},
+        vehicle:   p.vehicle   || {},
+        notes:     p.notes     || '',
+      };
     }
+
+    // Single-flight save with coalescing. PASS/FAIL clicks call
+    // saveDraft({immediate:true}); typed notes call saveDraft() and get
+    // debounced. If a save is already in flight, follow-up edits are
+    // marked pending and flushed once the current one returns so we never
+    // drop the most recent state.
+    var saveTimer       = null;
+    var saveInFlight    = false;
+    var savePendingAgain = false;
+    var DEBOUNCE_MS     = 250;
+
+    function flushSave() {
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      if (saveInFlight) { savePendingAgain = true; return; }
+      saveInFlight = true;
+      var body = buildSaveBody();
+      api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/draft', body)
+        .then(function (row) { mergeServerRow(row); })
+        .catch(function () { /* keep local optimistic state */ })
+        .then(function () {
+          saveInFlight = false;
+          if (savePendingAgain) { savePendingAgain = false; flushSave(); }
+        });
+    }
+
+    function saveDraft(opts) {
+      if (opts && opts.immediate) { flushSave(); return; }
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(flushSave, DEBOUNCE_MS);
+    }
+
+    // Best-effort flush on tab hide / navigation / reload. fetch keepalive
+    // lets the browser finish posting the body even after the page goes
+    // away, so a tap-then-reload sequence can no longer drop the PASS.
+    function flushSaveBeacon() {
+      if (!saveTimer && !saveInFlight && !savePendingAgain) return;
+      try {
+        var body = JSON.stringify(buildSaveBody());
+        fetch(API + '/quality/jobs/' + jobId + '/forms/' + code + '/draft', {
+          method: 'POST',
+          headers: { 'X-WP-Nonce': NONCE, 'Content-Type': 'application/json' },
+          body: body,
+          keepalive: true,
+          credentials: 'same-origin',
+        });
+      } catch (e) { /* nothing else we can do at unload */ }
+    }
+    window.addEventListener('pagehide', flushSaveBeacon);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flushSaveBeacon();
+    });
 
     function uploadPhoto(slotKey, file) {
       var fd = new FormData();
@@ -276,8 +394,10 @@
       fd.append('file', file);
       return api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/photos', fd)
         .then(function (res) {
-          state.row = res.row || state.row;
-          state.photoCache = res.photos || state.photoCache;
+          // Merge instead of replace so a PASS/FAIL click that happened
+          // while the upload was in flight isn't wiped by the response.
+          mergeServerRow(res && res.row);
+          state.photoCache = (res && res.photos) || state.photoCache;
           render();
         });
     }

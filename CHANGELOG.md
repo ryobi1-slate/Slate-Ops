@@ -1,5 +1,14 @@
 # Slate Ops Changelog
 
+## 0.62.2 — Quality PASS/FAIL persistence
+
+- Fixed PASS/FAIL selections being dropped in the Quality form runner on reload or rapid input.
+- Save responses no longer replace the local state wholesale; only server-managed fields (status, locked_at, submitted_*, reviewed_*, updated_*) are merged back. Locally touched checklist items are preserved.
+- Per-cell local-edit ledger tracks which (section, item) cells have been touched in the session; in-flight GET / save / photo-upload responses skip overwriting those cells.
+- PASS/FAIL clicks now flush the draft immediately instead of waiting on the typing debounce.
+- Single-flight save with pending-again coalescing: edits made while a save is in flight are flushed once it returns, so no click can be lost between request and response.
+- `pagehide` and `visibilitychange:hidden` handlers send a `keepalive` flush so a tap-then-reload sequence can no longer drop the latest PASS/FAIL or note.
+
 ## 0.62.1 — Quality registry fingerprint
 
 - Added a deterministic short fingerprint of the form registry topology (sha256 of section + item keys per form, truncated to 12 chars) so staging/prod can prove which registry version the server is actually serving when a cache layer is suspected.
