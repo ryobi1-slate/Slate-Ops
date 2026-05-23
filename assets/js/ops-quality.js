@@ -196,13 +196,58 @@
       photoCache: {},      // slot → [{attachment_id, url, thumb_url}]
     };
 
+    var localTouched = {};
+    function touchKey(sectionKey, itemKey) {
+      return sectionKey + '/' + itemKey;
+    }
+    function markTouched(sectionKey, itemKey) {
+      localTouched[touchKey(sectionKey, itemKey)] = true;
+    }
+    function isTouched(sectionKey, itemKey) {
+      return !!localTouched[touchKey(sectionKey, itemKey)];
+    }
+
+    function mergeServerRow(row) {
+      if (!row || typeof row !== 'object') return;
+      [
+        'status', 'status_label', 'locked', 'locked_at',
+        'submitted_by', 'submitted_at', 'reviewed_by', 'reviewed_at',
+        'signature_name', 'updated_by', 'updated_at', 'created_by', 'created_at'
+      ].forEach(function (key) {
+        if (row[key] !== undefined) state.row[key] = row[key];
+      });
+
+      state.row.payload = state.row.payload || {};
+      var serverPayload = row.payload || {};
+      var serverChecklist = isPlainObject(serverPayload.checklist) ? serverPayload.checklist : {};
+      if (!isPlainObject(state.row.payload.checklist)) {
+        state.row.payload.checklist = {};
+      }
+      Object.keys(serverChecklist).forEach(function (sectionKey) {
+        if (!isPlainObject(state.row.payload.checklist[sectionKey])) {
+          state.row.payload.checklist[sectionKey] = {};
+        }
+        Object.keys(serverChecklist[sectionKey] || {}).forEach(function (itemKey) {
+          if (!isTouched(sectionKey, itemKey)) {
+            state.row.payload.checklist[sectionKey][itemKey] = serverChecklist[sectionKey][itemKey];
+          }
+        });
+      });
+
+      ['vehicle', 'notes', 'signature', 'review', 'unlocks'].forEach(function (key) {
+        if (state.row.payload[key] === undefined && serverPayload[key] !== undefined) {
+          state.row.payload[key] = serverPayload[key];
+        }
+      });
+    }
+
     // Hydrate via REST so we (a) get the freshest template from the live
     // registry — not whatever was baked into the page HTML at render time
     // (defeats stale page caches), and (b) get photo URLs for any
     // attachments already on the row.
     api('GET', '/quality/jobs/' + jobId + '/forms/' + code).then(function (res) {
       if (res && res.template) state.template = res.template;
-      state.row        = res.row || state.row;
+      mergeServerRow(res.row);
       state.photos     = res.photos || {};
       state.photoCache = res.photos || {};
       // If the live registry no longer contains the item the user was
@@ -262,7 +307,9 @@
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
       bucket[itemKey].result = result;
-      saveDraft();
+      bucket[itemKey].timestamp = new Date().toISOString();
+      markTouched(sectionKey, itemKey);
+      saveDraft({ immediate: true });
       render();
     }
 
@@ -271,22 +318,62 @@
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
       bucket[itemKey].note = note;
+      markTouched(sectionKey, itemKey);
       saveDraft();
     }
 
     var saveTimer = null;
-    var saveSeq = 0;
-    function saveDraft() {
-      var seq = ++saveSeq;
+    var saveInFlight = false;
+    var savePendingAgain = false;
+    function flushSave() {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      if (saveInFlight) {
+        savePendingAgain = true;
+        return;
+      }
+      saveInFlight = true;
       var body = draftBody();
-      if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(function () {
-        api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/draft', body)
-          .then(function (row) {
-            if (seq === saveSeq) state.row = row;
-          }).catch(function () { /* keep local optimistic state */ });
-      }, 400);
+      api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/draft', body)
+        .then(function (row) {
+          mergeServerRow(row);
+        }).catch(function () { /* keep local optimistic state */ })
+        .then(function () {
+          saveInFlight = false;
+          if (savePendingAgain) {
+            savePendingAgain = false;
+            flushSave();
+          }
+        });
     }
+
+    function saveDraft(opts) {
+      if (opts && opts.immediate) {
+        flushSave();
+        return;
+      }
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(flushSave, 250);
+    }
+
+    function flushSaveBeacon() {
+      if (!saveTimer && !saveInFlight && !savePendingAgain) return;
+      try {
+        fetch(API + '/quality/jobs/' + jobId + '/forms/' + code + '/draft', {
+          method: 'POST',
+          headers: { 'X-WP-Nonce': NONCE, 'Content-Type': 'application/json' },
+          body: JSON.stringify(draftBody()),
+          keepalive: true,
+          credentials: 'same-origin'
+        });
+      } catch (e) { /* best effort on unload */ }
+    }
+    window.addEventListener('pagehide', flushSaveBeacon);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flushSaveBeacon();
+    });
 
     function uploadPhoto(slotKey, file) {
       var fd = new FormData();
@@ -294,7 +381,7 @@
       fd.append('file', file);
       return api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/photos', fd)
         .then(function (res) {
-          state.row = res.row || state.row;
+          mergeServerRow(res.row);
           state.photoCache = res.photos || state.photoCache;
           render();
         });
