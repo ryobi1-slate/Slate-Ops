@@ -361,6 +361,15 @@
     }
 
     function renderTablet() {
+      var step = STEPS[state.stepIdx].key;
+      if (step === 'sign') {
+        var signBody = el('div', { class: 'oq-rb oq-rb--tablet-sign' });
+        signBody.appendChild(renderSignStep());
+        host.appendChild(signBody);
+        host.appendChild(renderFooter());
+        return;
+      }
+
       // Two-panel layout: checklist on the left, detail/photos/notes on the right.
       var main = el('div', { class: 'oq-runner__main' });
 
