@@ -481,14 +481,61 @@ class Slate_Ops_Quality {
   }
 
   /**
-   * Decode JSON payload columns and add convenience fields.
+   * Decode JSON payload columns and add convenience fields. The checklist
+   * inside the payload is normalized against the current registry template
+   * for non-terminal rows so saved drafts can never resurrect items that
+   * were removed from the registry.
+   *
+   * Historical (submitted/passed) rows keep their on-disk payload intact —
+   * normalization on those would rewrite the historical record.
    */
   private static function hydrate_row(array $row) {
     $row['payload'] = json_decode((string)($row['payload'] ?? '{}'), true) ?: [];
     $row['photos']  = json_decode((string)($row['photos']  ?? '{}'), true) ?: [];
     $row['status_label'] = self::status_label($row['status']);
     $row['locked']  = !empty($row['locked_at']);
+
+    $is_historical = in_array($row['status'], [self::STATUS_SUBMITTED, self::STATUS_PASSED], true);
+    if (!$is_historical) {
+      $template = self::get_form_template($row['form_code'] ?? '');
+      if ($template) {
+        $row['payload'] = self::normalize_payload_against_template($row['payload'], $template);
+      }
+    }
     return $row;
+  }
+
+  /**
+   * Reshape a saved payload so its `checklist` keys mirror the current
+   * registry template exactly. Per-item responses (result / note / initials
+   * / user_id / timestamp) are preserved when their (section_key, item_key)
+   * still exists in the registry; obsolete keys are dropped. New registry
+   * items appear as missing (no entry in the checklist).
+   *
+   * Photos, vehicle, notes, signature, review, and unlocks are passed
+   * through untouched — they're identified by their own keys, not by
+   * checklist position. This intentionally only edits the checklist
+   * sub-tree; it does NOT delete uploaded media or audit trail data.
+   */
+  public static function normalize_payload_against_template(array $payload, array $template) {
+    $saved_checklist = is_array($payload['checklist'] ?? null) ? $payload['checklist'] : [];
+    $current = [];
+    foreach (($template['sections'] ?? []) as $section) {
+      $sk = $section['key'] ?? '';
+      if ($sk === '') continue;
+      $current[$sk] = [];
+      $saved_section = is_array($saved_checklist[$sk] ?? null) ? $saved_checklist[$sk] : [];
+      foreach (($section['items'] ?? []) as $item) {
+        $ik = $item['key'] ?? '';
+        if ($ik === '') continue;
+        if (isset($saved_section[$ik]) && is_array($saved_section[$ik])) {
+          $current[$sk][$ik] = $saved_section[$ik];
+        }
+        // Else: leave it absent (renders as unanswered).
+      }
+    }
+    $payload['checklist'] = $current;
+    return $payload;
   }
 
   /**
@@ -525,6 +572,15 @@ class Slate_Ops_Quality {
     $row = self::ensure_form_row($job_id, $form_code);
     if (!empty($row['locked_at'])) {
       return new WP_Error('quality_locked', 'This form is locked. Ask a supervisor to unlock it before editing.', ['status' => 423]);
+    }
+
+    // Normalize the incoming checklist against the current registry so
+    // obsolete item keys submitted by a stale client are dropped before
+    // they get persisted. Photos / vehicle / notes / signature / review
+    // are passed through untouched.
+    $template = self::get_form_template($form_code);
+    if ($template) {
+      $payload = self::normalize_payload_against_template($payload, $template);
     }
 
     $new_status = ($row['status'] === self::STATUS_NOT_STARTED || $row['status'] === self::STATUS_NEEDS_CORRECTION)

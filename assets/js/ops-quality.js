@@ -196,12 +196,25 @@
       photoCache: {},      // slot → [{attachment_id, url, thumb_url}]
     };
 
-    // Hydrate the photo cache from server-rendered initial state via REST so we
-    // get URLs for any attachments already on the row.
+    // Hydrate via REST so we (a) get the freshest template from the live
+    // registry — not whatever was baked into the page HTML at render time
+    // (defeats stale page caches), and (b) get photo URLs for any
+    // attachments already on the row.
     api('GET', '/quality/jobs/' + jobId + '/forms/' + code).then(function (res) {
-      state.row    = res.row || state.row;
-      state.photos = res.photos || {};
+      if (res && res.template) state.template = res.template;
+      state.row        = res.row || state.row;
+      state.photos     = res.photos || {};
       state.photoCache = res.photos || {};
+      // If the live registry no longer contains the item the user was
+      // looking at, reset the active item to the first one in the
+      // current template so the tablet detail pane doesn't blank out.
+      if (state.activeItem) {
+        var found = (state.template.sections || []).some(function (s) {
+          return s.key === state.activeItem.sectionKey
+              && (s.items || []).some(function (i) { return i.key === state.activeItem.itemKey; });
+        });
+        if (!found) state.activeItem = null;
+      }
       render();
     }).catch(function () { render(); });
 
