@@ -296,13 +296,7 @@ if (!function_exists('slate_ops_quality_form_chip')) {
                 $row = $forms_by_code[$rc] ?? null;
                 $template = Slate_Ops_Quality::get_form_template($rc);
                 $status = $row['status'] ?? Slate_Ops_Quality::STATUS_NOT_STARTED;
-                $is_locked_by_deps = false;
-                if (!$row && !empty($template['depends_on'])) {
-                  foreach ($template['depends_on'] as $dep) {
-                    $dep_row = $forms_by_code[$dep] ?? null;
-                    if (!$dep_row || $dep_row['status'] !== Slate_Ops_Quality::STATUS_PASSED) $is_locked_by_deps = true;
-                  }
-                }
+                $is_locked_by_deps = !empty(Slate_Ops_Quality::unmet_dependencies($job['job_id'], $rc));
                 $effective_status = $is_locked_by_deps ? Slate_Ops_Quality::STATUS_LOCKED : $status;
                 $short = preg_replace('/^QMS-/', '', $rc);
               ?>
@@ -475,6 +469,15 @@ if (!function_exists('slate_ops_quality_form_chip')) {
       <a class="oq-btn oq-btn--secondary" href="<?php echo esc_url(home_url('/ops/quality')); ?>">← Back to dashboard</a>
     </div>
   <?php else :
+    $unmet_deps = Slate_Ops_Quality::unmet_dependencies($job_id, $form_code);
+    if (!empty($unmet_deps)) : ?>
+      <div class="oq-empty-panel">
+        <div class="ops-page-eyebrow">Quality</div>
+        <h1 class="ops-page-title">Form locked</h1>
+        <p>This form unlocks after the prior step is marked passed.</p>
+        <a class="oq-btn oq-btn--secondary" href="<?php echo esc_url(home_url('/ops/quality/job/' . (int) $job_id)); ?>">← Back to job review</a>
+      </div>
+    <?php else :
     $row = Slate_Ops_Quality::ensure_form_row($job_id, $form_code);
     // Server-rendered initial state for the runner; JS replaces with interactive UI.
     $initial = [
@@ -492,7 +495,8 @@ if (!function_exists('slate_ops_quality_form_chip')) {
         </div>
       </div>
     </div>
-  <?php endif;
+    <?php endif;
+  endif;
 endif; ?>
 
 </div>

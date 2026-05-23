@@ -446,6 +446,22 @@ class Slate_Ops_Quality {
   }
 
   /**
+   * Return dependency form codes that have not yet been supervisor-passed.
+   */
+  public static function unmet_dependencies($job_id, $form_code) {
+    $template = self::get_form_template($form_code);
+    $deps = is_array($template['depends_on'] ?? null) ? $template['depends_on'] : [];
+    $unmet = [];
+    foreach ($deps as $dep) {
+      $dep_row = self::get_form($job_id, $dep);
+      if (!$dep_row || $dep_row['status'] !== self::STATUS_PASSED) {
+        $unmet[] = $dep;
+      }
+    }
+    return $unmet;
+  }
+
+  /**
    * Computes the overall Quality status for a job from its form rows.
    */
   public static function rollup_status(array $form_rows, array $required_codes) {
@@ -590,6 +606,10 @@ class Slate_Ops_Quality {
    */
   public static function save_draft($job_id, $form_code, array $payload) {
     global $wpdb;
+    if (!empty(self::unmet_dependencies($job_id, $form_code))) {
+      return new WP_Error('quality_dependency_locked', 'This form is locked until the prior step is passed.', ['status' => 423]);
+    }
+
     $row = self::ensure_form_row($job_id, $form_code);
     if (!empty($row['locked_at'])) {
       return new WP_Error('quality_locked', 'This form is locked. Ask a supervisor to unlock it before editing.', ['status' => 423]);
@@ -629,6 +649,10 @@ class Slate_Ops_Quality {
    */
   public static function attach_photo($job_id, $form_code, $slot_key, $attachment_id) {
     global $wpdb;
+    if (!empty(self::unmet_dependencies($job_id, $form_code))) {
+      return new WP_Error('quality_dependency_locked', 'This form is locked until the prior step is passed.', ['status' => 423]);
+    }
+
     $row = self::ensure_form_row($job_id, $form_code);
     if (!empty($row['locked_at'])) {
       return new WP_Error('quality_locked', 'This form is locked.', ['status' => 423]);
@@ -656,6 +680,10 @@ class Slate_Ops_Quality {
    */
   public static function submit_form($job_id, $form_code, array $signature) {
     global $wpdb;
+    if (!empty(self::unmet_dependencies($job_id, $form_code))) {
+      return new WP_Error('quality_dependency_locked', 'This form is locked until the prior step is passed.', ['status' => 423]);
+    }
+
     $row = self::ensure_form_row($job_id, $form_code);
     if (!empty($row['locked_at']) && $row['status'] === self::STATUS_SUBMITTED) {
       return new WP_Error('quality_already_submitted', 'This form has already been submitted.', ['status' => 409]);
