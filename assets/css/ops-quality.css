@@ -500,15 +500,21 @@
 .oq-input:focus { border-color: var(--slate-sage); outline: none; box-shadow: 0 0 0 3px rgba(64, 79, 75, 0.18); }
 .oq-textarea { height: auto; padding: 10px; min-height: 110px; resize: vertical; }
 
-/* Buttons */
+/* Buttons
+ *
+ * Reset native button chrome (appearance, box-shadow) so the parent
+ * theme's default button color cannot bleed through. Every variant
+ * below pins its own background/border/color to Slate tokens. */
 .oq-btn {
+  appearance: none;
+  -webkit-appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   height: 36px;
   padding: 0 14px;
-  border: 1px solid transparent;
+  border: 1px solid var(--slate-divider-strong);
   border-radius: var(--slate-radius-md);
   font-size: 13.5px;
   font-weight: 600;
@@ -517,6 +523,7 @@
   color: var(--slate-ink);
   text-decoration: none;
   font-family: inherit;
+  box-shadow: none;
   transition: background .12s, border-color .12s, color .12s;
 }
 .oq-btn:hover:not(:disabled) { background: var(--slate-surface-tint); border-color: var(--slate-sage); }
@@ -661,7 +668,13 @@
 .oq-cl-item__title { font-size: 16px; font-weight: 700; color: var(--slate-ink); margin-top: 8px; }
 .oq-cl-item__desc { font-size: 13px; color: var(--slate-ink-muted); margin-top: 6px; line-height: 1.45; }
 
-/* Big PASS/FAIL toggle */
+/* Big PASS/FAIL toggle
+ *
+ * The inner controls are <button> elements, so we explicitly reset native
+ * button styling (appearance, box-shadow, color) and pin every state to
+ * Slate tokens. Without these resets the parent theme's default button
+ * color bled through and rendered the selected PASS/FAIL state in a
+ * non-brand pink. */
 .oq-pf {
   display: flex;
   width: 100%;
@@ -673,8 +686,10 @@
   gap: 4px;
 }
 .oq-pf button {
+  appearance: none;
+  -webkit-appearance: none;
   flex: 1;
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
   font-family: inherit;
   font-weight: 700;
@@ -684,9 +699,31 @@
   border-radius: 6px;
   cursor: pointer;
   color: var(--slate-ink-muted);
+  box-shadow: none;
+  transition: background .12s, color .12s, border-color .12s;
 }
-.oq-pf button.is-pass { background: var(--slate-redwood); color: #fff; }
-.oq-pf button.is-fail { background: var(--slate-arches);  color: #fff; }
+.oq-pf button:hover:not(:disabled) { background: var(--slate-surface); color: var(--slate-ink); }
+.oq-pf button:focus-visible { outline: 2px solid var(--slate-sage); outline-offset: 2px; }
+.oq-pf button.is-pass {
+  background: var(--slate-redwood);
+  color: var(--slate-sand-wash);
+  border-color: var(--slate-redwood);
+}
+.oq-pf button.is-pass:hover:not(:disabled) {
+  background: var(--slate-redwood-dark);
+  color: var(--slate-sand-wash);
+  border-color: var(--slate-redwood-dark);
+}
+.oq-pf button.is-fail {
+  background: var(--slate-arches);
+  color: #fff;
+  border-color: var(--slate-arches);
+}
+.oq-pf button.is-fail:hover:not(:disabled) {
+  background: var(--slate-arches-ink);
+  color: #fff;
+  border-color: var(--slate-arches-ink);
+}
 
 /* Fail-note panel (required) */
 .oq-fail-panel {
