@@ -95,7 +95,7 @@
     return new Promise(function (resolve) {
       var ACTIONS = [
         ['STEP_AWAY', 'Step Away', 'Quick interruption or brief wait.', 'Scheduled breaks and lunch are handled automatically.'],
-        ['SWITCH_JOB', 'Switch Job', 'Move to another assigned job or help nearby.', '']
+        ['SWITCH_JOB', 'Switch Job', 'Move to another assigned job or help another tech.', '']
       ];
 
       function esc(value) {
