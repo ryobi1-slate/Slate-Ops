@@ -213,6 +213,15 @@ class Slate_Ops_Quality_REST {
     if (is_wp_error($resolved)) return $resolved;
     list($job, $template) = $resolved;
 
+    $is_tech_only = current_user_can(Slate_Ops_Utils::CAP_TECH)
+      && !current_user_can(Slate_Ops_Utils::CAP_SUPERVISOR)
+      && !current_user_can(Slate_Ops_Utils::CAP_ADMIN)
+      && !current_user_can(Slate_Ops_Utils::CAP_CS)
+      && !current_user_can(Slate_Ops_Utils::CAP_CS_LEGACY);
+    if ($is_tech_only && !self::user_can_edit_job($job)) {
+      return new WP_Error('quality_forbidden', 'This job is not assigned to you.', ['status' => 403]);
+    }
+
     $row = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
     return rest_ensure_response([
       'template'    => $template,
@@ -297,6 +306,13 @@ class Slate_Ops_Quality_REST {
       return new WP_Error('quality_invalid_decision', 'Decision must be passed or needs_correction.', ['status' => 400]);
     }
 
+    if ($decision === Slate_Ops_Quality::STATUS_PASSED) {
+      $row = Slate_Ops_Quality::get_form((int) $job['job_id'], $template['code']);
+      if (self::has_failed_checklist_items($row)) {
+        return new WP_Error('quality_failed_items_unresolved', 'Failed checklist items must be corrected or sent back before approval.', ['status' => 422]);
+      }
+    }
+
     $result = Slate_Ops_Quality::review_form((int) $job['job_id'], $template['code'], $decision, $note);
     if (is_wp_error($result)) return $result;
     return rest_ensure_response($result);
@@ -327,13 +343,15 @@ class Slate_Ops_Quality_REST {
     if ($slot_key === '') {
       return new WP_Error('quality_slot_required', 'Photo slot is required.', ['status' => 400]);
     }
-    // Slot must belong to the form's defined slot catalogue.
-    $valid_slot = false;
-    foreach (($template['photo_slots'] ?? []) as $s) {
-      if ($s['key'] === $slot_key) { $valid_slot = true; break; }
-    }
-    if (!$valid_slot) {
+    $slot_meta = self::resolve_photo_slot($template, $slot_key);
+    if (!$slot_meta) {
       return new WP_Error('quality_unknown_slot', 'Unknown photo slot for this form.', ['status' => 400]);
+    }
+
+    $section_id = sanitize_key((string) ($_POST['section'] ?? ($slot_meta['section'] ?? '')));
+    $item_id    = sanitize_key((string) ($_POST['item'] ?? ($slot_meta['item'] ?? '')));
+    if (!empty($slot_meta['item']) && ($section_id !== $slot_meta['section'] || $item_id !== $slot_meta['item'])) {
+      return new WP_Error('quality_invalid_item_photo', 'Photo metadata does not match this checklist item.', ['status' => 400]);
     }
 
     $row_before = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
@@ -363,9 +381,13 @@ class Slate_Ops_Quality_REST {
     $attachment_id = media_handle_upload('file', 0, [], $overrides);
     if (is_wp_error($attachment_id)) return $attachment_id;
 
-    update_post_meta($attachment_id, '_slate_ops_quality_job_id',   (int) $job['job_id']);
-    update_post_meta($attachment_id, '_slate_ops_quality_form_code', $template['code']);
-    update_post_meta($attachment_id, '_slate_ops_quality_slot',     $slot_key);
+    update_post_meta($attachment_id, '_slate_ops_quality_job_id',    (int) $job['job_id']);
+    update_post_meta($attachment_id, '_slate_ops_quality_form_code',  $template['code']);
+    update_post_meta($attachment_id, '_slate_ops_quality_slot',       $slot_key);
+    update_post_meta($attachment_id, '_slate_ops_quality_section_id', $section_id);
+    update_post_meta($attachment_id, '_slate_ops_quality_item_id',    $item_id);
+    update_post_meta($attachment_id, '_slate_ops_quality_uploaded_by', (int) get_current_user_id());
+    update_post_meta($attachment_id, '_slate_ops_quality_uploaded_at', current_time('mysql'));
 
     $row = Slate_Ops_Quality::attach_photo((int) $job['job_id'], $template['code'], $slot_key, (int) $attachment_id);
     if (is_wp_error($row)) return $row;
@@ -377,6 +399,45 @@ class Slate_Ops_Quality_REST {
       'row'           => $row,
       'photos'        => self::hydrate_photos($row['photos'] ?? []),
     ]);
+  }
+
+  private static function resolve_photo_slot(array $template, $slot_key) {
+    foreach (($template['photo_slots'] ?? []) as $s) {
+      if (($s['key'] ?? '') === $slot_key) {
+        return ['slot' => $slot_key, 'section' => '', 'item' => '', 'rule' => !empty($s['required']) ? 'required' : 'optional'];
+      }
+    }
+    foreach (($template['sections'] ?? []) as $section) {
+      $section_key = sanitize_key((string) ($section['key'] ?? ''));
+      foreach (($section['items'] ?? []) as $item) {
+        $item_key = sanitize_key((string) ($item['key'] ?? ''));
+        if ($section_key === '' || $item_key === '') continue;
+        $rule = sanitize_key((string) ($item['photo_rule'] ?? 'none'));
+        if ($rule === 'none') continue;
+        $item_slot = self::item_photo_slot_key($section_key, $item_key);
+        if ($item_slot === $slot_key) {
+          return ['slot' => $slot_key, 'section' => $section_key, 'item' => $item_key, 'rule' => $rule];
+        }
+      }
+    }
+    return null;
+  }
+
+  private static function item_photo_slot_key($section_key, $item_key) {
+    return 'item__' . sanitize_key((string) $section_key) . '__' . sanitize_key((string) $item_key);
+  }
+
+  private static function has_failed_checklist_items($row) {
+    $checklist = is_array($row['payload']['checklist'] ?? null) ? $row['payload']['checklist'] : [];
+    foreach ($checklist as $items) {
+      if (!is_array($items)) continue;
+      foreach ($items as $resp) {
+        if (is_array($resp) && ($resp['result'] ?? '') === 'fail') {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -406,7 +467,7 @@ class Slate_Ops_Quality_REST {
           $ik = sanitize_key((string) $item_key);
           if (!is_array($resp)) continue;
           $result = sanitize_key($resp['result'] ?? '');
-          if (!in_array($result, ['pass', 'fail', ''], true)) $result = '';
+          if (!in_array($result, ['pass', 'warning', 'fail', 'not_tested', ''], true)) $result = '';
           $checklist[$sec][$ik] = [
             'result'    => $result,
             'note'      => sanitize_textarea_field((string) ($resp['note'] ?? '')),
@@ -451,20 +512,37 @@ class Slate_Ops_Quality_REST {
     $errors = [];
     if (!$template) return ['form' => 'Unknown form.'];
     $checklist = is_array($row['payload']['checklist'] ?? null) ? $row['payload']['checklist'] : [];
+    $photos = is_array($row['photos'] ?? null) ? $row['photos'] : [];
     foreach ($template['sections'] as $section) {
       $sk = $section['key'];
       foreach ($section['items'] as $item) {
         $ik   = $item['key'];
         $resp = $checklist[$sk][$ik] ?? null;
         $result = $resp['result'] ?? '';
-        if ($result !== 'pass' && $result !== 'fail') {
+        if (!in_array($result, ['pass', 'warning', 'fail'], true)) {
           $errors[] = ['section' => $sk, 'item' => $ik, 'reason' => 'missing_response'];
-        } elseif ($result === 'fail' && trim((string) ($resp['note'] ?? '')) === '') {
+          continue;
+        }
+        if (($result === 'fail' || $result === 'warning') && trim((string) ($resp['note'] ?? '')) === '') {
           $errors[] = ['section' => $sk, 'item' => $ik, 'reason' => 'fail_note_required'];
+        }
+        $rule = sanitize_key((string) ($item['photo_rule'] ?? 'none'));
+        if (!in_array($rule, ['none', 'optional', 'required', 'required_on_fail', 'required_on_override'], true)) {
+          $rule = 'none';
+        }
+        $slot_key = self::item_photo_slot_key($sk, $ik);
+        $has_photo = !empty($photos[$slot_key]) && is_array($photos[$slot_key]);
+        if ($result === 'pass' && $rule === 'required' && !$has_photo) {
+          $errors[] = ['section' => $sk, 'item' => $ik, 'slot' => $slot_key, 'reason' => 'item_photo_required'];
+        }
+        if ($result === 'fail' && $rule === 'required_on_fail' && !$has_photo) {
+          $errors[] = ['section' => $sk, 'item' => $ik, 'slot' => $slot_key, 'reason' => 'failed_item_photo_required'];
+        }
+        if ($result === 'warning' && $rule === 'required_on_override' && (!$has_photo || trim((string) ($resp['note'] ?? '')) === '')) {
+          $errors[] = ['section' => $sk, 'item' => $ik, 'slot' => $slot_key, 'reason' => 'override_evidence_required'];
         }
       }
     }
-    $photos = is_array($row['photos'] ?? null) ? $row['photos'] : [];
     foreach (($template['photo_slots'] ?? []) as $slot) {
       if (!empty($slot['required']) && empty($photos[$slot['key']])) {
         $errors[] = ['slot' => $slot['key'], 'reason' => 'photo_required'];

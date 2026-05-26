@@ -105,6 +105,252 @@ class Slate_Ops_Quality {
     ];
   }
 
+  private static function qms_005_item($section, $key, $title, $description, $severity, $photo_rule, array $info, $code = '') {
+    return [
+      'key'        => $key,
+      'id'         => $section . '_' . $key,
+      'section'    => $section,
+      'label'      => $title,
+      'title'      => $title,
+      'code'       => $code,
+      'desc'       => $description,
+      'description'=> $description,
+      'severity'   => $severity,
+      'photo_rule' => $photo_rule,
+      'info'       => $info,
+    ];
+  }
+
+  private static function qms_005_info($purpose, array $procedure, array $pass_criteria, array $common_failures, array $required_evidence, $reference_note) {
+    return [
+      'purpose'           => $purpose,
+      'procedure'         => $procedure,
+      'pass_criteria'     => $pass_criteria,
+      'common_failures'   => $common_failures,
+      'required_evidence' => $required_evidence,
+      'reference_note'    => $reference_note,
+    ];
+  }
+
+  public static function qms_005_sections() {
+    return [
+      [
+        'key'   => 'electrical',
+        'label' => 'Electrical',
+        'items' => [
+          self::qms_005_item('electrical', 'highpot_pre', '120V high-pot test before energizing', 'Verify insulation integrity before shore power or 120V circuits are energized.', 'critical', 'required', self::qms_005_info(
+            'Catch wiring insulation or termination issues before power is applied.',
+            ['Confirm the test area is clear.', 'Run the approved high-pot test before energizing the circuit.', 'Record any abnormal reading in the item notes.'],
+            ['Test completes without breakdown or unsafe leakage.', 'No damaged insulation or exposed conductors are found.'],
+            ['Loose termination', 'Pinched insulation', 'Incorrect conductor routing'],
+            ['Photo of tester result or test setup tied to the unit.'],
+            'NEC 551.60'
+          ), 'NEC 551.60'),
+          self::qms_005_item('electrical', 'continuity_bond', 'Continuity and bonding test', 'Confirm metal components and bonding paths are electrically continuous.', 'critical', 'required', self::qms_005_info(
+            'Verify the van body and installed conductive components share a safe bonding path.',
+            ['Inspect bonding points.', 'Test continuity across required metal components.', 'Record resistance concerns in notes.'],
+            ['Continuity is present at required bonding points.', 'Bonding hardware is tight and accessible.'],
+            ['Paint under bonding lug', 'Loose fastener', 'Missing bonding conductor'],
+            ['Photo of bonding point or meter reading.'],
+            'NEC 551.60(1)'
+          ), 'NEC 551.60(1)'),
+          self::qms_005_item('electrical', 'polarity', 'Polarity test', 'Confirm hot, neutral, and ground are correctly wired at applicable outlets and circuits.', 'critical', 'required', self::qms_005_info(
+            'Prevent reversed polarity or open-ground conditions before delivery.',
+            ['Test applicable receptacles or circuits with the approved tester.', 'Correct any abnormal reading before pass.'],
+            ['Tester indicates correct wiring.', 'No open ground, reversed hot/neutral, or unsafe reading remains.'],
+            ['Reversed conductors', 'Open ground', 'Loose receptacle termination'],
+            ['Photo of tester showing correct result.'],
+            'NEC 551.60(3)'
+          ), 'NEC 551.60(3)'),
+          self::qms_005_item('electrical', 'gfci', 'GFCI function test', 'Verify Ground Fault Circuit Interrupters trip and reset correctly.', 'critical', 'required', self::qms_005_info(
+            'Confirm personnel protection works anywhere GFCI protection is installed.',
+            ['Press test on the GFCI device or use the approved tester.', 'Confirm protected circuit opens.', 'Reset and confirm power returns.'],
+            ['Device trips, resets, and restores power normally.', 'Protected outlets respond as expected.'],
+            ['Device will not trip', 'Device will not reset', 'Protected outlet wired incorrectly'],
+            ['Photo of tested GFCI or tester result.'],
+            'NEC 551.60(4)'
+          ), 'NEC 551.60(4)'),
+          self::qms_005_item('electrical', 'chassis_ground', 'Chassis grounding verification', 'Confirm chassis ground is installed, protected, and serviceable.', 'critical', 'required', self::qms_005_info(
+            'Verify the chassis grounding path is secure and available for service inspection.',
+            ['Locate chassis ground.', 'Inspect hardware, conductor condition, and routing.', 'Confirm no corrosion, paint barrier, or loose connection.'],
+            ['Ground point is tight, clean, visible, and protected.', 'Conductor is correctly routed and undamaged.'],
+            ['Loose hardware', 'Paint or debris under lug', 'Damaged conductor'],
+            ['Photo of the chassis ground point.'],
+            'NEC 551.60'
+          ), 'NEC 551.60'),
+          self::qms_005_item('electrical', 'highpot_post', 'Final 120V high-pot test after assembly', 'Run final insulation integrity test after assembly is complete.', 'critical', 'required', self::qms_005_info(
+            'Confirm final assembly did not introduce an insulation or wiring fault.',
+            ['Run the approved final high-pot test.', 'Inspect any circuit that produces an abnormal result.', 'Document correction before pass.'],
+            ['Final test completes without unsafe leakage or breakdown.', 'No unresolved electrical faults remain.'],
+            ['Post-assembly wire pinch', 'Damaged insulation', 'Incorrect terminal cover'],
+            ['Photo of final tester result or test setup.'],
+            'NEC 551.60'
+          ), 'NEC 551.60'),
+          self::qms_005_item('electrical', 'twelve_v', '12V operational test', 'Confirm low-voltage systems operate correctly under normal use.', 'major', 'required', self::qms_005_info(
+            'Verify installed 12V loads and controls work before final quality review.',
+            ['Operate installed 12V components.', 'Check switches, indicators, and expected load behavior.', 'Record abnormal operation in notes.'],
+            ['Installed 12V components power on and operate normally.', 'No loose, intermittent, or mislabeled control is found.'],
+            ['Loose connector', 'Incorrect fuse', 'Mislabeled switch', 'Intermittent operation'],
+            ['Photo of operating component, control panel, or meter reading.'],
+            'ANSI/RVIA LV 8-1'
+          ), 'ANSI/RVIA LV 8-1'),
+        ],
+      ],
+      [
+        'key'   => 'plumbing',
+        'label' => 'Plumbing',
+        'items' => [
+          self::qms_005_item('plumbing', 'fresh_tank_securement', 'Fresh tank securement', 'Verify the fresh tank is secured, protected, and serviceable.', 'critical', 'required', self::qms_005_info(
+            'Confirm the installed fresh tank cannot shift or rub during normal vehicle use.',
+            ['Inspect mounting hardware and support surfaces.', 'Check that the tank is protected from sharp edges and movement.', 'Verify service access remains available.'],
+            ['Tank is secure with no movement under hand pressure.', 'Mounting and routing do not damage the tank.'],
+            ['Loose strap', 'Unsupported tank span', 'Abrasion point near tank'],
+            ['Photo of tank mounting and support.'],
+            'Slate RVIA plumbing scope: gravity fill, pump, sink, and grey tank installed.'
+          )),
+          self::qms_005_item('plumbing', 'gravity_fill_routing', 'Gravity fill hose routing', 'Verify gravity fill hose routing is secure, sloped, and protected.', 'major', 'required', self::qms_005_info(
+            'Confirm gravity fill can be used without kinks, sags, or abrasion.',
+            ['Inspect the complete fill route.', 'Check clamps, bend radius, and protection at pass-throughs.', 'Verify no city water inlet components are present.'],
+            ['Fill hose is secured and serviceable.', 'Route is protected and does not kink.'],
+            ['Kinked hose', 'Missing clamp', 'Unprotected edge contact'],
+            ['Photo of fill hose routing and clamps.'],
+            'City water inlet is not installed on current Slate RVIA scope.'
+          )),
+          self::qms_005_item('plumbing', 'fresh_tank_vent_overflow', 'Fresh tank vent / overflow', 'Confirm vent and overflow routing is open, secured, and correctly terminated.', 'major', 'required', self::qms_005_info(
+            'Prevent tank pressurization, water backing up, or overflow into the van.',
+            ['Inspect vent and overflow lines.', 'Confirm line ends are protected and routed away from damage.', 'Verify no low trap or pinch point blocks flow.'],
+            ['Vent and overflow are open, secured, and routed safely.', 'No water can drain into finished interior surfaces.'],
+            ['Pinched vent', 'Loose overflow line', 'Termination inside cabinet'],
+            ['Photo of vent or overflow routing.'],
+            'Gravity fill system requires a clear vent and overflow path.'
+          )),
+          self::qms_005_item('plumbing', 'pump_pressure_hold', 'Pump pressure hold test', 'Pressurize the pump system and confirm pressure holds with no cycling or leaks.', 'critical', 'required', self::qms_005_info(
+            'Verify the pressurized pump side is sealed and ready for customer use.',
+            ['Fill the fresh tank enough for testing.', 'Run pump until it reaches cutoff.', 'Observe for pump cycling or leaks at fittings.'],
+            ['Pump reaches cutoff and stays off during hold period.', 'No visible leak is present.'],
+            ['Pump cycles repeatedly', 'Loose fitting', 'Air leak at pickup side'],
+            ['Photo of pump installation or test condition.'],
+            'Pressurized pump is installed; water heater and shower are not installed.'
+          )),
+          self::qms_005_item('plumbing', 'sink_fixture_flow', 'Sink fixture flow test', 'Verify sink fixture flow and drain behavior under normal operation.', 'major', 'required', self::qms_005_info(
+            'Confirm the installed sink delivers and drains water correctly.',
+            ['Run water at the sink.', 'Confirm flow, shutoff, and drain behavior.', 'Watch under-sink area during operation.'],
+            ['Water flows and shuts off normally.', 'Drain clears without backing up.'],
+            ['Low flow', 'Loose fixture', 'Slow or backed-up drain'],
+            ['Photo of running sink or fixture.'],
+            'Sink is installed in current Slate RVIA plumbing scope.'
+          )),
+          self::qms_005_item('plumbing', 'under_sink_leak', 'Under-sink leak check', 'Inspect under-sink supply and drain connections for leaks while the system is running.', 'critical', 'required', self::qms_005_info(
+            'Catch visible leaks before final completion.',
+            ['Run the sink and pump.', 'Inspect supply fittings, trap, drain line, and cabinet floor.', 'Dry and retest after any correction.'],
+            ['No drips, seepage, or wet cabinet surfaces are found.', 'Connections are tight and supported.'],
+            ['Seeping fitting', 'Loose drain connection', 'Unsupported line pulling on fitting'],
+            ['Photo of dry under-sink connections after test.'],
+            'Shower and water heater tests are not active because those systems are not installed.'
+          )),
+          self::qms_005_item('plumbing', 'grey_tank_drain_leak', 'Grey tank drain / leak test', 'Verify grey tank drain routing and check for leaks during water discharge.', 'critical', 'required', self::qms_005_info(
+            'Confirm collected sink water routes to the grey tank and drains without leaks.',
+            ['Run water through the sink.', 'Inspect grey tank inlet, body, outlet, and drain route.', 'Confirm drain valve or cap is secure.'],
+            ['No leak is visible at grey tank, inlet, outlet, or drain path.', 'Drain hardware is secure and serviceable.'],
+            ['Loose drain fitting', 'Tank seam leak', 'Drain cap not sealing'],
+            ['Photo of grey tank or drain connection after test.'],
+            'Grey tank is installed in current Slate RVIA plumbing scope.'
+          )),
+          self::qms_005_item('plumbing', 'low_point_winterization', 'Low point drain / winterization check', 'Confirm drain or winterization provisions are identified and serviceable.', 'major', 'required', self::qms_005_info(
+            'Make sure the installed plumbing can be drained or winterized by service staff.',
+            ['Locate low point drain or winterization access.', 'Verify access is not blocked.', 'Confirm routing and labeling are clear enough for service.'],
+            ['Drain or winterization access is reachable and correctly routed.', 'No installed component blocks service access.'],
+            ['Hidden drain', 'Blocked access', 'Unclear routing'],
+            ['Photo of drain or winterization access.'],
+            'Current scope uses gravity fill, pump, sink, and grey tank only.'
+          )),
+        ],
+      ],
+      [
+        'key'   => 'fire_life_safety',
+        'label' => 'Fire / Life Safety',
+        'items' => [
+          self::qms_005_item('fire_life_safety', 'smoke_alarm', 'Smoke alarm installed and tested', 'Confirm smoke alarm is installed, visible, and responds to test.', 'critical', 'required', self::qms_005_info(
+            'Verify smoke detection equipment is installed and operational.',
+            ['Locate smoke alarm.', 'Press test button.', 'Confirm audible response and secure mounting.'],
+            ['Alarm is mounted securely and test response is audible.', 'Alarm location is visible and not blocked.'],
+            ['No audible test', 'Loose mount', 'Blocked location'],
+            ['Photo of installed smoke alarm.'],
+            'NFPA 1194 / RVIA life-safety verification.'
+          )),
+          self::qms_005_item('fire_life_safety', 'co_alarm', 'CO alarm installed and tested', 'Confirm CO alarm is installed, visible, and responds to test.', 'critical', 'required', self::qms_005_info(
+            'Verify carbon monoxide detection equipment is installed and operational.',
+            ['Locate CO alarm.', 'Press test button.', 'Confirm audible response and secure mounting.'],
+            ['Alarm is mounted securely and test response is audible.', 'Alarm location is visible and not blocked.'],
+            ['No audible test', 'Missing alarm', 'Loose mount'],
+            ['Photo of installed CO alarm.'],
+            'NFPA 1194 / RVIA life-safety verification.'
+          )),
+          self::qms_005_item('fire_life_safety', 'fire_extinguisher_installed', 'Fire extinguisher installed and visible', 'Confirm fire extinguisher is installed in its intended location and visible.', 'critical', 'required', self::qms_005_info(
+            'Confirm the extinguisher is present and available to the customer.',
+            ['Locate extinguisher.', 'Check mounting and visibility.', 'Confirm no installed component blocks access.'],
+            ['Extinguisher is installed, visible, and secure.', 'Access is not blocked.'],
+            ['Missing extinguisher', 'Loose bracket', 'Hidden behind cargo'],
+            ['Photo of installed extinguisher.'],
+            'NFPA 1194 / RVIA life-safety verification.'
+          )),
+          self::qms_005_item('fire_life_safety', 'fire_extinguisher_location', 'Fire extinguisher location verified', 'Confirm extinguisher location matches the expected delivery configuration.', 'major', 'required', self::qms_005_info(
+            'Verify the extinguisher can be found quickly and matches the expected build location.',
+            ['Compare extinguisher location to the job configuration.', 'Check reach path and customer visibility.', 'Record any deviation in notes.'],
+            ['Location is correct, reachable, and visible.', 'Deviation is resolved or supervisor-reviewed.'],
+            ['Wrong location', 'Blocked access', 'Unclear customer visibility'],
+            ['Photo showing extinguisher location in context.'],
+            'NFPA 1194 / RVIA life-safety verification.'
+          )),
+        ],
+      ],
+      [
+        'key'   => 'safety_labels',
+        'label' => 'Safety Labels / Consumer Notices',
+        'items' => [
+          self::qms_005_item('safety_labels', 'warning_labels', 'Required warning labels installed', 'Confirm required warning labels are installed, readable, and correctly located.', 'major', 'required', self::qms_005_info(
+            'Verify customer-facing safety warnings are present before delivery.',
+            ['Inspect required label locations.', 'Confirm labels are readable and adhered.', 'Replace damaged or missing labels before pass.'],
+            ['Required warning labels are present, readable, and secure.', 'Labels match the installed systems.'],
+            ['Missing label', 'Damaged label', 'Wrong location'],
+            ['Photo of installed warning labels.'],
+            'RVIA labeling requirements and Slate delivery checklist.'
+          )),
+          self::qms_005_item('safety_labels', 'rvia_cert_vin_label', 'RVIA / certification / VIN label confirmed', 'Confirm certification and VIN label information is present and legible.', 'critical', 'required', self::qms_005_info(
+            'Verify certification and unit identification labels can be inspected later.',
+            ['Locate RVIA, certification, and VIN labels applicable to the unit.', 'Confirm labels are readable and match the job.', 'Record mismatch immediately.'],
+            ['Labels are present, legible, and match the unit.', 'No label mismatch remains unresolved.'],
+            ['Missing certification label', 'Unreadable VIN label', 'Mismatch to job record'],
+            ['Photo of label area with legible identification.'],
+            'RVIA / certification / VIN confirmation.'
+          )),
+          self::qms_005_item('safety_labels', 'owner_packet_notices', 'Owner packet / consumer notices included', 'Confirm owner packet and consumer notices are included for delivery.', 'major', 'required', self::qms_005_info(
+            'Make sure customer handoff materials travel with the completed unit.',
+            ['Locate owner packet and notices.', 'Confirm expected documents are included.', 'Place packet in the approved handoff location.'],
+            ['Owner packet and consumer notices are included and placed correctly.', 'Missing documents are replaced before pass.'],
+            ['Missing packet', 'Incomplete notices', 'Packet left outside handoff location'],
+            ['Photo of packet or handoff location.'],
+            'Slate delivery and consumer notice requirements.'
+          )),
+        ],
+      ],
+      [
+        'key'   => 'final_supervisor_review',
+        'label' => 'Final Supervisor Review',
+        'items' => [
+          self::qms_005_item('final_supervisor_review', 'supervisor_rvia_testing_review', 'Supervisor RVIA testing review', 'Supervisor confirms testing evidence, notes, and unresolved warnings before QMS-005 is submitted.', 'critical', 'optional', self::qms_005_info(
+            'Give the supervisor one final checkpoint before the RVIA testing sign-off leaves the technician workflow.',
+            ['Review all red, yellow, and green status rows.', 'Confirm required evidence is attached.', 'Add notes for any warning or override condition.'],
+            ['No blocker remains unresolved.', 'Any warning has a clear note and supervisor direction.'],
+            ['Missing evidence', 'Unclear warning note', 'Unresolved failed item'],
+            ['Optional photo if a supervisor needs extra context.'],
+            'Internal Slate Ops final review step.'
+          )),
+        ],
+      ],
+    ];
+  }
+
   // ── Form template registry ──────────────────────────────────────────────
 
   /**
@@ -163,71 +409,32 @@ class Slate_Ops_Quality {
         'photo_slots' => self::check_in_photo_slots(),
       ],
 
-      // ── QMS-005 Rev. 1.1 — RVIA Testing Sign-Off ───────────────────
-      // Paper form: 15 checklist items keyed by NEC / NFPA / ANSI codes.
+      // ── QMS-005 Rev. 1.2 — RVIA Testing Sign-Off ───────────────────
+      // Structured RVIA compliance checklist. Current Slate RVIA plumbing
+      // scope excludes city water inlet, water heater, and shower tests.
       self::FORM_QMS_005 => [
         'code'        => self::FORM_QMS_005,
-        'revision'    => '1.1',
+        'revision'    => '1.2',
         'name'        => 'RVIA Testing Sign-Off',
         'eyebrow'     => 'QMS-005 · RVIA',
         'kind'        => 'testing',
         'job_types'   => ['rvia'],
-        'description' => 'Electrical, plumbing, and life-safety verification per RVIA code.',
+        'description' => 'Structured RVIA compliance testing with item-level evidence.',
         'depends_on'  => [self::FORM_QMS_004],
-        'sections'    => [
-          [
-            'key'   => 'checklist',
-            'label' => 'RVIA Testing Checklist',
-            'items' => [
-              ['key' => 'highpot_pre',     'label' => '120V High-Pot Test (Prior to Energizing)',
-                'code' => 'NEC 551.60',
-                'desc' => 'Ensures insulation integrity before power is applied'],
-              ['key' => 'continuity_bond', 'label' => 'Continuity & Bonding Test',
-                'code' => 'NEC 551.60(1)',
-                'desc' => 'Ensures all metal components are properly connected'],
-              ['key' => 'polarity',        'label' => 'Polarity Test',
-                'code' => 'NEC 551.60(3)',
-                'desc' => 'Confirms that hot, neutral, and ground wiring are correctly connected'],
-              ['key' => 'gfci',            'label' => 'GFCI Function Test',
-                'code' => 'NEC 551.60(4)',
-                'desc' => 'Verifies that Ground Fault Circuit Interrupters (GFCIs) function correctly'],
-              ['key' => 'lighting_marker', 'label' => 'Lighting & Exterior Marker Lamp Check',
-                'code' => 'NFPA 1194',
-                'desc' => 'Ensures required lights meet visibility standards'],
-              ['key' => 'fire_safety',     'label' => 'Fire & Life Safety Equip. Verification',
-                'code' => 'NFPA 1194',
-                'desc' => 'Confirms all safety equipment is functional'],
-              ['key' => 'chassis_ground',  'label' => 'Chassis Grounding Verification',
-                'code' => 'NEC 551.60',
-                'desc' => 'Ensures chassis is properly grounded'],
-              ['key' => 'highpot_post',    'label' => 'Final 120V High-Pot Test (Post Assembly)',
-                'code' => 'NEC 551.60',
-                'desc' => 'Verifies insulation integrity post-assembly'],
-              ['key' => 'twelve_v',        'label' => '12V Operational Test',
-                'code' => 'ANSI/RVIA LV 8-1',
-                'desc' => 'Confirms correct function of low-voltage systems'],
-              ['key' => 'sink_install',    'label' => 'Sink Installation Verification',
-                'code' => 'NFPA 1192 7.1.2.1',
-                'desc' => 'Non-listed sink constructed of 304 stainless steel. Used in non-pressurized system with justification memo on file.'],
-              ['key' => 'trap',            'label' => 'Trap Installation (Sink)',
-                'code' => 'NFPA 1192 7.4.4.1',
-                'desc' => 'HepvO ASME A112.18.8-certified waterless trap installed and secured.'],
-              ['key' => 'gravity_drain',   'label' => 'Gravity Drain System',
-                'code' => 'NFPA 1192 7.4.7',
-                'desc' => 'Drain tubing is flexible and secured. Gravity-fed only, no pressurized plumbing.'],
-              ['key' => 'tank_labels',     'label' => 'Tank Identification Labels',
-                'code' => 'RVIA Labeling',
-                'desc' => 'Labels present: "POTABLE WATER ONLY" and "GREY WATER ONLY" on tanks and cabinet.'],
-              ['key' => 'bond_gauge',      'label' => 'Bonding Wire Gauge Check',
-                'code' => 'NEC 551.56(C)',
-                'desc' => 'Grounding wire is 8 AWG copper or larger. Resistance under 0.1 ohms verified.'],
-              ['key' => 'bond_access',     'label' => 'Bonding Point Accessibility',
-                'code' => 'NEC 551.56(B)',
-                'desc' => 'Ground terminal is visible and accessible.'],
-            ],
-          ],
+        'compliance'  => [
+          'enabled'  => true,
+          'statuses' => ['pass', 'warning', 'fail', 'not_tested'],
         ],
-        // QMS-005 has no required photo slots on the paper form.
+        'system_scope' => [
+          'gravity_fill'       => true,
+          'city_water_inlet'   => false,
+          'water_heater'       => false,
+          'pressurized_pump'   => true,
+          'sink'               => true,
+          'shower'             => false,
+          'grey_tank'          => true,
+        ],
+        'sections'    => self::qms_005_sections(),
         'photo_slots' => [],
       ],
 

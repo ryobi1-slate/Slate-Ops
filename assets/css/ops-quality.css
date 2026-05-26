@@ -2,7 +2,8 @@
  * Slate Ops — Quality module styles.
  *
  * Maps the revised Claude Design package visuals onto existing Slate Ops
- * tokens (Sage, Sand, Arches, Redwood). No new color introductions, no
+ * tokens (Sage, Sand, Arches, Redwood). QMS compliance status uses standard
+ * red / yellow / green safety colors inside checklist controls only. No
  * Inter / JetBrains Mono. Mobile-first layout for the form runner.
  *
  * Class prefix: .oq- (Ops Quality)
@@ -36,6 +37,14 @@
   --oq-arches-deep:  var(--slate-arches-ink);
   --oq-locked:       #6A7873;
   --oq-locked-soft:  #D8D6BF;
+  --oq-compliance-green: #15803D;
+  --oq-compliance-green-soft: #DCFCE7;
+  --oq-compliance-yellow: #B7791F;
+  --oq-compliance-yellow-soft: #FEF3C7;
+  --oq-compliance-red: #B91C1C;
+  --oq-compliance-red-soft: #FEE2E2;
+  --oq-compliance-gray: #6B7280;
+  --oq-compliance-gray-soft: #F3F4F6;
 }
 
 /* ── Status pill (canonical six) ────────────────────────────────────── */
@@ -971,6 +980,132 @@ body.slate-ops.ops-page-quality :where(button, a).oq-btn--ghost {
 .oq-cl-item.is-active { border-color: var(--slate-sage); box-shadow: 0 0 0 2px rgba(64, 79, 75, 0.12); }
 .oq-cl-item__title { font-size: 16px; font-weight: 700; color: var(--slate-ink); margin-top: 8px; }
 .oq-cl-item__desc { font-size: 13px; color: var(--slate-ink-muted); margin-top: 6px; line-height: 1.45; }
+.oq-evidence-mini {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--slate-ink-muted);
+}
+
+.oq-compliance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.oq-compliance::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.oq-compliance--pass { background: var(--oq-compliance-green-soft); color: var(--oq-compliance-green); border-color: rgba(21, 128, 61, .28); }
+.oq-compliance--warning { background: var(--oq-compliance-yellow-soft); color: var(--oq-compliance-yellow); border-color: rgba(183, 121, 31, .32); }
+.oq-compliance--fail { background: var(--oq-compliance-red-soft); color: var(--oq-compliance-red); border-color: rgba(185, 28, 28, .28); }
+.oq-compliance--not_tested { background: var(--oq-compliance-gray-soft); color: var(--oq-compliance-gray); border-color: rgba(107, 114, 128, .28); }
+
+.oq-evidence {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  background: var(--slate-sand-wash);
+}
+.oq-evidence.is-missing {
+  border-color: rgba(185, 28, 28, .35);
+  background: var(--oq-compliance-red-soft);
+}
+.oq-evidence__meta,
+.oq-evidence__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.oq-evidence__meta {
+  color: var(--slate-ink-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.oq-evidence__actions { margin-top: 10px; }
+.oq-btn--evidence {
+  min-height: 40px;
+}
+.oq-evidence__photos {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.oq-evidence__thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+  border: 1px solid var(--slate-divider-strong);
+  background:
+    repeating-linear-gradient(45deg, #D8D3B9 0 6px, #CFC9AD 6px 12px);
+  background-size: cover;
+  background-position: center;
+}
+.oq-evidence__warning {
+  margin-top: 8px;
+  color: var(--oq-compliance-red);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.oq-info {
+  margin-top: 14px;
+  border: 1px solid var(--slate-divider);
+  border-radius: var(--slate-radius-md);
+  background: var(--slate-surface);
+  overflow: hidden;
+}
+.oq-info summary {
+  min-height: 42px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--slate-sage);
+  font-weight: 700;
+  font-size: 13px;
+}
+.oq-info summary::marker { color: var(--slate-sage); }
+.oq-info__block {
+  padding: 10px 12px;
+  border-top: 1px solid var(--slate-divider-soft);
+}
+.oq-info__label {
+  margin-bottom: 5px;
+  font-size: 10.5px;
+  color: var(--slate-ink-muted);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.oq-info p,
+.oq-info ul {
+  margin: 0;
+  color: var(--slate-ink);
+  font-size: 12.8px;
+  line-height: 1.45;
+}
+.oq-info ul {
+  padding-left: 18px;
+}
+.oq-info li + li { margin-top: 3px; }
 
 /* Big PASS/FAIL toggle
  *
@@ -1032,6 +1167,24 @@ body.slate-ops.ops-page-quality :where(button, a).oq-btn--ghost {
   color: #fff;
   border-color: var(--slate-arches-ink);
 }
+.oq-pf--compliance button.is-pass {
+  background: var(--oq-compliance-green);
+  border-color: var(--oq-compliance-green);
+  color: #fff;
+}
+.oq-pf--compliance button.is-warning {
+  background: var(--oq-compliance-yellow);
+  border-color: var(--oq-compliance-yellow);
+  color: #fff;
+}
+.oq-pf--compliance button.is-fail {
+  background: var(--oq-compliance-red);
+  border-color: var(--oq-compliance-red);
+  color: #fff;
+}
+.oq-pf--compliance button.is-pass:hover:not(:disabled) { background: #166534; border-color: #166534; }
+.oq-pf--compliance button.is-warning:hover:not(:disabled) { background: #92400E; border-color: #92400E; }
+.oq-pf--compliance button.is-fail:hover:not(:disabled) { background: #991B1B; border-color: #991B1B; }
 
 /* Fail-note panel (required) */
 .oq-fail-panel {

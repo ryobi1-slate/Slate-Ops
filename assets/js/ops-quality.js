@@ -246,7 +246,11 @@
     // (defeats stale page caches), and (b) get photo URLs for any
     // attachments already on the row.
     api('GET', '/quality/jobs/' + jobId + '/forms/' + code).then(function (res) {
-      if (res && res.template) state.template = res.template;
+      if (res && res.template) {
+        state.template = res.template;
+        STEPS = buildSteps(state.template);
+        if (state.stepIdx >= STEPS.length) state.stepIdx = STEPS.length - 1;
+      }
       mergeServerRow(res.row);
       state.photos     = res.photos || {};
       state.photoCache = res.photos || {};
@@ -263,14 +267,20 @@
       render();
     }).catch(function () { render(); });
 
-    // STEPS — mobile stepper order matches the spec
-    var STEPS = [
-      { key: 'vehicle',   label: 'Vehicle' },
-      { key: 'checklist', label: 'Checklist' },
-      { key: 'photos',    label: 'Photos' },
-      { key: 'notes',     label: 'Notes' },
-      { key: 'sign',      label: 'Sign' },
-    ];
+    function buildSteps(template) {
+      var steps = [
+        { key: 'vehicle',   label: 'Vehicle' },
+        { key: 'checklist', label: 'Checklist' },
+      ];
+      if (((template && template.photo_slots) || []).length) {
+        steps.push({ key: 'photos', label: 'Photos' });
+      }
+      steps.push({ key: 'notes', label: 'Notes' });
+      steps.push({ key: 'sign', label: 'Sign' });
+      return steps;
+    }
+
+    var STEPS = buildSteps(state.template);
 
     function layoutMode() {
       // < 768 → stepper; 768-1199 → tablet two-panel; 1200+ → tablet (still
@@ -311,6 +321,13 @@
 
     function setResult(sectionKey, itemKey, result) {
       if (isLockedForEdits()) return;
+      if (result === 'pass') {
+        var item = findChecklistItem(sectionKey, itemKey);
+        if (item && !itemPhotoRequirementMet(sectionKey, item, 'pass')) {
+          window.alert('Add the required photo evidence before marking this item pass.');
+          return;
+        }
+      }
       ensureChecklist();
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
@@ -387,10 +404,12 @@
       if (document.visibilityState === 'hidden') flushSaveBeacon();
     });
 
-    function uploadPhoto(slotKey, file) {
+    function uploadPhoto(slotKey, file, meta) {
       if (isLockedForEdits()) return Promise.resolve();
       var fd = new FormData();
       fd.append('slot', slotKey);
+      if (meta && meta.sectionKey) fd.append('section', meta.sectionKey);
+      if (meta && meta.itemKey) fd.append('item', meta.itemKey);
       fd.append('file', file);
       return api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/photos', fd)
         .then(function (res) {
@@ -398,6 +417,59 @@
           state.photoCache = res.photos || state.photoCache;
           render();
         });
+    }
+
+    function findChecklistItem(sectionKey, itemKey) {
+      var sections = state.template.sections || [];
+      for (var s = 0; s < sections.length; s++) {
+        if (sections[s].key !== sectionKey) continue;
+        var items = sections[s].items || [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].key === itemKey) return items[i];
+        }
+      }
+      return null;
+    }
+
+    function isComplianceForm() {
+      return !!(state.template.compliance && state.template.compliance.enabled);
+    }
+
+    function itemPhotoSlotKey(sectionKey, itemKey) {
+      return 'item__' + String(sectionKey || '').replace(/[^a-z0-9_]+/gi, '_').toLowerCase()
+        + '__' + String(itemKey || '').replace(/[^a-z0-9_]+/gi, '_').toLowerCase();
+    }
+
+    function normalizedPhotoRule(item) {
+      var rule = item && item.photo_rule ? item.photo_rule : 'none';
+      return ['none', 'optional', 'required', 'required_on_fail', 'required_on_override'].indexOf(rule) !== -1 ? rule : 'none';
+    }
+
+    function itemPhotos(sectionKey, item) {
+      return (state.photoCache || {})[itemPhotoSlotKey(sectionKey, item.key)] || [];
+    }
+
+    function photoRuleLabel(rule) {
+      return {
+        none: 'No photo required',
+        optional: 'Photo optional',
+        required: 'Photo required',
+        required_on_fail: 'Photo required on fail',
+        required_on_override: 'Photo required on override'
+      }[rule] || 'No photo required';
+    }
+
+    function itemPhotoRequirementMet(sectionKey, item, result) {
+      var rule = normalizedPhotoRule(item);
+      var count = itemPhotos(sectionKey, item).length;
+      if (rule === 'required' && result === 'pass') return count > 0;
+      if (rule === 'required_on_fail' && result === 'fail') return count > 0;
+      if (rule === 'required_on_override' && result === 'warning') return count > 0;
+      return true;
+    }
+
+    function itemNeedsPhoto(sectionKey, item, result) {
+      return !itemPhotoRequirementMet(sectionKey, item, result || 'pass');
     }
 
     // ── Rendering ─────────────────────────────────────────────────
@@ -494,16 +566,18 @@
             && state.activeItem.sectionKey === section.key
             && state.activeItem.itemKey === item.key;
           var cardCls = 'oq-cl-item' + (isActive ? ' is-active' : '');
+          var photoCount = itemPhotos(section.key, item).length;
           var card = el('div', { class: cardCls, onclick: function () {
             state.activeItem = { sectionKey: section.key, itemKey: item.key };
             render();
           }}, [
             el('div', { class: 'oq-meta-row' }, [
               el('span', { class: 'oq-eyebrow' }, (item.code || item.label || item.key)),
-              resp.result === 'pass' ? pill('passed') : resp.result === 'fail' ? el('span', { class: 'oq-pill oq-pill--needs-correction' }, 'FAIL') : null
+              renderComplianceStatus(resp.result || 'not_tested')
             ]),
             el('div', { class: 'oq-cl-item__title' }, item.label),
-            el('div', { class: 'oq-cl-item__desc' }, item.desc || '')
+            el('div', { class: 'oq-cl-item__desc' }, item.desc || ''),
+            isComplianceForm() ? el('div', { class: 'oq-evidence-mini' }, photoCount + ' photo' + (photoCount === 1 ? '' : 's')) : null
           ]);
           left.appendChild(card);
         });
@@ -520,8 +594,10 @@
         };
       }
       right.appendChild(renderActiveDetail());
-      right.appendChild(el('div', { class: 'oq-rsection-label' }, 'Photos'));
-      right.appendChild(renderPhotosStep());
+      if ((state.template.photo_slots || []).length) {
+        right.appendChild(el('div', { class: 'oq-rsection-label' }, 'Photos'));
+        right.appendChild(renderPhotosStep());
+      }
       main.appendChild(right);
 
       host.appendChild(main);
@@ -538,20 +614,39 @@
 
     function renderChecklistCard(section, item) {
       var resp = (state.row.payload.checklist[section.key] || {})[item.key] || {};
+      var photoRule = normalizedPhotoRule(item);
+      var missingPhoto = resp.result && itemNeedsPhoto(section.key, item, resp.result);
       var card = el('div', { class: 'oq-cl-item is-active' }, [
         el('div', { class: 'oq-meta-row' }, [
           el('span', { class: 'oq-eyebrow' }, (item.code || item.label || item.key)),
-          resp.result === 'pass' ? pill('passed') : resp.result === 'fail' ? el('span', { class: 'oq-pill oq-pill--needs-correction' }, 'FAIL') : null,
+          isComplianceForm() ? renderComplianceStatus(resp.result || 'not_tested') : (resp.result === 'pass' ? pill('passed') : resp.result === 'fail' ? el('span', { class: 'oq-pill oq-pill--needs-correction' }, 'FAIL') : null),
         ]),
         el('div', { class: 'oq-cl-item__title' }, item.label),
         el('div', { class: 'oq-cl-item__desc' }, item.desc || ''),
+        isComplianceForm() ? renderComplianceEvidence(section, item, photoRule, missingPhoto) : null,
         renderPF(section, item, resp),
-        resp.result === 'fail' ? renderFailPanel(section, item, resp) : null,
+        isComplianceForm() ? renderInfoPanel(item) : null,
+        (resp.result === 'fail' || resp.result === 'warning' || isComplianceForm()) ? renderFailPanel(section, item, resp) : null,
       ]);
       return card;
     }
 
     function renderPF(section, item, resp) {
+      if (isComplianceForm()) {
+        var statuses = [
+          { key: 'pass', label: 'Pass', cls: 'is-pass' },
+          { key: 'warning', label: 'Review', cls: 'is-warning' },
+          { key: 'fail', label: 'Fail', cls: 'is-fail' }
+        ];
+        return el('div', { class: 'oq-pf oq-pf--compliance' }, statuses.map(function (status) {
+          return el('button', {
+            type: 'button',
+            class: resp.result === status.key ? status.cls : '',
+            disabled: isLockedForEdits() ? 'disabled' : null,
+            onclick: function () { setResult(section.key, item.key, status.key); }
+          }, status.label);
+        }));
+      }
       var passBtn = el('button', {
         type: 'button',
         class: resp.result === 'pass' ? 'is-pass' : '',
@@ -567,15 +662,79 @@
       return el('div', { class: 'oq-pf' }, [passBtn, failBtn]);
     }
 
+    function renderComplianceStatus(result) {
+      var labels = { pass: 'Pass', warning: 'Review', fail: 'Fail', not_tested: 'Not tested', '': 'Not tested' };
+      var key = labels[result] ? result : 'not_tested';
+      return el('span', { class: 'oq-compliance oq-compliance--' + key }, labels[key]);
+    }
+
+    function renderComplianceEvidence(section, item, photoRule, missingPhoto) {
+      var photos = itemPhotos(section.key, item);
+      var slotKey = itemPhotoSlotKey(section.key, item.key);
+      var addButton = el('button', {
+        type: 'button',
+        class: 'oq-btn oq-btn--secondary oq-btn--evidence',
+        disabled: isLockedForEdits() ? 'disabled' : null,
+        onclick: function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          triggerCapture(slotKey, { sectionKey: section.key, itemKey: item.key });
+        }
+      }, [icon('add_a_photo'), 'Add photo']);
+      var chips = el('div', { class: 'oq-evidence__photos' }, photos.slice(0, 4).map(function (photo) {
+        return el('span', {
+          class: 'oq-evidence__thumb',
+          style: photo ? 'background-image:url(' + (photo.thumb_url || photo.url) + ')' : ''
+        }, '');
+      }));
+      return el('div', { class: 'oq-evidence' + (missingPhoto ? ' is-missing' : '') }, [
+        el('div', { class: 'oq-evidence__meta' }, [
+          el('span', null, photoRuleLabel(photoRule)),
+          el('span', null, photos.length + ' attached')
+        ]),
+        el('div', { class: 'oq-evidence__actions' }, [addButton, photos.length ? chips : null]),
+        missingPhoto ? el('div', { class: 'oq-evidence__warning' }, 'Required photo evidence is missing for this status.') : null
+      ]);
+    }
+
+    function renderInfoPanel(item) {
+      var info = item.info || {};
+      var details = el('details', { class: 'oq-info' }, [
+        el('summary', null, [icon('info'), 'Item info'])
+      ]);
+      [
+        ['Purpose', info.purpose],
+        ['Procedure', info.procedure],
+        ['Pass criteria', info.pass_criteria],
+        ['Common failures', info.common_failures],
+        ['Required evidence', info.required_evidence],
+        ['Reference note', info.reference_note]
+      ].forEach(function (row) {
+        var label = row[0];
+        var value = row[1];
+        if (!value || (Array.isArray(value) && value.length === 0)) return;
+        var block = el('div', { class: 'oq-info__block' }, [el('div', { class: 'oq-info__label' }, label)]);
+        if (Array.isArray(value)) {
+          var list = el('ul', null);
+          value.forEach(function (entry) { list.appendChild(el('li', null, entry)); });
+          block.appendChild(list);
+        } else {
+          block.appendChild(el('p', null, value));
+        }
+        details.appendChild(block);
+      });
+      return details;
+    }
+
     function renderFailPanel(section, item, resp) {
       var ta = el('textarea', {
-        placeholder: 'What failed? What did you try? What\'s next?',
+        placeholder: resp.result === 'warning' ? 'What needs supervisor review?' : 'What failed? What did you try? What\'s next?',
         readonly: isLockedForEdits() ? 'readonly' : null,
         oninput: function (e) { setNote(section.key, item.key, e.target.value); }
       });
       ta.value = resp.note || '';
       return el('div', { class: 'oq-fail-panel' }, [
-        el('div', { class: 'oq-fail-panel__head' }, [icon('flag'), 'Note required for FAIL']),
+        el('div', { class: 'oq-fail-panel__head' }, [icon(resp.result === 'warning' ? 'rate_review' : 'flag'), resp.result === 'warning' ? 'Note required for review' : (resp.result === 'fail' ? 'Note required for FAIL' : 'Item notes')]),
         ta
       ]);
     }
@@ -702,17 +861,17 @@
       return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     }
 
-    function triggerCapture(slotKey) {
+    function triggerCapture(slotKey, meta) {
       if (isAndroidDevice() && canUseStreamCamera()) {
-        openStreamCamera(slotKey).catch(function () {
-          triggerFileCapture(slotKey);
+        openStreamCamera(slotKey, meta).catch(function () {
+          triggerFileCapture(slotKey, meta);
         });
         return;
       }
-      triggerFileCapture(slotKey);
+      triggerFileCapture(slotKey, meta);
     }
 
-    function triggerFileCapture(slotKey) {
+    function triggerFileCapture(slotKey, meta) {
       var inp = document.createElement('input');
       inp.type = 'file';
       inp.accept = 'image/*';
@@ -728,7 +887,7 @@
         var file = inp.files && inp.files[0];
         if (inp.parentNode) inp.parentNode.removeChild(inp);
         if (!file) return;
-        uploadPhoto(slotKey, file).catch(function (e) { window.alert(e.message); });
+        uploadPhoto(slotKey, file, meta).catch(function (e) { window.alert(e.message); });
       });
       inp.addEventListener('cancel', function () {
         if (inp.parentNode) inp.parentNode.removeChild(inp);
@@ -757,7 +916,7 @@
       });
     }
 
-    function openStreamCamera(slotKey) {
+    function openStreamCamera(slotKey, meta) {
       var overlay = el('div', { class: 'oq-camera', role: 'dialog', 'aria-label': 'Take photo' });
       var video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline', muted: 'muted' });
       var captureBtn = el('button', { type: 'button', class: 'oq-btn oq-btn--primary' }, 'Take photo');
@@ -812,7 +971,7 @@
             }
             var fileName = 'quality-' + slotKey + '-' + Date.now() + '.jpg';
             var file = new File([blob], fileName, { type: 'image/jpeg' });
-            uploadPhoto(slotKey, file)
+            uploadPhoto(slotKey, file, meta)
               .catch(function (e) { window.alert(e.message); })
               .finally(close);
           }, 'image/jpeg', 0.9);
@@ -903,10 +1062,21 @@
       state.template.sections.forEach(function (section) {
         section.items.forEach(function (item) {
           var resp = (state.row.payload.checklist[section.key] || {})[item.key] || {};
-          if (resp.result !== 'pass' && resp.result !== 'fail') {
+          if (isComplianceForm()) {
+            if (['pass', 'warning', 'fail'].indexOf(resp.result) === -1) {
+              issues.push('"' + item.label + '" needs Pass, Review, or Fail');
+              return;
+            }
+            if ((resp.result === 'warning' || resp.result === 'fail') && !(resp.note || '').trim()) {
+              issues.push('"' + item.label + '" needs a note');
+            }
+            if (itemNeedsPhoto(section.key, item, resp.result)) {
+              issues.push('"' + item.label + '" needs required photo evidence');
+            }
+          } else if (resp.result !== 'pass' && resp.result !== 'fail') {
             issues.push('"' + item.label + '" needs PASS or FAIL');
           } else if (resp.result === 'fail' && !(resp.note || '').trim()) {
-            issues.push('"' + item.label + '" failed — add a note');
+            issues.push('"' + item.label + '" failed - add a note');
           }
         });
       });
