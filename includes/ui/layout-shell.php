@@ -53,6 +53,9 @@ if ($shell_part === 'open') : ?>
   <?php if (!$is_embed) : ?>
   <script>try{if(localStorage.getItem('slate_ops_sidebar_collapsed')==='1')document.documentElement.classList.add('ops-sidebar-collapsed');}catch(e){}</script>
   <?php endif; ?>
+  <?php if (!empty($disable_react_mount)) : ?>
+  <script>window.__slateOpsDisableReactMount = true;</script>
+  <?php endif; ?>
   <?php wp_head(); ?>
 </head>
 <body class="slate-ops <?php echo esc_attr($role_class); ?> <?php echo esc_attr($page_class ?? ''); ?><?php echo $is_embed ? ' ops-embed' : ''; ?>">

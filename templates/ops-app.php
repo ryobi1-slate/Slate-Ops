@@ -74,6 +74,13 @@ $is_resource_hub_page = ($_ops_route === 'resource-hub');
 $is_audit_log_page = ($_ops_path === 'admin/audit');
 $is_supervisor_dashboard_page = ($_ops_route === 'supervisor-dashboard');
 $is_quality_page = ($_ops_route === 'quality');
+$disable_react_mount = ($page_slug === 'home')
+  || ($page_slug === 'cs-dashboard')
+  || $is_supervisor_dashboard_page
+  || $is_executive_page
+  || $is_quality_page
+  || $is_resource_hub_page
+  || $is_audit_log_page;
 
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
 $shell_part = 'open';
