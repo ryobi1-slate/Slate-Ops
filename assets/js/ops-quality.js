@@ -234,7 +234,7 @@
         });
       });
 
-      ['vehicle', 'notes', 'signature', 'review', 'unlocks'].forEach(function (key) {
+      ['vehicle', 'notes', 'photo_exemptions', 'signature', 'review', 'unlocks'].forEach(function (key) {
         if (state.row.payload[key] === undefined && serverPayload[key] !== undefined) {
           state.row.payload[key] = serverPayload[key];
         }
@@ -298,6 +298,7 @@
       return JSON.parse(JSON.stringify({
         checklist: state.row.payload.checklist || {},
         vehicle: state.row.payload.vehicle || {},
+        photo_exemptions: state.row.payload.photo_exemptions || {},
         notes: state.row.payload.notes || ''
       }));
     }
@@ -625,17 +626,31 @@
         var attached = photos[slot.key] || [];
         var filled = attached.length > 0;
         var first = filled ? attached[0] : null;
+        var noDamage = slot.key === 'existing_damage' && photoExemption(slot.key) === 'none';
+        var ok = filled || noDamage;
         var slotEl = el('div', {
-          class: 'oq-photo-slot ' + (filled ? 'oq-photo-slot--filled' : '') + (isLockedForEdits() ? ' is-readonly' : ''),
+          class: 'oq-photo-slot ' + (filled ? 'oq-photo-slot--filled' : '') + (noDamage ? ' oq-photo-slot--waived' : '') + (isLockedForEdits() ? ' is-readonly' : ''),
           role: isLockedForEdits() ? 'img' : 'button',
           tabindex: isLockedForEdits() ? null : '0',
           style: first ? 'background-image:url(' + (first.thumb_url || first.url) + ')' : '',
-          onclick: function () { if (!isLockedForEdits()) triggerCapture(slot.key); }
+          onclick: function () { if (!isLockedForEdits() && !noDamage) triggerCapture(slot.key); }
         }, [
-          el('span', { class: 'oq-photo-slot__status ' + (filled ? 'oq-photo-slot__status--ok' : 'oq-photo-slot__status--missing') }, filled ? '✓' : '!'),
-          el('span', { class: 'oq-photo-slot__label' }, (idx + 1) + '/' + slots.length + ' · ' + slot.label)
+          el('span', { class: 'oq-photo-slot__status ' + (ok ? 'oq-photo-slot__status--ok' : 'oq-photo-slot__status--missing') }, ok ? '✓' : '!'),
+          el('span', { class: 'oq-photo-slot__label' }, (idx + 1) + '/' + slots.length + ' · ' + (noDamage ? 'No existing damage' : slot.label))
         ]);
-        grid.appendChild(slotEl);
+        var slotWrap = el('div', { class: 'oq-photo-slot-wrap' }, [slotEl]);
+        if (slot.key === 'existing_damage' && !filled && !isLockedForEdits()) {
+          slotWrap.appendChild(el('button', {
+            type: 'button',
+            class: 'oq-photo-waive' + (noDamage ? ' is-active' : ''),
+            onclick: function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              setPhotoExemption(slot.key, noDamage ? '' : 'none');
+            }
+          }, noDamage ? 'Damage none noted' : 'No existing damage'));
+        }
+        grid.appendChild(slotWrap);
       });
       return el('div', null, [
         el('div', { class: 'oq-rsection-label' }, [
@@ -644,6 +659,20 @@
         ]),
         grid,
       ]);
+    }
+
+    function photoExemption(slotKey) {
+      var exemptions = state.row.payload.photo_exemptions || {};
+      return exemptions[slotKey] || '';
+    }
+
+    function setPhotoExemption(slotKey, value) {
+      if (isLockedForEdits()) return;
+      state.row.payload.photo_exemptions = state.row.payload.photo_exemptions || {};
+      if (value) state.row.payload.photo_exemptions[slotKey] = value;
+      else delete state.row.payload.photo_exemptions[slotKey];
+      saveDraft({ immediate: true });
+      render();
     }
 
     function attachedCount(photos, slots) {

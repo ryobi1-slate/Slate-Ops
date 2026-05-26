@@ -430,6 +430,17 @@ class Slate_Ops_Quality_REST {
       ];
     }
 
+    if (!empty($payload['photo_exemptions']) && is_array($payload['photo_exemptions'])) {
+      $out['photo_exemptions'] = [];
+      foreach ($payload['photo_exemptions'] as $slot_key => $reason) {
+        $slot = sanitize_key((string) $slot_key);
+        $value = sanitize_key((string) $reason);
+        if ($slot !== '' && $value !== '') {
+          $out['photo_exemptions'][$slot] = $value;
+        }
+      }
+    }
+
     if (!empty($payload['notes'])) {
       $out['notes'] = sanitize_textarea_field((string) $payload['notes']);
     }
