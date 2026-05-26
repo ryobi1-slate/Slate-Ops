@@ -787,6 +787,45 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
 .oq-btn:disabled { opacity: .5; cursor: not-allowed; }
 .oq-btn .material-symbols-outlined { font-size: 16px; }
 
+/* Mobile Safari/WordPress can reapply theme button colors with higher
+   specificity. Pin Quality controls to Slate tokens inside the page scope. */
+body.slate-ops.ops-page-quality :where(button, a).oq-btn {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+body.slate-ops.ops-page-quality :where(button, a).oq-btn--primary {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: #fff !important;
+}
+body.slate-ops.ops-page-quality :where(button, a).oq-btn--primary:hover:not(:disabled) {
+  background: var(--slate-sage-ink) !important;
+  border-color: var(--slate-sage-ink) !important;
+  color: #fff !important;
+}
+body.slate-ops.ops-page-quality :where(button, a).oq-btn--danger {
+  background: var(--slate-arches) !important;
+  border-color: var(--slate-arches) !important;
+  color: #fff !important;
+}
+body.slate-ops.ops-page-quality :where(button, a).oq-btn--danger:hover:not(:disabled) {
+  background: var(--slate-arches-ink) !important;
+  border-color: var(--slate-arches-ink) !important;
+  color: #fff !important;
+}
+body.slate-ops.ops-page-quality :where(button, a).oq-btn--secondary {
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-divider-strong) !important;
+  color: var(--slate-ink) !important;
+}
+body.slate-ops.ops-page-quality :where(button, a).oq-btn--ghost {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--slate-ink-muted) !important;
+}
+
 /* Stats grid */
 .oq-stats {
   display: grid;
@@ -1053,20 +1092,22 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
   border-color: var(--slate-divider);
 }
 .oq-photo-slot--waived .oq-photo-slot__label {
-  color: var(--slate-redwood);
+  color: var(--slate-sage-ink);
+  line-height: 1.25;
+  white-space: normal;
 }
 .oq-photo-waive {
   appearance: none;
   -webkit-appearance: none;
-  min-height: 34px;
-  padding: 0 8px;
-  border: 1px solid var(--slate-divider-strong);
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--slate-sage);
   border-radius: var(--slate-radius-md);
   background: var(--slate-surface);
-  color: var(--slate-sage-ink);
+  color: var(--slate-sage);
   font: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
 }
 .oq-photo-waive:hover {
@@ -1074,9 +1115,46 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
   background: var(--slate-sage-wash);
 }
 .oq-photo-waive.is-active {
-  border-color: var(--slate-redwood);
-  background: var(--oq-redwood-soft);
-  color: var(--slate-redwood);
+  border-color: var(--slate-sage);
+  background: var(--slate-sage);
+  color: #fff;
+}
+
+body.slate-ops.ops-page-quality button.oq-photo-waive {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sage) !important;
+  box-shadow: none !important;
+}
+body.slate-ops.ops-page-quality button.oq-photo-waive.is-active {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 700px) {
+  .oq-photo-tray {
+    gap: 10px;
+  }
+  .oq-photo-slot__label {
+    font-size: 9px;
+    right: 7px;
+  }
+  .oq-photo-waive {
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .oq-supervisor__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .oq-supervisor__actions .oq-btn {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 10px;
+  }
 }
 
 /* Android camera capture */

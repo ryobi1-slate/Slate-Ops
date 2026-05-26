@@ -620,14 +620,23 @@
 
     function renderPhotosStep() {
       var slots = state.template.photo_slots || [];
+      var requiredSlots = slots.filter(function (s) { return s.required; });
       var photos = state.photoCache || {};
       var grid = el('div', { class: 'oq-photo-tray' });
+      var requiredIndex = 0;
       slots.forEach(function (slot, idx) {
         var attached = photos[slot.key] || [];
         var filled = attached.length > 0;
         var first = filled ? attached[0] : null;
         var noDamage = slot.key === 'existing_damage' && photoExemption(slot.key) === 'none';
         var ok = filled || noDamage;
+        var slotLabel;
+        if (slot.required) {
+          requiredIndex++;
+          slotLabel = requiredIndex + '/' + requiredSlots.length + ' · ' + slot.label;
+        } else {
+          slotLabel = noDamage ? 'No existing damage noted' : 'Optional · ' + slot.label;
+        }
         var slotEl = el('div', {
           class: 'oq-photo-slot ' + (filled ? 'oq-photo-slot--filled' : '') + (noDamage ? ' oq-photo-slot--waived' : '') + (isLockedForEdits() ? ' is-readonly' : ''),
           role: isLockedForEdits() ? 'img' : 'button',
@@ -636,7 +645,7 @@
           onclick: function () { if (!isLockedForEdits() && !noDamage) triggerCapture(slot.key); }
         }, [
           el('span', { class: 'oq-photo-slot__status ' + (ok ? 'oq-photo-slot__status--ok' : 'oq-photo-slot__status--missing') }, ok ? '✓' : '!'),
-          el('span', { class: 'oq-photo-slot__label' }, (idx + 1) + '/' + slots.length + ' · ' + (noDamage ? 'No existing damage' : slot.label))
+          el('span', { class: 'oq-photo-slot__label' }, slotLabel)
         ]);
         var slotWrap = el('div', { class: 'oq-photo-slot-wrap' }, [slotEl]);
         if (slot.key === 'existing_damage' && !filled && !isLockedForEdits()) {
@@ -648,14 +657,14 @@
               e.stopPropagation();
               setPhotoExemption(slot.key, noDamage ? '' : 'none');
             }
-          }, noDamage ? 'Damage none noted' : 'No existing damage'));
+          }, noDamage ? 'No existing damage noted' : 'No existing damage'));
         }
         grid.appendChild(slotWrap);
       });
       return el('div', null, [
         el('div', { class: 'oq-rsection-label' }, [
           el('span', null, 'Required photos'),
-          el('span', null, attachedCount(photos, slots) + ' of ' + slots.filter(function (s) { return s.required; }).length)
+          el('span', null, attachedCount(photos, slots) + ' of ' + requiredSlots.length)
         ]),
         grid,
       ]);

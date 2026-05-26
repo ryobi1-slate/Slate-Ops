@@ -145,11 +145,28 @@
 - Console/network evidence: Not captured.
 - Suggested fix area: Render `rvia_no` only when `state.job.quality_type === 'rvia'` or when the template explicitly declares that field.
 
+### BUG-008 - Mobile Quality controls inherit pink theme button styling
+- Severity: Low
+- Steps to reproduce:
+  1. Open the Quality page on mobile Safari.
+  2. Navigate to Supervisor review or the photo step.
+  3. Observe the `Mark Passed` and optional existing damage controls.
+- Expected result: Quality controls use Slate Ops colors: sage for primary/pass and arches for warning/correction.
+- Actual result: Some buttons inherit a pink theme color, and the optional existing damage slot appears visually required because it is numbered with required photo slots.
+- Screenshot/video path: User-provided mobile screenshots, not saved in repo.
+- Console/network evidence: Not captured.
+- Suggested fix area: Scope Quality button styles to the Ops Quality page and separate required photo-slot numbering from optional existing damage.
+
 ## Screenshots
 
-No screenshots were captured because the staging URL and role credentials were not available in this test context. Screenshot directory created for the requested convention:
+Live Chrome screenshots captured during the follow-up staging pass:
 
-- `docs/testing/screenshots/quality-page/`
+- `docs/testing/screenshots/quality-page/quality-chrome-desktop-dashboard.png`
+- `docs/testing/screenshots/quality-page/quality-chrome-job-1011-current.png`
+- `docs/testing/screenshots/quality-page/quality-chrome-qms004-form-current.png`
+- `docs/testing/screenshots/quality-page/quality-chrome-qms004-sign-validation.png`
+- `docs/testing/screenshots/quality-page/quality-chrome-supervisor-review-q1012.png`
+- `docs/testing/screenshots/quality-page/quality-chrome-commercial-qms009.png`
 
 Planned names for live retest:
 
@@ -157,6 +174,27 @@ Planned names for live retest:
 - `docs/testing/screenshots/quality-page/quality-mobile-tech-checklist.png`
 - `docs/testing/screenshots/quality-page/quality-tablet-supervisor-review.png`
 - `docs/testing/screenshots/quality-page/quality-photo-upload-error.png`
+
+## Chrome Staging Retest - 2026-05-26
+
+- Staging URL tested: `https://staging-6c9f-infod7ae72dc14c-qjuxg.wpcomstaging.com/ops/quality/`
+- Chrome session role: Admin
+- Desktop viewport observed: 1920 x 855
+- Dashboard loaded with 36 jobs, no WordPress admin bar, no detected retail language, and no horizontal scroll.
+- Dashboard search worked: searching `Q-1012` showed 1 row.
+- Dashboard bucket filter worked: Submitted bucket showed 1 submitted row.
+- QMS-004 for job Q-1011 opened and rendered the responsive runner.
+- QMS-004 sign step correctly blocked incomplete submit with `Missing photo: Cargo area`.
+- Commercial job Q-1004 correctly loaded QMS-009 and QMS-010, with QMS-010 dependency-locked.
+- Supervisor review page for submitted job Q-1012 loaded; QMS-006 was the only enabled review option, while passed QMS-004/QMS-005 options were disabled.
+- New issue found: completed/submitted check-in photo tiles for Q-1012 render as mostly blank because thumbnail URLs are proxied as `fit=1%2C1`, making review photos visually unusable even though attachment slots exist.
+- Viewport limitation: Chrome automation could not resize the normal Chrome tab; tablet/mobile checks still need manual Chrome resize or DevTools device mode.
+
+## Mobile Screenshot Follow-Up - 2026-05-26
+
+- User-provided mobile Safari screenshots showed the Supervisor `Mark Passed` button and existing damage waiver controls inheriting pink button styling instead of Slate sage.
+- Existing damage was also counted and labeled like a required `9/9` photo slot, even when the required-photo summary showed `7 of 8`.
+- Local fix prepared: Quality page button styles are page-scoped to Slate tokens, optional existing damage now labels as optional/no-damage instead of a required count, and the waiver copy now reads `No existing damage noted` when active.
 
 ## Final Recommendation
 
