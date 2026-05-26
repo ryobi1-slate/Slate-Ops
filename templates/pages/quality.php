@@ -175,15 +175,15 @@ if (!function_exists('slate_ops_quality_form_chip')) {
           elseif  ($rollup === Slate_Ops_Quality::STATUS_PASSED)      $action_label = 'View Packet';
         ?>
           <tr class="oq-row" data-status="<?php echo esc_attr($rollup); ?>" data-search="<?php echo esc_attr(strtolower($j['so_number'] . ' ' . $j['vin'] . ' ' . $j['customer_name'] . ' ' . $j['dealer_name'] . ' Q-' . $j['job_id'])); ?>">
-            <td class="oq-mono">Q-<?php echo (int) $j['job_id']; ?></td>
-            <td class="oq-mono"><?php echo esc_html($j['so_number']); ?></td>
-            <td class="oq-mono oq-ink-3"><?php echo esc_html($j['vin_last8'] ? '…' . $j['vin_last8'] : $j['vin']); ?></td>
-            <td>
+            <td class="oq-mono" data-label="Job #">Q-<?php echo (int) $j['job_id']; ?></td>
+            <td class="oq-mono" data-label="SO #"><?php echo esc_html($j['so_number']); ?></td>
+            <td class="oq-mono oq-ink-3" data-label="VIN"><?php echo esc_html($j['vin_last8'] ? '…' . $j['vin_last8'] : $j['vin']); ?></td>
+            <td data-label="Customer">
               <div><?php echo esc_html($j['customer_name']); ?></div>
               <div class="oq-mono oq-ink-3"><?php echo esc_html($j['dealer_name']); ?></div>
             </td>
-            <td class="oq-mono oq-type"><?php echo esc_html(strtoupper($j['quality_type'])); ?></td>
-            <td>
+            <td class="oq-mono oq-type" data-label="Type"><?php echo esc_html(strtoupper($j['quality_type'])); ?></td>
+            <td data-label="Forms">
               <div class="oq-form-chips">
                 <?php foreach ($j['required_forms'] as $rc) :
                   $row = null;
@@ -194,11 +194,11 @@ if (!function_exists('slate_ops_quality_form_chip')) {
                 endforeach; ?>
               </div>
             </td>
-            <td class="oq-mono"><?php echo count($missing) ? '<span class="oq-warn">' . count($missing) . ' form' . (count($missing) > 1 ? 's' : '') . '</span>' : '<span class="oq-ink-3">—</span>'; ?></td>
-            <td><?php echo esc_html($assigned_name); ?></td>
-            <td class="oq-mono oq-ink-3"><?php echo esc_html(human_time_diff(strtotime($j['updated_at'] ?? 'now'), current_time('timestamp'))) . ' ago'; ?></td>
-            <td><?php echo slate_ops_quality_pill($rollup); ?></td>
-            <td class="oq-col-action">
+            <td class="oq-mono" data-label="Missing"><?php echo count($missing) ? '<span class="oq-warn">' . count($missing) . ' form' . (count($missing) > 1 ? 's' : '') . '</span>' : '<span class="oq-ink-3">—</span>'; ?></td>
+            <td data-label="Tech"><?php echo esc_html($assigned_name); ?></td>
+            <td class="oq-mono oq-ink-3" data-label="Updated"><?php echo esc_html(human_time_diff(strtotime($j['updated_at'] ?? 'now'), current_time('timestamp'))) . ' ago'; ?></td>
+            <td data-label="Status"><?php echo slate_ops_quality_pill($rollup); ?></td>
+            <td class="oq-col-action" data-label="Action">
               <a class="oq-link" href="<?php echo esc_url(home_url('/ops/quality/job/' . (int) $j['job_id'])); ?>">
                 <?php echo esc_html($action_label); ?> <span class="material-symbols-outlined">chevron_right</span>
               </a>
