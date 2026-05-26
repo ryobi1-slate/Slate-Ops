@@ -302,7 +302,14 @@
       }));
     }
 
+    function isLockedForEdits() {
+      return !!(state.row.locked || state.row.locked_at)
+          || state.row.status === 'submitted'
+          || state.row.status === 'passed';
+    }
+
     function setResult(sectionKey, itemKey, result) {
+      if (isLockedForEdits()) return;
       ensureChecklist();
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
@@ -314,6 +321,7 @@
     }
 
     function setNote(sectionKey, itemKey, note) {
+      if (isLockedForEdits()) return;
       ensureChecklist();
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
@@ -326,6 +334,7 @@
     var saveInFlight = false;
     var savePendingAgain = false;
     function flushSave() {
+      if (isLockedForEdits()) return;
       if (saveTimer) {
         clearTimeout(saveTimer);
         saveTimer = null;
@@ -350,6 +359,7 @@
     }
 
     function saveDraft(opts) {
+      if (isLockedForEdits()) return;
       if (opts && opts.immediate) {
         flushSave();
         return;
@@ -359,6 +369,7 @@
     }
 
     function flushSaveBeacon() {
+      if (isLockedForEdits()) return;
       if (!saveTimer && !saveInFlight && !savePendingAgain) return;
       try {
         fetch(API + '/quality/jobs/' + jobId + '/forms/' + code + '/draft', {
@@ -376,6 +387,7 @@
     });
 
     function uploadPhoto(slotKey, file) {
+      if (isLockedForEdits()) return Promise.resolve();
       var fd = new FormData();
       fd.append('slot', slotKey);
       fd.append('file', file);
@@ -420,6 +432,14 @@
       return head;
     }
 
+    function readOnlyNotice() {
+      if (!isLockedForEdits()) return null;
+      return el('div', { class: 'oq-readonly' }, [
+        icon('lock'),
+        el('span', null, 'This form is locked for editing. You can still review the captured details.')
+      ]);
+    }
+
     function stepDots() {
       var wrap = el('div', { class: 'oq-steps' });
       STEPS.forEach(function (s, i) {
@@ -437,6 +457,8 @@
     function renderMobile() {
       host.appendChild(stepDots());
       var body = el('div', { class: 'oq-rb' });
+      var notice = readOnlyNotice();
+      if (notice) body.appendChild(notice);
       var step = STEPS[state.stepIdx].key;
       if (step === 'vehicle')   body.appendChild(renderVehicleStep());
       if (step === 'checklist') body.appendChild(renderChecklistStep());
@@ -451,6 +473,8 @@
       var step = STEPS[state.stepIdx].key;
       if (step === 'sign') {
         var signBody = el('div', { class: 'oq-rb oq-rb--tablet-sign' });
+        var signNotice = readOnlyNotice();
+        if (signNotice) signBody.appendChild(signNotice);
         signBody.appendChild(renderSignStep());
         host.appendChild(signBody);
         host.appendChild(renderFooter());
@@ -486,6 +510,8 @@
       main.appendChild(left);
 
       var right = el('div', { class: 'oq-detail-pane' });
+      var tabletNotice = readOnlyNotice();
+      if (tabletNotice) right.appendChild(tabletNotice);
       if (!state.activeItem) {
         state.activeItem = {
           sectionKey: state.template.sections[0].key,
@@ -528,11 +554,13 @@
       var passBtn = el('button', {
         type: 'button',
         class: resp.result === 'pass' ? 'is-pass' : '',
+        disabled: isLockedForEdits() ? 'disabled' : null,
         onclick: function () { setResult(section.key, item.key, 'pass'); }
       }, 'PASS');
       var failBtn = el('button', {
         type: 'button',
         class: resp.result === 'fail' ? 'is-fail' : '',
+        disabled: isLockedForEdits() ? 'disabled' : null,
         onclick: function () { setResult(section.key, item.key, 'fail'); }
       }, 'FAIL');
       return el('div', { class: 'oq-pf' }, [passBtn, failBtn]);
@@ -541,6 +569,7 @@
     function renderFailPanel(section, item, resp) {
       var ta = el('textarea', {
         placeholder: 'What failed? What did you try? What\'s next?',
+        readonly: isLockedForEdits() ? 'readonly' : null,
         oninput: function (e) { setNote(section.key, item.key, e.target.value); }
       });
       ta.value = resp.note || '';
@@ -561,6 +590,7 @@
         var label = ({ vin: 'VIN', odometer: 'Odometer', key_count: 'Key count', rvia_no: 'RVIA #' })[key];
         var inp = el('input', {
           class: 'oq-input', type: 'text', placeholder: label,
+          readonly: isLockedForEdits() ? 'readonly' : null,
           oninput: function (e) {
             state.row.payload.vehicle = state.row.payload.vehicle || {};
             state.row.payload.vehicle[key] = e.target.value;
@@ -596,11 +626,11 @@
         var filled = attached.length > 0;
         var first = filled ? attached[0] : null;
         var slotEl = el('div', {
-          class: 'oq-photo-slot ' + (filled ? 'oq-photo-slot--filled' : ''),
-          role: 'button',
-          tabindex: '0',
+          class: 'oq-photo-slot ' + (filled ? 'oq-photo-slot--filled' : '') + (isLockedForEdits() ? ' is-readonly' : ''),
+          role: isLockedForEdits() ? 'img' : 'button',
+          tabindex: isLockedForEdits() ? null : '0',
           style: first ? 'background-image:url(' + (first.thumb_url || first.url) + ')' : '',
-          onclick: function () { triggerCapture(slot.key); }
+          onclick: function () { if (!isLockedForEdits()) triggerCapture(slot.key); }
         }, [
           el('span', { class: 'oq-photo-slot__status ' + (filled ? 'oq-photo-slot__status--ok' : 'oq-photo-slot__status--missing') }, filled ? '✓' : '!'),
           el('span', { class: 'oq-photo-slot__label' }, (idx + 1) + '/' + slots.length + ' · ' + slot.label)
@@ -637,6 +667,7 @@
       var ta = el('textarea', {
         class: 'oq-input oq-textarea',
         placeholder: 'Anything else the supervisor should know.',
+        readonly: isLockedForEdits() ? 'readonly' : null,
         oninput: function (e) {
           state.row.payload.notes = e.target.value;
           saveDraft();
@@ -662,7 +693,13 @@
       }
       var sig = el('div', { class: 'oq-signature' }, [
         el('label', { for: 'oq-sig' }, 'Typed signature'),
-        el('input', { id: 'oq-sig', type: 'text', placeholder: 'Type your full name', autocomplete: 'name' }),
+        el('input', {
+          id: 'oq-sig',
+          type: 'text',
+          placeholder: isLockedForEdits() ? 'Already submitted' : 'Type your full name',
+          autocomplete: 'name',
+          disabled: isLockedForEdits() ? 'disabled' : null
+        }),
         el('div', { class: 'oq-signature__meta' }, 'Your user ID and timestamp are recorded automatically.'),
       ]);
       return el('div', null, [
@@ -703,7 +740,12 @@
         onclick: function () { if (!prevDisabled) { state.stepIdx--; render(); } }
       }, [icon('chevron_left')]));
 
-      if (isLast) {
+      if (isLast && isLockedForEdits()) {
+        ftr.appendChild(el('a', {
+          class: 'oq-btn oq-btn--primary',
+          href: '/ops/quality/job/' + jobId
+        }, ['Back to job', icon('chevron_right')]));
+      } else if (isLast) {
         ftr.appendChild(el('button', {
           class: 'oq-btn oq-btn--primary',
           onclick: function () {

@@ -841,6 +841,24 @@
   background: var(--slate-surface-page);
 }
 
+.oq-readonly {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--slate-divider-strong);
+  border-radius: var(--slate-radius-md);
+  background: var(--slate-sand-wash);
+  color: var(--slate-ink-muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.oq-readonly .material-symbols-outlined {
+  color: var(--slate-sage);
+  font-size: 17px;
+}
+
 /* Sticky bottom bar */
 .oq-rfooter {
   display: flex;
@@ -913,6 +931,10 @@
 }
 .oq-pf button:hover:not(:disabled) { background: var(--slate-surface); color: var(--slate-ink); }
 .oq-pf button:focus-visible { outline: 2px solid var(--slate-sage); outline-offset: 2px; }
+.oq-pf button:disabled {
+  cursor: default;
+  opacity: .78;
+}
 .oq-pf button.is-pass {
   background: var(--slate-redwood);
   color: var(--slate-sand-wash);
@@ -973,6 +995,12 @@
 @media (min-width: 1100px) { .oq-photo-tray { grid-template-columns: repeat(4, 1fr); } }
 .oq-photo-tray .oq-photo-slot { aspect-ratio: 3/4; cursor: pointer; }
 .oq-photo-tray .oq-photo-slot[role="button"]:focus-visible { outline: 2px solid var(--slate-sage); outline-offset: 2px; }
+.oq-photo-tray .oq-photo-slot.is-readonly {
+  cursor: default;
+}
+.oq-photo-tray .oq-photo-slot.is-readonly:not(.oq-photo-slot--filled) {
+  opacity: .72;
+}
 
 /* Signature panel */
 .oq-signature {
