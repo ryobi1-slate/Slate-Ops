@@ -729,6 +729,35 @@
 
     function renderSignStep() {
       var issues = validate();
+      var signedName = state.row.signature_name
+        || (state.row.payload && state.row.payload.signature && state.row.payload.signature.typed_name)
+        || '';
+      if (isLockedForEdits()) {
+        var lockedSummary = el('div', { class: 'oq-summary' }, [
+          el('div', { class: 'oq-summary__title' }, signedName ? 'Submitted' : 'Signature not recorded'),
+          el('div', { class: 'oq-summary__sub' }, signedName
+            ? 'This form has already been signed and locked.'
+            : 'This submitted form is locked. Ask a supervisor to unlock it before adding a signature.'),
+        ]);
+        var lockedSig = el('div', { class: 'oq-signature' }, [
+          el('label', { for: 'oq-sig' }, 'Typed signature'),
+          el('input', {
+            id: 'oq-sig',
+            type: 'text',
+            value: signedName || '',
+            placeholder: signedName ? '' : 'No signature recorded',
+            disabled: 'disabled'
+          }),
+          el('div', { class: 'oq-signature__meta' }, signedName
+            ? 'Your user ID and timestamp were recorded at submit.'
+            : 'Unlock this form to add the missing signature.'),
+        ]);
+        return el('div', null, [
+          el('div', { class: 'oq-rsection-label' }, 'Signature'),
+          lockedSummary,
+          lockedSig,
+        ]);
+      }
       var summary = el('div', { class: 'oq-summary' }, [
         el('div', { class: 'oq-summary__title' }, issues.length === 0 ? 'Ready to submit' : 'Still to complete'),
         el('div', { class: 'oq-summary__sub' }, issues.length === 0 ? 'Type your name to sign and submit. Once submitted, the form locks.' : 'Resolve these before submitting.'),

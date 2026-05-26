@@ -396,14 +396,13 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
   }
 
   .oq-table tr.oq-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0 14px;
-    padding: 14px;
-    margin-bottom: 12px;
+    display: block;
+    padding: 16px;
+    margin-bottom: 14px;
     background: var(--slate-surface);
     border: 1px solid var(--slate-divider);
     border-radius: var(--slate-radius-lg);
+    overflow: hidden;
   }
 
   .oq-table tr.oq-row:hover td {
@@ -416,11 +415,13 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
     justify-content: space-between;
     gap: 12px;
     min-width: 0;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--slate-divider-soft);
+    padding: 9px 0;
+    border: 0 !important;
+    border-bottom: 1px solid var(--slate-divider-soft) !important;
     font-size: 14px;
     line-height: 1.35;
     overflow-wrap: anywhere;
+    background: transparent !important;
   }
 
   .oq-table td::before {
@@ -433,16 +434,13 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
     text-transform: uppercase;
   }
 
-  .oq-table td:empty {
-    display: none;
+  .oq-table td > *:not(.oq-link) {
+    max-width: 68%;
+    text-align: right;
   }
 
-  .oq-table td:nth-child(1),
-  .oq-table td:nth-child(2),
-  .oq-table td:nth-child(4),
-  .oq-table td:nth-child(10),
-  .oq-table td:nth-child(11) {
-    grid-column: 1 / -1;
+  .oq-table td:empty {
+    display: none;
   }
 
   .oq-table td:nth-child(1) {
@@ -453,6 +451,11 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
 
   .oq-table td:nth-child(4) {
     display: block;
+  }
+
+  .oq-table td:nth-child(4) > * {
+    max-width: 100%;
+    text-align: left;
   }
 
   .oq-table td:nth-child(4)::before {
@@ -474,7 +477,7 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
 
   .oq-table td:nth-child(11) {
     padding-bottom: 0;
-    border-bottom: 0;
+    border-bottom: 0 !important;
   }
 
   .oq-table td:nth-child(11)::before {
