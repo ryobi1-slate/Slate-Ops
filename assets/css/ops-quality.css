@@ -205,6 +205,41 @@
   font-weight: 600;
 }
 
+body.slate-ops.ops-page-quality .oq-bucket,
+body.slate-ops.ops-page-quality .oq-bucket:not(:hover):not(:focus),
+body.slate-ops.ops-page-quality .oq-bucket:not(:hover):not(:focus):not(:active) {
+  background: var(--slate-surface) !important;
+  border-color: var(--slate-divider) !important;
+  color: var(--slate-ink) !important;
+  box-shadow: none !important;
+}
+body.slate-ops.ops-page-quality .oq-bucket:hover {
+  background: var(--slate-surface-tint) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-ink) !important;
+}
+body.slate-ops.ops-page-quality .oq-bucket.is-active,
+body.slate-ops.ops-page-quality .oq-bucket.is-active:hover,
+body.slate-ops.ops-page-quality .oq-bucket.is-active:focus {
+  background: var(--slate-sage) !important;
+  border-color: var(--slate-sage) !important;
+  color: var(--slate-sand-wash) !important;
+}
+body.slate-ops.ops-page-quality .oq-bucket.is-active .oq-bucket__label,
+body.slate-ops.ops-page-quality .oq-bucket.is-active .oq-bucket__hint,
+body.slate-ops.ops-page-quality .oq-bucket.is-active .oq-bucket__count {
+  color: var(--slate-sand-wash) !important;
+}
+body.slate-ops.ops-page-quality .oq-search input {
+  box-sizing: border-box !important;
+  padding-left: 40px !important;
+}
+body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
+  left: 13px !important;
+  width: 18px;
+  text-align: center;
+}
+
 /* ── Table ──────────────────────────────────────────────────────────── */
 .oq-table-wrap {
   background: var(--slate-surface);
