@@ -1182,9 +1182,15 @@ body.slate-ops.ops-page-quality :where(button, a).oq-btn--ghost {
   border-color: var(--oq-compliance-red);
   color: #fff;
 }
+.oq-pf--compliance button.is-not-tested {
+  background: var(--oq-compliance-gray);
+  border-color: var(--oq-compliance-gray);
+  color: #fff;
+}
 .oq-pf--compliance button.is-pass:hover:not(:disabled) { background: #166534; border-color: #166534; }
 .oq-pf--compliance button.is-warning:hover:not(:disabled) { background: #92400E; border-color: #92400E; }
 .oq-pf--compliance button.is-fail:hover:not(:disabled) { background: #991B1B; border-color: #991B1B; }
+.oq-pf--compliance button.is-not-tested:hover:not(:disabled) { background: #4B5563; border-color: #4B5563; }
 
 /* Fail-note panel (required) */
 .oq-fail-panel {

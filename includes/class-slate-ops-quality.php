@@ -210,11 +210,11 @@ class Slate_Ops_Quality {
           )),
           self::qms_005_item('plumbing', 'gravity_fill_routing', 'Gravity fill hose routing', 'Verify gravity fill hose routing is secure, sloped, and protected.', 'major', 'required', self::qms_005_info(
             'Confirm gravity fill can be used without kinks, sags, or abrasion.',
-            ['Inspect the complete fill route.', 'Check clamps, bend radius, and protection at pass-throughs.', 'Verify no city water inlet components are present.'],
+            ['Inspect the complete fill route.', 'Check clamps, bend radius, and protection at pass-throughs.', 'Confirm the gravity-fill path is the active fill method for this unit.'],
             ['Fill hose is secured and serviceable.', 'Route is protected and does not kink.'],
             ['Kinked hose', 'Missing clamp', 'Unprotected edge contact'],
             ['Photo of fill hose routing and clamps.'],
-            'City water inlet is not installed on current Slate RVIA scope.'
+            'Current Slate RVIA plumbing scope uses gravity fill for fresh-water fill.'
           )),
           self::qms_005_item('plumbing', 'fresh_tank_vent_overflow', 'Fresh tank vent / overflow', 'Confirm vent and overflow routing is open, secured, and correctly terminated.', 'major', 'required', self::qms_005_info(
             'Prevent tank pressurization, water backing up, or overflow into the van.',
@@ -230,7 +230,7 @@ class Slate_Ops_Quality {
             ['Pump reaches cutoff and stays off during hold period.', 'No visible leak is present.'],
             ['Pump cycles repeatedly', 'Loose fitting', 'Air leak at pickup side'],
             ['Photo of pump installation or test condition.'],
-            'Pressurized pump is installed; water heater and shower are not installed.'
+            'Pressurized pump is installed for the active sink and fresh-water system.'
           )),
           self::qms_005_item('plumbing', 'sink_fixture_flow', 'Sink fixture flow test', 'Verify sink fixture flow and drain behavior under normal operation.', 'major', 'required', self::qms_005_info(
             'Confirm the installed sink delivers and drains water correctly.',
@@ -246,7 +246,7 @@ class Slate_Ops_Quality {
             ['No drips, seepage, or wet cabinet surfaces are found.', 'Connections are tight and supported.'],
             ['Seeping fitting', 'Loose drain connection', 'Unsupported line pulling on fitting'],
             ['Photo of dry under-sink connections after test.'],
-            'Shower and water heater tests are not active because those systems are not installed.'
+            'Under-sink supply and drain checks cover the active plumbing fixtures in this build.'
           )),
           self::qms_005_item('plumbing', 'grey_tank_drain_leak', 'Grey tank drain / leak test', 'Verify grey tank drain routing and check for leaks during water discharge.', 'critical', 'required', self::qms_005_info(
             'Confirm collected sink water routes to the grey tank and drains without leaks.',
@@ -410,8 +410,7 @@ class Slate_Ops_Quality {
       ],
 
       // ── QMS-005 Rev. 1.2 — RVIA Testing Sign-Off ───────────────────
-      // Structured RVIA compliance checklist. Current Slate RVIA plumbing
-      // scope excludes city water inlet, water heater, and shower tests.
+      // Structured RVIA compliance checklist for Slate's active RVIA scope.
       self::FORM_QMS_005 => [
         'code'        => self::FORM_QMS_005,
         'revision'    => '1.2',
@@ -427,11 +426,8 @@ class Slate_Ops_Quality {
         ],
         'system_scope' => [
           'gravity_fill'       => true,
-          'city_water_inlet'   => false,
-          'water_heater'       => false,
           'pressurized_pump'   => true,
           'sink'               => true,
-          'shower'             => false,
           'grey_tank'          => true,
         ],
         'sections'    => self::qms_005_sections(),

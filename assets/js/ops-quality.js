@@ -636,7 +636,8 @@
         var statuses = [
           { key: 'pass', label: 'Pass', cls: 'is-pass' },
           { key: 'warning', label: 'Review', cls: 'is-warning' },
-          { key: 'fail', label: 'Fail', cls: 'is-fail' }
+          { key: 'fail', label: 'Fail', cls: 'is-fail' },
+          { key: 'not_tested', label: 'Not tested', cls: 'is-not-tested' }
         ];
         return el('div', { class: 'oq-pf oq-pf--compliance' }, statuses.map(function (status) {
           return el('button', {

@@ -348,10 +348,22 @@ class Slate_Ops_Quality_REST {
       return new WP_Error('quality_unknown_slot', 'Unknown photo slot for this form.', ['status' => 400]);
     }
 
-    $section_id = sanitize_key((string) ($_POST['section'] ?? ($slot_meta['section'] ?? '')));
-    $item_id    = sanitize_key((string) ($_POST['item'] ?? ($slot_meta['item'] ?? '')));
-    if (!empty($slot_meta['item']) && ($section_id !== $slot_meta['section'] || $item_id !== $slot_meta['item'])) {
-      return new WP_Error('quality_invalid_item_photo', 'Photo metadata does not match this checklist item.', ['status' => 400]);
+    $is_item_slot = !empty($slot_meta['item']);
+    $section_id = sanitize_key((string) ($_POST['section'] ?? ''));
+    $item_id    = sanitize_key((string) ($_POST['item'] ?? ''));
+    if ($is_item_slot) {
+      if ($section_id === '') {
+        return new WP_Error('quality_section_required', 'Section is required for item evidence photos.', ['status' => 400]);
+      }
+      if ($item_id === '') {
+        return new WP_Error('quality_item_required', 'Item is required for item evidence photos.', ['status' => 400]);
+      }
+      if ($section_id !== $slot_meta['section'] || $item_id !== $slot_meta['item']) {
+        return new WP_Error('quality_invalid_item_photo', 'Photo metadata does not match this checklist item.', ['status' => 400]);
+      }
+    } else {
+      $section_id = '';
+      $item_id = '';
     }
 
     $row_before = Slate_Ops_Quality::ensure_form_row((int) $job['job_id'], $template['code']);
