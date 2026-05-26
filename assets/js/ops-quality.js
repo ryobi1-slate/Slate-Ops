@@ -685,7 +685,25 @@
       return window.innerWidth < 900 || coarsePointer || /Android|iPhone|iPad|iPod/i.test(ua);
     }
 
+    function isAndroidDevice() {
+      return /Android/i.test(navigator.userAgent || navigator.vendor || '');
+    }
+
+    function canUseStreamCamera() {
+      return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    }
+
     function triggerCapture(slotKey) {
+      if (isAndroidDevice() && canUseStreamCamera()) {
+        openStreamCamera(slotKey).catch(function () {
+          triggerFileCapture(slotKey);
+        });
+        return;
+      }
+      triggerFileCapture(slotKey);
+    }
+
+    function triggerFileCapture(slotKey) {
       var inp = document.createElement('input');
       inp.type = 'file';
       inp.accept = 'image/*';
@@ -708,6 +726,92 @@
       });
       document.body.appendChild(inp);
       inp.click();
+    }
+
+    function requestRearCamera() {
+      return navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { exact: 'environment' },
+          width: { ideal: 1600 },
+          height: { ideal: 1200 }
+        }
+      }).catch(function () {
+        return navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1600 },
+            height: { ideal: 1200 }
+          }
+        });
+      });
+    }
+
+    function openStreamCamera(slotKey) {
+      var overlay = el('div', { class: 'oq-camera', role: 'dialog', 'aria-label': 'Take photo' });
+      var video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline', muted: 'muted' });
+      var captureBtn = el('button', { type: 'button', class: 'oq-btn oq-btn--primary' }, 'Take photo');
+      var cancelBtn = el('button', { type: 'button', class: 'oq-btn oq-btn--ghost' }, 'Cancel');
+      var panel = el('div', { class: 'oq-camera__panel' }, [
+        el('div', { class: 'oq-camera__preview' }, [video]),
+        el('div', { class: 'oq-camera__actions' }, [cancelBtn, captureBtn])
+      ]);
+      overlay.appendChild(panel);
+
+      var stream = null;
+      var done = false;
+
+      function close() {
+        done = true;
+        if (stream) {
+          stream.getTracks().forEach(function (track) { track.stop(); });
+        }
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      }
+
+      cancelBtn.addEventListener('click', close);
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) close();
+      });
+
+      document.body.appendChild(overlay);
+
+      return requestRearCamera().then(function (mediaStream) {
+        if (done) {
+          mediaStream.getTracks().forEach(function (track) { track.stop(); });
+          return;
+        }
+        stream = mediaStream;
+        video.srcObject = stream;
+        return video.play();
+      }).then(function () {
+        if (done) return;
+        captureBtn.addEventListener('click', function () {
+          var width = video.videoWidth || 1280;
+          var height = video.videoHeight || 960;
+          var canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+          captureBtn.disabled = true;
+          canvas.toBlob(function (blob) {
+            if (!blob) {
+              close();
+              triggerFileCapture(slotKey);
+              return;
+            }
+            var fileName = 'quality-' + slotKey + '-' + Date.now() + '.jpg';
+            var file = new File([blob], fileName, { type: 'image/jpeg' });
+            uploadPhoto(slotKey, file)
+              .catch(function (e) { window.alert(e.message); })
+              .finally(close);
+          }, 'image/jpeg', 0.9);
+        }, { once: true });
+      }).catch(function (err) {
+        close();
+        return Promise.reject(err);
+      });
     }
 
     function renderNotesStep() {

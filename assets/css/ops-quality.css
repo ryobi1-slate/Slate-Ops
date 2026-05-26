@@ -1079,6 +1079,47 @@ body.slate-ops.ops-page-quality .oq-search .material-symbols-outlined {
   color: var(--slate-redwood);
 }
 
+/* Android camera capture */
+.oq-camera {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 24, 24, .9);
+}
+.oq-camera__panel {
+  width: min(100%, 520px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .32);
+}
+.oq-camera__preview {
+  background: #000;
+}
+.oq-camera__preview video {
+  display: block;
+  width: 100%;
+  max-height: min(72vh, 720px);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: #000;
+}
+.oq-camera__actions {
+  display: grid;
+  grid-template-columns: minmax(92px, .45fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  background: var(--slate-surface);
+}
+.oq-camera__actions .oq-btn {
+  justify-content: center;
+  min-height: 48px;
+}
+
 /* Signature panel */
 .oq-signature {
   background: var(--slate-surface);
