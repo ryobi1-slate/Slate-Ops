@@ -679,16 +679,34 @@
       return slots.filter(function (s) { return s.required && (photos[s.key] || []).length > 0; }).length;
     }
 
+    function prefersCameraCapture() {
+      var ua = navigator.userAgent || navigator.vendor || '';
+      var coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      return window.innerWidth < 900 || coarsePointer || /Android|iPhone|iPad|iPod/i.test(ua);
+    }
+
     function triggerCapture(slotKey) {
       var inp = document.createElement('input');
       inp.type = 'file';
       inp.accept = 'image/*';
-      // Camera-first on mobile, photo library otherwise.
-      if (window.innerWidth < 768) inp.capture = 'environment';
+      inp.style.position = 'fixed';
+      inp.style.left = '-9999px';
+      inp.style.opacity = '0';
+      // Camera-first on phones. Android Chrome is more reliable when capture
+      // is set as an attribute and the input is attached before click().
+      if (prefersCameraCapture()) {
+        inp.setAttribute('capture', 'environment');
+      }
       inp.addEventListener('change', function () {
-        if (!inp.files || !inp.files[0]) return;
-        uploadPhoto(slotKey, inp.files[0]).catch(function (e) { window.alert(e.message); });
+        var file = inp.files && inp.files[0];
+        if (inp.parentNode) inp.parentNode.removeChild(inp);
+        if (!file) return;
+        uploadPhoto(slotKey, file).catch(function (e) { window.alert(e.message); });
       });
+      inp.addEventListener('cancel', function () {
+        if (inp.parentNode) inp.parentNode.removeChild(inp);
+      });
+      document.body.appendChild(inp);
       inp.click();
     }
 
