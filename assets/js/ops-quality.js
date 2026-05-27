@@ -332,6 +332,9 @@
       var bucket = state.row.payload.checklist[sectionKey];
       bucket[itemKey] = bucket[itemKey] || {};
       bucket[itemKey].result = result;
+      if (result === 'pass' || result === 'not_tested') {
+        delete bucket[itemKey].note;
+      }
       bucket[itemKey].timestamp = new Date().toISOString();
       markTouched(sectionKey, itemKey);
       saveDraft({ immediate: true });
@@ -626,7 +629,7 @@
         isComplianceForm() ? renderComplianceEvidence(section, item, photoRule, missingPhoto) : null,
         renderPF(section, item, resp),
         isComplianceForm() ? renderInfoPanel(item) : null,
-        (resp.result === 'fail' || resp.result === 'warning' || isComplianceForm()) ? renderFailPanel(section, item, resp) : null,
+        (resp.result === 'fail' || resp.result === 'warning') ? renderFailPanel(section, item, resp) : null,
       ]);
       return card;
     }
