@@ -19,9 +19,36 @@
     });
   }
 
+  function logoutUrl() {
+    var settings = window.slateOpsSettings || {};
+    if (settings.auth && settings.auth.logoutUrl) return settings.auth.logoutUrl;
+
+    var shellLogout = document.querySelector('.ops-topbar-logout[href]');
+    return shellLogout ? shellLogout.getAttribute('href') : '';
+  }
+
+  function ensureTechLogout() {
+    if (document.querySelector('.ops-tech-logout')) return;
+
+    var href = logoutUrl();
+    if (!href) return;
+
+    var link = document.createElement('a');
+    link.className = 'ops-tech-logout';
+    link.href = href;
+    link.title = 'Log out';
+    link.setAttribute('aria-label', 'Log out');
+    link.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">logout</span>';
+    document.body.appendChild(link);
+  }
+
   function start() {
+    ensureTechLogout();
     hideUnwiredNoteButtons();
-    var observer = new MutationObserver(hideUnwiredNoteButtons);
+    var observer = new MutationObserver(function () {
+      ensureTechLogout();
+      hideUnwiredNoteButtons();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
