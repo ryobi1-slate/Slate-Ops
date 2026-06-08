@@ -299,20 +299,24 @@ add_action('wp_enqueue_scripts', function() {
         $ver_tech_polish = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') : SLATE_OPS_VERSION;
         wp_enqueue_script('slate-ops-tech-polish', SLATE_OPS_URL . 'assets/js/ops-tech-polish.js', ['slate-ops-react'], $ver_tech_polish, true);
 
-        // Quality section injected into each tech job card.
-        $ver_tech_q_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops-tech-quality.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-tech-quality.css') : SLATE_OPS_VERSION;
-        $ver_tech_q_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-quality.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-quality.js')   : SLATE_OPS_VERSION;
-        wp_enqueue_style('slate-ops-tech-quality', SLATE_OPS_URL . 'assets/css/ops-tech-quality.css', ['slate-ops-react'], $ver_tech_q_css);
-        wp_enqueue_script('slate-ops-tech-quality', SLATE_OPS_URL . 'assets/js/ops-tech-quality.js', ['slate-ops-react'], $ver_tech_q_js, true);
-        wp_localize_script('slate-ops-tech-quality', 'slateOpsTechQuality', [
-          'api' => [
-            'root'  => esc_url_raw(rest_url('slate-ops/v1')),
-            'nonce' => wp_create_nonce('wp_rest'),
-          ],
-          'urls' => [
-            'quality_job' => esc_url_raw(home_url('/ops/quality/job/')),
-          ],
-        ]);
+        // Quality is staged behind an explicit rollout switch so the Tech
+        // page flow does not change until leadership enables the pilot.
+        $enable_tech_quality = (bool) apply_filters('slate_ops_enable_tech_quality_injection', false);
+        if ($enable_tech_quality) {
+          $ver_tech_q_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops-tech-quality.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-tech-quality.css') : SLATE_OPS_VERSION;
+          $ver_tech_q_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-quality.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-quality.js')   : SLATE_OPS_VERSION;
+          wp_enqueue_style('slate-ops-tech-quality', SLATE_OPS_URL . 'assets/css/ops-tech-quality.css', ['slate-ops-react'], $ver_tech_q_css);
+          wp_enqueue_script('slate-ops-tech-quality', SLATE_OPS_URL . 'assets/js/ops-tech-quality.js', ['slate-ops-react'], $ver_tech_q_js, true);
+          wp_localize_script('slate-ops-tech-quality', 'slateOpsTechQuality', [
+            'api' => [
+              'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+              'nonce' => wp_create_nonce('wp_rest'),
+            ],
+            'urls' => [
+              'quality_job' => esc_url_raw(home_url('/ops/quality/job/')),
+            ],
+          ]);
+        }
       }
     }
 
