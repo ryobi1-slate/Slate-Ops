@@ -86,6 +86,11 @@ class Slate_Ops_Executive {
 		return $s['labor_capture_watchlist'];
 	}
 
+	public function get_labor_diagnostics() {
+		$s = $this->summary();
+		return $s['labor_diagnostics'];
+	}
+
 	public function get_bottleneck_kpis() {
 		$s = $this->summary();
 		return $s['bottleneck_kpis'];
@@ -168,6 +173,7 @@ class Slate_Ops_Executive {
 		$job_minutes = array();
 		$job_last_entry = array();
 		$open_timers = array();
+		$open_timer_jobs = array();
 		$tech_minutes = array();
 		$tech_today = array();
 		$tech_week = array();
@@ -216,6 +222,9 @@ class Slate_Ops_Executive {
 						'minutes' => $minutes,
 						'start_ts' => $start,
 					);
+					if ( $minutes >= 240 ) {
+						$open_timer_jobs[ $job_id ] = true;
+					}
 				}
 			}
 		}
@@ -234,6 +243,8 @@ class Slate_Ops_Executive {
 		$blockers = array();
 		$jobs = array();
 		$labor_capture_watchlist = array();
+		$diagnostic_jobs = array();
+		$diagnostic_techs = array();
 
 		foreach ( $rows as $row ) {
 			$status = Slate_Ops_Statuses::normalize( (string) $row['status'] );
@@ -248,6 +259,7 @@ class Slate_Ops_Executive {
 			$customer = $row['customer_name'] ?: $row['dealer_name'] ?: 'Customer';
 			$reason = $this->risk_reason( $status, $est, $logged, (string) $row['block_reason'], (string) $row['block_note'] );
 			$risk = $this->job_risk( $status, $est, $logged, $reason );
+			$assigned_user_id = (int) $row['assigned_user_id'];
 
 			if ( $is_active ) {
 				$active_rows[] = $row;
@@ -269,8 +281,8 @@ class Slate_Ops_Executive {
 				$zero_time_completions++;
 			}
 
-			if ( $row['assigned_user_id'] ) {
-				$uid = (int) $row['assigned_user_id'];
+			if ( $assigned_user_id ) {
+				$uid = $assigned_user_id;
 				if ( ! isset( $assigned[ $uid ] ) ) {
 					$assigned[ $uid ] = array(
 						'user_id' => $uid,
@@ -285,6 +297,7 @@ class Slate_Ops_Executive {
 					$assigned[ $uid ]['active']++;
 					$assigned[ $uid ]['est'] += $est;
 				}
+				$diagnostic_techs[ $uid ] = $lead ?: 'User ' . $uid;
 			}
 
 			if ( Slate_Ops_Statuses::BLOCKED === $status || $row['block_reason'] || $row['block_note'] ) {
@@ -328,6 +341,27 @@ class Slate_Ops_Executive {
 					'tech_state' => $risk,
 				);
 			}
+
+			if ( $is_active || ( Slate_Ops_Statuses::COMPLETE === $status && $logged <= 0 ) ) {
+				$diag_issue = $this->diagnostic_issue( $status, $assigned_user_id, $est, $logged, ! empty( $open_timer_jobs[ $job_id ] ) );
+				$diagnostic_jobs[] = array(
+					'job_id' => $job_id,
+					'so' => $row['so_number'] ?: ( 'Job ' . $job_id ),
+					'cust' => $customer,
+					'status' => Slate_Ops_Statuses::label( $status ),
+					'tech_id' => $assigned_user_id,
+					'tech' => $lead ?: 'Unassigned',
+					'est_minutes' => $est,
+					'logged_minutes' => $logged,
+					'variance_minutes' => $variance,
+					'capture' => $est > 0 ? (int) round( $logged / $est * 100 ) : 0,
+					'last' => isset( $job_last_entry[ $job_id ] ) ? $this->last_label( $job_last_entry[ $job_id ] ) : '-',
+					'issue_key' => $diag_issue['key'],
+					'issue' => $diag_issue['label'],
+					'risk' => $diag_issue['risk'],
+					'action' => $diag_issue['action'],
+				);
+			}
 		}
 
 		$techs = $this->build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_last_entry );
@@ -348,6 +382,7 @@ class Slate_Ops_Executive {
 		$readout = $this->build_readout( $active_count, $jobs_with_logged, $labor_capture_pct, $status_counts, count( $blockers ), count( $open_over_four ) );
 		$trust = $this->build_labor_trust( $estimate_coverage, $labor_capture_pct, $zero_time_completions, count( $open_over_four ) );
 		$blocker_reasons = $this->build_blocker_reasons( $block_reason_counts );
+		$labor_diagnostics = $this->build_labor_diagnostics( $diagnostic_jobs, $diagnostic_techs );
 
 		$this->summary = array(
 			'overview' => array(
@@ -397,6 +432,7 @@ class Slate_Ops_Executive {
 			),
 			'labor_trust' => $trust,
 			'labor_capture_watchlist' => array_slice( $labor_capture_watchlist, 0, 50 ),
+			'labor_diagnostics' => $labor_diagnostics,
 			'bottleneck_kpis' => array(
 				'ready_for_build' => $status_counts[ Slate_Ops_Statuses::READY_FOR_BUILD ] ?? 0,
 				'scheduled' => $status_counts[ Slate_Ops_Statuses::SCHEDULED ] ?? 0,
@@ -430,6 +466,7 @@ class Slate_Ops_Executive {
 			'labor_kpis' => array( 'jobs_with_estimate' => 0, 'jobs_missing_estimate' => 0, 'jobs_with_logged' => 0, 'jobs_no_logged' => 0, 'total_raw_logged' => '0h 0m', 'estimate_coverage' => 0, 'open_timers' => 0, 'zero_time_completions' => 0 ),
 			'labor_trust' => array( 'score' => 0, 'tier' => 'NO DATA', 'desc' => 'No live Slate Ops job data was found.', 'factors' => array() ),
 			'labor_capture_watchlist' => array(),
+			'labor_diagnostics' => $this->build_labor_diagnostics( array(), array() ),
 			'bottleneck_kpis' => array( 'ready_for_build' => 0, 'scheduled' => 0, 'in_progress' => 0, 'qc' => 0, 'blocked' => 0, 'on_hold' => 0, 'cancelled' => 0, 'avg_block_age' => '0.0', 'avg_age_help' => 'No blockers' ),
 			'blocker_reasons' => array(),
 			'blockers' => array(),
@@ -634,6 +671,104 @@ class Slate_Ops_Executive {
 		);
 	}
 
+	private function build_labor_diagnostics( $jobs, $tech_options ) {
+		$filters = $this->diagnostic_filters();
+		$issue_options = $this->diagnostic_issue_options();
+		$filtered = array();
+		$issue_counts = array_fill_keys( array_keys( $issue_options ), 0 );
+		$tech_rollup = array();
+
+		foreach ( $jobs as $job ) {
+			if ( isset( $issue_counts[ $job['issue_key'] ] ) ) {
+				$issue_counts[ $job['issue_key'] ]++;
+			}
+
+			if ( '' !== $filters['job'] ) {
+				$haystack = strtolower( $job['so'] . ' ' . $job['cust'] . ' ' . $job['job_id'] );
+				if ( false === strpos( $haystack, strtolower( $filters['job'] ) ) ) {
+					continue;
+				}
+			}
+			if ( 'all' !== $filters['issue'] && $job['issue_key'] !== $filters['issue'] ) {
+				continue;
+			}
+			if ( 'all' !== $filters['tech'] ) {
+				if ( '0' === $filters['tech'] && (int) $job['tech_id'] !== 0 ) {
+					continue;
+				}
+				if ( '0' !== $filters['tech'] && (int) $job['tech_id'] !== (int) $filters['tech'] ) {
+					continue;
+				}
+			}
+
+			$filtered[] = $job;
+			$tid = (int) $job['tech_id'];
+			if ( ! isset( $tech_rollup[ $tid ] ) ) {
+				$tech_rollup[ $tid ] = array(
+					'tech_id' => $tid,
+					'tech' => $job['tech'],
+					'jobs' => 0,
+					'with_time' => 0,
+					'no_time' => 0,
+					'missing_estimate' => 0,
+					'open_timer' => 0,
+					'est_minutes' => 0,
+					'logged_minutes' => 0,
+					'main_issue' => 'On track',
+					'main_risk' => 'ok',
+				);
+			}
+			$tech_rollup[ $tid ]['jobs']++;
+			$tech_rollup[ $tid ]['est_minutes'] += (int) $job['est_minutes'];
+			$tech_rollup[ $tid ]['logged_minutes'] += (int) $job['logged_minutes'];
+			if ( (int) $job['logged_minutes'] > 0 ) {
+				$tech_rollup[ $tid ]['with_time']++;
+			} else {
+				$tech_rollup[ $tid ]['no_time']++;
+			}
+			if ( 'missing_estimate' === $job['issue_key'] ) {
+				$tech_rollup[ $tid ]['missing_estimate']++;
+			}
+			if ( 'open_timer' === $job['issue_key'] ) {
+				$tech_rollup[ $tid ]['open_timer']++;
+			}
+			if ( $this->diagnostic_risk_rank( $job['risk'] ) < $this->diagnostic_risk_rank( $tech_rollup[ $tid ]['main_risk'] ) ) {
+				$tech_rollup[ $tid ]['main_issue'] = $job['issue'];
+				$tech_rollup[ $tid ]['main_risk'] = $job['risk'];
+			}
+		}
+
+		foreach ( $tech_rollup as &$row ) {
+			$row['capture'] = $row['est_minutes'] > 0 ? (int) round( $row['logged_minutes'] / $row['est_minutes'] * 100 ) : 0;
+			$row['est'] = self::minutes_label( $row['est_minutes'] );
+			$row['logged'] = self::minutes_label( $row['logged_minutes'] );
+			$row['variance'] = self::signed_minutes_label( $row['logged_minutes'] - $row['est_minutes'] );
+		}
+		unset( $row );
+
+		usort( $filtered, array( $this, 'sort_diagnostic_jobs' ) );
+		usort( $tech_rollup, function ( $a, $b ) {
+			return (int) $b['no_time'] === (int) $a['no_time'] ? strcasecmp( $a['tech'], $b['tech'] ) : ( (int) $b['no_time'] <=> (int) $a['no_time'] );
+		} );
+		asort( $tech_options, SORT_NATURAL | SORT_FLAG_CASE );
+
+		return array(
+			'filters' => $filters,
+			'issue_options' => $issue_options,
+			'tech_options' => $tech_options,
+			'issue_counts' => $issue_counts,
+			'summary' => array(
+				'jobs' => count( $filtered ),
+				'with_time' => count( array_filter( $filtered, function ( $job ) { return (int) $job['logged_minutes'] > 0; } ) ),
+				'no_time' => count( array_filter( $filtered, function ( $job ) { return (int) $job['logged_minutes'] <= 0; } ) ),
+				'missing_estimate' => count( array_filter( $filtered, function ( $job ) { return (int) $job['est_minutes'] <= 0; } ) ),
+				'open_timer' => count( array_filter( $filtered, function ( $job ) { return 'open_timer' === $job['issue_key']; } ) ),
+			),
+			'by_tech' => array_values( $tech_rollup ),
+			'jobs' => array_slice( $filtered, 0, 100 ),
+		);
+	}
+
 	private function build_blocker_reasons( $counts ) {
 		if ( empty( $counts ) ) {
 			return array( array( 'label' => 'None', 'count' => 0, 'delta' => '-', 'kind' => '' ) );
@@ -751,6 +886,70 @@ class Slate_Ops_Executive {
 			return 'Missing estimate';
 		}
 		return $reason ?: Slate_Ops_Statuses::label( $status );
+	}
+
+	private function diagnostic_issue( $status, $assigned_user_id, $est, $logged, $has_open_timer ) {
+		if ( Slate_Ops_Statuses::COMPLETE === $status && $logged <= 0 ) {
+			return array( 'key' => 'zero_time_complete', 'label' => 'Complete with no time', 'risk' => 'crit', 'action' => 'Backfill or void time' );
+		}
+		if ( $assigned_user_id <= 0 ) {
+			return array( 'key' => 'no_tech', 'label' => 'No assigned tech', 'risk' => 'crit', 'action' => 'Assign a lead tech' );
+		}
+		if ( $logged <= 0 ) {
+			return array( 'key' => 'no_time', 'label' => 'No logged time', 'risk' => 'crit', 'action' => 'Verify clock-in' );
+		}
+		if ( $est <= 0 ) {
+			return array( 'key' => 'missing_estimate', 'label' => 'Missing estimate', 'risk' => 'warn', 'action' => 'Add labor estimate' );
+		}
+		if ( $has_open_timer ) {
+			return array( 'key' => 'open_timer', 'label' => 'Open timer over 4h', 'risk' => 'warn', 'action' => 'Confirm with tech' );
+		}
+		if ( $logged > $est ) {
+			return array( 'key' => 'over_estimate', 'label' => 'Over estimate', 'risk' => 'watch', 'action' => 'Review estimate vs work' );
+		}
+		return array( 'key' => 'on_track', 'label' => 'On track', 'risk' => 'ok', 'action' => 'No action' );
+	}
+
+	private function diagnostic_issue_options() {
+		return array(
+			'no_tech' => 'No assigned tech',
+			'no_time' => 'No logged time',
+			'missing_estimate' => 'Missing estimate',
+			'open_timer' => 'Open timer over 4h',
+			'over_estimate' => 'Over estimate',
+			'zero_time_complete' => 'Complete with no time',
+			'on_track' => 'On track',
+		);
+	}
+
+	private function diagnostic_filters() {
+		$issue_options = $this->diagnostic_issue_options();
+		$issue = isset( $_GET['diag_issue'] ) ? sanitize_key( wp_unslash( $_GET['diag_issue'] ) ) : 'all'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'all' !== $issue && ! isset( $issue_options[ $issue ] ) ) {
+			$issue = 'all';
+		}
+
+		$tech = isset( $_GET['diag_tech'] ) ? sanitize_text_field( wp_unslash( $_GET['diag_tech'] ) ) : 'all'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'all' !== $tech && '0' !== $tech ) {
+			$tech = (string) max( 0, absint( $tech ) );
+		}
+
+		return array(
+			'tech' => $tech,
+			'issue' => $issue,
+			'job' => isset( $_GET['diag_job'] ) ? sanitize_text_field( wp_unslash( $_GET['diag_job'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		);
+	}
+
+	private function diagnostic_risk_rank( $risk ) {
+		$order = array( 'crit' => 0, 'warn' => 1, 'watch' => 2, 'ok' => 3 );
+		return $order[ $risk ] ?? 4;
+	}
+
+	private function sort_diagnostic_jobs( $a, $b ) {
+		$ra = $this->diagnostic_risk_rank( $a['risk'] );
+		$rb = $this->diagnostic_risk_rank( $b['risk'] );
+		return $ra === $rb ? strcmp( $a['so'], $b['so'] ) : ( $ra <=> $rb );
 	}
 
 	private function block_reason_label( $reason, $note ) {

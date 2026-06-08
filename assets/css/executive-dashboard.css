@@ -401,6 +401,34 @@
 	border: 0; outline: 0; background: transparent; font-family: inherit;
 	font-size: 11.5px; color: var(--ink-2); cursor: pointer;
 }
+.so-exec .field-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 32px;
+	padding: 5px 11px;
+	border: 1px solid var(--rule);
+	border-radius: 5px;
+	background: var(--card);
+	color: var(--ink-2);
+	font-size: 12px;
+	font-weight: 500;
+}
+.so-exec .field-chip select {
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--ink);
+	font-family: inherit;
+	font-size: 12px;
+	cursor: pointer;
+}
+.so-exec .diag-filters .search {
+	flex: 1 1 280px;
+}
+.so-exec .diag-reasons {
+	border-top: 0;
+}
 
 /* ---------- Help-card (info banner) ---- */
 .so-exec .help-card {
