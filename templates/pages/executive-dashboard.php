@@ -250,8 +250,8 @@ $blocks = $exec->get_blockers();
 						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
 						<input placeholder="Search tech…" type="search" data-tech-filter="search" />
 					</div>
-					<button class="chip toggle" type="button" data-tech-filter="issues">Has issues</button>
-					<button class="chip toggle on" type="button" data-tech-filter="active">Active only</button>
+					<button class="chip toggle" type="button" data-tech-filter="issues" aria-pressed="false">Has issues</button>
+					<button class="chip toggle on" type="button" data-tech-filter="active" aria-pressed="true">Active only</button>
 					<div style="flex:1"></div>
 					<span class="chip" style="cursor:default">Sort:&nbsp;
 						<select data-tech-sort>
@@ -308,7 +308,10 @@ $blocks = $exec->get_blockers();
 							data-tech-capture="<?php echo (int) $t['capture']; ?>"
 							data-tech-issues="<?php echo empty( $t['flags'] ) ? '0' : '1'; ?>">
 							<td class="tech">
-								<?php echo Slate_Ops_Executive::avatar_html( $t['name'], $t['state'] ); ?><?php echo esc_html( $t['name'] ); ?>
+								<div class="tech-main">
+									<?php echo Slate_Ops_Executive::avatar_html( $t['name'], $t['state'] ); ?>
+									<span><?php echo esc_html( $t['name'] ); ?></span>
+								</div>
 								<?php if ( ! empty( $t['note'] ) ) : ?>
 									<span class="sub"><?php echo esc_html( $t['note'] ); ?></span>
 								<?php endif; ?>

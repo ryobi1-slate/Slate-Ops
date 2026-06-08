@@ -67,6 +67,11 @@
 		var rows = $$('[data-tech-row]', pane);
 		var total = rows.length;
 
+		function setPressed(chip) {
+			if (!chip) return;
+			chip.setAttribute('aria-pressed', chip.classList.contains('on') ? 'true' : 'false');
+		}
+
 		function minutes(row, attr) {
 			return parseInt(row.getAttribute(attr) || '0', 10) || 0;
 		}
@@ -135,10 +140,20 @@
 		}
 
 		if (search) search.addEventListener('input', apply);
-		if (issuesChip) issuesChip.addEventListener('click', function () { issuesChip.classList.toggle('on'); apply(); });
-		if (activeChip) activeChip.addEventListener('click', function () { activeChip.classList.toggle('on'); apply(); });
+		if (issuesChip) issuesChip.addEventListener('click', function () {
+			issuesChip.classList.toggle('on');
+			setPressed(issuesChip);
+			apply();
+		});
+		if (activeChip) activeChip.addEventListener('click', function () {
+			activeChip.classList.toggle('on');
+			setPressed(activeChip);
+			apply();
+		});
 		if (windowSel) windowSel.addEventListener('change', apply);
 		if (sortSel) sortSel.addEventListener('change', apply);
+		setPressed(issuesChip);
+		setPressed(activeChip);
 		apply();
 	}
 
