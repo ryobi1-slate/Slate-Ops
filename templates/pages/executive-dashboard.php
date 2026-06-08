@@ -456,7 +456,7 @@ $blocks = $exec->get_blockers();
 				<div class="kpi flag-crit">
 					<div class="k-label">Blocked <span class="k-status crit">4+ days</span></div>
 					<div class="k-value"><?php echo (int) $bk['blocked']; ?></div>
-					<div class="k-help">4 critical · 5 watch</div>
+					<div class="k-help"><?php echo esc_html( $bk['blocked_breakdown'] ); ?></div>
 				</div>
 				<div class="kpi"><div class="k-label">On Hold</div><div class="k-value"><?php echo (int) $bk['on_hold']; ?></div></div>
 				<div class="kpi"><div class="k-label">Cancelled</div><div class="k-value"><?php echo (int) $bk['cancelled']; ?></div></div>

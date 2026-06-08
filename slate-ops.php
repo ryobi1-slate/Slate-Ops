@@ -47,7 +47,7 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-resource-hub.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-cs.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-supervisor-dashboard.php';
 
-// Executive Dashboard data layer (server-rendered, stub data for now)
+// Executive Dashboard data layer (server-rendered, live job/time rollups)
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-executive.php';
 
 // Scheduler services (Phase 0)
