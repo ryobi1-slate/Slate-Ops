@@ -179,6 +179,7 @@ class Slate_Ops_Executive {
 		$tech_week = array();
 		$tech_job_ids = array();
 		$tech_last_entry = array();
+		$tech_open_timers = array();
 		$tech_names = array();
 
 		if ( $has_segments ) {
@@ -230,6 +231,11 @@ class Slate_Ops_Executive {
 					if ( $minutes >= 240 ) {
 						$open_timer_jobs[ $job_id ] = true;
 					}
+					if ( ! isset( $tech_open_timers[ $user_id ] ) ) {
+						$tech_open_timers[ $user_id ] = array( 'count' => 0, 'minutes' => 0 );
+					}
+					$tech_open_timers[ $user_id ]['count']++;
+					$tech_open_timers[ $user_id ]['minutes'] += $minutes;
 				}
 			}
 		}
@@ -250,6 +256,7 @@ class Slate_Ops_Executive {
 		$labor_capture_watchlist = array();
 		$diagnostic_jobs = array();
 		$diagnostic_techs = array();
+		$tech_job_details = array();
 
 		foreach ( $rows as $row ) {
 			$status = Slate_Ops_Statuses::normalize( (string) $row['status'] );
@@ -303,6 +310,27 @@ class Slate_Ops_Executive {
 					$assigned[ $uid ]['est'] += $est;
 				}
 				$diagnostic_techs[ $uid ] = $lead ?: 'User ' . $uid;
+			}
+
+			if ( $assigned_user_id ) {
+				$diag_issue = $this->diagnostic_issue( $status, $assigned_user_id, $est, $logged, ! empty( $open_timer_jobs[ $job_id ] ) );
+				if ( ! isset( $tech_job_details[ $assigned_user_id ] ) ) {
+					$tech_job_details[ $assigned_user_id ] = array();
+				}
+				$tech_job_details[ $assigned_user_id ][] = array(
+					'so' => $row['so_number'] ?: ( 'Job ' . $job_id ),
+					'cust' => $customer,
+					'status' => Slate_Ops_Statuses::label( $status ),
+					'est' => self::minutes_label( $est ),
+					'logged' => self::minutes_label( $logged ),
+					'variance' => self::signed_minutes_label( $variance ),
+					'variance_minutes' => $variance,
+					'capture' => $used,
+					'issue' => $diag_issue['label'],
+					'issue_key' => $diag_issue['key'],
+					'risk' => $diag_issue['risk'],
+					'action' => $diag_issue['action'],
+				);
 			}
 
 			if ( Slate_Ops_Statuses::BLOCKED === $status || $row['block_reason'] || $row['block_note'] ) {
@@ -369,7 +397,7 @@ class Slate_Ops_Executive {
 			}
 		}
 
-		$techs = $this->build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_job_ids, $tech_last_entry );
+		$techs = $this->build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_job_ids, $tech_last_entry, $tech_open_timers, $tech_job_details );
 		$active_count = count( $active_rows );
 		$missing_time = max( 0, $active_count - $jobs_with_logged );
 		$missing_estimate = max( 0, $active_count - $jobs_with_estimate );
@@ -557,7 +585,7 @@ class Slate_Ops_Executive {
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: array();
 	}
 
-	private function build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_job_ids, $tech_last_entry ) {
+	private function build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_job_ids, $tech_last_entry, $tech_open_timers, $tech_job_details ) {
 		$uids = array_unique( array_merge( array_keys( $assigned ), array_keys( $tech_minutes ) ) );
 		$out = array();
 		foreach ( $uids as $uid ) {
@@ -572,25 +600,47 @@ class Slate_Ops_Executive {
 			$touched_jobs = isset( $tech_job_ids[ $uid ] ) && is_array( $tech_job_ids[ $uid ] ) ? count( $tech_job_ids[ $uid ] ) : 0;
 			$est = (int) ( $a['est'] ?? 0 );
 			$capture = $est > 0 ? (int) round( $logged / $est * 100 ) : 0;
+			$open_timer_count = (int) ( $tech_open_timers[ $uid ]['count'] ?? 0 );
+			$open_timer_minutes = (int) ( $tech_open_timers[ $uid ]['minutes'] ?? 0 );
 			$flags = array();
+			if ( $logged <= 0 && (int) $a['active'] > 0 ) {
+				$flags[] = array( 'key' => 'no_period', 'text' => 'No period time', 'kind' => 'crit' );
+			}
 			if ( $today <= 0 && (int) $a['active'] > 0 ) {
-				$flags[] = array( 'text' => 'No time today', 'kind' => 'warn' );
+				$flags[] = array( 'key' => 'no_today', 'text' => 'No time today', 'kind' => 'watch' );
 			}
 			if ( $week <= 0 && (int) $a['active'] > 0 ) {
-				$flags[] = array( 'text' => 'No time this week', 'kind' => 'crit' );
+				$flags[] = array( 'key' => 'no_week', 'text' => 'No time this week', 'kind' => 'crit' );
 			}
 			if ( $est > 0 && $logged > $est ) {
-				$flags[] = array( 'text' => 'Over estimate', 'kind' => 'warn' );
+				$flags[] = array( 'key' => 'over_estimate', 'text' => 'Over estimate', 'kind' => 'warn' );
 			}
+			if ( $est > 0 && $logged > 0 && $capture < 60 ) {
+				$flags[] = array( 'key' => 'low_capture', 'text' => 'Low capture', 'kind' => 'warn' );
+			}
+			if ( $open_timer_count > 0 ) {
+				$flags[] = array( 'key' => 'open_timer', 'text' => 'Open timer', 'kind' => 'warn' );
+			}
+			$jobs = $tech_job_details[ $uid ] ?? array();
+			usort( $jobs, array( $this, 'sort_tech_focus_jobs' ) );
+			$issue_keys = array_values( array_unique( array_map( function ( $flag ) {
+				return $flag['key'];
+			}, $flags ) ) );
+			$attention_score = $this->tech_attention_score( (int) $a['active'], $logged, $today, $week, $est, $capture, $open_timer_count, $jobs );
+			$risk_key = $this->tech_risk_key( $flags, $capture, (int) $a['active'] );
 			$out[] = array(
 				'name' => $a['name'],
 				'state' => $this->tech_state( $flags, $capture, (int) $a['active'] ),
+				'risk_key' => $risk_key,
+				'risk_label' => $this->tech_risk_label( $risk_key ),
 				'assigned' => (int) $a['assigned'],
 				'active' => (int) $a['active'],
 				'touched_jobs' => $touched_jobs,
 				'period_minutes' => $logged,
 				'today_minutes' => $today,
 				'week_minutes' => $week,
+				'open_timer_count' => $open_timer_count,
+				'open_timer_minutes' => $open_timer_minutes,
 				'today' => self::minutes_label( $today ),
 				'week' => self::minutes_label( $week ),
 				'est' => self::minutes_label( $est ),
@@ -601,8 +651,13 @@ class Slate_Ops_Executive {
 				'capture' => $capture,
 				'capture_flag' => $capture <= 0 && (int) $a['active'] > 0 ? 'crit' : ( $capture < 60 ? 'warn' : 'ok' ),
 				'flags' => $flags,
+				'issue_keys' => $issue_keys,
+				'attention_score' => $attention_score,
+				'primary_action' => $this->tech_primary_action( $flags, (int) $a['active'], $logged, $open_timer_count ),
+				'focus_jobs' => array_slice( $jobs, 0, 3 ),
 				'note' => isset( $tech_last_entry[ $uid ] ) ? 'Last entry ' . $this->last_label( $tech_last_entry[ $uid ] ) : '',
 				'last_entry' => isset( $tech_last_entry[ $uid ] ) ? $this->last_label( $tech_last_entry[ $uid ] ) : '-',
+				'last_entry_ts' => isset( $tech_last_entry[ $uid ] ) ? strtotime( $tech_last_entry[ $uid ] ) : 0,
 			);
 		}
 		usort( $out, function ( $a, $b ) {
@@ -998,12 +1053,108 @@ class Slate_Ops_Executive {
 	}
 
 	private function tech_state( $flags, $capture, $active ) {
+		$risk = $this->tech_risk_key( $flags, $capture, $active );
+		if ( 'critical' === $risk ) {
+			return 'crit';
+		}
+		if ( in_array( $risk, array( 'warning', 'watch' ), true ) ) {
+			return 'warn';
+		}
+		return 'ok';
+	}
+
+	private function tech_risk_key( $flags, $capture, $active ) {
 		foreach ( $flags as $f ) {
 			if ( 'crit' === $f['kind'] ) {
-				return 'crit';
+				return 'critical';
 			}
 		}
-		return $active > 0 && $capture < 60 ? 'warn' : 'ok';
+		foreach ( $flags as $f ) {
+			if ( 'warn' === $f['kind'] ) {
+				return 'warning';
+			}
+		}
+		foreach ( $flags as $f ) {
+			if ( 'watch' === $f['kind'] ) {
+				return 'watch';
+			}
+		}
+		return $active > 0 && $capture < 60 ? 'warning' : 'ok';
+	}
+
+	private function tech_risk_label( $risk ) {
+		$labels = array(
+			'critical' => 'Critical',
+			'warning' => 'Warning',
+			'watch' => 'Watch',
+			'ok' => 'On track',
+		);
+		return $labels[ $risk ] ?? 'On track';
+	}
+
+	private function tech_primary_action( $flags, $active, $logged, $open_timer_count ) {
+		if ( $open_timer_count > 0 ) {
+			return 'Confirm open timer';
+		}
+		foreach ( $flags as $flag ) {
+			if ( 'no_period' === $flag['key'] ) {
+				return 'Confirm clock-in';
+			}
+			if ( 'no_week' === $flag['key'] ) {
+				return 'Check weekly time';
+			}
+			if ( 'over_estimate' === $flag['key'] ) {
+				return 'Review estimate';
+			}
+			if ( 'low_capture' === $flag['key'] ) {
+				return 'Review low capture';
+			}
+		}
+		if ( $active > 0 && $logged > 0 ) {
+			return 'Monitor workload';
+		}
+		return 'No active work';
+	}
+
+	private function tech_attention_score( $active, $logged, $today, $week, $est, $capture, $open_timer_count, $jobs ) {
+		$score = 0;
+		if ( $active > 0 && $logged <= 0 ) {
+			$score += 800;
+		}
+		if ( $active > 0 && $week <= 0 ) {
+			$score += 450;
+		}
+		if ( $active > 0 && $today <= 0 ) {
+			$score += 250;
+		}
+		if ( $est > 0 && $logged > $est ) {
+			$score += 350 + min( 300, $logged - $est );
+		}
+		if ( $est > 0 && $logged > 0 && $capture < 60 ) {
+			$score += 200;
+		}
+		$score += $open_timer_count * 300;
+		foreach ( $jobs as $job ) {
+			if ( 'crit' === $job['risk'] ) {
+				$score += 80;
+			} elseif ( 'warn' === $job['risk'] ) {
+				$score += 50;
+			} elseif ( 'watch' === $job['risk'] ) {
+				$score += 25;
+			}
+		}
+		return $score;
+	}
+
+	private function sort_tech_focus_jobs( $a, $b ) {
+		$ra = $this->diagnostic_risk_rank( $a['risk'] );
+		$rb = $this->diagnostic_risk_rank( $b['risk'] );
+		if ( $ra !== $rb ) {
+			return $ra <=> $rb;
+		}
+		$va = abs( (int) $a['variance_minutes'] );
+		$vb = abs( (int) $b['variance_minutes'] );
+		return $va === $vb ? strcmp( $a['so'], $b['so'] ) : ( $vb <=> $va );
 	}
 
 	private function sort_jobs_by_risk( $a, $b ) {

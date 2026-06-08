@@ -191,9 +191,13 @@ add_action('wp_enqueue_scripts', function() {
     }
     $ver_exec_css = file_exists(SLATE_OPS_PATH . 'assets/css/executive-dashboard.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/executive-dashboard.css') : SLATE_OPS_VERSION;
     $ver_exec_js  = file_exists(SLATE_OPS_PATH . 'assets/js/executive-dashboard.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/executive-dashboard.js')   : SLATE_OPS_VERSION;
+    $ver_tech_overview_css = file_exists(SLATE_OPS_PATH . 'assets/css/tech-overview.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/tech-overview.css') : SLATE_OPS_VERSION;
+    $ver_tech_overview_js  = file_exists(SLATE_OPS_PATH . 'assets/js/tech-overview.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/tech-overview.js')   : SLATE_OPS_VERSION;
     wp_enqueue_style('slate-ops-executive',  SLATE_OPS_URL . 'assets/css/executive-dashboard.css', ['slate-ops-shell'], $ver_exec_css);
     $enqueue_design_language(['slate-ops-executive']);
+    wp_enqueue_style('slate-ops-tech-overview', SLATE_OPS_URL . 'assets/css/tech-overview.css', ['slate-ops-design-language'], $ver_tech_overview_css);
     wp_enqueue_script('slate-ops-executive', SLATE_OPS_URL . 'assets/js/executive-dashboard.js',   [],                  $ver_exec_js,  true);
+    wp_enqueue_script('slate-ops-tech-overview', SLATE_OPS_URL . 'assets/js/tech-overview.js', [], $ver_tech_overview_js, true);
   } elseif ($is_quality) {
     $route_blocked_quality = !slate_ops_current_user_can_access_ops_page('quality');
     if ($route_blocked_quality) {

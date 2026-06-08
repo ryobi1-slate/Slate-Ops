@@ -302,6 +302,7 @@
 .so-exec .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
 
 /* ---------- Tables (matches Purchasing .pur-table) ---- */
+.so-exec .table-scroll { overflow-x: auto; }
 .so-exec .t { width: 100%; border-collapse: collapse; font-size: 13px; }
 .so-exec .t th, .so-exec .t td { padding: 11px 16px; text-align: left; }
 .so-exec .t thead tr { background: var(--thead-bg); border-bottom: 1px solid var(--rule); }
@@ -333,6 +334,33 @@
 	font-size: 11px; line-height: 1.35; color: var(--muted);
 }
 .so-exec .t .action { color: var(--slate-sage); font-weight: 500; }
+.so-exec .t .focus-jobs {
+	min-width: 260px;
+	max-width: 360px;
+}
+.so-exec .focus-job {
+	display: grid;
+	grid-template-columns: minmax(86px, auto) 1fr;
+	gap: 3px 8px;
+	align-items: center;
+	padding: 4px 0;
+	border-bottom: 1px solid var(--rule-2);
+}
+.so-exec .focus-job:last-child { border-bottom: 0; }
+.so-exec .focus-job .tag,
+.so-exec .focus-job .sub { grid-column: 2; }
+.so-exec .focus-job .sub {
+	padding: 0;
+	font-size: 11px;
+	line-height: 1.3;
+	color: var(--muted);
+}
+.so-exec .focus-so {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 11px;
+	color: var(--ink-2);
+	white-space: nowrap;
+}
 .so-exec .bad { color: var(--crit); font-weight: 500; }
 .so-exec .foot {
 	display: flex; justify-content: space-between; padding: 10px 16px;

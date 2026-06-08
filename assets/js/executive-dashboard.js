@@ -70,6 +70,7 @@
 		var search = $('[data-tech-filter="search"]', pane);
 		var issuesChip = $('[data-tech-filter="issues"]', pane);
 		var activeChip = $('[data-tech-filter="active"]', pane);
+		var issueSel = $('[data-tech-filter="issue"]', pane);
 		var windowSel = $('[data-tech-filter="window"]', pane);
 		var sortSel = $('[data-tech-sort]', pane);
 		var counter = $('[data-tech-count]', pane);
@@ -77,6 +78,7 @@
 		var tbody = $('tbody', pane);
 		var rows = $$('[data-tech-row]', pane);
 		var total = rows.length;
+		if (!total) return;
 
 		function setPressed(chip) {
 			if (!chip) return;
@@ -88,17 +90,7 @@
 		}
 
 		function attentionScore(row) {
-			var active = minutes(row, 'data-tech-active');
-			var period = minutes(row, 'data-tech-period');
-			var variance = minutes(row, 'data-tech-variance');
-			var capture = minutes(row, 'data-tech-capture');
-			var hasIssues = row.getAttribute('data-tech-issues') === '1';
-			var score = 0;
-			if (hasIssues) score += 1000;
-			if (active > 0 && period <= 0) score += 700;
-			if (variance > 0) score += 400 + Math.min(variance, 999);
-			if (capture <= 0 && active > 0) score += 250;
-			return score;
+			return minutes(row, 'data-tech-attention');
 		}
 
 		function sortRows() {
@@ -113,6 +105,7 @@
 				if (mode === 'capture-asc') return minutes(a, 'data-tech-capture') - minutes(b, 'data-tech-capture') || an.localeCompare(bn);
 				if (mode === 'capture-desc') return minutes(b, 'data-tech-capture') - minutes(a, 'data-tech-capture') || an.localeCompare(bn);
 				if (mode === 'variance-desc') return minutes(b, 'data-tech-variance') - minutes(a, 'data-tech-variance') || an.localeCompare(bn);
+				if (mode === 'last-asc') return minutes(a, 'data-tech-last') - minutes(b, 'data-tech-last') || an.localeCompare(bn);
 				return attentionScore(b) - attentionScore(a) || an.localeCompare(bn);
 			});
 			sorted.forEach(function (row) { tbody.appendChild(row); });
@@ -123,6 +116,7 @@
 			var q = search ? (search.value || '').trim().toLowerCase() : '';
 			var issuesOnly = issuesChip && issuesChip.classList.contains('on');
 			var activeOnly = activeChip && activeChip.classList.contains('on');
+			var issueValue = issueSel ? issueSel.value : 'all';
 			var windowValue = windowSel ? windowSel.value : 'all';
 			var shown = 0;
 
@@ -134,10 +128,12 @@
 				var today = minutes(row, 'data-tech-today');
 				var week = minutes(row, 'data-tech-week');
 				var hasIssues = row.getAttribute('data-tech-issues') === '1';
+				var issueKeys = ',' + (row.getAttribute('data-tech-issue-keys') || '') + ',';
 
 				if (q && name.indexOf(q) === -1) ok = false;
 				if (issuesOnly && !hasIssues) ok = false;
 				if (activeOnly && active <= 0) ok = false;
+				if (issueValue !== 'all' && issueKeys.indexOf(',' + issueValue + ',') === -1) ok = false;
 				if (windowValue === 'today' && today <= 0) ok = false;
 				if (windowValue === 'week' && week <= 0) ok = false;
 				if (windowValue === 'no-week' && week > 0) ok = false;
@@ -161,6 +157,7 @@
 			setPressed(activeChip);
 			apply();
 		});
+		if (issueSel) issueSel.addEventListener('change', apply);
 		if (windowSel) windowSel.addEventListener('change', apply);
 		if (sortSel) sortSel.addEventListener('change', apply);
 		setPressed(issuesChip);
