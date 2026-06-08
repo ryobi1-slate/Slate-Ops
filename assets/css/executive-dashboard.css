@@ -80,6 +80,51 @@
 .so-exec .page-meta b { color: var(--ink); font-weight: 600; }
 .so-exec .page-meta .sep { color: var(--rule); }
 .so-exec .page-meta .crit b { color: var(--crit); }
+.so-exec .period-filter {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+}
+.so-exec .period-filter label {
+	color: var(--muted);
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+.so-exec .period-filter select {
+	-webkit-appearance: none;
+	appearance: none;
+	min-height: 28px;
+	padding: 4px 26px 4px 9px;
+	border: 1px solid var(--rule);
+	border-radius: 999px;
+	background: var(--card);
+	color: var(--ink);
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.so-exec .period-filter button {
+	min-height: 28px;
+	padding: 4px 10px;
+	border: 1px solid var(--rule);
+	border-radius: 999px;
+	background: var(--row-hover);
+	color: var(--ink-2);
+	font-family: inherit;
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.so-exec .period-filter select:focus-visible,
+.so-exec .period-filter button:focus-visible {
+	outline: 2px solid rgba(64, 79, 75, 0.35);
+	outline-offset: 2px;
+}
 
 /* ---------- Tabs ---- */
 /* Hardened against WP theme/button defaults that may inject pink/blue

@@ -19,6 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $exec = Slate_Ops_Executive::instance();
+$period = $exec->get_period();
+$period_options = Slate_Ops_Executive::period_options();
 $ov   = $exec->get_overview_kpis();
 $read = $exec->get_executive_readout();
 $lwl  = $exec->get_labor_watchlist();
@@ -49,7 +51,15 @@ $blocks = $exec->get_blockers();
 				<div class="page-sub">Job costing, performance tracking, and labor capture · Shop PDX-01</div>
 			</div>
 			<div class="page-meta">
-				<span>Period <b>30 days</b></span>
+				<form class="period-filter" method="get" action="<?php echo esc_url( home_url( '/ops/exec' ) ); ?>">
+					<label for="so-exec-period">Period</label>
+					<select id="so-exec-period" name="period" data-period-select>
+						<?php foreach ( $period_options as $key => $option ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $period['key'], $key ); ?>><?php echo esc_html( $option['label'] ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<button type="submit">Apply</button>
+				</form>
 				<span class="sep">·</span>
 				<span>WIP <b><?php echo (int) $bk['in_progress'] + (int) $bk['qc']; ?></b></span>
 				<span class="sep">·</span>
@@ -172,7 +182,7 @@ $blocks = $exec->get_blockers();
 						<?php endforeach; ?>
 						</tbody>
 					</table>
-					<div class="foot"><span>Source · Time entries 30d</span><span><?php echo count( $lwl ); ?> of <?php echo count( $lwl ); ?></span></div>
+					<div class="foot"><span>Source · Time entries · <?php echo esc_html( $period['label'] ); ?></span><span><?php echo count( $lwl ); ?> of <?php echo count( $lwl ); ?></span></div>
 				</div>
 
 				<div class="card">
@@ -318,7 +328,7 @@ $blocks = $exec->get_blockers();
 					<button class="chip" type="button">Status <span class="caret">▾</span></button>
 					<button class="chip" type="button">Lead Tech <span class="caret">▾</span></button>
 					<button class="chip" type="button">Job Type <span class="caret">▾</span></button>
-					<button class="chip" type="button">Last 30 days <span class="caret">▾</span></button>
+					<button class="chip" type="button"><?php echo esc_html( $period['label'] ); ?> <span class="caret">▾</span></button>
 					<button class="chip toggle" type="button" data-filter="over">Over estimate</button>
 					<button class="chip toggle" type="button" data-filter="missing">Missing time</button>
 					<div style="flex:1"></div>
@@ -442,7 +452,7 @@ $blocks = $exec->get_blockers();
 					<?php endforeach; ?>
 					</tbody>
 				</table>
-				<div class="foot"><span>Showing <?php echo count( $lcwl ); ?> of <?php echo count( $lcwl ); ?></span><span>Source · Time entries · Live</span></div>
+				<div class="foot"><span>Showing <?php echo count( $lcwl ); ?> of <?php echo count( $lcwl ); ?></span><span>Source · Time entries · <?php echo esc_html( $period['label'] ); ?></span></div>
 			</div>
 		</section>
 
@@ -470,7 +480,7 @@ $blocks = $exec->get_blockers();
 			<div class="card">
 				<div class="card-head">
 					<h3>Blocker Reasons</h3>
-					<div class="actions"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase"><?php echo (int) $bk['blocked']; ?> blocked · last 30 days</span></div>
+					<div class="actions"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase"><?php echo (int) $bk['blocked']; ?> blocked · <?php echo esc_html( $period['label'] ); ?></span></div>
 				</div>
 				<div class="reason-grid">
 					<?php foreach ( $br as $r ) : ?>

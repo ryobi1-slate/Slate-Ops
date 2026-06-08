@@ -90,8 +90,17 @@
 		});
 	}
 
+	function bindPeriodFilter() {
+		var select = $('[data-period-select]');
+		if (!select || !select.form) return;
+		select.addEventListener('change', function () {
+			select.form.submit();
+		});
+	}
+
 	function init() {
 		bindTabs();
+		bindPeriodFilter();
 		bindJobFilters();
 		bindChipToggles();
 	}

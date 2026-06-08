@@ -16,6 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Slate_Ops_Executive {
 
 	private $summary = null;
+	private $period = null;
 
 	/** Singleton accessor (matches Purchasing pattern). */
 	public static function instance() {
@@ -100,6 +101,45 @@ class Slate_Ops_Executive {
 		return $s['blockers'];
 	}
 
+	public function get_period() {
+		if ( null !== $this->period ) {
+			return $this->period;
+		}
+
+		$key = isset( $_GET['period'] ) ? sanitize_key( wp_unslash( $_GET['period'] ) ) : '30'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$options = self::period_options();
+		if ( ! isset( $options[ $key ] ) ) {
+			$key = '30';
+		}
+
+		$cutoff = null;
+		if ( 'today' === $key ) {
+			$cutoff = gmdate( 'Y-m-d 00:00:00', strtotime( Slate_Ops_Utils::now_gmt() ) );
+		} elseif ( $options[ $key ]['days'] ) {
+			$cutoff = gmdate( 'Y-m-d H:i:s', strtotime( Slate_Ops_Utils::now_gmt() ) - ( (int) $options[ $key ]['days'] * DAY_IN_SECONDS ) );
+		}
+
+		$this->period = array(
+			'key' => $key,
+			'label' => $options[ $key ]['label'],
+			'short_label' => $options[ $key ]['short_label'],
+			'days' => $options[ $key ]['days'],
+			'cutoff' => $cutoff,
+		);
+
+		return $this->period;
+	}
+
+	public static function period_options() {
+		return array(
+			'today' => array( 'label' => 'Today', 'short_label' => 'Today', 'days' => 1 ),
+			'7' => array( 'label' => 'Last 7 days', 'short_label' => '7 days', 'days' => 7 ),
+			'30' => array( 'label' => 'Last 30 days', 'short_label' => '30 days', 'days' => 30 ),
+			'90' => array( 'label' => 'Last 90 days', 'short_label' => '90 days', 'days' => 90 ),
+			'all' => array( 'label' => 'All time', 'short_label' => 'All time', 'days' => null ),
+		);
+	}
+
 	/* -----------------------------------------------------------------
 	 * Live data snapshot
 	 * --------------------------------------------------------------- */
@@ -121,35 +161,9 @@ class Slate_Ops_Executive {
 
 		$has_segments = $this->table_exists( $segs_t );
 		$active_statuses = Slate_Ops_Statuses::active();
+		$period = $this->get_period();
 
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT
-					j.job_id,
-					j.so_number,
-					j.customer_name,
-					j.dealer_name,
-					j.status,
-					j.status_updated_at,
-					j.updated_at,
-					j.created_at,
-					j.assigned_user_id,
-					COALESCE(u.display_name, '') AS assigned_name,
-					COALESCE(j.estimated_minutes, 0) AS estimated_minutes,
-					COALESCE(j.actual_minutes_approved, 0) AS cached_approved,
-					COALESCE(j.actual_minutes_pending, 0) AS cached_pending,
-					j.block_reason,
-					j.block_note,
-					j.block_owner
-				FROM $jobs_t j
-				LEFT JOIN {$wpdb->users} u ON u.ID = j.assigned_user_id
-				WHERE j.archived_at IS NULL
-				ORDER BY j.status ASC, j.priority ASC, j.updated_at DESC
-				LIMIT %d",
-				500
-			),
-			ARRAY_A
-		) ?: array();
+		$rows = $this->fetch_jobs( $jobs_t, $active_statuses, $period );
 
 		$job_minutes = array();
 		$job_last_entry = array();
@@ -161,21 +175,7 @@ class Slate_Ops_Executive {
 		$tech_names = array();
 
 		if ( $has_segments ) {
-			$time_rows = $wpdb->get_results(
-				"SELECT
-					s.job_id,
-					s.user_id,
-					COALESCE(u.display_name, '') AS tech_name,
-					s.start_ts,
-					s.end_ts,
-					s.state,
-					s.approval_status,
-					TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, UTC_TIMESTAMP())) AS minutes
-				FROM $segs_t s
-				LEFT JOIN {$wpdb->users} u ON u.ID = s.user_id
-				WHERE s.approval_status != 'voided'",
-				ARRAY_A
-			) ?: array();
+			$time_rows = $this->fetch_time_rows( $segs_t, $period );
 
 			foreach ( $time_rows as $tr ) {
 				$job_id = (int) $tr['job_id'];
@@ -390,6 +390,7 @@ class Slate_Ops_Executive {
 				'jobs_with_logged' => $jobs_with_logged,
 				'jobs_no_logged' => $missing_time,
 				'total_raw_logged' => self::minutes_label( $total_logged ),
+				'period_label' => $period['label'],
 				'estimate_coverage' => $estimate_coverage,
 				'open_timers' => count( $open_over_four ),
 				'zero_time_completions' => $zero_time_completions,
@@ -407,6 +408,7 @@ class Slate_Ops_Executive {
 				'cancelled' => $status_counts[ Slate_Ops_Statuses::CANCELLED ] ?? 0,
 				'avg_block_age' => $this->average_block_age( $blockers ),
 				'avg_age_help' => 'Live from job blocker state',
+				'period_label' => $period['label'],
 			),
 			'blocker_reasons' => $blocker_reasons,
 			'blockers' => array_slice( $blockers, 0, 50 ),
@@ -437,6 +439,78 @@ class Slate_Ops_Executive {
 	/* -----------------------------------------------------------------
 	 * Builders and helpers
 	 * --------------------------------------------------------------- */
+
+	private function fetch_jobs( $jobs_t, $active_statuses, $period ) {
+		global $wpdb;
+
+		$status_placeholders = implode( ',', array_fill( 0, count( $active_statuses ), '%s' ) );
+		$params = array();
+
+		$where = 'j.archived_at IS NULL';
+		if ( ! empty( $period['cutoff'] ) ) {
+			$where .= " AND (j.status IN ($status_placeholders)
+				OR COALESCE(j.actual_completed_at, j.status_updated_at, j.updated_at, j.created_at) >= %s)";
+			$params = array_merge( $params, $active_statuses );
+			$params[] = $period['cutoff'];
+		}
+
+		$params[] = 500;
+
+		$sql = "SELECT
+				j.job_id,
+				j.so_number,
+				j.customer_name,
+				j.dealer_name,
+				j.status,
+				j.status_updated_at,
+				j.updated_at,
+				j.created_at,
+				j.assigned_user_id,
+				COALESCE(u.display_name, '') AS assigned_name,
+				COALESCE(j.estimated_minutes, 0) AS estimated_minutes,
+				COALESCE(j.actual_minutes_approved, 0) AS cached_approved,
+				COALESCE(j.actual_minutes_pending, 0) AS cached_pending,
+				j.block_reason,
+				j.block_note,
+				j.block_owner
+			FROM $jobs_t j
+			LEFT JOIN {$wpdb->users} u ON u.ID = j.assigned_user_id
+			WHERE $where
+			ORDER BY j.status ASC, j.priority ASC, j.updated_at DESC
+			LIMIT %d";
+
+		return $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A ) ?: array();
+	}
+
+	private function fetch_time_rows( $segs_t, $period ) {
+		global $wpdb;
+
+		$where = "s.approval_status != 'voided'";
+		$params = array();
+		if ( ! empty( $period['cutoff'] ) ) {
+			$where .= " AND (s.start_ts >= %s OR (s.end_ts IS NULL AND s.state = 'active'))";
+			$params[] = $period['cutoff'];
+		}
+
+		$sql = "SELECT
+				s.job_id,
+				s.user_id,
+				COALESCE(u.display_name, '') AS tech_name,
+				s.start_ts,
+				s.end_ts,
+				s.state,
+				s.approval_status,
+				TIMESTAMPDIFF(MINUTE, s.start_ts, COALESCE(s.end_ts, UTC_TIMESTAMP())) AS minutes
+			FROM $segs_t s
+			LEFT JOIN {$wpdb->users} u ON u.ID = s.user_id
+			WHERE $where";
+
+		if ( $params ) {
+			return $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A ) ?: array();
+		}
+
+		return $wpdb->get_results( $sql, ARRAY_A ) ?: array();
+	}
 
 	private function build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_last_entry ) {
 		$uids = array_unique( array_merge( array_keys( $assigned ), array_keys( $tech_minutes ) ) );
