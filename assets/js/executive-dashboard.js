@@ -15,8 +15,7 @@
 (function () {
 	'use strict';
 
-	var root = document.querySelector('.so-exec');
-	if (!root) return;
+	var root = null;
 
 	var $  = function (sel, r) { return (r || root).querySelector(sel); };
 	var $$ = function (sel, r) { return Array.prototype.slice.call((r || root).querySelectorAll(sel)); };
@@ -25,29 +24,41 @@
 	function activateTab(id) {
 		var tab = $('.tab[data-tab="' + id + '"]');
 		if (!tab) return;
-		$$('.tab').forEach(function (x) { x.classList.toggle('active', x === tab); });
+		$$('.tab').forEach(function (x) {
+			var active = x === tab;
+			x.classList.toggle('active', active);
+			x.setAttribute('aria-selected', active ? 'true' : 'false');
+			x.setAttribute('tabindex', active ? '0' : '-1');
+		});
 		$$('.tab-pane').forEach(function (p) {
-			p.classList.toggle('active', p.id === 'pane-' + id);
+			var active = p.id === 'pane-' + id;
+			p.classList.toggle('active', active);
+			p.hidden = !active;
 		});
 	}
 
 	function bindTabs() {
-		$$('.tab').forEach(function (t) {
-			t.addEventListener('click', function () {
-				var id = t.getAttribute('data-tab');
-				activateTab(id);
-				if (window.history && window.URLSearchParams) {
-					var url = new URL(window.location.href);
-					url.searchParams.set('tab', id);
-					window.history.replaceState({}, '', url.toString());
-				}
-				window.scrollTo({ top: 0, behavior: 'instant' });
-			});
+		var tabs = $('.tabs');
+		if (!tabs) return;
+		tabs.addEventListener('click', function (event) {
+			var t = event.target.closest ? event.target.closest('.tab') : null;
+			if (!t || !tabs.contains(t)) return;
+			var id = t.getAttribute('data-tab');
+			activateTab(id);
+			if (window.history && window.URLSearchParams) {
+				var url = new URL(window.location.href);
+				url.searchParams.set('tab', id);
+				window.history.replaceState({}, '', url.toString());
+			}
+			window.scrollTo({ top: 0, behavior: 'instant' });
 		});
 
 		if (window.URLSearchParams) {
 			var selected = new URLSearchParams(window.location.search).get('tab');
 			if (selected) activateTab(selected);
+		} else {
+			var active = $('.tab.active');
+			if (active) activateTab(active.getAttribute('data-tab'));
 		}
 	}
 
@@ -60,13 +71,52 @@
 		var issuesChip = $('[data-tech-filter="issues"]', pane);
 		var activeChip = $('[data-tech-filter="active"]', pane);
 		var windowSel = $('[data-tech-filter="window"]', pane);
+		var sortSel = $('[data-tech-sort]', pane);
 		var counter = $('[data-tech-count]', pane);
 		var footCounter = $('[data-tech-foot-count]', pane);
+		var tbody = $('tbody', pane);
 		var rows = $$('[data-tech-row]', pane);
 		var total = rows.length;
 
+		function setPressed(chip) {
+			if (!chip) return;
+			chip.setAttribute('aria-pressed', chip.classList.contains('on') ? 'true' : 'false');
+		}
+
 		function minutes(row, attr) {
 			return parseInt(row.getAttribute(attr) || '0', 10) || 0;
+		}
+
+		function attentionScore(row) {
+			var active = minutes(row, 'data-tech-active');
+			var period = minutes(row, 'data-tech-period');
+			var variance = minutes(row, 'data-tech-variance');
+			var capture = minutes(row, 'data-tech-capture');
+			var hasIssues = row.getAttribute('data-tech-issues') === '1';
+			var score = 0;
+			if (hasIssues) score += 1000;
+			if (active > 0 && period <= 0) score += 700;
+			if (variance > 0) score += 400 + Math.min(variance, 999);
+			if (capture <= 0 && active > 0) score += 250;
+			return score;
+		}
+
+		function sortRows() {
+			if (!tbody) return;
+			var mode = sortSel ? sortSel.value : 'attention';
+			var sorted = rows.slice().sort(function (a, b) {
+				var an = (a.getAttribute('data-tech-name') || '').toLowerCase();
+				var bn = (b.getAttribute('data-tech-name') || '').toLowerCase();
+				if (mode === 'name') return an.localeCompare(bn);
+				if (mode === 'logged-desc') return minutes(b, 'data-tech-period') - minutes(a, 'data-tech-period') || an.localeCompare(bn);
+				if (mode === 'jobs-desc') return minutes(b, 'data-tech-touched') - minutes(a, 'data-tech-touched') || an.localeCompare(bn);
+				if (mode === 'capture-asc') return minutes(a, 'data-tech-capture') - minutes(b, 'data-tech-capture') || an.localeCompare(bn);
+				if (mode === 'capture-desc') return minutes(b, 'data-tech-capture') - minutes(a, 'data-tech-capture') || an.localeCompare(bn);
+				if (mode === 'variance-desc') return minutes(b, 'data-tech-variance') - minutes(a, 'data-tech-variance') || an.localeCompare(bn);
+				return attentionScore(b) - attentionScore(a) || an.localeCompare(bn);
+			});
+			sorted.forEach(function (row) { tbody.appendChild(row); });
+			rows = sorted;
 		}
 
 		function apply() {
@@ -76,6 +126,7 @@
 			var windowValue = windowSel ? windowSel.value : 'all';
 			var shown = 0;
 
+			sortRows();
 			rows.forEach(function (row) {
 				var ok = true;
 				var name = (row.getAttribute('data-tech-name') || '').toLowerCase();
@@ -100,9 +151,20 @@
 		}
 
 		if (search) search.addEventListener('input', apply);
-		if (issuesChip) issuesChip.addEventListener('click', function () { issuesChip.classList.toggle('on'); apply(); });
-		if (activeChip) activeChip.addEventListener('click', function () { activeChip.classList.toggle('on'); apply(); });
+		if (issuesChip) issuesChip.addEventListener('click', function () {
+			issuesChip.classList.toggle('on');
+			setPressed(issuesChip);
+			apply();
+		});
+		if (activeChip) activeChip.addEventListener('click', function () {
+			activeChip.classList.toggle('on');
+			setPressed(activeChip);
+			apply();
+		});
 		if (windowSel) windowSel.addEventListener('change', apply);
+		if (sortSel) sortSel.addEventListener('change', apply);
+		setPressed(issuesChip);
+		setPressed(activeChip);
 		apply();
 	}
 
@@ -165,12 +227,21 @@
 	function bindPeriodFilter() {
 		var select = $('[data-period-select]');
 		if (!select || !select.form) return;
+		function syncPeriodTab() {
+			var active = $('.tab.active');
+			var input = $('[data-period-tab]', select.form);
+			if (active && input) input.value = active.getAttribute('data-tab') || 'overview';
+		}
+		select.form.addEventListener('submit', syncPeriodTab);
 		select.addEventListener('change', function () {
+			syncPeriodTab();
 			select.form.submit();
 		});
 	}
 
 	function init() {
+		root = document.querySelector('.so-exec');
+		if (!root) return;
 		bindTabs();
 		bindPeriodFilter();
 		bindTechFilters();

@@ -177,6 +177,7 @@ class Slate_Ops_Executive {
 		$tech_minutes = array();
 		$tech_today = array();
 		$tech_week = array();
+		$tech_job_ids = array();
 		$tech_last_entry = array();
 		$tech_names = array();
 
@@ -202,8 +203,12 @@ class Slate_Ops_Executive {
 					$tech_minutes[ $user_id ] = 0;
 					$tech_today[ $user_id ] = 0;
 					$tech_week[ $user_id ] = 0;
+					$tech_job_ids[ $user_id ] = array();
 				}
 				$tech_minutes[ $user_id ] += $minutes;
+				if ( $job_id > 0 ) {
+					$tech_job_ids[ $user_id ][ $job_id ] = true;
+				}
 				$tech_names[ $user_id ] = $tr['tech_name'] ?: 'User ' . $user_id;
 				if ( empty( $tech_last_entry[ $user_id ] ) || $end > $tech_last_entry[ $user_id ] ) {
 					$tech_last_entry[ $user_id ] = $end;
@@ -364,7 +369,7 @@ class Slate_Ops_Executive {
 			}
 		}
 
-		$techs = $this->build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_last_entry );
+		$techs = $this->build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_job_ids, $tech_last_entry );
 		$active_count = count( $active_rows );
 		$missing_time = max( 0, $active_count - $jobs_with_logged );
 		$missing_estimate = max( 0, $active_count - $jobs_with_estimate );
@@ -404,12 +409,15 @@ class Slate_Ops_Executive {
 			'production_watchlist' => $this->build_production_watchlist( $status_counts, $blockers ),
 			'tech_kpis' => array(
 				'techs_active' => count( $techs ),
-				'logged_today' => self::minutes_label( array_sum( $tech_today ) ),
-				'logged_week' => self::minutes_label( array_sum( $tech_week ) ),
-				'no_time_today' => count( array_filter( $techs, function ( $t ) {
-					return '0h 0m' === $t['today'];
+				'period_label' => $period['label'],
+				'logged_period' => self::minutes_label( array_sum( $tech_minutes ) ),
+				'jobs_touched' => array_sum( array_map( function ( $job_ids ) {
+					return is_array( $job_ids ) ? count( $job_ids ) : 0;
+				}, $tech_job_ids ) ),
+				'no_time_period' => count( array_filter( $techs, function ( $t ) {
+					return (int) $t['active'] > 0 && (int) $t['period_minutes'] <= 0;
 				} ) ),
-				'no_time_help' => $this->no_time_today_help( $techs ),
+				'no_time_help' => $this->no_time_period_help( $techs ),
 			),
 			'techs' => $techs,
 			'job_kpis' => array(
@@ -459,7 +467,7 @@ class Slate_Ops_Executive {
 			'readout' => array(),
 			'labor_watchlist' => array(),
 			'production_watchlist' => array(),
-			'tech_kpis' => array( 'techs_active' => 0, 'logged_today' => '0h 0m', 'logged_week' => '0h 0m', 'no_time_today' => 0, 'no_time_help' => 'No active techs' ),
+			'tech_kpis' => array( 'techs_active' => 0, 'period_label' => 'No period', 'logged_period' => '0h 0m', 'jobs_touched' => 0, 'no_time_period' => 0, 'no_time_help' => 'No active techs' ),
 			'techs' => array(),
 			'job_kpis' => array( 'total_jobs' => 0, 'over_estimate' => 0, 'missing_time' => 0, 'at_risk' => 0 ),
 			'jobs' => array(),
@@ -549,7 +557,7 @@ class Slate_Ops_Executive {
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: array();
 	}
 
-	private function build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_last_entry ) {
+	private function build_techs( $assigned, $tech_names, $tech_minutes, $tech_today, $tech_week, $tech_job_ids, $tech_last_entry ) {
 		$uids = array_unique( array_merge( array_keys( $assigned ), array_keys( $tech_minutes ) ) );
 		$out = array();
 		foreach ( $uids as $uid ) {
@@ -561,6 +569,7 @@ class Slate_Ops_Executive {
 			$logged = (int) ( $tech_minutes[ $uid ] ?? 0 );
 			$today = (int) ( $tech_today[ $uid ] ?? 0 );
 			$week = (int) ( $tech_week[ $uid ] ?? 0 );
+			$touched_jobs = isset( $tech_job_ids[ $uid ] ) && is_array( $tech_job_ids[ $uid ] ) ? count( $tech_job_ids[ $uid ] ) : 0;
 			$est = (int) ( $a['est'] ?? 0 );
 			$capture = $est > 0 ? (int) round( $logged / $est * 100 ) : 0;
 			$flags = array();
@@ -578,17 +587,22 @@ class Slate_Ops_Executive {
 				'state' => $this->tech_state( $flags, $capture, (int) $a['active'] ),
 				'assigned' => (int) $a['assigned'],
 				'active' => (int) $a['active'],
+				'touched_jobs' => $touched_jobs,
+				'period_minutes' => $logged,
 				'today_minutes' => $today,
 				'week_minutes' => $week,
 				'today' => self::minutes_label( $today ),
 				'week' => self::minutes_label( $week ),
 				'est' => self::minutes_label( $est ),
 				'logged' => self::minutes_label( $logged ),
+				'est_minutes' => $est,
+				'variance_minutes' => $logged - $est,
 				'variance' => self::signed_minutes_label( $logged - $est ),
 				'capture' => $capture,
 				'capture_flag' => $capture <= 0 && (int) $a['active'] > 0 ? 'crit' : ( $capture < 60 ? 'warn' : 'ok' ),
 				'flags' => $flags,
 				'note' => isset( $tech_last_entry[ $uid ] ) ? 'Last entry ' . $this->last_label( $tech_last_entry[ $uid ] ) : '',
+				'last_entry' => isset( $tech_last_entry[ $uid ] ) ? $this->last_label( $tech_last_entry[ $uid ] ) : '-',
 			);
 		}
 		usort( $out, function ( $a, $b ) {
@@ -831,14 +845,14 @@ class Slate_Ops_Executive {
 		return $crit . ' critical · ' . $watch . ' watch · ' . $normal . ' normal';
 	}
 
-	private function no_time_today_help( $techs ) {
+	private function no_time_period_help( $techs ) {
 		$names = array();
 		foreach ( $techs as $t ) {
-			if ( '0h 0m' === $t['today'] && (int) $t['active'] > 0 ) {
+			if ( (int) $t['period_minutes'] <= 0 && (int) $t['active'] > 0 ) {
 				$names[] = $t['name'];
 			}
 		}
-		return $names ? implode( ', ', array_slice( $names, 0, 3 ) ) : 'All active techs have time today';
+		return $names ? implode( ', ', array_slice( $names, 0, 3 ) ) : 'All active techs have time in period';
 	}
 
 	private function average_block_age( $blockers ) {

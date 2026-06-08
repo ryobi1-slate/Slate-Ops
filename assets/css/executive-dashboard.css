@@ -324,10 +324,13 @@
 }
 .so-exec .t .so { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11.5px; }
 .so-exec .t .cust { color: var(--ink); }
-.so-exec .t .tech { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.so-exec .t .tech { min-width: 170px; }
+.so-exec .t .tech-main {
+	display: flex; align-items: center; gap: 8px;
+}
 .so-exec .t .tech .sub {
-	display: block; width: 100%; padding-left: 28px; padding-top: 2px;
-	font-size: 11px; color: var(--muted);
+	display: block; padding-left: 30px; padding-top: 4px;
+	font-size: 11px; line-height: 1.35; color: var(--muted);
 }
 .so-exec .t .action { color: var(--slate-sage); font-weight: 500; }
 .so-exec .bad { color: var(--crit); font-weight: 500; }
@@ -393,9 +396,17 @@
 .so-exec .chip .caret { font-size: 9px; color: var(--muted); }
 .so-exec .chip.toggle { user-select: none; }
 .so-exec .chip.toggle.on {
-	background: rgba(64,79,75,.10) !important;
+	background: var(--slate-sage) !important;
 	border-color: var(--slate-sage) !important;
-	color: var(--slate-sage) !important;
+	color: #fff !important;
+	box-shadow: inset 0 0 0 1px rgba(255,255,255,.18) !important;
+}
+.so-exec .chip.toggle.on::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	border-radius: 999px;
+	background: currentColor;
 }
 .so-exec .chip select {
 	border: 0; outline: 0; background: transparent; font-family: inherit;
@@ -631,9 +642,9 @@
 }
 
 .ops-page-exec .so-exec .chip.toggle.on {
-  background: var(--slate-sage-wash) !important;
+  background: var(--slate-sage) !important;
   border-color: var(--slate-sage) !important;
-  color: var(--slate-sage-ink) !important;
+  color: #fff !important;
 }
 
 .ops-page-exec .so-exec .t thead tr {
