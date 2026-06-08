@@ -15,8 +15,7 @@
 (function () {
 	'use strict';
 
-	var root = document.querySelector('.so-exec');
-	if (!root) return;
+	var root = null;
 
 	var $  = function (sel, r) { return (r || root).querySelector(sel); };
 	var $$ = function (sel, r) { return Array.prototype.slice.call((r || root).querySelectorAll(sel)); };
@@ -25,29 +24,41 @@
 	function activateTab(id) {
 		var tab = $('.tab[data-tab="' + id + '"]');
 		if (!tab) return;
-		$$('.tab').forEach(function (x) { x.classList.toggle('active', x === tab); });
+		$$('.tab').forEach(function (x) {
+			var active = x === tab;
+			x.classList.toggle('active', active);
+			x.setAttribute('aria-selected', active ? 'true' : 'false');
+			x.setAttribute('tabindex', active ? '0' : '-1');
+		});
 		$$('.tab-pane').forEach(function (p) {
-			p.classList.toggle('active', p.id === 'pane-' + id);
+			var active = p.id === 'pane-' + id;
+			p.classList.toggle('active', active);
+			p.hidden = !active;
 		});
 	}
 
 	function bindTabs() {
-		$$('.tab').forEach(function (t) {
-			t.addEventListener('click', function () {
-				var id = t.getAttribute('data-tab');
-				activateTab(id);
-				if (window.history && window.URLSearchParams) {
-					var url = new URL(window.location.href);
-					url.searchParams.set('tab', id);
-					window.history.replaceState({}, '', url.toString());
-				}
-				window.scrollTo({ top: 0, behavior: 'instant' });
-			});
+		var tabs = $('.tabs');
+		if (!tabs) return;
+		tabs.addEventListener('click', function (event) {
+			var t = event.target.closest ? event.target.closest('.tab') : null;
+			if (!t || !tabs.contains(t)) return;
+			var id = t.getAttribute('data-tab');
+			activateTab(id);
+			if (window.history && window.URLSearchParams) {
+				var url = new URL(window.location.href);
+				url.searchParams.set('tab', id);
+				window.history.replaceState({}, '', url.toString());
+			}
+			window.scrollTo({ top: 0, behavior: 'instant' });
 		});
 
 		if (window.URLSearchParams) {
 			var selected = new URLSearchParams(window.location.search).get('tab');
 			if (selected) activateTab(selected);
+		} else {
+			var active = $('.tab.active');
+			if (active) activateTab(active.getAttribute('data-tab'));
 		}
 	}
 
@@ -229,6 +240,8 @@
 	}
 
 	function init() {
+		root = document.querySelector('.so-exec');
+		if (!root) return;
 		bindTabs();
 		bindPeriodFilter();
 		bindTechFilters();
