@@ -53,6 +53,7 @@ $blocks = $exec->get_blockers();
 			</div>
 			<div class="page-meta">
 				<form class="period-filter" method="get" action="<?php echo esc_url( home_url( '/ops/exec' ) ); ?>">
+					<input type="hidden" name="tab" value="overview" data-period-tab />
 					<label for="so-exec-period">Period</label>
 					<select id="so-exec-period" name="period" data-period-select>
 						<?php foreach ( $period_options as $key => $option ) : ?>
@@ -225,12 +226,12 @@ $blocks = $exec->get_blockers();
 		<!-- ===== TECH ===== -->
 		<section class="tab-pane" id="pane-tech" data-screen-label="02 Tech Performance">
 			<div class="kpi-grid">
-				<div class="kpi"><div class="k-label">Techs Active</div><div class="k-value"><?php echo (int) $tk['techs_active']; ?></div></div>
-				<div class="kpi"><div class="k-label">Logged Today</div><div class="k-value"><?php echo esc_html( $tk['logged_today'] ); ?></div></div>
-				<div class="kpi"><div class="k-label">Logged This Week</div><div class="k-value"><?php echo esc_html( $tk['logged_week'] ); ?></div></div>
+				<div class="kpi"><div class="k-label">Techs in Scope</div><div class="k-value"><?php echo (int) $tk['techs_active']; ?></div><div class="k-help"><?php echo esc_html( $tk['period_label'] ); ?></div></div>
+				<div class="kpi"><div class="k-label">Logged in Period</div><div class="k-value"><?php echo esc_html( $tk['logged_period'] ); ?></div><div class="k-help">Approved, pending, and active timer time</div></div>
+				<div class="kpi"><div class="k-label">Jobs Touched</div><div class="k-value"><?php echo (int) $tk['jobs_touched']; ?></div><div class="k-help">Jobs with technician time in period</div></div>
 				<div class="kpi flag-warn">
-					<div class="k-label">No Time Today</div>
-					<div class="k-value"><?php echo (int) $tk['no_time_today']; ?></div>
+					<div class="k-label">No Time in Period</div>
+					<div class="k-value"><?php echo (int) $tk['no_time_period']; ?></div>
 					<div class="k-help"><?php echo esc_html( $tk['no_time_help'] ); ?></div>
 				</div>
 			</div>
@@ -252,6 +253,17 @@ $blocks = $exec->get_blockers();
 					<button class="chip toggle" type="button" data-tech-filter="issues">Has issues</button>
 					<button class="chip toggle on" type="button" data-tech-filter="active">Active only</button>
 					<div style="flex:1"></div>
+					<span class="chip" style="cursor:default">Sort:&nbsp;
+						<select data-tech-sort>
+							<option value="attention">Needs attention</option>
+							<option value="logged-desc">Most logged</option>
+							<option value="jobs-desc">Most jobs touched</option>
+							<option value="capture-asc">Lowest capture</option>
+							<option value="capture-desc">Highest capture</option>
+							<option value="variance-desc">Most over estimate</option>
+							<option value="name">Name</option>
+						</select>
+					</span>
 					<span class="chip" style="cursor:default">Window:&nbsp;
 						<select data-tech-filter="window">
 							<option value="all">All</option>
@@ -266,12 +278,12 @@ $blocks = $exec->get_blockers();
 						<th>Tech</th>
 						<th class="num">Assigned</th>
 						<th class="num">Active</th>
-						<th class="num">Logged Today</th>
-						<th class="num">Logged Week</th>
+						<th class="num">Jobs Touched</th>
+						<th class="num">Logged Period</th>
 						<th class="num">Est.</th>
-						<th class="num">Logged</th>
 						<th class="num">Variance</th>
 						<th>Capture</th>
+						<th>Last Entry</th>
 						<th>Flags</th>
 					</tr></thead>
 					<tbody>
@@ -287,8 +299,13 @@ $blocks = $exec->get_blockers();
 							data-tech-row
 							data-tech-name="<?php echo esc_attr( $t['name'] ); ?>"
 							data-tech-active="<?php echo (int) $t['active']; ?>"
+							data-tech-touched="<?php echo (int) $t['touched_jobs']; ?>"
+							data-tech-period="<?php echo (int) $t['period_minutes']; ?>"
 							data-tech-today="<?php echo (int) $t['today_minutes']; ?>"
 							data-tech-week="<?php echo (int) $t['week_minutes']; ?>"
+							data-tech-est="<?php echo (int) $t['est_minutes']; ?>"
+							data-tech-variance="<?php echo (int) $t['variance_minutes']; ?>"
+							data-tech-capture="<?php echo (int) $t['capture']; ?>"
 							data-tech-issues="<?php echo empty( $t['flags'] ) ? '0' : '1'; ?>">
 							<td class="tech">
 								<?php echo Slate_Ops_Executive::avatar_html( $t['name'], $t['state'] ); ?><?php echo esc_html( $t['name'] ); ?>
@@ -298,12 +315,12 @@ $blocks = $exec->get_blockers();
 							</td>
 							<td class="num"><?php echo (int) $t['assigned']; ?></td>
 							<td class="num"><?php echo (int) $t['active']; ?></td>
-							<td class="num"><?php echo $t['today'] === '0h 0m' ? '<span class="bad">0h 0m</span>' : esc_html( $t['today'] ); ?></td>
-							<td class="num"><?php echo $t['week']  === '0h 0m' ? '<span class="bad">0h 0m</span>' : esc_html( $t['week'] ); ?></td>
+							<td class="num"><?php echo (int) $t['touched_jobs']; ?></td>
+							<td class="num"><?php echo $t['logged'] === '0h 0m' ? '<span class="bad">0h 0m</span>' : esc_html( $t['logged'] ); ?></td>
 							<td class="num"><?php echo esc_html( $t['est'] ); ?></td>
-							<td class="num"><?php echo esc_html( $t['logged'] ); ?></td>
 							<td class="num" style="<?php echo esc_attr( $variance_style ); ?>"><?php echo esc_html( $t['variance'] ); ?></td>
 							<td><?php echo Slate_Ops_Executive::meter_html( $t['capture'], $t['capture_flag'] ); ?></td>
+							<td class="mono"><?php echo esc_html( $t['last_entry'] ); ?></td>
 							<td>
 								<?php if ( empty( $t['flags'] ) ) : ?>
 									<?php echo Slate_Ops_Executive::tag_html( 'ok', 'On track' ); ?>
