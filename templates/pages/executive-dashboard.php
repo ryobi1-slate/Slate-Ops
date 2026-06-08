@@ -83,7 +83,7 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 			</button>
 			<button class="tab <?php echo $active_tab === 'tech' ? 'active' : ''; ?>" data-tab="tech" role="tab" type="button" aria-controls="pane-tech" aria-selected="<?php echo $active_tab === 'tech' ? 'true' : 'false'; ?>" tabindex="<?php echo $active_tab === 'tech' ? '0' : '-1'; ?>">
 				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="6" r="2.4"/><path d="M3 14c0-2.5 2.2-4.2 5-4.2S13 11.5 13 14"/></svg>
-				<span>Tech Performance</span>
+				<span>Tech Overview</span>
 				<span class="count"><?php echo (int) $tk['techs_active']; ?></span>
 			</button>
 			<button class="tab <?php echo $active_tab === 'jobs' ? 'active' : ''; ?>" data-tab="jobs" role="tab" type="button" aria-controls="pane-jobs" aria-selected="<?php echo $active_tab === 'jobs' ? 'true' : 'false'; ?>" tabindex="<?php echo $active_tab === 'jobs' ? '0' : '-1'; ?>">
@@ -229,7 +229,7 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 		</section>
 
 		<!-- ===== TECH ===== -->
-		<section class="tab-pane <?php echo $active_tab === 'tech' ? 'active' : ''; ?>" id="pane-tech" data-screen-label="02 Tech Performance" <?php echo $active_tab === 'tech' ? '' : 'hidden'; ?>>
+		<section class="tab-pane <?php echo $active_tab === 'tech' ? 'active' : ''; ?>" id="pane-tech" data-screen-label="02 Tech Overview" <?php echo $active_tab === 'tech' ? '' : 'hidden'; ?>>
 			<div class="kpi-grid">
 				<div class="kpi"><div class="k-label">Techs in Scope</div><div class="k-value"><?php echo (int) $tk['techs_active']; ?></div><div class="k-help"><?php echo esc_html( $tk['period_label'] ); ?></div></div>
 				<div class="kpi"><div class="k-label">Logged in Period</div><div class="k-value"><?php echo esc_html( $tk['logged_period'] ); ?></div><div class="k-help">Approved, pending, and active timer time</div></div>
@@ -243,12 +243,12 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 
 			<div class="card">
 				<div class="card-head">
-					<h3>Tech Performance <span class="count-pill" data-tech-count><?php echo count( $techs ); ?> of <?php echo count( $techs ); ?> techs</span></h3>
+					<h3>Tech Overview <span class="count-pill" data-tech-count><?php echo count( $techs ); ?> of <?php echo count( $techs ); ?> techs</span></h3>
 					<div class="actions"><button class="btn" type="button">Export CSV</button></div>
 				</div>
 				<div class="help-card">
 					<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 4.7v.4"/></svg>
-					Spot workload imbalance, training needs, and time-tracking gaps. Capture % over 100 usually means under-estimated work.
+					Review each tech by period, active workload, logged time, estimate variance, current flags, and the jobs driving attention.
 				</div>
 				<div class="filter-row">
 					<div class="search">
@@ -266,7 +266,19 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 							<option value="capture-asc">Lowest capture</option>
 							<option value="capture-desc">Highest capture</option>
 							<option value="variance-desc">Most over estimate</option>
+							<option value="last-asc">Oldest last entry</option>
 							<option value="name">Name</option>
+						</select>
+					</span>
+					<span class="chip" style="cursor:default">Issue:&nbsp;
+						<select data-tech-filter="issue">
+							<option value="all">All</option>
+							<option value="no_period">No period time</option>
+							<option value="no_today">No time today</option>
+							<option value="no_week">No time this week</option>
+							<option value="over_estimate">Over estimate</option>
+							<option value="low_capture">Low capture</option>
+							<option value="open_timer">Open timer</option>
 						</select>
 					</span>
 					<span class="chip" style="cursor:default">Window:&nbsp;
@@ -278,6 +290,7 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 						</select>
 					</span>
 				</div>
+				<div class="table-scroll">
 				<table class="t">
 					<thead><tr>
 						<th>Tech</th>
@@ -290,6 +303,8 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 						<th>Capture</th>
 						<th>Last Entry</th>
 						<th>Flags</th>
+						<th>Action</th>
+						<th>Focus Jobs</th>
 					</tr></thead>
 					<tbody>
 					<?php foreach ( $techs as $t ) :
@@ -311,6 +326,9 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 							data-tech-est="<?php echo (int) $t['est_minutes']; ?>"
 							data-tech-variance="<?php echo (int) $t['variance_minutes']; ?>"
 							data-tech-capture="<?php echo (int) $t['capture']; ?>"
+							data-tech-last="<?php echo (int) $t['last_entry_ts']; ?>"
+							data-tech-attention="<?php echo (int) $t['attention_score']; ?>"
+							data-tech-issue-keys="<?php echo esc_attr( implode( ',', $t['issue_keys'] ) ); ?>"
 							data-tech-issues="<?php echo empty( $t['flags'] ) ? '0' : '1'; ?>">
 							<td class="tech">
 								<div class="tech-main">
@@ -340,10 +358,26 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 									</div>
 								<?php endif; ?>
 							</td>
+							<td class="action"><?php echo esc_html( $t['primary_action'] ); ?> &rarr;</td>
+							<td class="focus-jobs">
+								<?php if ( empty( $t['focus_jobs'] ) ) : ?>
+									<span class="sub">No active job detail</span>
+								<?php else : ?>
+									<?php foreach ( $t['focus_jobs'] as $job ) : ?>
+										<div class="focus-job">
+											<span class="focus-so"><?php echo esc_html( $job['so'] ); ?></span>
+											<span><?php echo esc_html( $job['cust'] ); ?></span>
+											<?php echo Slate_Ops_Executive::tag_html( $job['risk'], $job['issue'] ); ?>
+											<span class="sub"><?php echo esc_html( $job['logged'] ); ?> logged · <?php echo esc_html( $job['est'] ); ?> est.</span>
+										</div>
+									<?php endforeach; ?>
+								<?php endif; ?>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 					</tbody>
 				</table>
+				</div>
 				<div class="foot"><span data-tech-foot-count>Showing <?php echo count( $techs ); ?> of <?php echo count( $techs ); ?></span><span>Last sync <?php echo esc_html( wp_date( 'g:i A' ) ); ?></span></div>
 			</div>
 		</section>
