@@ -51,6 +51,61 @@
 		}
 	}
 
+	/* ---------- Tech filters ---------- */
+	function bindTechFilters() {
+		var pane = $('#pane-tech');
+		if (!pane) return;
+
+		var search = $('[data-tech-filter="search"]', pane);
+		var issuesChip = $('[data-tech-filter="issues"]', pane);
+		var activeChip = $('[data-tech-filter="active"]', pane);
+		var windowSel = $('[data-tech-filter="window"]', pane);
+		var counter = $('[data-tech-count]', pane);
+		var footCounter = $('[data-tech-foot-count]', pane);
+		var rows = $$('[data-tech-row]', pane);
+		var total = rows.length;
+
+		function minutes(row, attr) {
+			return parseInt(row.getAttribute(attr) || '0', 10) || 0;
+		}
+
+		function apply() {
+			var q = search ? (search.value || '').trim().toLowerCase() : '';
+			var issuesOnly = issuesChip && issuesChip.classList.contains('on');
+			var activeOnly = activeChip && activeChip.classList.contains('on');
+			var windowValue = windowSel ? windowSel.value : 'all';
+			var shown = 0;
+
+			rows.forEach(function (row) {
+				var ok = true;
+				var name = (row.getAttribute('data-tech-name') || '').toLowerCase();
+				var active = minutes(row, 'data-tech-active');
+				var today = minutes(row, 'data-tech-today');
+				var week = minutes(row, 'data-tech-week');
+				var hasIssues = row.getAttribute('data-tech-issues') === '1';
+
+				if (q && name.indexOf(q) === -1) ok = false;
+				if (issuesOnly && !hasIssues) ok = false;
+				if (activeOnly && active <= 0) ok = false;
+				if (windowValue === 'today' && today <= 0) ok = false;
+				if (windowValue === 'week' && week <= 0) ok = false;
+				if (windowValue === 'no-week' && week > 0) ok = false;
+
+				row.style.display = ok ? '' : 'none';
+				if (ok) shown++;
+			});
+
+			if (counter) counter.textContent = shown + ' of ' + total + ' techs';
+			if (footCounter) footCounter.textContent = 'Showing ' + shown + ' of ' + total;
+		}
+
+		if (search) search.addEventListener('input', apply);
+		if (issuesChip) issuesChip.addEventListener('click', function () { issuesChip.classList.toggle('on'); apply(); });
+		if (activeChip) activeChip.addEventListener('click', function () { activeChip.classList.toggle('on'); apply(); });
+		if (windowSel) windowSel.addEventListener('change', apply);
+		apply();
+	}
+
 	/* ---------- Job filters ---------- */
 	function bindJobFilters() {
 		var pane = $('#pane-jobs');
@@ -100,8 +155,9 @@
 	/* ---------- Generic chip toggles (decorative, no-op filter) ---------- */
 	function bindChipToggles() {
 		$$('.chip.toggle').forEach(function (c) {
-			// skip job-page chips which already have explicit handlers
+			// skip chips which already have explicit handlers
 			if (c.hasAttribute('data-filter')) return;
+			if (c.hasAttribute('data-tech-filter')) return;
 			c.addEventListener('click', function () { c.classList.toggle('on'); });
 		});
 	}
@@ -117,6 +173,7 @@
 	function init() {
 		bindTabs();
 		bindPeriodFilter();
+		bindTechFilters();
 		bindJobFilters();
 		bindChipToggles();
 	}

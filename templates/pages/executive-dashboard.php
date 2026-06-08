@@ -237,7 +237,7 @@ $blocks = $exec->get_blockers();
 
 			<div class="card">
 				<div class="card-head">
-					<h3>Tech Performance <span class="count-pill"><?php echo count( $techs ); ?> techs</span></h3>
+					<h3>Tech Performance <span class="count-pill" data-tech-count><?php echo count( $techs ); ?> of <?php echo count( $techs ); ?> techs</span></h3>
 					<div class="actions"><button class="btn" type="button">Export CSV</button></div>
 				</div>
 				<div class="help-card">
@@ -247,14 +247,21 @@ $blocks = $exec->get_blockers();
 				<div class="filter-row">
 					<div class="search">
 						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
-						<input placeholder="Search tech…" type="search" />
+						<input placeholder="Search tech…" type="search" data-tech-filter="search" />
 					</div>
 					<button class="chip" type="button">Department <span class="caret">▾</span></button>
 					<button class="chip" type="button">Shift <span class="caret">▾</span></button>
-					<button class="chip toggle" type="button">Has issues</button>
-					<button class="chip toggle on" type="button">Active only</button>
+					<button class="chip toggle" type="button" data-tech-filter="issues">Has issues</button>
+					<button class="chip toggle on" type="button" data-tech-filter="active">Active only</button>
 					<div style="flex:1"></div>
-					<button class="chip" type="button">This week <span class="caret">▾</span></button>
+					<span class="chip" style="cursor:default">Window:&nbsp;
+						<select data-tech-filter="window">
+							<option value="all">All</option>
+							<option value="today">Logged today</option>
+							<option value="week">Logged this week</option>
+							<option value="no-week">No time this week</option>
+						</select>
+					</span>
 				</div>
 				<table class="t">
 					<thead><tr>
@@ -278,7 +285,13 @@ $blocks = $exec->get_blockers();
 							$variance_style = 'color:var(--risk)';
 						}
 						?>
-						<tr>
+						<tr
+							data-tech-row
+							data-tech-name="<?php echo esc_attr( $t['name'] ); ?>"
+							data-tech-active="<?php echo (int) $t['active']; ?>"
+							data-tech-today="<?php echo (int) $t['today_minutes']; ?>"
+							data-tech-week="<?php echo (int) $t['week_minutes']; ?>"
+							data-tech-issues="<?php echo empty( $t['flags'] ) ? '0' : '1'; ?>">
 							<td class="tech">
 								<?php echo Slate_Ops_Executive::avatar_html( $t['name'], $t['state'] ); ?><?php echo esc_html( $t['name'] ); ?>
 								<?php if ( ! empty( $t['note'] ) ) : ?>
@@ -308,7 +321,7 @@ $blocks = $exec->get_blockers();
 					<?php endforeach; ?>
 					</tbody>
 				</table>
-				<div class="foot"><span>Showing <?php echo count( $techs ); ?> of <?php echo count( $techs ); ?></span><span>Last sync <?php echo esc_html( wp_date( 'g:i A' ) ); ?></span></div>
+				<div class="foot"><span data-tech-foot-count>Showing <?php echo count( $techs ); ?> of <?php echo count( $techs ); ?></span><span>Last sync <?php echo esc_html( wp_date( 'g:i A' ) ); ?></span></div>
 			</div>
 		</section>
 

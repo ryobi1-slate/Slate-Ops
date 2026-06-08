@@ -578,6 +578,8 @@ class Slate_Ops_Executive {
 				'state' => $this->tech_state( $flags, $capture, (int) $a['active'] ),
 				'assigned' => (int) $a['assigned'],
 				'active' => (int) $a['active'],
+				'today_minutes' => $today,
+				'week_minutes' => $week,
 				'today' => self::minutes_label( $today ),
 				'week' => self::minutes_label( $week ),
 				'est' => self::minutes_label( $est ),
