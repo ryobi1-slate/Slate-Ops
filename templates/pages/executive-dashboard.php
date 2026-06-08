@@ -46,6 +46,20 @@ $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) )
 if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 	$active_tab = 'overview';
 }
+$tech_risk_counts = array( 'critical' => 0, 'warning' => 0, 'watch' => 0, 'ok' => 0 );
+$tech_attention_count = 0;
+$tech_open_timer_count = 0;
+foreach ( $techs as $tech_summary ) {
+	$risk_key = isset( $tech_summary['risk_key'] ) ? $tech_summary['risk_key'] : 'ok';
+	if ( ! isset( $tech_risk_counts[ $risk_key ] ) ) {
+		$risk_key = 'ok';
+	}
+	$tech_risk_counts[ $risk_key ]++;
+	if ( in_array( $risk_key, array( 'critical', 'warning' ), true ) ) {
+		$tech_attention_count++;
+	}
+	$tech_open_timer_count += (int) ( $tech_summary['open_timer_count'] ?? 0 );
+}
 ?>
 <div class="so-exec">
 	<div class="page-wrap">
@@ -230,155 +244,154 @@ if ( ! in_array( $active_tab, $allowed_tabs, true ) ) {
 
 		<!-- ===== TECH ===== -->
 		<section class="tab-pane <?php echo $active_tab === 'tech' ? 'active' : ''; ?>" id="pane-tech" data-screen-label="02 Tech Overview" <?php echo $active_tab === 'tech' ? '' : 'hidden'; ?>>
-			<div class="kpi-grid">
-				<div class="kpi"><div class="k-label">Techs in Scope</div><div class="k-value"><?php echo (int) $tk['techs_active']; ?></div><div class="k-help"><?php echo esc_html( $tk['period_label'] ); ?></div></div>
-				<div class="kpi"><div class="k-label">Logged in Period</div><div class="k-value"><?php echo esc_html( $tk['logged_period'] ); ?></div><div class="k-help">Approved, pending, and active timer time</div></div>
-				<div class="kpi"><div class="k-label">Jobs Touched</div><div class="k-value"><?php echo (int) $tk['jobs_touched']; ?></div><div class="k-help">Jobs with technician time in period</div></div>
-				<div class="kpi flag-warn">
-					<div class="k-label">No Time in Period</div>
-					<div class="k-value"><?php echo (int) $tk['no_time_period']; ?></div>
-					<div class="k-help"><?php echo esc_html( $tk['no_time_help'] ); ?></div>
-				</div>
-			</div>
-
-			<div class="card">
-				<div class="card-head">
-					<h3>Tech Overview <span class="count-pill" data-tech-count><?php echo count( $techs ); ?> of <?php echo count( $techs ); ?> techs</span></h3>
-					<div class="actions"><button class="btn" type="button">Export CSV</button></div>
-				</div>
-				<div class="help-card">
-					<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 4.7v.4"/></svg>
-					Review each tech by period, active workload, logged time, estimate variance, current flags, and the jobs driving attention.
-				</div>
-				<div class="filter-row">
-					<div class="search">
-						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
-						<input placeholder="Search tech…" type="search" data-tech-filter="search" />
+			<div class="to">
+				<div class="to-kpis">
+					<div class="to-kpi to-kpi--attention">
+						<div class="to-kpi__label">Needs Attention</div>
+						<div class="to-kpi__value <?php echo $tech_attention_count > 0 ? 'is-crit' : ''; ?>"><?php echo (int) $tech_attention_count; ?></div>
+						<div class="to-kpi__split">
+							<span><span class="pip crit"></span><b><?php echo (int) $tech_risk_counts['critical']; ?></b> Critical</span>
+							<span><span class="pip warn"></span><b><?php echo (int) $tech_risk_counts['warning']; ?></b> Warning</span>
+							<span><span class="pip watch"></span><b><?php echo (int) $tech_risk_counts['watch']; ?></b> Watch</span>
+						</div>
 					</div>
-					<button class="chip toggle" type="button" data-tech-filter="issues" aria-pressed="false">Has issues</button>
-					<button class="chip toggle on" type="button" data-tech-filter="active" aria-pressed="true">Active only</button>
-					<div style="flex:1"></div>
-					<span class="chip" style="cursor:default">Sort:&nbsp;
-						<select data-tech-sort>
-							<option value="attention">Needs attention</option>
-							<option value="logged-desc">Most logged</option>
-							<option value="jobs-desc">Most jobs touched</option>
-							<option value="capture-asc">Lowest capture</option>
-							<option value="capture-desc">Highest capture</option>
-							<option value="variance-desc">Most over estimate</option>
-							<option value="last-asc">Oldest last entry</option>
-							<option value="name">Name</option>
-						</select>
-					</span>
-					<span class="chip" style="cursor:default">Issue:&nbsp;
-						<select data-tech-filter="issue">
-							<option value="all">All</option>
-							<option value="no_period">No period time</option>
-							<option value="no_today">No time today</option>
-							<option value="no_week">No time this week</option>
-							<option value="over_estimate">Over estimate</option>
-							<option value="low_capture">Low capture</option>
-							<option value="open_timer">Open timer</option>
-						</select>
-					</span>
-					<span class="chip" style="cursor:default">Window:&nbsp;
-						<select data-tech-filter="window">
-							<option value="all">All</option>
-							<option value="today">Logged today</option>
-							<option value="week">Logged this week</option>
-							<option value="no-week">No time this week</option>
-						</select>
-					</span>
+					<div class="to-kpi">
+						<div class="to-kpi__label">Techs in Scope</div>
+						<div class="to-kpi__value"><?php echo (int) $tk['techs_active']; ?></div>
+						<div class="to-kpi__sub"><?php echo (int) $tech_risk_counts['ok']; ?> on track · <?php echo esc_html( $tk['period_label'] ); ?></div>
+					</div>
+					<div class="to-kpi">
+						<div class="to-kpi__label">Logged in Period</div>
+						<div class="to-kpi__value"><?php echo esc_html( $tk['logged_period'] ); ?></div>
+						<div class="to-kpi__sub">Approved, pending and active timer time</div>
+					</div>
+					<div class="to-kpi">
+						<div class="to-kpi__label">No Time in Period</div>
+						<div class="to-kpi__value <?php echo (int) $tk['no_time_period'] > 0 ? 'is-crit' : ''; ?>"><?php echo (int) $tk['no_time_period']; ?></div>
+						<div class="to-kpi__sub"><?php echo esc_html( $tk['no_time_help'] ); ?></div>
+					</div>
+					<div class="to-kpi">
+						<div class="to-kpi__label">Open Timers</div>
+						<div class="to-kpi__value"><?php echo (int) $tech_open_timer_count; ?></div>
+						<div class="to-kpi__sub"><?php echo $tech_open_timer_count > 0 ? 'Confirm active timer hygiene' : 'No active tech timers'; ?></div>
+					</div>
 				</div>
-				<div class="table-scroll">
-				<table class="t">
-					<thead><tr>
-						<th>Tech</th>
-						<th class="num">Assigned</th>
-						<th class="num">Active</th>
-						<th class="num">Jobs Touched</th>
-						<th class="num">Logged Period</th>
-						<th class="num">Est.</th>
-						<th class="num">Variance</th>
-						<th>Capture</th>
-						<th>Last Entry</th>
-						<th>Flags</th>
-						<th>Action</th>
-						<th>Focus Jobs</th>
-					</tr></thead>
-					<tbody>
-					<?php foreach ( $techs as $t ) :
-						$variance_style = '';
-						if ( strpos( $t['variance'], '+' ) === 0 ) {
-							$variance_style = 'color:var(--warn)';
-						} elseif ( $t['variance'] === '-56h 0m' ) {
-							$variance_style = 'color:var(--risk)';
-						}
-						?>
-						<tr
-							data-tech-row
-							data-tech-name="<?php echo esc_attr( $t['name'] ); ?>"
-							data-tech-active="<?php echo (int) $t['active']; ?>"
-							data-tech-touched="<?php echo (int) $t['touched_jobs']; ?>"
-							data-tech-period="<?php echo (int) $t['period_minutes']; ?>"
-							data-tech-today="<?php echo (int) $t['today_minutes']; ?>"
-							data-tech-week="<?php echo (int) $t['week_minutes']; ?>"
-							data-tech-est="<?php echo (int) $t['est_minutes']; ?>"
-							data-tech-variance="<?php echo (int) $t['variance_minutes']; ?>"
-							data-tech-capture="<?php echo (int) $t['capture']; ?>"
-							data-tech-last="<?php echo (int) $t['last_entry_ts']; ?>"
-							data-tech-attention="<?php echo (int) $t['attention_score']; ?>"
-							data-tech-issue-keys="<?php echo esc_attr( implode( ',', $t['issue_keys'] ) ); ?>"
-							data-tech-issues="<?php echo empty( $t['flags'] ) ? '0' : '1'; ?>">
-							<td class="tech">
-								<div class="tech-main">
-									<?php echo Slate_Ops_Executive::avatar_html( $t['name'], $t['state'] ); ?>
-									<span><?php echo esc_html( $t['name'] ); ?></span>
-								</div>
-								<?php if ( ! empty( $t['note'] ) ) : ?>
-									<span class="sub"><?php echo esc_html( $t['note'] ); ?></span>
-								<?php endif; ?>
-							</td>
-							<td class="num"><?php echo (int) $t['assigned']; ?></td>
-							<td class="num"><?php echo (int) $t['active']; ?></td>
-							<td class="num"><?php echo (int) $t['touched_jobs']; ?></td>
-							<td class="num"><?php echo $t['logged'] === '0h 0m' ? '<span class="bad">0h 0m</span>' : esc_html( $t['logged'] ); ?></td>
-							<td class="num"><?php echo esc_html( $t['est'] ); ?></td>
-							<td class="num" style="<?php echo esc_attr( $variance_style ); ?>"><?php echo esc_html( $t['variance'] ); ?></td>
-							<td><?php echo Slate_Ops_Executive::meter_html( $t['capture'], $t['capture_flag'] ); ?></td>
-							<td class="mono"><?php echo esc_html( $t['last_entry'] ); ?></td>
-							<td>
-								<?php if ( empty( $t['flags'] ) ) : ?>
-									<?php echo Slate_Ops_Executive::tag_html( 'ok', 'On track' ); ?>
-								<?php else : ?>
-									<div style="display:flex;gap:4px;flex-wrap:wrap">
-										<?php foreach ( $t['flags'] as $f ) : ?>
-											<?php echo Slate_Ops_Executive::tag_html( $f['kind'], $f['text'] ); ?>
-										<?php endforeach; ?>
+
+				<div class="card">
+					<div class="card-head">
+						<h3>Tech Overview <span class="count-pill" data-tech-count><?php echo count( $techs ); ?> of <?php echo count( $techs ); ?> techs</span></h3>
+						<button class="btn" type="button"><span class="material-symbols-outlined" style="font-size:15px">download</span> Export CSV</button>
+					</div>
+
+					<div class="help-card">
+						<span class="material-symbols-outlined">lightbulb</span>
+						Sorted by attention. Click a row to view the jobs driving that tech's risk.
+					</div>
+
+					<div class="to-controls">
+						<div class="seg">
+							<button class="active" data-risk="all" type="button">All <span class="seg-count"><?php echo count( $techs ); ?></span></button>
+							<button data-risk="attention" type="button"><span class="seg-dot crit"></span>Attention <span class="seg-count"><?php echo (int) $tech_attention_count; ?></span></button>
+							<button data-risk="critical" type="button"><span class="seg-dot crit"></span>Critical <span class="seg-count"><?php echo (int) $tech_risk_counts['critical']; ?></span></button>
+							<button data-risk="warning" type="button"><span class="seg-dot warn"></span>Warning <span class="seg-count"><?php echo (int) $tech_risk_counts['warning']; ?></span></button>
+							<button data-risk="watch" type="button"><span class="seg-dot watch"></span>Watch <span class="seg-count"><?php echo (int) $tech_risk_counts['watch']; ?></span></button>
+							<button data-risk="ok" type="button"><span class="seg-dot ok"></span>On track <span class="seg-count"><?php echo (int) $tech_risk_counts['ok']; ?></span></button>
+						</div>
+						<div class="spacer"></div>
+						<div class="search">
+							<span class="material-symbols-outlined">search</span>
+							<input placeholder="Search tech…" data-tech-search type="search" />
+						</div>
+						<div class="mini-select">Sort:
+							<select data-tech-sort>
+								<option value="attention">Needs attention</option>
+								<option value="logged-desc">Most logged</option>
+								<option value="capture-asc">Lowest capture</option>
+								<option value="capture-desc">Highest capture</option>
+								<option value="last-asc">Oldest last entry</option>
+								<option value="name">Name</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="to-head to-grid">
+						<span>Tech</span>
+						<span>Status</span>
+						<span>Why — flags</span>
+						<span class="c">Workload</span>
+						<span class="r">Logged / Est</span>
+						<span>Capture</span>
+						<span>Action</span>
+						<span class="r">Jobs</span>
+					</div>
+
+					<div class="to-list">
+						<?php foreach ( $techs as $t ) :
+							$risk_key = isset( $t['risk_key'] ) ? $t['risk_key'] : 'ok';
+							$risk_pill = $risk_key;
+							$capture_class = $t['capture_flag'] === 'crit' ? 'crit' : ( $t['capture_flag'] === 'warn' ? 'warn' : '' );
+							$variance_class = (int) $t['variance_minutes'] > 0 ? 'over' : ( ( (int) $t['period_minutes'] <= 0 && (int) $t['active'] > 0 ) ? 'under' : 'ok' );
+							$meter_width = min( 100, max( 0, (int) $t['capture'] ) );
+							$focus_count = count( $t['focus_jobs'] );
+							?>
+							<div class="to-row to-grid" data-risk="<?php echo esc_attr( $risk_key ); ?>" data-name="<?php echo esc_attr( $t['name'] ); ?>" data-period="<?php echo (int) $t['period_minutes']; ?>" data-capture="<?php echo (int) $t['capture']; ?>" data-last="<?php echo (int) $t['last_entry_ts']; ?>" data-attention="<?php echo (int) $t['attention_score']; ?>">
+								<button class="to-row__main" type="button">
+									<div class="to-tech">
+										<?php echo Slate_Ops_Executive::avatar_html( $t['name'], $t['state'] ); ?>
+										<span class="to-tech__name"><b><?php echo esc_html( $t['name'] ); ?></b><span><?php echo esc_html( $t['note'] ?: 'No recent entry' ); ?></span></span>
 									</div>
-								<?php endif; ?>
-							</td>
-							<td class="action"><?php echo esc_html( $t['primary_action'] ); ?> &rarr;</td>
-							<td class="focus-jobs">
-								<?php if ( empty( $t['focus_jobs'] ) ) : ?>
-									<span class="sub">No active job detail</span>
-								<?php else : ?>
-									<?php foreach ( $t['focus_jobs'] as $job ) : ?>
-										<div class="focus-job">
-											<span class="focus-so"><?php echo esc_html( $job['so'] ); ?></span>
-											<span><?php echo esc_html( $job['cust'] ); ?></span>
-											<?php echo Slate_Ops_Executive::tag_html( $job['risk'], $job['issue'] ); ?>
-											<span class="sub"><?php echo esc_html( $job['logged'] ); ?> logged · <?php echo esc_html( $job['est'] ); ?> est.</span>
+									<div class="to-status"><span class="risk-pill <?php echo esc_attr( $risk_pill ); ?>"><span class="dot"></span><?php echo esc_html( $t['risk_label'] ); ?></span></div>
+									<div class="to-why">
+										<?php if ( empty( $t['flags'] ) ) : ?>
+											<span class="flag">On track</span>
+										<?php else : ?>
+											<?php foreach ( $t['flags'] as $flag ) :
+												$flag_class = 'sev-' . ( 'crit' === $flag['kind'] ? 'crit' : ( 'watch' === $flag['kind'] ? 'watch' : 'warn' ) );
+												?>
+												<span class="flag <?php echo esc_attr( $flag_class ); ?>"><?php echo esc_html( $flag['text'] ); ?></span>
+											<?php endforeach; ?>
+										<?php endif; ?>
+									</div>
+									<div class="to-work"><b><?php echo (int) $t['active']; ?><span style="color:var(--slate-ink-subtle);font-weight:400">/<?php echo (int) $t['assigned']; ?></span></b><span>active · <?php echo (int) $t['touched_jobs']; ?> touched</span></div>
+									<div class="to-labor">
+										<div class="to-labor__top"><span class="<?php echo (int) $t['period_minutes'] <= 0 && (int) $t['active'] > 0 ? 'z' : ''; ?>"><?php echo esc_html( $t['logged'] ); ?></span> <span class="sep">/</span> <?php echo esc_html( $t['est'] ); ?></div>
+										<div class="to-labor__var <?php echo esc_attr( $variance_class ); ?>"><?php echo esc_html( $t['variance'] ); ?> variance</div>
+									</div>
+									<div class="to-capwrap"><div class="to-cap">
+										<span class="to-cap__val <?php echo esc_attr( $capture_class ); ?>"><?php echo (int) $t['capture']; ?>%</span>
+										<span class="to-cap__bar <?php echo esc_attr( $capture_class ); ?>"><i style="width:<?php echo esc_attr( $meter_width ); ?>%"></i><span class="tick" style="left:80%"></span></span>
+									</div></div>
+									<div class="to-actionwrap"><span class="to-action-link"><?php echo esc_html( $t['primary_action'] ); ?> &rarr;</span></div>
+									<div class="to-expwrap"><span class="to-exp"><?php echo (int) $focus_count; ?><span class="material-symbols-outlined">expand_more</span></span></div>
+								</button>
+								<div class="to-row__drawer">
+									<div class="to-drawer__label">Focus jobs</div>
+									<?php if ( empty( $t['focus_jobs'] ) ) : ?>
+										<div class="to-empty"><span class="material-symbols-outlined">check_circle</span><b>No focus jobs</b><span>This tech has no assigned job detail in the current report scope.</span></div>
+									<?php else : ?>
+										<div class="fj-grid">
+											<?php foreach ( $t['focus_jobs'] as $job ) :
+												$job_sev = 'crit' === $job['risk'] ? 'crit' : ( 'warn' === $job['risk'] || 'watch' === $job['risk'] ? 'warn' : 'ok' );
+												?>
+												<div class="fj" data-sev="<?php echo esc_attr( $job_sev ); ?>">
+													<span class="fj__so"><?php echo esc_html( $job['so'] ); ?></span>
+													<span class="fj__tag"><span class="fj-tag <?php echo esc_attr( $job_sev ); ?>"><?php echo esc_html( $job['issue'] ); ?></span></span>
+													<span class="fj__cust"><?php echo esc_html( $job['cust'] ); ?></span>
+													<span class="fj__meta"><?php echo esc_html( $job['logged'] ); ?> logged · <?php echo esc_html( $job['est'] ); ?> est.</span>
+												</div>
+											<?php endforeach; ?>
 										</div>
-									<?php endforeach; ?>
-								<?php endif; ?>
-							</td>
-						</tr>
-					<?php endforeach; ?>
-					</tbody>
-				</table>
+									<?php endif; ?>
+									<div class="to-drawer__foot">
+										<button class="to-action-btn" type="button"><span class="material-symbols-outlined">schedule</span><?php echo esc_html( $t['primary_action'] ); ?></button>
+										<button class="to-action-btn secondary" type="button">Review jobs</button>
+									</div>
+								</div>
+							</div>
+						<?php endforeach; ?>
+						<div class="to-empty to-empty-list" style="display:none"><span class="material-symbols-outlined">filter_alt_off</span><b>No techs match</b><span>Adjust the segment, search, or sort controls.</span></div>
+					</div>
 				</div>
-				<div class="foot"><span data-tech-foot-count>Showing <?php echo count( $techs ); ?> of <?php echo count( $techs ); ?></span><span>Last sync <?php echo esc_html( wp_date( 'g:i A' ) ); ?></span></div>
 			</div>
 		</section>
 

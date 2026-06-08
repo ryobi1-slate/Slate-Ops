@@ -607,7 +607,7 @@ class Slate_Ops_Executive {
 				$flags[] = array( 'key' => 'no_period', 'text' => 'No period time', 'kind' => 'crit' );
 			}
 			if ( $today <= 0 && (int) $a['active'] > 0 ) {
-				$flags[] = array( 'key' => 'no_today', 'text' => 'No time today', 'kind' => 'warn' );
+				$flags[] = array( 'key' => 'no_today', 'text' => 'No time today', 'kind' => 'watch' );
 			}
 			if ( $week <= 0 && (int) $a['active'] > 0 ) {
 				$flags[] = array( 'key' => 'no_week', 'text' => 'No time this week', 'kind' => 'crit' );
@@ -627,9 +627,12 @@ class Slate_Ops_Executive {
 				return $flag['key'];
 			}, $flags ) ) );
 			$attention_score = $this->tech_attention_score( (int) $a['active'], $logged, $today, $week, $est, $capture, $open_timer_count, $jobs );
+			$risk_key = $this->tech_risk_key( $flags, $capture, (int) $a['active'] );
 			$out[] = array(
 				'name' => $a['name'],
 				'state' => $this->tech_state( $flags, $capture, (int) $a['active'] ),
+				'risk_key' => $risk_key,
+				'risk_label' => $this->tech_risk_label( $risk_key ),
 				'assigned' => (int) $a['assigned'],
 				'active' => (int) $a['active'],
 				'touched_jobs' => $touched_jobs,
@@ -1050,12 +1053,43 @@ class Slate_Ops_Executive {
 	}
 
 	private function tech_state( $flags, $capture, $active ) {
+		$risk = $this->tech_risk_key( $flags, $capture, $active );
+		if ( 'critical' === $risk ) {
+			return 'crit';
+		}
+		if ( in_array( $risk, array( 'warning', 'watch' ), true ) ) {
+			return 'warn';
+		}
+		return 'ok';
+	}
+
+	private function tech_risk_key( $flags, $capture, $active ) {
 		foreach ( $flags as $f ) {
 			if ( 'crit' === $f['kind'] ) {
-				return 'crit';
+				return 'critical';
 			}
 		}
-		return $active > 0 && $capture < 60 ? 'warn' : 'ok';
+		foreach ( $flags as $f ) {
+			if ( 'warn' === $f['kind'] ) {
+				return 'warning';
+			}
+		}
+		foreach ( $flags as $f ) {
+			if ( 'watch' === $f['kind'] ) {
+				return 'watch';
+			}
+		}
+		return $active > 0 && $capture < 60 ? 'warning' : 'ok';
+	}
+
+	private function tech_risk_label( $risk ) {
+		$labels = array(
+			'critical' => 'Critical',
+			'warning' => 'Warning',
+			'watch' => 'Watch',
+			'ok' => 'On track',
+		);
+		return $labels[ $risk ] ?? 'On track';
 	}
 
 	private function tech_primary_action( $flags, $active, $logged, $open_timer_count ) {

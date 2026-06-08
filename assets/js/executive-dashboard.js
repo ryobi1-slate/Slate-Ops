@@ -78,6 +78,7 @@
 		var tbody = $('tbody', pane);
 		var rows = $$('[data-tech-row]', pane);
 		var total = rows.length;
+		if (!total) return;
 
 		function setPressed(chip) {
 			if (!chip) return;
