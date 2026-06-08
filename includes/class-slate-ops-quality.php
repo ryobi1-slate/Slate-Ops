@@ -1038,6 +1038,7 @@ class Slate_Ops_Quality {
     if (!class_exists('Slate_Ops_Jobs')) return [];
     $limit  = max(1, (int) ($args['limit'] ?? 100));
     $status = $args['status'] ?? null;
+    $include_test_data = !empty($args['include_test_data']) || (bool) apply_filters('slate_ops_quality_include_test_jobs', false);
 
     $rows = Slate_Ops_Jobs::query([
       'limit'            => $limit,
@@ -1050,10 +1051,31 @@ class Slate_Ops_Quality {
     foreach ($rows as $r) {
       $desc = self::describe_job((int) $r['job_id']);
       if (!$desc) continue;
+      if (!$include_test_data && self::is_seed_or_test_job($desc)) continue;
       if ($status && $desc['rollup_status'] !== $status) continue;
       $out[] = $desc;
     }
     return $out;
+  }
+
+  /**
+   * Identify seeded QA/demo records so they do not pollute live Quality queues.
+   * This intentionally avoids matching generic names like "Test" by itself.
+   */
+  public static function is_seed_or_test_job(array $job) {
+    $so = strtoupper(trim((string) ($job['so_number'] ?? '')));
+    $vin = strtoupper(trim((string) ($job['vin'] ?? '')));
+    $customer = strtoupper(trim((string) ($job['customer_name'] ?? '')));
+    $dealer = strtoupper(trim((string) ($job['dealer_name'] ?? '')));
+    $combined = $customer . ' ' . $dealer;
+
+    $is_seed = 0 === strpos($so, 'TEST-SO')
+      || 0 === strpos($vin, 'SCHEDTEST')
+      || false !== strpos($combined, 'SCHEDULER TEST DATA')
+      || false !== strpos($combined, 'RVIA QUALITY TEST')
+      || false !== strpos($combined, 'SLATE INTERNAL TEST');
+
+    return (bool) apply_filters('slate_ops_quality_is_seed_or_test_job', $is_seed, $job);
   }
 
   /**
