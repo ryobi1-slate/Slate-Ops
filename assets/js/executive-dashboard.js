@@ -22,17 +22,33 @@
 	var $$ = function (sel, r) { return Array.prototype.slice.call((r || root).querySelectorAll(sel)); };
 
 	/* ---------- Tabs ---------- */
+	function activateTab(id) {
+		var tab = $('.tab[data-tab="' + id + '"]');
+		if (!tab) return;
+		$$('.tab').forEach(function (x) { x.classList.toggle('active', x === tab); });
+		$$('.tab-pane').forEach(function (p) {
+			p.classList.toggle('active', p.id === 'pane-' + id);
+		});
+	}
+
 	function bindTabs() {
 		$$('.tab').forEach(function (t) {
 			t.addEventListener('click', function () {
 				var id = t.getAttribute('data-tab');
-				$$('.tab').forEach(function (x) { x.classList.toggle('active', x === t); });
-				$$('.tab-pane').forEach(function (p) {
-					p.classList.toggle('active', p.id === 'pane-' + id);
-				});
+				activateTab(id);
+				if (window.history && window.URLSearchParams) {
+					var url = new URL(window.location.href);
+					url.searchParams.set('tab', id);
+					window.history.replaceState({}, '', url.toString());
+				}
 				window.scrollTo({ top: 0, behavior: 'instant' });
 			});
 		});
+
+		if (window.URLSearchParams) {
+			var selected = new URLSearchParams(window.location.search).get('tab');
+			if (selected) activateTab(selected);
+		}
 	}
 
 	/* ---------- Job filters ---------- */
@@ -90,8 +106,17 @@
 		});
 	}
 
+	function bindPeriodFilter() {
+		var select = $('[data-period-select]');
+		if (!select || !select.form) return;
+		select.addEventListener('change', function () {
+			select.form.submit();
+		});
+	}
+
 	function init() {
 		bindTabs();
+		bindPeriodFilter();
 		bindJobFilters();
 		bindChipToggles();
 	}

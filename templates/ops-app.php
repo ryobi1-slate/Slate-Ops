@@ -47,6 +47,7 @@ $route_map = [
   'tech'         => 'tech',
   'schedule'     => 'schedule',
   'purchasing'   => 'purchasing',
+  'quality'      => 'quality',
   'resource-hub' => 'resource-hub',
   'admin'        => 'admin',
   'settings'     => 'settings',
@@ -72,6 +73,14 @@ $is_executive_page = ($_ops_route === 'exec');
 $is_resource_hub_page = ($_ops_route === 'resource-hub');
 $is_audit_log_page = ($_ops_path === 'admin/audit');
 $is_supervisor_dashboard_page = ($_ops_route === 'supervisor-dashboard');
+$is_quality_page = ($_ops_route === 'quality');
+$disable_react_mount = ($page_slug === 'home')
+  || ($page_slug === 'cs-dashboard')
+  || $is_supervisor_dashboard_page
+  || $is_executive_page
+  || $is_quality_page
+  || $is_resource_hub_page
+  || $is_audit_log_page;
 
 // Open layout shell (outputs <html> … <section class="ops-content"><div id="ops-view">)
 $shell_part = 'open';
@@ -98,6 +107,10 @@ elseif ($is_executive_page) :
   // Server-rendered Executive Dashboard V2 (Purchasing pattern).
   // React app is not enqueued for this route in slate-ops.php.
   include SLATE_OPS_PATH . 'templates/pages/executive-dashboard.php';
+elseif ($is_quality_page) :
+  // Server-rendered Quality module (Purchasing pattern). React app is not
+  // enqueued for this route in slate-ops.php.
+  include SLATE_OPS_PATH . 'templates/pages/quality.php';
 elseif ($is_resource_hub_page) :
   // Server-rendered Resource Hub. React app is not enqueued for this route.
   include SLATE_OPS_PATH . 'templates/pages/resource-hub.php';

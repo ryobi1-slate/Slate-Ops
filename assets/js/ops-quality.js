@@ -1,0 +1,1162 @@
+/*
+ * Slate Ops — Quality module front-end.
+ *
+ * Three views are mounted off the same root .oq element:
+ *   - dashboard  → filters and search the server-rendered job list
+ *   - job        → handles supervisor review actions
+ *   - form       → renders the responsive form runner (mobile stepper,
+ *                  tablet two-panel)
+ *
+ * Vanilla JS only. No jQuery. All API calls go through the REST nonce.
+ */
+(function () {
+  'use strict';
+
+  var settings = window.slateOpsQuality || {};
+  var API   = (settings.api && settings.api.root)  || '/wp-json/slate-ops/v1';
+  var NONCE = (settings.api && settings.api.nonce) || '';
+  var CAPS  = (settings.user && settings.user.caps) || {};
+
+  function api(method, path, body, opts) {
+    opts = opts || {};
+    var headers = { 'X-WP-Nonce': NONCE };
+    var init = { method: method, headers: headers, credentials: 'same-origin' };
+    if (body instanceof FormData) {
+      init.body = body;
+    } else if (body) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(body);
+    }
+    return fetch(API + path, init).then(function (r) {
+      return r.json().then(function (data) {
+        if (!r.ok) {
+          var err = new Error(data && data.message ? data.message : 'Request failed');
+          err.payload = data;
+          err.status  = r.status;
+          throw err;
+        }
+        return data;
+      });
+    });
+  }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        if (k === 'class') node.className = attrs[k];
+        else if (k === 'html') node.innerHTML = attrs[k];
+        else if (k.indexOf('on') === 0) node.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
+        else if (k === 'data' && typeof attrs[k] === 'object') {
+          Object.keys(attrs[k]).forEach(function (dk) { node.dataset[dk] = attrs[k][dk]; });
+        } else if (attrs[k] != null) {
+          node.setAttribute(k, attrs[k]);
+        }
+      });
+    }
+    if (children) {
+      if (!Array.isArray(children)) children = [children];
+      children.forEach(function (c) {
+        if (c == null) return;
+        if (typeof c === 'string') node.appendChild(document.createTextNode(c));
+        else node.appendChild(c);
+      });
+    }
+    return node;
+  }
+
+  function icon(name) {
+    return el('span', { class: 'material-symbols-outlined' }, name);
+  }
+
+  function pill(status) {
+    var labels = {
+      not_started: 'Not Started', in_progress: 'In Progress',
+      submitted: 'Submitted', needs_correction: 'Needs Correction',
+      passed: 'Passed', locked: 'Locked'
+    };
+    var cls = status.replace(/_/g, '-');
+    return el('span', { class: 'oq-pill oq-pill--' + cls }, labels[status] || status);
+  }
+
+  // ── Dashboard view ───────────────────────────────────────────────────
+  function initDashboard(root) {
+    var search = root.querySelector('#oq-search-input');
+    var rows   = root.querySelectorAll('#oq-job-table tr.oq-row');
+    var count  = root.querySelector('#oq-row-count');
+    var buckets = root.querySelectorAll('.oq-bucket');
+    var activeBucket = null;
+
+    function apply() {
+      var q = (search.value || '').toLowerCase().trim();
+      var visible = 0;
+      rows.forEach(function (tr) {
+        var hay = tr.dataset.search || '';
+        var st  = tr.dataset.status || '';
+        var hit = (q === '' || hay.indexOf(q) !== -1)
+               && (!activeBucket || st === activeBucket);
+        tr.style.display = hit ? '' : 'none';
+        if (hit) visible++;
+      });
+      if (count) count.textContent = visible;
+    }
+
+    if (search) search.addEventListener('input', apply);
+
+    buckets.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var bucket = b.dataset.bucket;
+        if (activeBucket === bucket) {
+          activeBucket = null;
+          buckets.forEach(function (x) { x.classList.remove('is-active'); });
+        } else {
+          activeBucket = bucket;
+          buckets.forEach(function (x) { x.classList.toggle('is-active', x === b); });
+        }
+        apply();
+      });
+    });
+  }
+
+  // ── Job review (supervisor) ─────────────────────────────────────────
+  function initJobReview(root) {
+    var jobId = parseInt(root.dataset.jobId, 10);
+    if (!jobId) return;
+
+    var select   = root.querySelector('#oq-review-form');
+    var note     = root.querySelector('#oq-review-note');
+    var btnPass  = root.querySelector('[data-action="review-pass"]');
+    var btnFail  = root.querySelector('[data-action="review-fail"]');
+    var btnUnlock = root.querySelector('[data-action="unlock"]');
+
+    function busy(b, on) { if (b) { b.disabled = on; b.style.opacity = on ? '.6' : ''; } }
+
+    function reload() { setTimeout(function () { window.location.reload(); }, 250); }
+
+    if (btnPass) btnPass.addEventListener('click', function () {
+      if (!select) return;
+      busy(btnPass, true);
+      api('POST', '/quality/jobs/' + jobId + '/forms/' + select.value + '/review', {
+        decision: 'passed',
+        note: note ? note.value : ''
+      }).then(reload).catch(function (e) {
+        busy(btnPass, false);
+        window.alert(e.message);
+      });
+    });
+
+    if (btnFail) btnFail.addEventListener('click', function () {
+      if (!select) return;
+      var reason = note && note.value.trim();
+      if (!reason) { window.alert('Add correction notes so the tech knows what to fix.'); return; }
+      busy(btnFail, true);
+      api('POST', '/quality/jobs/' + jobId + '/forms/' + select.value + '/review', {
+        decision: 'needs_correction',
+        note: reason
+      }).then(reload).catch(function (e) {
+        busy(btnFail, false);
+        window.alert(e.message);
+      });
+    });
+
+    if (btnUnlock) btnUnlock.addEventListener('click', function () {
+      if (!select) return;
+      var reason = window.prompt('Reason to unlock this form?');
+      if (!reason || !reason.trim()) return;
+      busy(btnUnlock, true);
+      api('POST', '/quality/jobs/' + jobId + '/forms/' + select.value + '/unlock', {
+        reason: reason
+      }).then(reload).catch(function (e) {
+        busy(btnUnlock, false);
+        window.alert(e.message);
+      });
+    });
+  }
+
+  // ── Form runner ─────────────────────────────────────────────────────
+  function initRunner(root) {
+    var host = root.querySelector('[data-runner]');
+    if (!host) return;
+    var raw  = host.getAttribute('data-initial') || '{}';
+    var data;
+    try { data = JSON.parse(raw); } catch (e) { data = {}; }
+    if (!data.template) return;
+
+    var jobId = (data.job && data.job.job_id) || parseInt(root.dataset.jobId, 10);
+    var code  = data.template.code;
+
+    var state = {
+      stepIdx: 0,
+      template: data.template,
+      job: data.job,
+      row: data.row || { status: 'not_started', payload: {}, photos: {} },
+      activeItem: null,    // { sectionKey, itemKey }
+      activeSlot: null,    // photo slot key
+      saving: false,
+      photoCache: {},      // slot → [{attachment_id, url, thumb_url}]
+    };
+
+    var localTouched = {};
+    function touchKey(sectionKey, itemKey) {
+      return sectionKey + '/' + itemKey;
+    }
+    function markTouched(sectionKey, itemKey) {
+      localTouched[touchKey(sectionKey, itemKey)] = true;
+    }
+    function isTouched(sectionKey, itemKey) {
+      return !!localTouched[touchKey(sectionKey, itemKey)];
+    }
+
+    function mergeServerRow(row) {
+      if (!row || typeof row !== 'object') return;
+      [
+        'status', 'status_label', 'locked', 'locked_at',
+        'submitted_by', 'submitted_at', 'reviewed_by', 'reviewed_at',
+        'signature_name', 'updated_by', 'updated_at', 'created_by', 'created_at'
+      ].forEach(function (key) {
+        if (row[key] !== undefined) state.row[key] = row[key];
+      });
+
+      state.row.payload = state.row.payload || {};
+      var serverPayload = row.payload || {};
+      var serverChecklist = isPlainObject(serverPayload.checklist) ? serverPayload.checklist : {};
+      if (!isPlainObject(state.row.payload.checklist)) {
+        state.row.payload.checklist = {};
+      }
+      Object.keys(serverChecklist).forEach(function (sectionKey) {
+        if (!isPlainObject(state.row.payload.checklist[sectionKey])) {
+          state.row.payload.checklist[sectionKey] = {};
+        }
+        Object.keys(serverChecklist[sectionKey] || {}).forEach(function (itemKey) {
+          if (!isTouched(sectionKey, itemKey)) {
+            state.row.payload.checklist[sectionKey][itemKey] = serverChecklist[sectionKey][itemKey];
+          }
+        });
+      });
+
+      ['vehicle', 'notes', 'photo_exemptions', 'signature', 'review', 'unlocks'].forEach(function (key) {
+        if (state.row.payload[key] === undefined && serverPayload[key] !== undefined) {
+          state.row.payload[key] = serverPayload[key];
+        }
+      });
+    }
+
+    // Hydrate via REST so we (a) get the freshest template from the live
+    // registry — not whatever was baked into the page HTML at render time
+    // (defeats stale page caches), and (b) get photo URLs for any
+    // attachments already on the row.
+    api('GET', '/quality/jobs/' + jobId + '/forms/' + code).then(function (res) {
+      if (res && res.template) {
+        state.template = res.template;
+        STEPS = buildSteps(state.template);
+        if (state.stepIdx >= STEPS.length) state.stepIdx = STEPS.length - 1;
+      }
+      mergeServerRow(res.row);
+      state.photos     = res.photos || {};
+      state.photoCache = res.photos || {};
+      // If the live registry no longer contains the item the user was
+      // looking at, reset the active item to the first one in the
+      // current template so the tablet detail pane doesn't blank out.
+      if (state.activeItem) {
+        var found = (state.template.sections || []).some(function (s) {
+          return s.key === state.activeItem.sectionKey
+              && (s.items || []).some(function (i) { return i.key === state.activeItem.itemKey; });
+        });
+        if (!found) state.activeItem = null;
+      }
+      render();
+    }).catch(function () { render(); });
+
+    function buildSteps(template) {
+      var steps = [
+        { key: 'vehicle',   label: 'Vehicle' },
+        { key: 'checklist', label: 'Checklist' },
+      ];
+      if (((template && template.photo_slots) || []).length) {
+        steps.push({ key: 'photos', label: 'Photos' });
+      }
+      steps.push({ key: 'notes', label: 'Notes' });
+      steps.push({ key: 'sign', label: 'Sign' });
+      return steps;
+    }
+
+    var STEPS = buildSteps(state.template);
+
+    function layoutMode() {
+      // < 768 → stepper; 768-1199 → tablet two-panel; 1200+ → tablet (still
+      // two-panel but wider). Desktop "review" lives on the job page.
+      return window.innerWidth >= 768 ? 'tablet' : 'mobile';
+    }
+
+    function ensureChecklist() {
+      state.row.payload = state.row.payload || {};
+      if (!isPlainObject(state.row.payload.checklist)) {
+        state.row.payload.checklist = {};
+      }
+      state.template.sections.forEach(function (s) {
+        if (!isPlainObject(state.row.payload.checklist[s.key])) {
+          state.row.payload.checklist[s.key] = {};
+        }
+      });
+    }
+
+    function isPlainObject(value) {
+      return !!value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function draftBody() {
+      return JSON.parse(JSON.stringify({
+        checklist: state.row.payload.checklist || {},
+        vehicle: state.row.payload.vehicle || {},
+        photo_exemptions: state.row.payload.photo_exemptions || {},
+        notes: state.row.payload.notes || ''
+      }));
+    }
+
+    function isLockedForEdits() {
+      return !!(state.row.locked || state.row.locked_at)
+          || state.row.status === 'submitted'
+          || state.row.status === 'passed';
+    }
+
+    function setResult(sectionKey, itemKey, result) {
+      if (isLockedForEdits()) return;
+      if (result === 'pass') {
+        var item = findChecklistItem(sectionKey, itemKey);
+        if (item && !itemPhotoRequirementMet(sectionKey, item, 'pass')) {
+          window.alert('Add the required photo evidence before marking this item pass.');
+          return;
+        }
+      }
+      ensureChecklist();
+      var bucket = state.row.payload.checklist[sectionKey];
+      bucket[itemKey] = bucket[itemKey] || {};
+      bucket[itemKey].result = result;
+      if (result === 'pass' || result === 'not_tested') {
+        delete bucket[itemKey].note;
+      }
+      bucket[itemKey].timestamp = new Date().toISOString();
+      markTouched(sectionKey, itemKey);
+      saveDraft({ immediate: true });
+      render();
+    }
+
+    function setNote(sectionKey, itemKey, note) {
+      if (isLockedForEdits()) return;
+      ensureChecklist();
+      var bucket = state.row.payload.checklist[sectionKey];
+      bucket[itemKey] = bucket[itemKey] || {};
+      bucket[itemKey].note = note;
+      markTouched(sectionKey, itemKey);
+      saveDraft();
+    }
+
+    var saveTimer = null;
+    var saveInFlight = false;
+    var savePendingAgain = false;
+    function flushSave() {
+      if (isLockedForEdits()) return;
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      if (saveInFlight) {
+        savePendingAgain = true;
+        return;
+      }
+      saveInFlight = true;
+      var body = draftBody();
+      api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/draft', body)
+        .then(function (row) {
+          mergeServerRow(row);
+        }).catch(function () { /* keep local optimistic state */ })
+        .then(function () {
+          saveInFlight = false;
+          if (savePendingAgain) {
+            savePendingAgain = false;
+            flushSave();
+          }
+        });
+    }
+
+    function saveDraft(opts) {
+      if (isLockedForEdits()) return;
+      if (opts && opts.immediate) {
+        flushSave();
+        return;
+      }
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(flushSave, 250);
+    }
+
+    function flushSaveBeacon() {
+      if (isLockedForEdits()) return;
+      if (!saveTimer && !saveInFlight && !savePendingAgain) return;
+      try {
+        fetch(API + '/quality/jobs/' + jobId + '/forms/' + code + '/draft', {
+          method: 'POST',
+          headers: { 'X-WP-Nonce': NONCE, 'Content-Type': 'application/json' },
+          body: JSON.stringify(draftBody()),
+          keepalive: true,
+          credentials: 'same-origin'
+        });
+      } catch (e) { /* best effort on unload */ }
+    }
+    window.addEventListener('pagehide', flushSaveBeacon);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flushSaveBeacon();
+    });
+
+    function uploadPhoto(slotKey, file, meta) {
+      if (isLockedForEdits()) return Promise.resolve();
+      var fd = new FormData();
+      fd.append('slot', slotKey);
+      if (meta && meta.sectionKey) fd.append('section', meta.sectionKey);
+      if (meta && meta.itemKey) fd.append('item', meta.itemKey);
+      fd.append('file', file);
+      return api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/photos', fd)
+        .then(function (res) {
+          mergeServerRow(res.row);
+          state.photoCache = res.photos || state.photoCache;
+          render();
+        });
+    }
+
+    function findChecklistItem(sectionKey, itemKey) {
+      var sections = state.template.sections || [];
+      for (var s = 0; s < sections.length; s++) {
+        if (sections[s].key !== sectionKey) continue;
+        var items = sections[s].items || [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].key === itemKey) return items[i];
+        }
+      }
+      return null;
+    }
+
+    function isComplianceForm() {
+      return !!(state.template.compliance && state.template.compliance.enabled);
+    }
+
+    function itemPhotoSlotKey(sectionKey, itemKey) {
+      return 'item__' + String(sectionKey || '').replace(/[^a-z0-9_]+/gi, '_').toLowerCase()
+        + '__' + String(itemKey || '').replace(/[^a-z0-9_]+/gi, '_').toLowerCase();
+    }
+
+    function normalizedPhotoRule(item) {
+      var rule = item && item.photo_rule ? item.photo_rule : 'none';
+      return ['none', 'optional', 'required', 'required_on_fail', 'required_on_override'].indexOf(rule) !== -1 ? rule : 'none';
+    }
+
+    function itemPhotos(sectionKey, item) {
+      return (state.photoCache || {})[itemPhotoSlotKey(sectionKey, item.key)] || [];
+    }
+
+    function photoRuleLabel(rule) {
+      return {
+        none: 'No photo required',
+        optional: 'Photo optional',
+        required: 'Photo required',
+        required_on_fail: 'Photo required on fail',
+        required_on_override: 'Photo required on override'
+      }[rule] || 'No photo required';
+    }
+
+    function itemPhotoRequirementMet(sectionKey, item, result) {
+      var rule = normalizedPhotoRule(item);
+      var count = itemPhotos(sectionKey, item).length;
+      if (rule === 'required' && result === 'pass') return count > 0;
+      if (rule === 'required_on_fail' && result === 'fail') return count > 0;
+      if (rule === 'required_on_override' && result === 'warning') return count > 0;
+      return true;
+    }
+
+    function itemNeedsPhoto(sectionKey, item, result) {
+      return !itemPhotoRequirementMet(sectionKey, item, result || 'pass');
+    }
+
+    // ── Rendering ─────────────────────────────────────────────────
+    function render() {
+      ensureChecklist();
+      host.innerHTML = '';
+      host.dataset.layout = layoutMode() === 'tablet' ? 'tablet' : 'mobile';
+
+      var header = renderHeader();
+      host.appendChild(header);
+
+      if (layoutMode() === 'tablet') {
+        renderTablet();
+      } else {
+        renderMobile();
+      }
+    }
+
+    function renderHeader() {
+      var head = el('div', { class: 'oq-rh' }, [
+        el('div', { class: 'oq-rh__left' }, [
+          el('div', { class: 'oq-eyebrow' }, state.template.eyebrow),
+          el('div', { class: 'oq-rh__title' }, state.template.name + ' · Q-' + jobId)
+        ]),
+        el('div', { class: 'oq-rh__right' }, [
+          pill(state.row.status || 'not_started'),
+          el('a', { class: 'oq-btn oq-btn--ghost', href: '/ops/quality/job/' + jobId }, [
+            icon('close'),
+            'Close'
+          ])
+        ])
+      ]);
+      return head;
+    }
+
+    function readOnlyNotice() {
+      if (!isLockedForEdits()) return null;
+      return el('div', { class: 'oq-readonly' }, [
+        icon('lock'),
+        el('span', null, 'This form is locked for editing. You can still review the captured details.')
+      ]);
+    }
+
+    function stepDots() {
+      var wrap = el('div', { class: 'oq-steps' });
+      STEPS.forEach(function (s, i) {
+        var cls = 'oq-step';
+        if (i < state.stepIdx) cls += ' is-done';
+        if (i === state.stepIdx) cls += ' is-active';
+        wrap.appendChild(el('div', { class: cls, onclick: function () { state.stepIdx = i; render(); } }, [
+          el('div', { class: 'oq-step__bar' }),
+          el('div', { class: 'oq-step__label' }, s.label)
+        ]));
+      });
+      return wrap;
+    }
+
+    function renderMobile() {
+      host.appendChild(stepDots());
+      var body = el('div', { class: 'oq-rb' });
+      var notice = readOnlyNotice();
+      if (notice) body.appendChild(notice);
+      var step = STEPS[state.stepIdx].key;
+      if (step === 'vehicle')   body.appendChild(renderVehicleStep());
+      if (step === 'checklist') body.appendChild(renderChecklistStep());
+      if (step === 'photos')    body.appendChild(renderPhotosStep());
+      if (step === 'notes')     body.appendChild(renderNotesStep());
+      if (step === 'sign')      body.appendChild(renderSignStep());
+      host.appendChild(body);
+      host.appendChild(renderFooter());
+    }
+
+    function renderTablet() {
+      var step = STEPS[state.stepIdx].key;
+      if (step === 'sign') {
+        var signBody = el('div', { class: 'oq-rb oq-rb--tablet-sign' });
+        var signNotice = readOnlyNotice();
+        if (signNotice) signBody.appendChild(signNotice);
+        signBody.appendChild(renderSignStep());
+        host.appendChild(signBody);
+        host.appendChild(renderFooter());
+        return;
+      }
+
+      // Two-panel layout: checklist on the left, detail/photos/notes on the right.
+      var main = el('div', { class: 'oq-runner__main' });
+
+      var left = el('div', { class: 'oq-checklist-pane' });
+      state.template.sections.forEach(function (section) {
+        left.appendChild(el('div', { class: 'oq-rsection-label' }, [el('span', null, section.label)]));
+        section.items.forEach(function (item) {
+          var resp = (state.row.payload.checklist[section.key] || {})[item.key] || {};
+          var isActive = state.activeItem
+            && state.activeItem.sectionKey === section.key
+            && state.activeItem.itemKey === item.key;
+          var cardCls = 'oq-cl-item' + (isActive ? ' is-active' : '');
+          var photoCount = itemPhotos(section.key, item).length;
+          var card = el('div', { class: cardCls, onclick: function () {
+            state.activeItem = { sectionKey: section.key, itemKey: item.key };
+            render();
+          }}, [
+            el('div', { class: 'oq-meta-row' }, [
+              el('span', { class: 'oq-eyebrow' }, (item.code || item.label || item.key)),
+              renderComplianceStatus(resp.result || 'not_tested')
+            ]),
+            el('div', { class: 'oq-cl-item__title' }, item.label),
+            el('div', { class: 'oq-cl-item__desc' }, item.desc || ''),
+            isComplianceForm() ? el('div', { class: 'oq-evidence-mini' }, photoCount + ' photo' + (photoCount === 1 ? '' : 's')) : null
+          ]);
+          left.appendChild(card);
+        });
+      });
+      main.appendChild(left);
+
+      var right = el('div', { class: 'oq-detail-pane' });
+      var tabletNotice = readOnlyNotice();
+      if (tabletNotice) right.appendChild(tabletNotice);
+      if (!state.activeItem) {
+        state.activeItem = {
+          sectionKey: state.template.sections[0].key,
+          itemKey: state.template.sections[0].items[0].key,
+        };
+      }
+      right.appendChild(renderActiveDetail());
+      if ((state.template.photo_slots || []).length) {
+        right.appendChild(el('div', { class: 'oq-rsection-label' }, 'Photos'));
+        right.appendChild(renderPhotosStep());
+      }
+      main.appendChild(right);
+
+      host.appendChild(main);
+      host.appendChild(renderFooter());
+    }
+
+    function renderActiveDetail() {
+      var sk = state.activeItem.sectionKey;
+      var ik = state.activeItem.itemKey;
+      var section = state.template.sections.find(function (s) { return s.key === sk; });
+      var item    = section.items.find(function (i) { return i.key === ik; });
+      return renderChecklistCard(section, item);
+    }
+
+    function renderChecklistCard(section, item) {
+      var resp = (state.row.payload.checklist[section.key] || {})[item.key] || {};
+      var photoRule = normalizedPhotoRule(item);
+      var missingPhoto = resp.result && itemNeedsPhoto(section.key, item, resp.result);
+      var card = el('div', { class: 'oq-cl-item is-active' }, [
+        el('div', { class: 'oq-meta-row' }, [
+          el('span', { class: 'oq-eyebrow' }, (item.code || item.label || item.key)),
+          isComplianceForm() ? renderComplianceStatus(resp.result || 'not_tested') : (resp.result === 'pass' ? pill('passed') : resp.result === 'fail' ? el('span', { class: 'oq-pill oq-pill--needs-correction' }, 'FAIL') : null),
+        ]),
+        el('div', { class: 'oq-cl-item__title' }, item.label),
+        el('div', { class: 'oq-cl-item__desc' }, item.desc || ''),
+        isComplianceForm() ? renderComplianceEvidence(section, item, photoRule, missingPhoto) : null,
+        renderPF(section, item, resp),
+        isComplianceForm() ? renderInfoPanel(item) : null,
+        (resp.result === 'fail' || resp.result === 'warning') ? renderFailPanel(section, item, resp) : null,
+      ]);
+      return card;
+    }
+
+    function renderPF(section, item, resp) {
+      if (isComplianceForm()) {
+        var statuses = [
+          { key: 'pass', label: 'Pass', cls: 'is-pass' },
+          { key: 'warning', label: 'Review', cls: 'is-warning' },
+          { key: 'fail', label: 'Fail', cls: 'is-fail' },
+          { key: 'not_tested', label: 'Not tested', cls: 'is-not-tested' }
+        ];
+        return el('div', { class: 'oq-pf oq-pf--compliance' }, statuses.map(function (status) {
+          return el('button', {
+            type: 'button',
+            class: resp.result === status.key ? status.cls : '',
+            disabled: isLockedForEdits() ? 'disabled' : null,
+            onclick: function () { setResult(section.key, item.key, status.key); }
+          }, status.label);
+        }));
+      }
+      var passBtn = el('button', {
+        type: 'button',
+        class: resp.result === 'pass' ? 'is-pass' : '',
+        disabled: isLockedForEdits() ? 'disabled' : null,
+        onclick: function () { setResult(section.key, item.key, 'pass'); }
+      }, 'PASS');
+      var failBtn = el('button', {
+        type: 'button',
+        class: resp.result === 'fail' ? 'is-fail' : '',
+        disabled: isLockedForEdits() ? 'disabled' : null,
+        onclick: function () { setResult(section.key, item.key, 'fail'); }
+      }, 'FAIL');
+      return el('div', { class: 'oq-pf' }, [passBtn, failBtn]);
+    }
+
+    function renderComplianceStatus(result) {
+      var labels = { pass: 'Pass', warning: 'Review', fail: 'Fail', not_tested: 'Not tested', '': 'Not tested' };
+      var key = labels[result] ? result : 'not_tested';
+      return el('span', { class: 'oq-compliance oq-compliance--' + key }, labels[key]);
+    }
+
+    function renderComplianceEvidence(section, item, photoRule, missingPhoto) {
+      var photos = itemPhotos(section.key, item);
+      var slotKey = itemPhotoSlotKey(section.key, item.key);
+      var addButton = el('button', {
+        type: 'button',
+        class: 'oq-btn oq-btn--secondary oq-btn--evidence',
+        disabled: isLockedForEdits() ? 'disabled' : null,
+        onclick: function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          triggerCapture(slotKey, { sectionKey: section.key, itemKey: item.key });
+        }
+      }, [icon('add_a_photo'), 'Add photo']);
+      var chips = el('div', { class: 'oq-evidence__photos' }, photos.slice(0, 4).map(function (photo) {
+        return el('span', {
+          class: 'oq-evidence__thumb',
+          style: photo ? 'background-image:url(' + (photo.thumb_url || photo.url) + ')' : ''
+        }, '');
+      }));
+      return el('div', { class: 'oq-evidence' + (missingPhoto ? ' is-missing' : '') }, [
+        el('div', { class: 'oq-evidence__meta' }, [
+          el('span', null, photoRuleLabel(photoRule)),
+          el('span', null, photos.length + ' attached')
+        ]),
+        el('div', { class: 'oq-evidence__actions' }, [addButton, photos.length ? chips : null]),
+        missingPhoto ? el('div', { class: 'oq-evidence__warning' }, 'Required photo evidence is missing for this status.') : null
+      ]);
+    }
+
+    function renderInfoPanel(item) {
+      var info = item.info || {};
+      var details = el('details', { class: 'oq-info' }, [
+        el('summary', null, [icon('info'), 'Item info'])
+      ]);
+      [
+        ['Purpose', info.purpose],
+        ['Procedure', info.procedure],
+        ['Pass criteria', info.pass_criteria],
+        ['Common failures', info.common_failures],
+        ['Required evidence', info.required_evidence],
+        ['Reference note', info.reference_note]
+      ].forEach(function (row) {
+        var label = row[0];
+        var value = row[1];
+        if (!value || (Array.isArray(value) && value.length === 0)) return;
+        var block = el('div', { class: 'oq-info__block' }, [el('div', { class: 'oq-info__label' }, label)]);
+        if (Array.isArray(value)) {
+          var list = el('ul', null);
+          value.forEach(function (entry) { list.appendChild(el('li', null, entry)); });
+          block.appendChild(list);
+        } else {
+          block.appendChild(el('p', null, value));
+        }
+        details.appendChild(block);
+      });
+      return details;
+    }
+
+    function renderFailPanel(section, item, resp) {
+      var ta = el('textarea', {
+        placeholder: resp.result === 'warning' ? 'What needs supervisor review?' : 'What failed? What did you try? What\'s next?',
+        readonly: isLockedForEdits() ? 'readonly' : null,
+        oninput: function (e) { setNote(section.key, item.key, e.target.value); }
+      });
+      ta.value = resp.note || '';
+      return el('div', { class: 'oq-fail-panel' }, [
+        el('div', { class: 'oq-fail-panel__head' }, [icon(resp.result === 'warning' ? 'rate_review' : 'flag'), resp.result === 'warning' ? 'Note required for review' : (resp.result === 'fail' ? 'Note required for FAIL' : 'Item notes')]),
+        ta
+      ]);
+    }
+
+    function renderVehicleStep() {
+      var v = (state.row.payload && state.row.payload.vehicle) || {};
+      var wrap = el('div', { class: 'oq-cl-item' }, [
+        el('div', { class: 'oq-eyebrow' }, 'Vehicle info'),
+        el('div', { class: 'oq-cl-item__title' }, 'Confirm what\'s on the dash'),
+        el('div', { class: 'oq-cl-item__desc' }, 'These values are saved as part of the form record.'),
+      ]);
+      ['vin', 'odometer', 'key_count', 'rvia_no'].forEach(function (key) {
+        var label = ({ vin: 'VIN', odometer: 'Odometer', key_count: 'Key count', rvia_no: 'RVIA #' })[key];
+        var inp = el('input', {
+          class: 'oq-input', type: 'text', placeholder: label,
+          readonly: isLockedForEdits() ? 'readonly' : null,
+          oninput: function (e) {
+            state.row.payload.vehicle = state.row.payload.vehicle || {};
+            state.row.payload.vehicle[key] = e.target.value;
+            saveDraft();
+          }
+        });
+        inp.value = v[key] || '';
+        wrap.appendChild(el('div', { class: 'oq-rsection-label' }, label));
+        wrap.appendChild(inp);
+      });
+      return wrap;
+    }
+
+    function renderChecklistStep() {
+      var box = document.createDocumentFragment();
+      state.template.sections.forEach(function (section) {
+        box.appendChild(el('div', { class: 'oq-rsection-label' }, section.label));
+        section.items.forEach(function (item) {
+          box.appendChild(renderChecklistCard(section, item));
+        });
+      });
+      var wrap = el('div', null);
+      wrap.appendChild(box);
+      return wrap;
+    }
+
+    function renderPhotosStep() {
+      var slots = state.template.photo_slots || [];
+      var requiredSlots = slots.filter(function (s) { return s.required; });
+      var photos = state.photoCache || {};
+      var grid = el('div', { class: 'oq-photo-tray' });
+      var requiredIndex = 0;
+      slots.forEach(function (slot, idx) {
+        var attached = photos[slot.key] || [];
+        var filled = attached.length > 0;
+        var first = filled ? attached[0] : null;
+        var noDamage = slot.key === 'existing_damage' && photoExemption(slot.key) === 'none';
+        var ok = filled || noDamage;
+        var slotLabel;
+        if (slot.required) {
+          requiredIndex++;
+          slotLabel = requiredIndex + '/' + requiredSlots.length + ' · ' + slot.label;
+        } else {
+          slotLabel = noDamage ? 'No existing damage noted' : 'Optional · ' + slot.label;
+        }
+        var slotEl = el('div', {
+          class: 'oq-photo-slot ' + (filled ? 'oq-photo-slot--filled' : '') + (noDamage ? ' oq-photo-slot--waived' : '') + (isLockedForEdits() ? ' is-readonly' : ''),
+          role: isLockedForEdits() ? 'img' : 'button',
+          tabindex: isLockedForEdits() ? null : '0',
+          style: first ? 'background-image:url(' + (first.thumb_url || first.url) + ')' : '',
+          onclick: function () { if (!isLockedForEdits() && !noDamage) triggerCapture(slot.key); }
+        }, [
+          el('span', { class: 'oq-photo-slot__status ' + (ok ? 'oq-photo-slot__status--ok' : 'oq-photo-slot__status--missing') }, ok ? '✓' : '!'),
+          el('span', { class: 'oq-photo-slot__label' }, slotLabel)
+        ]);
+        var slotWrap = el('div', { class: 'oq-photo-slot-wrap' }, [slotEl]);
+        if (slot.key === 'existing_damage' && !filled && !isLockedForEdits()) {
+          slotWrap.appendChild(el('button', {
+            type: 'button',
+            class: 'oq-photo-waive' + (noDamage ? ' is-active' : ''),
+            onclick: function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              setPhotoExemption(slot.key, noDamage ? '' : 'none');
+            }
+          }, noDamage ? 'No existing damage noted' : 'No existing damage'));
+        }
+        grid.appendChild(slotWrap);
+      });
+      return el('div', null, [
+        el('div', { class: 'oq-rsection-label' }, [
+          el('span', null, 'Required photos'),
+          el('span', null, attachedCount(photos, slots) + ' of ' + requiredSlots.length)
+        ]),
+        grid,
+      ]);
+    }
+
+    function photoExemption(slotKey) {
+      var exemptions = state.row.payload.photo_exemptions || {};
+      return exemptions[slotKey] || '';
+    }
+
+    function setPhotoExemption(slotKey, value) {
+      if (isLockedForEdits()) return;
+      state.row.payload.photo_exemptions = state.row.payload.photo_exemptions || {};
+      if (value) state.row.payload.photo_exemptions[slotKey] = value;
+      else delete state.row.payload.photo_exemptions[slotKey];
+      saveDraft({ immediate: true });
+      render();
+    }
+
+    function attachedCount(photos, slots) {
+      return slots.filter(function (s) { return s.required && (photos[s.key] || []).length > 0; }).length;
+    }
+
+    function prefersCameraCapture() {
+      var ua = navigator.userAgent || navigator.vendor || '';
+      var coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      return window.innerWidth < 900 || coarsePointer || /Android|iPhone|iPad|iPod/i.test(ua);
+    }
+
+    function isAndroidDevice() {
+      return /Android/i.test(navigator.userAgent || navigator.vendor || '');
+    }
+
+    function canUseStreamCamera() {
+      return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    }
+
+    function triggerCapture(slotKey, meta) {
+      if (isAndroidDevice() && canUseStreamCamera()) {
+        openStreamCamera(slotKey, meta).catch(function () {
+          triggerFileCapture(slotKey, meta);
+        });
+        return;
+      }
+      triggerFileCapture(slotKey, meta);
+    }
+
+    function triggerFileCapture(slotKey, meta) {
+      var inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/*';
+      inp.style.position = 'fixed';
+      inp.style.left = '-9999px';
+      inp.style.opacity = '0';
+      // Camera-first on phones. Android Chrome is more reliable when capture
+      // is set as an attribute and the input is attached before click().
+      if (prefersCameraCapture()) {
+        inp.setAttribute('capture', 'environment');
+      }
+      inp.addEventListener('change', function () {
+        var file = inp.files && inp.files[0];
+        if (inp.parentNode) inp.parentNode.removeChild(inp);
+        if (!file) return;
+        uploadPhoto(slotKey, file, meta).catch(function (e) { window.alert(e.message); });
+      });
+      inp.addEventListener('cancel', function () {
+        if (inp.parentNode) inp.parentNode.removeChild(inp);
+      });
+      document.body.appendChild(inp);
+      inp.click();
+    }
+
+    function requestRearCamera() {
+      return navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { exact: 'environment' },
+          width: { ideal: 1600 },
+          height: { ideal: 1200 }
+        }
+      }).catch(function () {
+        return navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1600 },
+            height: { ideal: 1200 }
+          }
+        });
+      });
+    }
+
+    function openStreamCamera(slotKey, meta) {
+      var overlay = el('div', { class: 'oq-camera', role: 'dialog', 'aria-label': 'Take photo' });
+      var video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline', muted: 'muted' });
+      var captureBtn = el('button', { type: 'button', class: 'oq-btn oq-btn--primary' }, 'Take photo');
+      var cancelBtn = el('button', { type: 'button', class: 'oq-btn oq-btn--ghost' }, 'Cancel');
+      var panel = el('div', { class: 'oq-camera__panel' }, [
+        el('div', { class: 'oq-camera__preview' }, [video]),
+        el('div', { class: 'oq-camera__actions' }, [cancelBtn, captureBtn])
+      ]);
+      overlay.appendChild(panel);
+
+      var stream = null;
+      var done = false;
+
+      function close() {
+        done = true;
+        if (stream) {
+          stream.getTracks().forEach(function (track) { track.stop(); });
+        }
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      }
+
+      cancelBtn.addEventListener('click', close);
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) close();
+      });
+
+      document.body.appendChild(overlay);
+
+      return requestRearCamera().then(function (mediaStream) {
+        if (done) {
+          mediaStream.getTracks().forEach(function (track) { track.stop(); });
+          return;
+        }
+        stream = mediaStream;
+        video.srcObject = stream;
+        return video.play();
+      }).then(function () {
+        if (done) return;
+        captureBtn.addEventListener('click', function () {
+          var width = video.videoWidth || 1280;
+          var height = video.videoHeight || 960;
+          var canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+          captureBtn.disabled = true;
+          canvas.toBlob(function (blob) {
+            if (!blob) {
+              close();
+              triggerFileCapture(slotKey);
+              return;
+            }
+            var fileName = 'quality-' + slotKey + '-' + Date.now() + '.jpg';
+            var file = new File([blob], fileName, { type: 'image/jpeg' });
+            uploadPhoto(slotKey, file, meta)
+              .catch(function (e) { window.alert(e.message); })
+              .finally(close);
+          }, 'image/jpeg', 0.9);
+        }, { once: true });
+      }).catch(function (err) {
+        close();
+        return Promise.reject(err);
+      });
+    }
+
+    function renderNotesStep() {
+      var ta = el('textarea', {
+        class: 'oq-input oq-textarea',
+        placeholder: 'Anything else the supervisor should know.',
+        readonly: isLockedForEdits() ? 'readonly' : null,
+        oninput: function (e) {
+          state.row.payload.notes = e.target.value;
+          saveDraft();
+        }
+      });
+      ta.value = state.row.payload.notes || '';
+      return el('div', null, [
+        el('div', { class: 'oq-rsection-label' }, 'Notes'),
+        ta,
+      ]);
+    }
+
+    function renderSignStep() {
+      var issues = validate();
+      var signedName = state.row.signature_name
+        || (state.row.payload && state.row.payload.signature && state.row.payload.signature.typed_name)
+        || '';
+      if (isLockedForEdits()) {
+        var lockedSummary = el('div', { class: 'oq-summary' }, [
+          el('div', { class: 'oq-summary__title' }, signedName ? 'Submitted' : 'Signature not recorded'),
+          el('div', { class: 'oq-summary__sub' }, signedName
+            ? 'This form has already been signed and locked.'
+            : 'This submitted form is locked. Ask a supervisor to unlock it before adding a signature.'),
+        ]);
+        var lockedSig = el('div', { class: 'oq-signature' }, [
+          el('label', { for: 'oq-sig' }, 'Typed signature'),
+          el('input', {
+            id: 'oq-sig',
+            type: 'text',
+            value: signedName || '',
+            placeholder: signedName ? '' : 'No signature recorded',
+            disabled: 'disabled'
+          }),
+          el('div', { class: 'oq-signature__meta' }, signedName
+            ? 'Your user ID and timestamp were recorded at submit.'
+            : 'Unlock this form to add the missing signature.'),
+        ]);
+        return el('div', null, [
+          el('div', { class: 'oq-rsection-label' }, 'Signature'),
+          lockedSummary,
+          lockedSig,
+        ]);
+      }
+      var summary = el('div', { class: 'oq-summary' }, [
+        el('div', { class: 'oq-summary__title' }, issues.length === 0 ? 'Ready to submit' : 'Still to complete'),
+        el('div', { class: 'oq-summary__sub' }, issues.length === 0 ? 'Type your name to sign and submit. Once submitted, the form locks.' : 'Resolve these before submitting.'),
+      ]);
+      if (issues.length) {
+        var ul = el('ul', { class: 'oq-summary__list' });
+        issues.forEach(function (msg) { ul.appendChild(el('li', null, ['• ', msg])); });
+        summary.appendChild(ul);
+      }
+      var sig = el('div', { class: 'oq-signature' }, [
+        el('label', { for: 'oq-sig' }, 'Typed signature'),
+        el('input', {
+          id: 'oq-sig',
+          type: 'text',
+          placeholder: isLockedForEdits() ? 'Already submitted' : 'Type your full name',
+          autocomplete: 'name',
+          disabled: isLockedForEdits() ? 'disabled' : null
+        }),
+        el('div', { class: 'oq-signature__meta' }, 'Your user ID and timestamp are recorded automatically.'),
+      ]);
+      return el('div', null, [
+        el('div', { class: 'oq-rsection-label' }, 'Sign & submit'),
+        summary,
+        sig,
+      ]);
+    }
+
+    function validate() {
+      var issues = [];
+      state.template.sections.forEach(function (section) {
+        section.items.forEach(function (item) {
+          var resp = (state.row.payload.checklist[section.key] || {})[item.key] || {};
+          if (isComplianceForm()) {
+            if (['pass', 'warning', 'fail'].indexOf(resp.result) === -1) {
+              issues.push('"' + item.label + '" needs Pass, Review, or Fail');
+              return;
+            }
+            if ((resp.result === 'warning' || resp.result === 'fail') && !(resp.note || '').trim()) {
+              issues.push('"' + item.label + '" needs a note');
+            }
+            if (itemNeedsPhoto(section.key, item, resp.result)) {
+              issues.push('"' + item.label + '" needs required photo evidence');
+            }
+          } else if (resp.result !== 'pass' && resp.result !== 'fail') {
+            issues.push('"' + item.label + '" needs PASS or FAIL');
+          } else if (resp.result === 'fail' && !(resp.note || '').trim()) {
+            issues.push('"' + item.label + '" failed - add a note');
+          }
+        });
+      });
+      var photos = state.photoCache || {};
+      (state.template.photo_slots || []).forEach(function (s) {
+        if (s.required && !(photos[s.key] || []).length) {
+          issues.push('Missing photo: ' + s.label);
+        }
+      });
+      return issues;
+    }
+
+    function renderFooter() {
+      var prevDisabled = state.stepIdx === 0;
+      var isLast = state.stepIdx === STEPS.length - 1;
+      var ftr = el('div', { class: 'oq-rfooter' });
+      ftr.appendChild(el('button', {
+        class: 'oq-btn oq-btn--secondary oq-btn--icon',
+        disabled: prevDisabled ? 'disabled' : null,
+        onclick: function () { if (!prevDisabled) { state.stepIdx--; render(); } }
+      }, [icon('chevron_left')]));
+
+      if (isLast && isLockedForEdits()) {
+        ftr.appendChild(el('a', {
+          class: 'oq-btn oq-btn--primary',
+          href: '/ops/quality/job/' + jobId
+        }, ['Back to job', icon('chevron_right')]));
+      } else if (isLast) {
+        ftr.appendChild(el('button', {
+          class: 'oq-btn oq-btn--primary',
+          onclick: function () {
+            var input = document.getElementById('oq-sig');
+            if (!input || !input.value.trim()) { window.alert('Type your name to sign.'); return; }
+            var name = input.value.trim();
+            api('POST', '/quality/jobs/' + jobId + '/forms/' + code + '/submit', {
+              signature: { typed_name: name },
+              payload: state.row.payload || {}
+            }).then(function () {
+              window.location.href = '/ops/quality/job/' + jobId;
+            }).catch(function (e) {
+              if (e.payload && e.payload.data && e.payload.data.errors) {
+                window.alert('Cannot submit yet — finish required items.');
+              } else {
+                window.alert(e.message);
+              }
+            });
+          }
+        }, ['Sign & submit', icon('check')]));
+      } else {
+        ftr.appendChild(el('button', {
+          class: 'oq-btn oq-btn--primary',
+          onclick: function () { state.stepIdx++; render(); }
+        }, ['Next', icon('arrow_forward')]));
+      }
+      return ftr;
+    }
+
+    var resizeT = null;
+    window.addEventListener('resize', function () {
+      if (resizeT) clearTimeout(resizeT);
+      resizeT = setTimeout(render, 120);
+    });
+  }
+
+  function start() {
+    var root = document.querySelector('.oq');
+    if (!root) return;
+    var view = root.dataset.view;
+    if (view === 'dashboard') initDashboard(root);
+    if (view === 'job')       initJobReview(root);
+    if (view === 'form')      initRunner(root);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();

@@ -1,5 +1,33 @@
 # Slate Ops Changelog
 
+## 0.62.3 — Quality runner desktop layout
+
+- Removed the tablet-width `flex-direction: row` rule on `.oq-runner` that laid out the header, body, and footer as three side-by-side columns at ≥768px. That was the cause of the huge empty left area, the stranded header, the compressed detail pane, and the skinny vertical "sticky action rail" on the right at desktop width.
+- `.oq-runner` now stays column-flex at every viewport; only `.oq-runner__main` switches to a two-column grid (checklist | active item detail + photos) at ≥768px.
+- Grid mins tightened to fit the 768px viewport inside the Slate Ops shell without overflow, then widen at 1100+ for desktop comfort (minmax(380, 0.9fr) / minmax(440, 1.1fr)).
+- Footer becomes a full-width horizontal bar at desktop with the Sign & submit / Next button pinned right.
+- Photo tray uses 3 columns at tablet, 4 columns only at desktop so slot tiles stay tappable in the narrower right pane.
+- Skips the unused 0.62.2 slot — the QMS draft persistence patch landed directly on `staging` as `f295376` without a version bump.
+
+## 0.62.1 — Quality registry fingerprint
+
+- Added a deterministic short fingerprint of the form registry topology (sha256 of section + item keys per form, truncated to 12 chars) so staging/prod can prove which registry version the server is actually serving when a cache layer is suspected.
+- Surfaced the fingerprint and `SLATE_OPS_VERSION` on `GET /quality/registry` and `GET /quality/jobs/{id}/forms/{code}`.
+- Bumped plugin version to force `Slate_Ops_Install::maybe_upgrade()` so deployments that wrap the install hook with an opcache reset pick up the corrected form registry. No schema change.
+
+## 0.62.0 — Quality module
+
+- Added responsive Quality module that digitizes the five QMS sign-off forms (QMS-004, 005, 006, 009, 010) onto existing Ops jobs.
+- Added `/ops/quality` desktop dashboard (status buckets, search, job list) and per-job supervisor review at `/ops/quality/job/{id}`.
+- Added mobile-first form runner (5-step stepper) at `/ops/quality/job/{id}/form/{code}` with PASS/FAIL toggles, required fail notes, camera-first photo slot uploader, typed-signature submit, and submit lock.
+- Added supervisor review actions (Pass, Needs Correction, Unlock with reason) keyed off the canonical six-status vocabulary.
+- Added tablet two-panel layout for the form runner (checklist left, detail/photos right) at ≥768px without altering the React bundle.
+- Injected a Quality section into each `.ops-tech-card` on `/ops/tech` (status pill, per-form chips, deep links) via a vanilla JS overlay that does not modify the React app.
+- Added `slate_ops_quality_forms` table for per-(job, form) storage of payload, photos (WP media attachment IDs by slot), submission metadata, and lock state.
+- Added `Slate_Ops_Quality` data layer with form template registry, photo slot catalogues, status rollup, and storage helpers.
+- Added `Slate_Ops_Quality_REST` endpoints (registry, dashboard, job, form GET/draft/submit/review/unlock/photos) gated on existing CAP_SUBMIT_QC / CAP_REVIEW_QC capabilities.
+- Added Quality to feature flags, page-access matrix, and sidebar navigation.
+
 ## 0.61.3 — Item sync batch parity
 
 - `process_item_sync` now accepts batch `{items: [...]}` payloads from Power Automate in addition to single-item payloads, matching the vendor sync contract.

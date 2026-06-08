@@ -19,6 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $exec = Slate_Ops_Executive::instance();
+$period = $exec->get_period();
+$period_options = Slate_Ops_Executive::period_options();
 $ov   = $exec->get_overview_kpis();
 $read = $exec->get_executive_readout();
 $lwl  = $exec->get_labor_watchlist();
@@ -34,6 +36,7 @@ $jobs_total = count( $jobs );
 $lk     = $exec->get_labor_kpis();
 $trust  = $exec->get_labor_trust();
 $lcwl   = $exec->get_labor_capture_watchlist();
+$diag   = $exec->get_labor_diagnostics();
 
 $bk     = $exec->get_bottleneck_kpis();
 $br     = $exec->get_blocker_reasons();
@@ -49,7 +52,15 @@ $blocks = $exec->get_blockers();
 				<div class="page-sub">Job costing, performance tracking, and labor capture · Shop PDX-01</div>
 			</div>
 			<div class="page-meta">
-				<span>Period <b>30 days</b></span>
+				<form class="period-filter" method="get" action="<?php echo esc_url( home_url( '/ops/exec' ) ); ?>">
+					<label for="so-exec-period">Period</label>
+					<select id="so-exec-period" name="period" data-period-select>
+						<?php foreach ( $period_options as $key => $option ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $period['key'], $key ); ?>><?php echo esc_html( $option['label'] ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<button type="submit">Apply</button>
+				</form>
 				<span class="sep">·</span>
 				<span>WIP <b><?php echo (int) $bk['in_progress'] + (int) $bk['qc']; ?></b></span>
 				<span class="sep">·</span>
@@ -78,6 +89,11 @@ $blocks = $exec->get_blockers();
 				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="9" r="5"/><path d="M8 6.5V9l1.6 1.2"/><path d="M6.5 1.5h3M8 1.5v2"/></svg>
 				<span>Labor Capture</span>
 				<span class="count"><?php echo (int) $lk['jobs_no_logged']; ?></span>
+			</button>
+			<button class="tab" data-tab="diagnostics" role="tab" type="button">
+				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 3h10M3 8h10M3 13h10"/><circle cx="6" cy="3" r="1.4" fill="currentColor"/><circle cx="10" cy="8" r="1.4" fill="currentColor"/><circle cx="7.5" cy="13" r="1.4" fill="currentColor"/></svg>
+				<span>Labor Diagnostics</span>
+				<span class="count"><?php echo (int) $diag['summary']['no_time']; ?></span>
 			</button>
 			<button class="tab" data-tab="blocks" role="tab" type="button">
 				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 13.5h12L8 2.5 2 13.5Z"/><path d="M8 6.5v3"/><circle cx="8" cy="11.4" r=".4" fill="currentColor"/></svg>
@@ -172,7 +188,7 @@ $blocks = $exec->get_blockers();
 						<?php endforeach; ?>
 						</tbody>
 					</table>
-					<div class="foot"><span>Source · Time entries 30d</span><span><?php echo count( $lwl ); ?> of <?php echo count( $lwl ); ?></span></div>
+					<div class="foot"><span>Source · Time entries · <?php echo esc_html( $period['label'] ); ?></span><span><?php echo count( $lwl ); ?> of <?php echo count( $lwl ); ?></span></div>
 				</div>
 
 				<div class="card">
@@ -318,7 +334,7 @@ $blocks = $exec->get_blockers();
 					<button class="chip" type="button">Status <span class="caret">▾</span></button>
 					<button class="chip" type="button">Lead Tech <span class="caret">▾</span></button>
 					<button class="chip" type="button">Job Type <span class="caret">▾</span></button>
-					<button class="chip" type="button">Last 30 days <span class="caret">▾</span></button>
+					<button class="chip" type="button"><?php echo esc_html( $period['label'] ); ?> <span class="caret">▾</span></button>
 					<button class="chip toggle" type="button" data-filter="over">Over estimate</button>
 					<button class="chip toggle" type="button" data-filter="missing">Missing time</button>
 					<div style="flex:1"></div>
@@ -442,12 +458,110 @@ $blocks = $exec->get_blockers();
 					<?php endforeach; ?>
 					</tbody>
 				</table>
-				<div class="foot"><span>Showing <?php echo count( $lcwl ); ?> of <?php echo count( $lcwl ); ?></span><span>Source · Time entries · Live</span></div>
+				<div class="foot"><span>Showing <?php echo count( $lcwl ); ?> of <?php echo count( $lcwl ); ?></span><span>Source · Time entries · <?php echo esc_html( $period['label'] ); ?></span></div>
+			</div>
+		</section>
+
+		<!-- ===== LABOR DIAGNOSTICS ===== -->
+		<section class="tab-pane" id="pane-diagnostics" data-screen-label="05 Labor Diagnostics">
+			<div class="kpi-grid">
+				<div class="kpi"><div class="k-label">Jobs in Scope</div><div class="k-value"><?php echo (int) $diag['summary']['jobs']; ?></div><div class="k-help"><?php echo esc_html( $period['label'] ); ?></div></div>
+				<div class="kpi flag-crit"><div class="k-label">No Logged Time</div><div class="k-value"><?php echo (int) $diag['summary']['no_time']; ?></div><div class="k-help">Primary capture gap</div></div>
+				<div class="kpi flag-warn"><div class="k-label">Missing Estimate</div><div class="k-value"><?php echo (int) $diag['summary']['missing_estimate']; ?></div><div class="k-help">Cannot trust capture %</div></div>
+				<div class="kpi flag-warn"><div class="k-label">Open Timers</div><div class="k-value"><?php echo (int) $diag['summary']['open_timer']; ?></div><div class="k-help">Timers over 4h</div></div>
+			</div>
+
+			<div class="card">
+				<div class="card-head">
+					<h3>Labor Diagnostics <span class="count-pill"><?php echo count( $diag['jobs'] ); ?> jobs</span></h3>
+					<div class="actions"><button class="btn" type="button">Export</button></div>
+				</div>
+				<form class="filter-row diag-filters" method="get" action="<?php echo esc_url( home_url( '/ops/exec' ) ); ?>">
+					<input type="hidden" name="tab" value="diagnostics" />
+					<input type="hidden" name="period" value="<?php echo esc_attr( $period['key'] ); ?>" />
+					<label class="field-chip">Tech
+						<select name="diag_tech">
+							<option value="all">All techs</option>
+							<option value="0" <?php selected( $diag['filters']['tech'], '0' ); ?>>Unassigned</option>
+							<?php foreach ( $diag['tech_options'] as $tech_id => $tech_name ) : ?>
+								<option value="<?php echo (int) $tech_id; ?>" <?php selected( $diag['filters']['tech'], (string) $tech_id ); ?>><?php echo esc_html( $tech_name ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+					<label class="field-chip">Issue
+						<select name="diag_issue">
+							<option value="all">All issues</option>
+							<?php foreach ( $diag['issue_options'] as $issue_key => $issue_label ) : ?>
+								<option value="<?php echo esc_attr( $issue_key ); ?>" <?php selected( $diag['filters']['issue'], $issue_key ); ?>><?php echo esc_html( $issue_label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+					<div class="search">
+						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+						<input name="diag_job" value="<?php echo esc_attr( $diag['filters']['job'] ); ?>" placeholder="Search SO#, customer, or job ID" type="search" />
+					</div>
+					<button class="btn" type="submit">Apply</button>
+					<a class="btn ghost" href="<?php echo esc_url( add_query_arg( array( 'period' => $period['key'], 'tab' => 'diagnostics' ), home_url( '/ops/exec' ) ) ); ?>">Reset</a>
+				</form>
+				<div class="reason-grid diag-reasons">
+					<?php foreach ( $diag['issue_options'] as $issue_key => $issue_label ) :
+						$count = (int) ( $diag['issue_counts'][ $issue_key ] ?? 0 );
+						$kind = in_array( $issue_key, array( 'no_tech', 'no_time', 'zero_time_complete' ), true ) && $count > 0 ? 'crit' : ( $count > 0 ? 'warn' : '' );
+						?>
+						<div class="reason <?php echo esc_attr( $kind ); ?>">
+							<div class="lbl"><?php echo esc_html( $issue_label ); ?></div>
+							<div class="val"><?php echo $count; ?><span class="delta">Live</span></div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+
+			<div class="split">
+				<div class="card">
+					<div class="card-head"><h3>By Tech <span class="count-pill"><?php echo count( $diag['by_tech'] ); ?> techs</span></h3></div>
+					<table class="t">
+						<thead><tr><th>Tech</th><th class="num">Jobs</th><th class="num">No Time</th><th class="num">Logged</th><th class="num">Variance</th><th>Top Issue</th></tr></thead>
+						<tbody>
+						<?php foreach ( $diag['by_tech'] as $row ) : ?>
+							<tr>
+								<td><?php echo $row['tech_id'] ? Slate_Ops_Executive::avatar_html( $row['tech'], $row['main_risk'] ) . ' ' . esc_html( $row['tech'] ) : '<span class="bad">Unassigned</span>'; ?></td>
+								<td class="num"><?php echo (int) $row['jobs']; ?></td>
+								<td class="num"><?php echo (int) $row['no_time']; ?></td>
+								<td class="num"><?php echo esc_html( $row['logged'] ); ?></td>
+								<td class="num" style="<?php echo strpos( $row['variance'], '+' ) === 0 ? 'color:var(--warn)' : ''; ?>"><?php echo esc_html( $row['variance'] ); ?></td>
+								<td><?php echo Slate_Ops_Executive::tag_html( $row['main_risk'], $row['main_issue'], 'warn' === $row['main_risk'] ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+					<div class="foot"><span>Filtered by current report controls</span><span><?php echo count( $diag['by_tech'] ); ?> rows</span></div>
+				</div>
+
+				<div class="card">
+					<div class="card-head"><h3>Job Action Queue <span class="count-pill"><?php echo count( $diag['jobs'] ); ?> jobs</span></h3></div>
+					<table class="t">
+						<thead><tr><th>Job</th><th>Customer</th><th>Tech</th><th>Issue</th><th class="num">Est.</th><th class="num">Logged</th><th>Action</th></tr></thead>
+						<tbody>
+						<?php foreach ( $diag['jobs'] as $row ) : ?>
+							<tr>
+								<td class="so"><?php echo esc_html( $row['so'] ); ?></td>
+								<td class="cust"><?php echo esc_html( $row['cust'] ); ?></td>
+								<td><?php echo $row['tech_id'] ? esc_html( $row['tech'] ) : '<span class="bad">Unassigned</span>'; ?></td>
+								<td><?php echo Slate_Ops_Executive::tag_html( $row['risk'], $row['issue'], 'warn' === $row['risk'] ); ?></td>
+								<td class="num"><?php echo esc_html( Slate_Ops_Executive::minutes_label( $row['est_minutes'] ) ); ?></td>
+								<td class="num"><?php echo $row['logged_minutes'] <= 0 ? '<span class="bad">0h 0m</span>' : esc_html( Slate_Ops_Executive::minutes_label( $row['logged_minutes'] ) ); ?></td>
+								<td class="action"><?php echo esc_html( $row['action'] ); ?> &rarr;</td>
+							</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+					<div class="foot"><span>Sorted by severity</span><span>Showing <?php echo count( $diag['jobs'] ); ?> of <?php echo (int) $diag['summary']['jobs']; ?></span></div>
+				</div>
 			</div>
 		</section>
 
 		<!-- ===== BLOCKS ===== -->
-		<section class="tab-pane" id="pane-blocks" data-screen-label="05 Bottlenecks">
+		<section class="tab-pane" id="pane-blocks" data-screen-label="06 Bottlenecks">
 			<div class="kpi-grid">
 				<div class="kpi"><div class="k-label">Ready to Build</div><div class="k-value"><?php echo (int) $bk['ready_for_build']; ?></div></div>
 				<div class="kpi"><div class="k-label">Scheduled</div><div class="k-value"><?php echo (int) $bk['scheduled']; ?></div></div>
@@ -456,7 +570,7 @@ $blocks = $exec->get_blockers();
 				<div class="kpi flag-crit">
 					<div class="k-label">Blocked <span class="k-status crit">4+ days</span></div>
 					<div class="k-value"><?php echo (int) $bk['blocked']; ?></div>
-					<div class="k-help">4 critical · 5 watch</div>
+					<div class="k-help"><?php echo esc_html( $bk['blocked_breakdown'] ); ?></div>
 				</div>
 				<div class="kpi"><div class="k-label">On Hold</div><div class="k-value"><?php echo (int) $bk['on_hold']; ?></div></div>
 				<div class="kpi"><div class="k-label">Cancelled</div><div class="k-value"><?php echo (int) $bk['cancelled']; ?></div></div>
@@ -470,7 +584,7 @@ $blocks = $exec->get_blockers();
 			<div class="card">
 				<div class="card-head">
 					<h3>Blocker Reasons</h3>
-					<div class="actions"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase"><?php echo (int) $bk['blocked']; ?> blocked · last 30 days</span></div>
+					<div class="actions"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase"><?php echo (int) $bk['blocked']; ?> blocked · <?php echo esc_html( $period['label'] ); ?></span></div>
 				</div>
 				<div class="reason-grid">
 					<?php foreach ( $br as $r ) : ?>

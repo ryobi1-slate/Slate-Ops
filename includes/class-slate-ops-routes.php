@@ -24,6 +24,16 @@ class Slate_Ops_Routes {
 
   public static function current_path() {
     $p = get_query_var('slate_ops_path');
-    return $p ? sanitize_text_field($p) : '';
+    $path = $p ? trim(sanitize_text_field($p), '/') : '';
+
+    // Legacy shorthand: /ops/qc should render the canonical Quality module.
+    if ($path === 'qc') {
+      return 'quality';
+    }
+    if (strncmp($path, 'qc/', 3) === 0) {
+      return 'quality/' . substr($path, 3);
+    }
+
+    return $path;
   }
 }

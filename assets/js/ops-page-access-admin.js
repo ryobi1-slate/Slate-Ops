@@ -9,6 +9,7 @@
     ['tech','Tech'],
     ['schedule','Schedule'],
     ['purchasing','Purchasing'],
+    ['quality','Quality'],
     ['resource-hub','Resource hub'],
     ['admin','Admin'],
     ['settings','Settings'],

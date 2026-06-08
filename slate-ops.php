@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.61.4
+ * Version: 0.62.4
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.61.4');
+define('SLATE_OPS_VERSION', '0.62.4');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -47,7 +47,7 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-resource-hub.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-cs.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-supervisor-dashboard.php';
 
-// Executive Dashboard data layer (server-rendered, stub data for now)
+// Executive Dashboard data layer (server-rendered, live job/time rollups)
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-executive.php';
 
 // Scheduler services (Phase 0)
@@ -61,6 +61,10 @@ require_once SLATE_OPS_PATH . 'includes/data/class-slate-ops-purchasing.php';
 require_once SLATE_OPS_PATH . 'includes/integration/class-slate-ops-pa-events.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-purchasing-rest.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-resource-hub-rest.php';
+
+// Quality module — form registry, storage, REST.
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-quality.php';
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-quality-rest.php';
 
 if ( is_admin() ) {
     require_once SLATE_OPS_PATH . 'includes/admin/class-clickup-import-admin.php';
@@ -86,6 +90,7 @@ add_action('init', ['Slate_Ops_Routes', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_REST', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_Purchasing_REST', 'register_routes']);
 add_action('rest_api_init', ['Slate_Ops_Resource_Hub_REST', 'register_routes']);
+add_action('rest_api_init', ['Slate_Ops_Quality_REST', 'register_routes']);
 
 add_action('wp_enqueue_scripts', function() {
   if (!Slate_Ops_Routes::is_ops_request()) return;
@@ -108,6 +113,7 @@ add_action('wp_enqueue_scripts', function() {
   $is_resource_hub = ($current_path === 'resource-hub' || strncmp($current_path, 'resource-hub/', 13) === 0);
   $is_audit_log    = ($current_path === 'admin/audit');
   $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
+  $is_quality      = ($current_path === 'quality' || strncmp($current_path, 'quality/', 8) === 0);
 
   $enqueue_design_language = function($deps = ['slate-ops-shell']) {
     $file = SLATE_OPS_PATH . 'assets/css/ops-design-language.css';
@@ -188,6 +194,30 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('slate-ops-executive',  SLATE_OPS_URL . 'assets/css/executive-dashboard.css', ['slate-ops-shell'], $ver_exec_css);
     $enqueue_design_language(['slate-ops-executive']);
     wp_enqueue_script('slate-ops-executive', SLATE_OPS_URL . 'assets/js/executive-dashboard.js',   [],                  $ver_exec_js,  true);
+  } elseif ($is_quality) {
+    $route_blocked_quality = !slate_ops_current_user_can_access_ops_page('quality');
+    if ($route_blocked_quality) {
+      return;
+    }
+    $ver_q_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops-quality.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-quality.css') : SLATE_OPS_VERSION;
+    $ver_q_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-quality.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-quality.js')   : SLATE_OPS_VERSION;
+    wp_enqueue_style('slate-ops-quality',  SLATE_OPS_URL . 'assets/css/ops-quality.css', ['slate-ops-shell'], $ver_q_css);
+    $enqueue_design_language(['slate-ops-quality']);
+    wp_enqueue_script('slate-ops-quality', SLATE_OPS_URL . 'assets/js/ops-quality.js',   [],                  $ver_q_js,  true);
+    wp_localize_script('slate-ops-quality', 'slateOpsQuality', [
+      'api' => [
+        'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+        'nonce' => wp_create_nonce('wp_rest'),
+      ],
+      'user' => [
+        'id'   => get_current_user_id(),
+        'name' => wp_get_current_user()->display_name,
+        'caps' => Slate_Ops_Utils::current_user_caps_summary(),
+      ],
+      'urls' => [
+        'ops_quality' => esc_url_raw(home_url('/ops/quality')),
+      ],
+    ]);
   } elseif ($is_resource_hub) {
     $route_blocked_resource_hub = !slate_ops_current_user_can_access_ops_page('resource-hub');
     if ($route_blocked_resource_hub) {
@@ -231,7 +261,8 @@ add_action('wp_enqueue_scripts', function() {
     $route_map = [
       '' => 'executive', 'exec' => 'executive', 'cs' => 'cs', 'tech' => 'tech',
       'cs-dashboard' => 'cs-dashboard', 'supervisor-dashboard' => 'supervisor-dashboard',
-      'schedule' => 'schedule', 'purchasing' => 'purchasing', 'resource-hub' => 'resource-hub', 'admin' => 'admin',
+      'schedule' => 'schedule', 'purchasing' => 'purchasing', 'quality' => 'quality',
+      'resource-hub' => 'resource-hub', 'admin' => 'admin',
       'settings' => 'settings', 'monitor' => 'monitor',
     ];
     $route_slug = $route_map[$current_path] ?? null;
@@ -267,6 +298,25 @@ add_action('wp_enqueue_scripts', function() {
         wp_enqueue_script('slate-ops-tech-readonly', SLATE_OPS_URL . 'assets/js/ops-tech-readonly.js', ['slate-ops-react'], $ver_tech_readonly, true);
         $ver_tech_polish = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-polish.js') : SLATE_OPS_VERSION;
         wp_enqueue_script('slate-ops-tech-polish', SLATE_OPS_URL . 'assets/js/ops-tech-polish.js', ['slate-ops-react'], $ver_tech_polish, true);
+
+        // Quality is staged behind an explicit rollout switch so the Tech
+        // page flow does not change until leadership enables the pilot.
+        $enable_tech_quality = (bool) apply_filters('slate_ops_enable_tech_quality_injection', false);
+        if ($enable_tech_quality) {
+          $ver_tech_q_css = file_exists(SLATE_OPS_PATH . 'assets/css/ops-tech-quality.css') ? filemtime(SLATE_OPS_PATH . 'assets/css/ops-tech-quality.css') : SLATE_OPS_VERSION;
+          $ver_tech_q_js  = file_exists(SLATE_OPS_PATH . 'assets/js/ops-tech-quality.js')   ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-tech-quality.js')   : SLATE_OPS_VERSION;
+          wp_enqueue_style('slate-ops-tech-quality', SLATE_OPS_URL . 'assets/css/ops-tech-quality.css', ['slate-ops-react'], $ver_tech_q_css);
+          wp_enqueue_script('slate-ops-tech-quality', SLATE_OPS_URL . 'assets/js/ops-tech-quality.js', ['slate-ops-react'], $ver_tech_q_js, true);
+          wp_localize_script('slate-ops-tech-quality', 'slateOpsTechQuality', [
+            'api' => [
+              'root'  => esc_url_raw(rest_url('slate-ops/v1')),
+              'nonce' => wp_create_nonce('wp_rest'),
+            ],
+            'urls' => [
+              'quality_job' => esc_url_raw(home_url('/ops/quality/job/')),
+            ],
+          ]);
+        }
       }
     }
 
