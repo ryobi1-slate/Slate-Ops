@@ -249,8 +249,6 @@ $blocks = $exec->get_blockers();
 						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
 						<input placeholder="Search tech…" type="search" data-tech-filter="search" />
 					</div>
-					<button class="chip" type="button">Department <span class="caret">▾</span></button>
-					<button class="chip" type="button">Shift <span class="caret">▾</span></button>
 					<button class="chip toggle" type="button" data-tech-filter="issues">Has issues</button>
 					<button class="chip toggle on" type="button" data-tech-filter="active">Active only</button>
 					<div style="flex:1"></div>
