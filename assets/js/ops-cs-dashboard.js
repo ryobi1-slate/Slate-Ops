@@ -1341,6 +1341,12 @@
           : (snap && snap.estimated_minutes != null ? Number(snap.estimated_minutes) : 0);
         return m > 0 ? String(+(m / 60).toFixed(2)) : '';
       }
+      if (!det && snap) {
+        if (field === 'requested_date') return snap.requested_date || snap.due_date || '';
+        if (field === 'customer_name') return snap.customer || '';
+        if (field === 'dealer_name') return snap.dealer || '';
+        if (field === 'parts_status') return snap.parts_status || '';
+      }
       if (!det) return undefined;
       if (field === 'vin_last8') {
         return String(det.vin_last8 || det.vin || '');
@@ -1480,6 +1486,8 @@
     var id = j.id;
     var det = betaState.jobDetails[id];      // may be undefined while loading
     var detailLoading = !det && betaState.jobDetailsLoading[id];
+    var detailFailed = !det && !detailLoading && betaState.jobDetailsFailed[id];
+    var limitedDetail = detailFailed;
 
     var jobEl  = document.getElementById('cs-beta-detail-job');
     var custEl = document.getElementById('cs-beta-detail-cust');
@@ -1501,8 +1509,8 @@
     var loadingNote = detailLoading
       ? '<div class="cs-beta-detail-loading"><span class="material-symbols-outlined cs-beta__spinner" aria-hidden="true">progress_activity</span><span>Loading job…</span></div>'
       : '';
-    var loadFailed = !det && !detailLoading && betaState.jobDetailsFailed[id]
-      ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Queue fields are still editable.</span></div>'
+    var loadFailed = detailFailed
+      ? '<div class="cs-beta-detail-loading cs-beta-detail-loading--error"><span class="material-symbols-outlined">error</span><span>Couldn\'t load full job detail. Available queue fields are still editable.</span></div>'
       : '';
     var status = betaStatusKey(j.status);
     var blockedSeverity = betaBlockedSeverity(j);
@@ -1536,13 +1544,13 @@
       +   '<div class="cs-beta-detail-fields">'
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Customer</span>'
-      +       (det
+      +       ((det || limitedDetail)
                 ? '<input type="text" class="cs-beta-field__input' + ec('customer_name') + '" data-field="customer_name" value="' + fv('customer_name') + '" maxlength="160">'
                 : readOnly(j.customer))
       +     '</label>'
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Dealer</span>'
-      +       (det
+      +       ((det || limitedDetail)
                 ? '<input type="text" class="cs-beta-field__input' + ec('dealer_name') + '" data-field="dealer_name" value="' + fv('dealer_name') + '" maxlength="160">'
                 : readOnly(j.dealer))
       +     '</label>'
@@ -1570,14 +1578,14 @@
       +   '<div class="cs-beta-detail-fields">'
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Due date</span>'
-      +       (det
+      +       ((det || limitedDetail)
                 ? '<input type="date" class="cs-beta-mono cs-beta-field__input' + ec('requested_date') + vc('requested_date') + '" data-field="requested_date" value="' + fv('requested_date') + '">'
                 : readOnly((det && det.requested_date) || j.requested_date || j.due_date))
       +       (betaState.rowValidation[id] && betaState.rowValidation[id].dueRequired ? '<span class="cs-beta-field__error">Add a due date before moving to Ready to Build.</span>' : '')
       +     '</label>'
       +     '<label class="cs-beta-field">'
       +       '<span class="cs-beta-field__label">Estimated Hours</span>'
-      +       (det
+      +       ((det || limitedDetail)
                 ? '<input type="number" min="0" step="0.25" class="cs-beta-mono cs-beta-field__input' + ec('estimated_hours') + '" data-field="estimated_hours" value="' + fv('estimated_hours') + '" placeholder="—">'
                 : readOnly(j.estimated_minutes ? +(j.estimated_minutes / 60).toFixed(2) : null))
       +     '</label>'

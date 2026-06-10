@@ -4043,8 +4043,11 @@ if ($row) {
 
   // Computed actual minutes
   $seg = $wpdb->prefix . 'slate_ops_time_segments';
-  $mins = $wpdb->get_var($wpdb->prepare("SELECT SUM(TIMESTAMPDIFF(MINUTE, start_ts, end_ts)) FROM $seg WHERE job_id=%d AND end_ts IS NOT NULL", (int)$job_id));
-  $row['actual_minutes'] = (int)($mins ?: 0);
+  $row['actual_minutes'] = 0;
+  if (self::table_exists($seg)) {
+    $mins = $wpdb->get_var($wpdb->prepare("SELECT SUM(TIMESTAMPDIFF(MINUTE, start_ts, end_ts)) FROM $seg WHERE job_id=%d AND end_ts IS NOT NULL", (int)$job_id));
+    $row['actual_minutes'] = (int)($mins ?: 0);
+  }
 	  }
     return $row;
   }
@@ -4053,17 +4056,39 @@ if ($row) {
     global $wpdb;
     $segments = $wpdb->prefix . 'slate_ops_time_segments';
 
-    $rows = $wpdb->get_results($wpdb->prepare("
-      SELECT user_id,
-        SUM(CASE WHEN approval_status='approved' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as approved_minutes,
-        SUM(CASE WHEN approval_status='pending' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as pending_minutes,
-        COUNT(*) as segment_count,
-        MAX(COALESCE(end_ts, start_ts)) as last_activity
-      FROM $segments
-      WHERE job_id=%d
-      GROUP BY user_id
-      ORDER BY approved_minutes DESC, pending_minutes DESC
-    ", $job_id), ARRAY_A);
+    if (!self::table_exists($segments)) {
+      return [
+        'approved_minutes_total' => 0,
+        'pending_minutes_total' => 0,
+        'by_tech' => [],
+      ];
+    }
+
+    if (self::table_has_column($segments, 'approval_status')) {
+      $rows = $wpdb->get_results($wpdb->prepare("
+        SELECT user_id,
+          SUM(CASE WHEN approval_status='approved' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as approved_minutes,
+          SUM(CASE WHEN approval_status='pending' AND end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as pending_minutes,
+          COUNT(*) as segment_count,
+          MAX(COALESCE(end_ts, start_ts)) as last_activity
+        FROM $segments
+        WHERE job_id=%d
+        GROUP BY user_id
+        ORDER BY approved_minutes DESC, pending_minutes DESC
+      ", $job_id), ARRAY_A) ?: [];
+    } else {
+      $rows = $wpdb->get_results($wpdb->prepare("
+        SELECT user_id,
+          SUM(CASE WHEN end_ts IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_ts, end_ts) ELSE 0 END) as approved_minutes,
+          0 as pending_minutes,
+          COUNT(*) as segment_count,
+          MAX(COALESCE(end_ts, start_ts)) as last_activity
+        FROM $segments
+        WHERE job_id=%d
+        GROUP BY user_id
+        ORDER BY approved_minutes DESC
+      ", $job_id), ARRAY_A) ?: [];
+    }
 
     $by_tech = [];
     $approved_total = 0;
@@ -4087,6 +4112,17 @@ if ($row) {
       'pending_minutes_total' => $pending_total,
       'by_tech' => $by_tech,
     ];
+  }
+
+  private static function table_exists($table): bool {
+    global $wpdb;
+    return (bool) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+  }
+
+  private static function table_has_column($table, $column): bool {
+    global $wpdb;
+    $table_ident = '`' . str_replace('`', '``', (string) $table) . '`';
+    return (bool) $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM $table_ident LIKE %s", sanitize_key($column)));
   }
 
   private static function audit($entity_type, $entity_id, $action, $field, $old, $new, $note = '') {
