@@ -39,6 +39,20 @@ class Slate_Ops_REST {
     'PHASE_3_REPORTING_READY',
   ];
 
+  private const SHOP_MONITOR_CONTENT_OPTION = 'slate_ops_monitor_content_settings';
+  private const SHOP_MONITOR_10MM_CATEGORIES = [
+    'WEIRD BUT TRUE',
+    'LITTLE INSTRUCTION',
+    'DAD JOKE',
+    'SHOP TIP',
+    'SHOP DEBATE',
+  ];
+  private const SHOP_MONITOR_10MM_ROTATION_MODES = [
+    'weekday',
+    'sequential',
+    'random',
+  ];
+
   private static function scheduler_debug_enabled() {
     return defined('SLATE_OPS_DEBUG_SCHEDULER') && SLATE_OPS_DEBUG_SCHEDULER;
   }
@@ -1162,6 +1176,7 @@ return ['ok' => true, 'id' => $id];
     $row['auto_stop_job_timers_at_shift_end'] = (bool) $row['auto_stop_job_timers_at_shift_end'];
     $row['shift_end_grace_minutes'] = (int) $row['shift_end_grace_minutes'];
     $row['tech_rollout_mode'] = self::tech_rollout_mode();
+    $row['shop_monitor_content'] = self::get_shop_monitor_content_settings();
     $row['daily_deduction_minutes'] = (int)($row['lunch_minutes'] ?? 30) + ((int)($row['break_count']) * (int)($row['break_minutes'] ?? 10));
     return $row;
   }
@@ -1220,6 +1235,9 @@ return ['ok' => true, 'id' => $id];
       $notif = array_map('rest_sanitize_boolean', $body['notifications']);
       update_option('slate_ops_notifications', $notif);
     }
+    if (isset($body['shop_monitor_content']) && is_array($body['shop_monitor_content'])) {
+      self::save_shop_monitor_content_settings($body['shop_monitor_content']);
+    }
 
     $wpdb->update($t, [
       'shift_start'   => $shift_start,
@@ -1243,8 +1261,85 @@ return ['ok' => true, 'id' => $id];
       'tech_rollout_mode' => self::tech_rollout_mode(),
       'dealers' => $dealers,
       'sales_people' => $sales_people,
+      'shop_monitor_content_updated' => isset($body['shop_monitor_content']),
     ]), 'Settings updated');
     return self::get_settings($req);
+  }
+
+  private static function default_shop_monitor_content_settings() {
+    return [
+      'tenmm_enabled' => false,
+      'tenmm_rotation' => 'weekday',
+      'tenmm_entries' => '',
+      'fun_days_enabled' => false,
+      'fun_days_entries' => '',
+    ];
+  }
+
+  private static function get_shop_monitor_content_settings() {
+    $saved = get_option(self::SHOP_MONITOR_CONTENT_OPTION, []);
+    $saved = is_array($saved) ? $saved : [];
+    $settings = array_merge(self::default_shop_monitor_content_settings(), $saved);
+    $settings['tenmm_enabled'] = !empty($settings['tenmm_enabled']);
+    $settings['fun_days_enabled'] = !empty($settings['fun_days_enabled']);
+    $settings['tenmm_rotation'] = in_array($settings['tenmm_rotation'], self::SHOP_MONITOR_10MM_ROTATION_MODES, true)
+      ? $settings['tenmm_rotation']
+      : 'weekday';
+    $settings['tenmm_entries'] = (string) ($settings['tenmm_entries'] ?? '');
+    $settings['fun_days_entries'] = (string) ($settings['fun_days_entries'] ?? '');
+    return $settings;
+  }
+
+  private static function save_shop_monitor_content_settings($input) {
+    $settings = [
+      'tenmm_enabled' => !empty($input['tenmm_enabled']),
+      'tenmm_rotation' => in_array(($input['tenmm_rotation'] ?? ''), self::SHOP_MONITOR_10MM_ROTATION_MODES, true)
+        ? $input['tenmm_rotation']
+        : 'weekday',
+      'tenmm_entries' => self::sanitize_10mm_entries_text($input['tenmm_entries'] ?? ''),
+      'fun_days_enabled' => !empty($input['fun_days_enabled']),
+      'fun_days_entries' => self::sanitize_fun_days_entries_text($input['fun_days_entries'] ?? ''),
+    ];
+    update_option(self::SHOP_MONITOR_CONTENT_OPTION, $settings, false);
+  }
+
+  private static function textarea_lines($value) {
+    $value = str_replace(["\r\n", "\r"], "\n", (string) $value);
+    return preg_split('/\n/', $value);
+  }
+
+  private static function sanitize_10mm_entries_text($value) {
+    $out = [];
+    foreach (self::textarea_lines($value) as $line) {
+      $line = trim((string) $line);
+      if ($line === '' || strpos($line, '|') === false) continue;
+
+      [$category, $text] = array_map('trim', explode('|', $line, 2));
+      $category = strtoupper(sanitize_text_field($category));
+      $text = sanitize_text_field($text);
+      if (!in_array($category, self::SHOP_MONITOR_10MM_CATEGORIES, true) || $text === '') continue;
+
+      $out[] = $category . ' | ' . $text;
+    }
+    return implode("\n", $out);
+  }
+
+  private static function sanitize_fun_days_entries_text($value) {
+    $out = [];
+    foreach (self::textarea_lines($value) as $line) {
+      $line = trim((string) $line);
+      if ($line === '' || strpos($line, '|') === false) continue;
+
+      [$date, $name] = array_map('trim', explode('|', $line, 2));
+      $name = sanitize_text_field($name);
+      if (!preg_match('/^(\d{2})\/(\d{2})$/', $date, $m) || $name === '') continue;
+      $month = (int) $m[1];
+      $day = (int) $m[2];
+      if (!checkdate($month, $day, 2024)) continue;
+
+      $out[] = sprintf('%02d/%02d | %s', $month, $day, $name);
+    }
+    return implode("\n", $out);
   }
 
   public static function get_page_access($req) {

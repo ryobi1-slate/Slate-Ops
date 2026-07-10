@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.62.4
+ * Version: 0.62.5
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.62.4');
+define('SLATE_OPS_VERSION', '0.62.5');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -114,6 +114,7 @@ add_action('wp_enqueue_scripts', function() {
   $is_audit_log    = ($current_path === 'admin/audit');
   $is_tech         = ($current_path === 'tech' || strncmp($current_path, 'tech/', 5) === 0);
   $is_quality      = ($current_path === 'quality' || strncmp($current_path, 'quality/', 8) === 0);
+  $is_settings     = ($current_path === 'settings' || strncmp($current_path, 'settings/', 9) === 0);
 
   $enqueue_design_language = function($deps = ['slate-ops-shell']) {
     $file = SLATE_OPS_PATH . 'assets/css/ops-design-language.css';
@@ -363,6 +364,11 @@ add_action('wp_enqueue_scripts', function() {
     if (!$route_blocked) {
       $ver_access_admin = file_exists(SLATE_OPS_PATH . 'assets/js/ops-page-access-admin.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-page-access-admin.js') : SLATE_OPS_VERSION;
       wp_enqueue_script('slate-ops-page-access-admin', SLATE_OPS_URL . 'assets/js/ops-page-access-admin.js', ['slate-ops-react'], $ver_access_admin, true);
+
+      if ($is_settings) {
+        $ver_monitor_content = file_exists(SLATE_OPS_PATH . 'assets/js/ops-monitor-content-settings.js') ? filemtime(SLATE_OPS_PATH . 'assets/js/ops-monitor-content-settings.js') : SLATE_OPS_VERSION;
+        wp_enqueue_script('slate-ops-monitor-content-settings', SLATE_OPS_URL . 'assets/js/ops-monitor-content-settings.js', ['slate-ops-react'], $ver_monitor_content, true);
+      }
     }
   }
 });
