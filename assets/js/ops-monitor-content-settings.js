@@ -42,17 +42,21 @@
     return document.getElementById(id);
   }
 
-  function render(settings) {
-    var host = document.querySelector('#ops-view > div') || document.getElementById('ops-view');
-    if (!host || document.getElementById(PANEL_ID)) return;
-
-    var content = Object.assign({
+  function defaultContent() {
+    return {
       tenmm_enabled: false,
       tenmm_rotation: 'weekday',
       tenmm_entries: '',
       fun_days_enabled: false,
       fun_days_entries: ''
-    }, settings.shop_monitor_content || {});
+    };
+  }
+
+  function render(settings) {
+    var host = document.querySelector('#ops-view > div') || document.getElementById('ops-view');
+    if (!host || document.getElementById(PANEL_ID)) return;
+
+    var content = Object.assign(defaultContent(), (settings && settings.shop_monitor_content) || {});
 
     var section = document.createElement('section');
     section.id = PANEL_ID;
@@ -103,11 +107,21 @@
 
     host.appendChild(section);
     field('monitor-content-save').addEventListener('click', function () {
-      save(settings);
+      save();
     });
   }
 
-  function save(existingSettings) {
+  function hydrate(settings) {
+    if (!settings || !document.getElementById(PANEL_ID)) return;
+    var content = Object.assign(defaultContent(), settings.shop_monitor_content || {});
+    field('monitor-tenmm-enabled').checked = !!content.tenmm_enabled;
+    field('monitor-tenmm-rotation').value = content.tenmm_rotation || 'weekday';
+    field('monitor-tenmm-entries').value = content.tenmm_entries || '';
+    field('monitor-fun-days-enabled').checked = !!content.fun_days_enabled;
+    field('monitor-fun-days-entries').value = content.fun_days_entries || '';
+  }
+
+  function save() {
     var button = field('monitor-content-save');
     var status = field('monitor-content-status');
     if (!button || !status) return;
@@ -117,23 +131,25 @@
     status.className = 'text-xs font-bold text-slate-500';
     status.textContent = '';
 
-    var payload = Object.assign({}, existingSettings, {
-      shop_monitor_content: {
-        tenmm_enabled: field('monitor-tenmm-enabled').checked,
-        tenmm_rotation: field('monitor-tenmm-rotation').value,
-        tenmm_entries: field('monitor-tenmm-entries').value,
-        fun_days_enabled: field('monitor-fun-days-enabled').checked,
-        fun_days_entries: field('monitor-fun-days-entries').value
-      }
-    });
+    var nextContent = {
+      tenmm_enabled: field('monitor-tenmm-enabled').checked,
+      tenmm_rotation: field('monitor-tenmm-rotation').value,
+      tenmm_entries: field('monitor-tenmm-entries').value,
+      fun_days_enabled: field('monitor-fun-days-enabled').checked,
+      fun_days_entries: field('monitor-fun-days-entries').value
+    };
 
-    request('/settings', {
-      method: 'POST',
-      body: JSON.stringify(payload)
+    request('/settings').then(function (currentSettings) {
+      return request('/settings', {
+        method: 'POST',
+        body: JSON.stringify(Object.assign({}, currentSettings, {
+          shop_monitor_content: nextContent
+        }))
+      });
     }).then(function (updated) {
       status.className = 'text-xs font-bold text-green-600';
       status.textContent = 'Saved';
-      existingSettings.shop_monitor_content = updated.shop_monitor_content || payload.shop_monitor_content;
+      hydrate(updated);
     }).catch(function (error) {
       status.className = 'text-xs font-bold text-red-600';
       status.textContent = error.message || 'Save failed';
@@ -148,16 +164,15 @@
 
   function init() {
     if (!document.body.classList.contains('ops-page-settings')) return;
-    request('/settings').then(function (settings) {
-      var attempts = 0;
-      var timer = window.setInterval(function () {
-        attempts += 1;
-        render(settings);
-        if (document.getElementById(PANEL_ID) || attempts > 40) {
-          window.clearInterval(timer);
-        }
-      }, 150);
-    }).catch(function () {});
+    var attempts = 0;
+    var timer = window.setInterval(function () {
+      attempts += 1;
+      render(null);
+      if (document.getElementById(PANEL_ID) || attempts > 40) {
+        window.clearInterval(timer);
+        request('/settings').then(hydrate).catch(function () {});
+      }
+    }, 150);
   }
 
   if (document.readyState === 'loading') {
