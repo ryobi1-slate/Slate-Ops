@@ -48,11 +48,11 @@ $quick_links = [
   ],
   [
     'slug' => 'monitor',
-    'label' => 'Monitor',
+    'label' => 'Shop Monitor',
     'href' => home_url('/slate-ops-monitor/'),
     'icon' => 'desktop_windows',
-    'description' => 'Floor status display for wall-mounted TVs in shop and dispatch areas.',
-    'meta' => 'Live floor view',
+    'description' => 'Wall-mounted TV display for shop schedules, floor status, and shared team updates.',
+    'meta' => 'TV display view',
   ],
   [
     'slug' => 'settings',
@@ -113,7 +113,7 @@ $guidance = [
   [
     'role' => 'Supervisors',
     'class' => 'supervisor',
-    'text' => 'Use Executive for throughput, labor capture, and exceptions. Use Monitor for shared floor visibility.',
+    'text' => 'Use Executive for throughput, labor capture, and exceptions. Use Shop Monitor for shared floor visibility.',
   ],
   [
     'role' => 'Admins',
