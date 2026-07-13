@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Slate Ops
  * Description: Internal Ops UI (/ops/) for Customer Service, Shop Supervisor, and Techs. Integrates with Slate Dealer Portal + ClickUp.
- * Version: 0.63.0
+ * Version: 0.64.0
  * Author: Slate
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('SLATE_OPS_VERSION', '0.63.0');
+define('SLATE_OPS_VERSION', '0.64.0');
 define('SLATE_OPS_PATH', plugin_dir_path(__FILE__));
 define('SLATE_OPS_URL', plugin_dir_url(__FILE__));
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-assets.php';
@@ -66,9 +66,19 @@ require_once SLATE_OPS_PATH . 'includes/class-slate-ops-resource-hub-rest.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-quality.php';
 require_once SLATE_OPS_PATH . 'includes/class-slate-ops-quality-rest.php';
 
+// Finance Invoice — standalone combined-invoice tool (CPT + data layer).
+require_once SLATE_OPS_PATH . 'includes/class-slate-ops-finance-invoice.php';
+add_action( 'init', [ 'Slate_Ops_Finance_Invoice', 'register' ] );
+
 if ( is_admin() ) {
     require_once SLATE_OPS_PATH . 'includes/admin/class-clickup-import-admin.php';
     add_action( 'admin_menu', [ 'Slate_Ops_ClickUp_Import_Admin', 'register_menu' ] );
+
+    // Slate Ops Tools — tabbed admin page + tab registry (invoice tab = first tab).
+    require_once SLATE_OPS_PATH . 'includes/admin/class-slate-ops-tools.php';
+    require_once SLATE_OPS_PATH . 'includes/admin/class-slate-ops-finance-invoice-tab.php';
+    add_action( 'admin_menu', [ 'Slate_Ops_Tools', 'register_menu' ] );
+    Slate_Ops_Finance_Invoice_Tab::boot();
 }
 
 register_activation_hook(__FILE__, ['Slate_Ops_Install', 'activate']);
