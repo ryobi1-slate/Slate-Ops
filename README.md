@@ -60,3 +60,6 @@ New classes:
 - `Slate_Ops_Tools` (`includes/admin/class-slate-ops-tools.php`) — Tools page shell, `slate_ops_tools_tabs` registry, server-side `?tab=` routing, per-tab capability gate (route + save + strip), save dispatch.
 - `Slate_Ops_Finance_Invoice` (`includes/class-slate-ops-finance-invoice.php`) — `slate_finance_invoice` CPT registration + data layer (field definitions, sanitize/save, read, listing, render-time totals).
 - `Slate_Ops_Finance_Invoice_Tab` (`includes/admin/class-slate-ops-finance-invoice-tab.php`) — invoice tab: self-registers as the first tab, admin create/edit/list form, nonce- and capability-checked save handler.
+- `Slate_Ops_Finance_Invoice_Print` (`includes/admin/class-slate-ops-finance-invoice-print.php`) — read-only print output: `admin-post` route (CAP_CS + nonce) streaming a standalone, brand-styled Letter-portrait invoice document for browser Save-as-PDF.
+
+_v2 fast-follow (not built): feed `Slate_Ops_Finance_Invoice_Print::build_html()` to a pure-PHP PDF library (Dompdf/mPDF) to emit `application/pdf` server-side instead of streaming HTML._
