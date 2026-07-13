@@ -1,0 +1,84 @@
+/**
+ * Slate Ops Tools — minimal admin layout for the Tools page + invoice tab.
+ * Functional only; no print/PDF styling this phase.
+ */
+
+.slate-ops-tools__panel {
+	margin-top: 1rem;
+}
+
+.slate-ops-tools .slate-fi-group {
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 12px 16px;
+	margin: 0 0 16px;
+	max-width: 720px;
+}
+
+.slate-ops-tools .slate-fi-group legend {
+	font-weight: 600;
+	padding: 0 6px;
+}
+
+.slate-ops-tools .slate-fi-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0 0 10px;
+}
+
+.slate-ops-tools .slate-fi-field label {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.slate-ops-tools .slate-fi-field input[type="text"],
+.slate-ops-tools .slate-fi-field textarea {
+	max-width: 420px;
+}
+
+.slate-ops-tools .slate-fi-lines {
+	max-width: 900px;
+	margin-bottom: 10px;
+}
+
+.slate-ops-tools .slate-fi-lines th,
+.slate-ops-tools .slate-fi-lines td {
+	vertical-align: middle;
+}
+
+.slate-ops-tools .slate-fi-lines .col-qty {
+	width: 70px;
+}
+
+.slate-ops-tools .slate-fi-lines .col-num {
+	width: 130px;
+	text-align: right;
+}
+
+.slate-ops-tools .slate-fi-lines .col-actions {
+	width: 40px;
+	text-align: center;
+}
+
+.slate-ops-tools .slate-fi-lines input[type="text"],
+.slate-ops-tools .slate-fi-lines input[type="number"] {
+	width: 100%;
+}
+
+.slate-ops-tools .slate-fi-lines__totals th,
+.slate-ops-tools .slate-fi-lines__totals td {
+	font-weight: 600;
+}
+
+.slate-ops-tools .slate-fi-remove-row {
+	color: #b32d2e;
+	text-decoration: none;
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.slate-ops-tools .slate-fi-row-active {
+	background: #f0f6fc;
+}
