@@ -68,6 +68,11 @@ class Slate_Ops_Install {
       $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `block_cleared_at` DATETIME NULL AFTER `block_cleared_by`");
     }
 
+    // Structured vehicle-presence flag (1 = on-site, default; 0 = not here).
+    if (!in_array('vehicle_on_site', $cols, true)) {
+      $wpdb->query("ALTER TABLE `{$jobs}` ADD COLUMN `vehicle_on_site` TINYINT(1) NOT NULL DEFAULT 1 AFTER `parts_status`");
+    }
+
     $setting_cols = $wpdb->get_col("SHOW COLUMNS FROM `{$settings}`", 0);
     if (!in_array('auto_stop_job_timers_at_shift_end', $setting_cols, true)) {
       $wpdb->query("ALTER TABLE `{$settings}` ADD COLUMN `auto_stop_job_timers_at_shift_end` TINYINT(1) NOT NULL DEFAULT 1 AFTER `ot_threshold_minutes`");
@@ -138,6 +143,7 @@ dealer_name VARCHAR(255) NULL,
 -- Classification
 job_type VARCHAR(30) NOT NULL DEFAULT 'UPFIT',
 parts_status VARCHAR(20) NOT NULL DEFAULT 'NOT_READY',
+vehicle_on_site TINYINT(1) NOT NULL DEFAULT 1,
 
 -- Status + scheduling
 status VARCHAR(30) NOT NULL DEFAULT 'INTAKE',

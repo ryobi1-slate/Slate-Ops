@@ -502,6 +502,7 @@
       status:           e.status !== undefined ? betaStatusKey(e.status) : j.status,
       status_label:     e.status !== undefined ? betaStatusLabel(e.status) : j.status_label,
       parts_status:     e.parts_status  !== undefined ? e.parts_status  : j.parts_status,
+      vehicle_on_site:  e.vehicle_on_site !== undefined ? e.vehicle_on_site : j.vehicle_on_site,
       estimated_minutes: j.estimated_minutes,
       requested_date:   j.requested_date,
       due_date:         j.due_date,
@@ -919,6 +920,7 @@
           +   '</div>'
           +   '<div class="cs-beta-row__status">' + betaRowStatusControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__parts">' + betaRowPartsControlHtml(j) + '</div>'
+          +   '<div class="cs-beta-row__vehicle">' + betaRowVehicleControlHtml(j) + '</div>'
           +   '<div class="cs-beta-row__tech">'
           +     '<select class="cs-beta-row__techselect" data-field="assigned_user_id" aria-label="Assigned tech"' + (isClosed ? ' disabled' : '') + '>'
           +       betaTechOptions(j.assigned_user_id)
@@ -965,6 +967,7 @@
         +       '<span>Customer / Dealer</span>'
         +       '<span>Status</span>'
         +       '<span>Parts</span>'
+        +       '<span>Vehicle</span>'
         +       '<span>Tech</span>'
         +       '<span>Due</span>'
         +       '<span>Note</span>'
@@ -1026,6 +1029,10 @@
         }
         if (select.dataset.field === 'parts_status') {
           betaAutosaveRowDropdown(id, 'parts_status', String(select.value || '').trim(), select);
+          return;
+        }
+        if (select.dataset.field === 'vehicle_on_site') {
+          betaAutosaveRowDropdown(id, 'vehicle_on_site', parseInt(select.value, 10) === 0 ? 0 : 1, select);
         }
       });
     });
@@ -1753,6 +1760,19 @@
       + '</select>';
   }
 
+  function betaRowVehicleControlHtml(j) {
+    var onSite = (j.vehicle_on_site == null ? 1 : parseInt(j.vehicle_on_site, 10)) === 0 ? 0 : 1;
+    var values = [
+      { value: 1, label: 'On-site' },
+      { value: 0, label: 'Not here' }
+    ];
+    return '<select class="cs-beta-row__select cs-beta-row__vehicleselect" data-field="vehicle_on_site" aria-label="Vehicle on-site">'
+      + values.map(function (v) {
+          return '<option value="' + v.value + '"' + (onSite === v.value ? ' selected' : '') + '>' + escapeHtml(v.label) + '</option>';
+        }).join('')
+      + '</select>';
+  }
+
   function betaStatusControlHtml(status, label, readyDeps, isRow) {
     var options = [];
     var hint = '';
@@ -1939,6 +1959,23 @@
           snap.parts_status = value;
           if (betaState.jobDetails[id]) betaState.jobDetails[id].parts_status = value;
         });
+    } else if (field === 'vehicle_on_site') {
+      request = fetch(api.root + '/jobs/' + id, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: {
+          'X-WP-Nonce': api.nonce,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ vehicle_on_site: value })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error((res.body && (res.body.message || res.body.code)) || 'Vehicle save failed');
+          snap.vehicle_on_site = value;
+          if (betaState.jobDetails[id]) betaState.jobDetails[id].vehicle_on_site = value;
+        });
     } else {
       request = Promise.reject(new Error('Unsupported autosave field'));
     }
@@ -1954,6 +1991,7 @@
         betaPruneEdits(id, [field]);
         if (field === 'assigned_user_id') snap.assigned_user_id = oldValue;
         if (field === 'parts_status') snap.parts_status = oldValue;
+        if (field === 'vehicle_on_site') snap.vehicle_on_site = oldValue;
         if (field === 'status') {
           snap.status = betaStatusKey(oldValue);
           snap.status_label = betaStatusLabel(oldValue);

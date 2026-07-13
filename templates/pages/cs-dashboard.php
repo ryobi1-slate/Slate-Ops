@@ -510,6 +510,13 @@ $health_tone_class_map = [
           </select>
         </label>
         <label class="cs-beta-field">
+          <span class="cs-beta-field__label">Vehicle</span>
+          <select class="cs-beta-field__input" name="vehicle_on_site">
+            <option value="1" selected>On-site</option>
+            <option value="0">Not here</option>
+          </select>
+        </label>
+        <label class="cs-beta-field">
           <span class="cs-beta-field__label">Requested Date<span class="cs-beta-field__hint">optional</span></span>
           <input type="date" class="cs-beta-mono cs-beta-field__input" name="requested_date">
         </label>
