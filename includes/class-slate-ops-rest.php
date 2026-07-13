@@ -1645,7 +1645,7 @@ if ($scheduled_from && $scheduled_to) {
 }
 
 $sql = "SELECT job_id, source, created_from, portal_quote_id, quote_number, so_number, customer_name, vin, dealer_name,
-               job_type, parts_status, status, status_detail, status_updated_at, delay_reason, priority, priority_score,
+               job_type, parts_status, vehicle_on_site, status, status_detail, status_updated_at, delay_reason, priority, priority_score,
                assigned_user_id, work_center, estimated_minutes, constraint_minutes_required,
                scope_status, scheduling_status, target_week_id, ready_queue_entered_at, override_flag, override_reason, override_notes,
                scheduler_locked, hold_reason, hold_note, schedule_notes, scheduling_flag,
@@ -1809,6 +1809,16 @@ foreach ($rows as &$r) {
         if ($store !== $job['parts_status']) {
           $audits[] = ['parts_status', $job['parts_status'], $store];
           $update['parts_status'] = $store;
+        }
+      }
+
+      // Vehicle on-site (structured presence flag; default 1 = on-site)
+      if (array_key_exists('vehicle_on_site', $body)) {
+        $vos = !empty($body['vehicle_on_site']) ? 1 : 0;
+        $cur = (int) ($job['vehicle_on_site'] ?? 1);
+        if ($vos !== $cur) {
+          $audits[] = ['vehicle_on_site', $cur, $vos];
+          $update['vehicle_on_site'] = $vos;
         }
       }
 
@@ -2342,6 +2352,11 @@ foreach ($rows as &$r) {
       return self::validation_error('parts_status', 'invalid_parts_status', 'Select a valid parts status.');
     }
 
+    // Vehicle on-site (structured presence flag). Absent → default 1 = on-site.
+    $vehicle_on_site = array_key_exists('vehicle_on_site', $body)
+      ? (!empty($body['vehicle_on_site']) ? 1 : 0)
+      : 1;
+
     $estimated_hours_raw = isset($body['estimated_hours']) ? trim((string) $body['estimated_hours']) : '';
     if ($estimated_hours_raw === '' || !is_numeric($estimated_hours_raw)) {
       return self::validation_error('estimated_hours', 'invalid_estimated_hours', 'Estimated hours are required.');
@@ -2398,6 +2413,7 @@ foreach ($rows as &$r) {
       'vin_last8' => $vin_last8 ?: null,
       'job_type' => $job_type,
       'parts_status' => $parts_status,
+      'vehicle_on_site' => $vehicle_on_site,
       'status' => 'INTAKE',
       'status_updated_at' => $now,
       'delay_reason' => null,
@@ -5093,7 +5109,7 @@ self::maybe_push_dealer_portal_status($job);
     $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
 
     $sql = "SELECT job_id, so_number, customer_name, dealer_name,
-                   status, parts_status, estimated_minutes,
+                   status, parts_status, vehicle_on_site, estimated_minutes,
                    promised_date, requested_date, actual_completed_at,
                    target_ship_date, scheduled_start, assigned_user_id,
                    queue_order, queue_visible, queue_note,
@@ -5130,6 +5146,7 @@ self::maybe_push_dealer_portal_status($job);
         'status_raw'        => $r['status'],
         'status_label'      => Slate_Ops_Statuses::label($canonical_status),
         'parts_status'      => $r['parts_status'],
+        'vehicle_on_site'   => (int) ($r['vehicle_on_site'] ?? 1),
         'estimated_minutes' => isset($r['estimated_minutes']) ? (int) $r['estimated_minutes'] : 0,
         'due_date'          => $due_date,
         'requested_date'    => $r['requested_date'],

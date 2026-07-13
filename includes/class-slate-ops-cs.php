@@ -45,7 +45,7 @@ class Slate_Ops_CS {
 
     $statuses = self::active_statuses();
     $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
-    $sql = "SELECT job_id, so_number, customer_name, dealer_name, status, parts_status,
+    $sql = "SELECT job_id, so_number, customer_name, dealer_name, status, parts_status, vehicle_on_site,
                    assigned_user_id, estimated_minutes, requested_date, promised_date,
                    target_ship_date, updated_at, created_at, block_reason, block_note,
                    queue_note
