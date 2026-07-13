@@ -1,0 +1,319 @@
+/**
+ * Finance Invoice — standalone print document (Phase 2).
+ *
+ * Letter portrait, single page. Brand-matched to Slate letterhead: ink #0f342a,
+ * accent #BA7517, DM Sans (Google Fonts, loaded in the doc head) with a safe
+ * print-time fallback. No gradients, no shadows. Inlined into the print doc.
+ */
+
+:root {
+	--ink: #0f342a;
+	--ink-soft: #4a5f58;
+	--accent: #BA7517;
+	--rule: #cfd8d4;
+	--rule-strong: #0f342a;
+	--band: #f4f6f5;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	background: #ffffff;
+	color: var(--ink);
+	font-family: 'DM Sans', Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.inv {
+	width: 8.5in;
+	min-height: 11in;
+	margin: 0 auto;
+	padding: 0.6in 0.65in;
+}
+
+/* ── Top band ─────────────────────────────────────────────────────────────── */
+
+.inv-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	border-bottom: 2px solid var(--rule-strong);
+	padding-bottom: 14px;
+	margin-bottom: 18px;
+}
+
+.inv-logo {
+	margin-bottom: 10px;
+}
+
+.inv-logo svg {
+	width: 170px;
+	height: auto;
+	display: block;
+}
+
+.inv-logo__fallback {
+	font-size: 26px;
+	font-weight: 700;
+	letter-spacing: 3px;
+	color: var(--ink);
+}
+
+.inv-addr {
+	font-size: 11px;
+	color: var(--ink-soft);
+	line-height: 1.5;
+}
+
+.inv-top__right {
+	text-align: right;
+}
+
+.inv-title {
+	font-size: 30px;
+	font-weight: 700;
+	letter-spacing: 3px;
+	color: var(--accent);
+	line-height: 1;
+}
+
+.inv-page {
+	font-size: 11px;
+	color: var(--ink-soft);
+	margin: 4px 0 10px;
+}
+
+.inv-meta-top {
+	margin-left: auto;
+	border-collapse: collapse;
+	font-size: 11px;
+}
+
+.inv-meta-top th {
+	text-align: right;
+	font-weight: 500;
+	color: var(--ink-soft);
+	padding: 2px 8px 2px 0;
+	white-space: nowrap;
+}
+
+.inv-meta-top td {
+	text-align: right;
+	font-weight: 700;
+	padding: 2px 0;
+	min-width: 90px;
+}
+
+/* ── Vehicle + Ship-To ────────────────────────────────────────────────────── */
+
+.inv-cols {
+	display: flex;
+	gap: 22px;
+	margin-bottom: 18px;
+}
+
+.inv-block {
+	flex: 1;
+	border: 1px solid var(--rule);
+}
+
+.inv-block__head {
+	background: var(--band);
+	border-bottom: 1px solid var(--rule);
+	padding: 5px 10px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.inv-kv {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.inv-kv th,
+.inv-kv td {
+	padding: 4px 10px;
+	text-align: left;
+	vertical-align: top;
+	font-size: 11.5px;
+}
+
+.inv-kv th {
+	width: 34%;
+	font-weight: 500;
+	color: var(--ink-soft);
+}
+
+.inv-kv td {
+	font-weight: 700;
+}
+
+.inv-shipto {
+	padding: 8px 10px;
+	font-size: 11.5px;
+}
+
+.inv-shipto__name {
+	font-weight: 700;
+	margin-bottom: 3px;
+}
+
+.inv-shipto__addr {
+	color: var(--ink-soft);
+	line-height: 1.5;
+}
+
+/* ── Meta row ─────────────────────────────────────────────────────────────── */
+
+.inv-metarow {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 18px;
+	border: 1px solid var(--rule);
+}
+
+.inv-metarow th {
+	background: var(--band);
+	border: 1px solid var(--rule);
+	padding: 5px 8px;
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	text-align: left;
+	color: var(--ink-soft);
+}
+
+.inv-metarow td {
+	border: 1px solid var(--rule);
+	padding: 6px 8px;
+	font-size: 11.5px;
+	font-weight: 500;
+}
+
+/* ── Line items ───────────────────────────────────────────────────────────── */
+
+.inv-lines {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 20px;
+}
+
+.inv-caption {
+	background: var(--ink);
+	color: #ffffff;
+	text-align: left;
+	padding: 6px 10px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.6px;
+}
+
+.inv-lines__head th {
+	border-bottom: 1.5px solid var(--rule-strong);
+	padding: 5px 10px;
+	font-size: 10.5px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	color: var(--ink-soft);
+}
+
+.inv-lines tbody td {
+	border-bottom: 1px solid var(--rule);
+	padding: 5px 10px;
+	font-size: 11.5px;
+	vertical-align: top;
+}
+
+.inv-lines .c-qty {
+	width: 70px;
+	text-align: center;
+}
+
+.inv-lines .c-desc {
+	text-align: left;
+}
+
+.inv-lines .c-desc.is-feature {
+	padding-left: 26px;
+	color: var(--ink-soft);
+}
+
+.inv-lines .c-num {
+	width: 100px;
+	text-align: right;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.inv-lines__head .c-qty {
+	text-align: center;
+}
+
+.inv-lines__head .c-num {
+	text-align: right;
+}
+
+.inv-lines__totals td {
+	border-top: 2px solid var(--rule-strong);
+	border-bottom: none;
+	padding: 8px 10px;
+	font-size: 12.5px;
+	font-weight: 700;
+}
+
+.inv-totals-label {
+	text-align: right;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.inv-foot {
+	text-align: center;
+	margin-top: 26px;
+	padding-top: 14px;
+	border-top: 1px solid var(--rule);
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 1px;
+	color: var(--ink);
+}
+
+/* ── Print ────────────────────────────────────────────────────────────────── */
+
+@page {
+	size: Letter portrait;
+	margin: 0;
+}
+
+@media print {
+	html, body {
+		width: 8.5in;
+	}
+
+	.inv {
+		padding: 0.5in 0.55in;
+	}
+
+	.inv-caption {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	.inv-block__head,
+	.inv-metarow th {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+}

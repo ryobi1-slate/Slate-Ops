@@ -208,6 +208,7 @@ class Slate_Ops_Finance_Invoice_Tab {
 				</button>
 				<?php if ( $editing_id ) : ?>
 					<a class="button" href="<?php echo esc_url( $form_url ); ?>"><?php esc_html_e( 'Cancel / New', 'slate-ops' ); ?></a>
+					<a class="button" href="<?php echo esc_url( Slate_Ops_Finance_Invoice_Print::print_url( $editing_id ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Print / PDF', 'slate-ops' ); ?></a>
 				<?php endif; ?>
 			</p>
 		</form>
@@ -322,7 +323,11 @@ class Slate_Ops_Finance_Invoice_Tab {
 						<td><?php echo esc_html( $row['invoice_date'] !== '' ? $row['invoice_date'] : '—' ); ?></td>
 						<td><?php echo esc_html( $row['vin'] !== '' ? $row['vin'] : '—' ); ?></td>
 						<td><?php echo esc_html( $row['modified'] ); ?></td>
-						<td><a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit', 'slate-ops' ); ?></a></td>
+						<td>
+							<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit', 'slate-ops' ); ?></a>
+							<span aria-hidden="true"> | </span>
+							<a href="<?php echo esc_url( Slate_Ops_Finance_Invoice_Print::print_url( (int) $row['id'] ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Print / PDF', 'slate-ops' ); ?></a>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
