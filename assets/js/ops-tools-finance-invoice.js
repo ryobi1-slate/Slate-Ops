@@ -42,10 +42,12 @@
 
 		table.querySelectorAll( '[data-total]' ).forEach( function ( cell ) {
 			var key = cell.getAttribute( 'data-total' );
-			cell.textContent = totals[ key ].toLocaleString( undefined, {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2
-			} );
+			if ( totals[ key ] !== undefined ) {
+				cell.textContent = totals[ key ].toLocaleString( undefined, {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2
+				} );
+			}
 		} );
 	}
 

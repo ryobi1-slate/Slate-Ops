@@ -74,7 +74,7 @@ class Slate_Ops_Tools {
 		}
 
 		foreach ( $raw as $tab ) {
-			if ( empty( $tab['id'] ) || empty( $tab['label'] ) || empty( $tab['render'] ) ) {
+			if ( empty( $tab['id'] ) || empty( $tab['label'] ) || empty( $tab['render'] ) || ! is_callable( $tab['render'] ) ) {
 				continue;
 			}
 			$id = sanitize_key( $tab['id'] );

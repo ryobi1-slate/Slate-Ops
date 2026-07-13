@@ -309,8 +309,10 @@ class Slate_Ops_Finance_Invoice {
 
 		if ( is_array( $line_items ) ) {
 			foreach ( $line_items as $item ) {
-				$total_msrp    += floatval( $item['msrp'] ?? 0 );
-				$total_invoice += floatval( $item['invoice'] ?? 0 );
+				if ( is_array( $item ) ) {
+					$total_msrp    += floatval( $item['msrp'] ?? 0 );
+					$total_invoice += floatval( $item['invoice'] ?? 0 );
+				}
 			}
 		}
 
