@@ -239,6 +239,28 @@ body.slate-ops {
   max-width: none;
 }
 
+/* Settings is a legacy React route with a vanilla-injected Shop Monitor
+ * content panel. Let the shared shell own vertical scrolling so injected
+ * settings content cannot be clipped by React's h-screen/overflow-hidden
+ * wrappers. */
+.ops-page-settings .ops-content {
+  overflow-y: auto;
+}
+
+.ops-page-settings .ops-content > #ops-view,
+.ops-page-settings .ops-content > #ops-view > div,
+.ops-page-settings .ops-content > #ops-view main,
+.ops-page-settings .ops-content > #ops-view main > div {
+  height: auto !important;
+  min-height: 100%;
+  overflow: visible !important;
+}
+
+.ops-page-settings .ops-content > #ops-view > div,
+.ops-page-settings .ops-content > #ops-view main {
+  display: block !important;
+}
+
 .ops-home {
   padding: 24px 28px 40px;
   color: var(--slate-ink);
