@@ -497,6 +497,8 @@
       id:               j.id,
       job_number:       j.job_number,
       so_number:        j.so_number,
+      vin:              j.vin,
+      vin_last8:        j.vin_last8,
       customer:         e.customer_name !== undefined ? e.customer_name : j.customer,
       dealer:           e.dealer_name   !== undefined ? e.dealer_name   : j.dealer,
       status:           e.status !== undefined ? betaStatusKey(e.status) : j.status,
