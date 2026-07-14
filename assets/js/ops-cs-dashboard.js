@@ -666,6 +666,7 @@
     if (!q) return true;
     var hay = [
       j.so_number, j.job_number, j.customer, j.dealer,
+      j.vin, j.vin_last8,
       j.assigned_tech, j.queue_note, j.status_label
     ].join(' ').toLowerCase();
     return hay.indexOf(q) !== -1;
@@ -896,6 +897,11 @@
           +     (dup ? '<span class="cs-beta-row__dup" title="Duplicate queue number">!</span>' : '')
           +   '</div>'
           +   '<div class="cs-beta-row__so"><span class="cs-beta-mono">' + escapeHtml(j.so_number || j.job_number || '') + '</span></div>'
+          +   '<div class="cs-beta-row__vin"' + (j.vin ? ' title="' + escapeHtml(j.vin) + '"' : '') + '>'
+          +     (j.vin_last8
+                ? '<span class="cs-beta-mono">' + escapeHtml(j.vin_last8) + '</span>'
+                : '<span class="cs-beta-row__vin--empty">—</span>')
+          +   '</div>'
           +   '<div class="cs-beta-row__cust">'
           +     '<div class="cs-beta-row__name">' + escapeHtml(j.customer || '—') + '</div>'
           +     '<div class="cs-beta-row__sub">' + escapeHtml(j.dealer || '') + '</div>'
@@ -964,6 +970,7 @@
         +       '<span></span>'
         +       '<span>Q#</span>'
         +       '<span>SO #</span>'
+        +       '<span>VIN</span>'
         +       '<span>Customer / Dealer</span>'
         +       '<span>Status</span>'
         +       '<span>Parts</span>'
