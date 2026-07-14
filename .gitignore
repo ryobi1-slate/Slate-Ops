@@ -1,5 +1,6 @@
 node_modules/
 react-ui/node_modules/
+react-ui/recovery-dist/
 
 # One-time import artifacts — raw exports and generated data files
 local-imports/*.csv
