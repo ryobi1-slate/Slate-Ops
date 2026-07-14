@@ -5109,6 +5109,7 @@ self::maybe_push_dealer_portal_status($job);
     $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
 
     $sql = "SELECT job_id, so_number, customer_name, dealer_name,
+                   vin, vin_last8,
                    status, parts_status, vehicle_on_site, estimated_minutes,
                    promised_date, requested_date, actual_completed_at,
                    target_ship_date, scheduled_start, assigned_user_id,
@@ -5142,6 +5143,10 @@ self::maybe_push_dealer_portal_status($job);
         'so_number'         => $r['so_number'],
         'customer'          => $r['customer_name'],
         'dealer'            => $r['dealer_name'],
+        'vin'               => (string) ($r['vin'] ?? ''),
+        'vin_last8'         => (string) ($r['vin_last8'] ?? '') !== ''
+          ? (string) $r['vin_last8']
+          : substr((string) ($r['vin'] ?? ''), -8),
         'status'            => $canonical_status,
         'status_raw'        => $r['status'],
         'status_label'      => Slate_Ops_Statuses::label($canonical_status),
