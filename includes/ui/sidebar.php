@@ -13,14 +13,15 @@
 if (!defined('ABSPATH')) exit;
 
 if (!function_exists('ops_nav_link')) {
-  function ops_nav_link($href, $route, $icon, $label) {
+  function ops_nav_link($href, $route, $icon, $label, $aria_label = '') {
     $current_path = class_exists('Slate_Ops_Routes') ? Slate_Ops_Routes::current_path() : '';
     $current_route = $current_path === '' ? '/' : '/' . strtok($current_path, '/');
     $current_full_route = $current_path === '' ? '/' : '/' . trim($current_path, '/');
     $is_active = ($current_route === $route || $current_full_route === $route);
     $classes = 'ops-nav-link' . ($is_active ? ' active' : '');
-    echo '<a href="' . esc_url($href) . '" data-route="' . esc_attr($route) . '" class="' . esc_attr($classes) . '">'
-      . '<span class="material-symbols-outlined ops-nav-icon">' . esc_html($icon) . '</span>'
+    $aria = $aria_label !== '' ? ' aria-label="' . esc_attr($aria_label) . '"' : '';
+    echo '<a href="' . esc_url($href) . '" data-route="' . esc_attr($route) . '" class="' . esc_attr($classes) . '"' . $aria . '>'
+      . '<span class="material-symbols-outlined ops-nav-icon" aria-hidden="true">' . esc_html($icon) . '</span>'
       . '<span class="ops-nav-label">' . esc_html($label) . '</span>'
       . '</a>';
   }
@@ -75,7 +76,7 @@ if (!function_exists('ops_nav_link')) {
         ops_nav_link('/ops/exec', '/exec', 'monitoring', 'Executive');
       endif;
       if (in_array('monitor', $allowed, true)) :
-        ops_nav_link(home_url('/slate-ops-monitor/'), '/monitor', 'desktop_windows', 'Monitor');
+        ops_nav_link(home_url('/slate-ops-monitor/'), '/monitor', 'desktop_windows', 'Shop Monitor', 'Open Shop Monitor wall display');
       endif;
       ?>
     </div>
